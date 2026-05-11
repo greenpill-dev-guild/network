@@ -1,19 +1,24 @@
 {
   "name": "greenpill_v2",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Greenpill Network public website — Astro + Keystatic",
+  "type": "module",
+  "engines": {
+    "node": ">=18.20.8 || >=20.3.0"
+  },
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "build:css": "postcss ./tailwind.css -o ./styles.css",
-    "tailwind:css": "postcss ./tailwind.css -o ./styles.css --watch"
+    "astro": "astro"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "autoprefixer": "^10.4.27",
+    "eslint": "^8.42.0",
+    "postcss": "^8.5.8",
+    "prettier": "^2.8.8",
     "tailwindcss": "^3.4.19"
   },
   "dependencies": {
@@ -23,12 +28,8 @@
     "@keystatic/astro": "^5.0.6",
     "@keystatic/core": "^0.5.48",
     "astro": "^5.18.1",
-    "eslint": "^8.42.0",
     "force-graph": "^1.51.2",
     "gsap": "^3.14.2",
-    "postcss": "^8.5.8",
-    "postcss-cli": "^10.1.0",
-    "prettier": "^2.8.8",
     "sharp": "^0.34.5"
   }
 }

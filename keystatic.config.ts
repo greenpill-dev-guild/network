@@ -1,5 +1,52 @@
 import { config, fields, collection, singleton } from '@keystatic/core';
 
+const stewardField = fields.array(
+  fields.object({
+    name: fields.text({ label: 'Name' }),
+    role: fields.text({ label: 'Role' }),
+    avatar: fields.text({ label: 'Avatar Path' }),
+    wallet: fields.text({ label: 'Wallet (optional)' }),
+  }),
+  { label: 'Stewards', itemLabel: (props) => props.fields.name.value },
+);
+
+const linkField = fields.array(
+  fields.object({
+    label: fields.text({ label: 'Label' }),
+    url: fields.url({ label: 'URL' }),
+  }),
+  { label: 'Links', itemLabel: (props) => props.fields.label.value },
+);
+
+const regionOptions = [
+  { label: 'Americas', value: 'americas' },
+  { label: 'Africa', value: 'africa' },
+  { label: 'Asia', value: 'asia' },
+  { label: 'Europe', value: 'europe' },
+  { label: 'Oceania', value: 'oceania' },
+];
+
+const entityStatusOptions = [
+  { label: 'Active', value: 'active' },
+  { label: 'Forming', value: 'forming' },
+  { label: 'Inactive', value: 'inactive' },
+];
+
+const projectStatusOptions = [
+  { label: 'Active', value: 'active' },
+  { label: 'Beta', value: 'beta' },
+  { label: 'Experimental', value: 'experimental' },
+  { label: 'Archived', value: 'archived' },
+];
+
+const storyCategoryOptions = [
+  { label: 'Chapter Update', value: 'chapter' },
+  { label: 'Guild Update', value: 'guild' },
+  { label: 'Program Update', value: 'program' },
+  { label: 'Essay', value: 'essay' },
+  { label: 'Field Report', value: 'field-report' },
+];
+
 export default config({
   storage: { kind: 'local' },
 
@@ -11,9 +58,86 @@ export default config({
       format: { data: 'json' },
       schema: {
         name: fields.slug({ name: { label: 'Chapter Name' } }),
+        city: fields.text({ label: 'City' }),
+        country: fields.text({ label: 'Country' }),
+        region: fields.select({ label: 'Region', options: regionOptions, defaultValue: 'americas' }),
+        status: fields.select({ label: 'Status', options: entityStatusOptions, defaultValue: 'active' }),
+        summary: fields.text({ label: 'Summary', multiline: true }),
+        image: fields.text({ label: 'Image Path' }),
+        founded: fields.text({ label: 'Founded (year)' }),
         lat: fields.number({ label: 'Latitude', validation: { isRequired: true } }),
         long: fields.number({ label: 'Longitude', validation: { isRequired: true } }),
-        link: fields.url({ label: 'Chapter Link' }),
+        link: fields.url({ label: 'Primary Link (legacy / external)' }),
+        stewards: stewardField,
+        links: linkField,
+      },
+    }),
+
+    guilds: collection({
+      label: 'Guilds & Pods',
+      slugField: 'name',
+      path: 'src/content/guilds/*',
+      format: { data: 'json' },
+      schema: {
+        name: fields.slug({ name: { label: 'Guild Name' } }),
+        type: fields.select({
+          label: 'Type',
+          options: [
+            { label: 'Guild', value: 'guild' },
+            { label: 'Pod', value: 'pod' },
+          ],
+          defaultValue: 'guild',
+        }),
+        status: fields.select({ label: 'Status', options: entityStatusOptions, defaultValue: 'active' }),
+        summary: fields.text({ label: 'Summary' }),
+        description: fields.text({ label: 'Description', multiline: true }),
+        image: fields.text({ label: 'Image Path' }),
+        stewards: stewardField,
+        links: linkField,
+      },
+    }),
+
+    projects: collection({
+      label: 'Projects & Protocols',
+      slugField: 'name',
+      path: 'src/content/projects/*',
+      format: { data: 'json' },
+      schema: {
+        name: fields.slug({ name: { label: 'Project Name' } }),
+        status: fields.select({ label: 'Status', options: projectStatusOptions, defaultValue: 'active' }),
+        guild: fields.text({ label: 'Guild (slug or name)' }),
+        summary: fields.text({ label: 'Summary' }),
+        description: fields.text({ label: 'Description', multiline: true }),
+        image: fields.text({ label: 'Image Path' }),
+        techStack: fields.array(fields.text({ label: 'Tech' }), {
+          label: 'Tech Stack',
+          itemLabel: (props) => props.value,
+        }),
+        repoUrl: fields.url({ label: 'Repository URL' }),
+        liveUrl: fields.url({ label: 'Live URL' }),
+      },
+    }),
+
+    stories: collection({
+      label: 'Stories & Updates',
+      slugField: 'title',
+      path: 'src/content/stories/*',
+      format: { data: 'json' },
+      schema: {
+        title: fields.slug({ name: { label: 'Title' } }),
+        category: fields.select({
+          label: 'Category',
+          options: storyCategoryOptions,
+          defaultValue: 'chapter',
+        }),
+        publishDate: fields.text({ label: 'Publish Date (YYYY-MM-DD)' }),
+        excerpt: fields.text({ label: 'Excerpt', multiline: true }),
+        body: fields.text({ label: 'Body (Markdown)', multiline: true }),
+        image: fields.text({ label: 'Header Image Path' }),
+        author: fields.text({ label: 'Author' }),
+        authorAvatar: fields.text({ label: 'Author Avatar Path' }),
+        relatedChapter: fields.text({ label: 'Related Chapter (slug)' }),
+        relatedGuild: fields.text({ label: 'Related Guild (slug)' }),
       },
     }),
 

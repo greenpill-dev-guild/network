@@ -1,0 +1,11 @@
+{
+  "name": "GreenWill",
+  "status": "active",
+  "guild": "dev-guild",
+  "summary": "Community governance toolkit for chapters and guilds.",
+  "description": "GreenWill is a governance toolkit covering proposals, voting, treasury, and member roles for distributed regenerative communities.",
+  "image": "",
+  "techStack": ["React", "Node"],
+  "repoUrl": "",
+  "liveUrl": ""
+}

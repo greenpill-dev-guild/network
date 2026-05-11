@@ -1,0 +1,82 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Nav from '../../components/Nav.astro';
+import Footer from '../../components/Footer.astro';
+import '../../styles/global.css';
+
+export async function getStaticPaths() {
+  const items = await getCollection('guilds');
+  return items.map(item => ({ params: { slug: item.id }, props: { item } }));
+}
+
+const { item } = Astro.props;
+const { name, type, status, summary, description, stewards, links } = item.data;
+
+const projects = (await getCollection('projects')).filter(p => p.data.guild === item.id);
+---
+
+<BaseLayout title={`${name} · Greenpill ${type === 'guild' ? 'Guild' : 'Pod'}`} description={summary || ''}>
+  <Nav />
+  <main class="pt-32 pb-24 px-4 max-w-3xl mx-auto">
+    <a href="/guilds" class="text-green text-sm hover:text-[var(--mid-green)] inline-block mb-6">← Back to Guilds & Pods</a>
+    <header class="mb-10">
+      <span class="text-xs uppercase font-bold text-green tracking-widest">{type === 'guild' ? 'Guild' : 'Pod'}</span>
+      <h1 class="font-volkhov text-4xl sm:text-5xl text-yellow mt-2">{name}</h1>
+      {summary && <p class="text-white text-lg mt-3 opacity-80">{summary}</p>}
+      {status && (
+        <span class="inline-block mt-4 px-3 py-1 rounded-full text-xs uppercase font-bold border border-green text-green">
+          {status}
+        </span>
+      )}
+    </header>
+
+    {description && <p class="text-white text-base leading-relaxed mb-8">{description}</p>}
+
+    {projects.length > 0 && (
+      <section class="mb-8">
+        <h2 class="font-volkhov text-xl text-yellow mb-3">Projects</h2>
+        <ul class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {projects.map(p => (
+            <li>
+              <a href={`/projects/${p.id}`} class="block rounded-2xl border border-green bg-black bg-opacity-40 backdrop-blur-md p-4 transition-all hover:bg-opacity-60">
+                <span class="text-xs uppercase font-bold text-green tracking-wider">Project · {p.data.status}</span>
+                <h3 class="font-volkhov text-lg text-yellow mt-1">{p.data.name}</h3>
+                {p.data.summary && <p class="text-white text-sm mt-2 opacity-80">{p.data.summary}</p>}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    {stewards.length > 0 && (
+      <section class="mb-8">
+        <h2 class="font-volkhov text-xl text-yellow mb-3">Stewards</h2>
+        <ul class="flex flex-wrap gap-3">
+          {stewards.map(s => (
+            <li class="rounded-2xl border border-green bg-black bg-opacity-40 backdrop-blur-md px-4 py-2 text-white text-sm">
+              <span class="font-bold">{s.name}</span>
+              {s.role && <span class="opacity-70"> · {s.role}</span>}
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    {links.length > 0 && (
+      <section class="mb-8">
+        <h2 class="font-volkhov text-xl text-yellow mb-3">Links</h2>
+        <ul class="flex flex-col gap-2">
+          {links.filter(l => l.url).map(l => (
+            <li><a href={l.url} target="_blank" rel="noopener" class="text-green hover:text-[var(--mid-green)]">→ {l.label}</a></li>
+          ))}
+        </ul>
+      </section>
+    )}
+  </main>
+  <Footer />
+  <script>
+    import '../../scripts/mobile-menu';
+  </script>
+</BaseLayout>

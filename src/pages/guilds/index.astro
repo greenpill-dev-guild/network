@@ -1,0 +1,59 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Nav from '../../components/Nav.astro';
+import Footer from '../../components/Footer.astro';
+import '../../styles/global.css';
+
+const items = (await getCollection('guilds')).sort((a, b) =>
+  a.data.name.localeCompare(b.data.name)
+);
+const guilds = items.filter(i => i.data.type === 'guild');
+const pods = items.filter(i => i.data.type === 'pod');
+---
+
+<BaseLayout title="Guilds & Pods · Greenpill Network" description="Skill guilds and topic pods coordinating work across the Greenpill network.">
+  <Nav />
+  <main class="pt-32 pb-24 px-4 max-w-6xl mx-auto">
+    <header class="mb-12">
+      <span class="text-xs uppercase font-bold text-green tracking-widest">Guilds & Pods</span>
+      <h1 class="font-volkhov text-4xl sm:text-5xl text-yellow mt-2">Guilds & Pods</h1>
+      <p class="text-white text-base sm:text-lg mt-4 max-w-2xl opacity-80">
+        Guilds organize around skills. Pods organize around topics.
+      </p>
+    </header>
+
+    {guilds.length > 0 && (
+      <section class="mb-12">
+        <h2 class="font-volkhov text-2xl text-yellow mb-5">Guilds</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {guilds.map(item => (
+            <a href={`/guilds/${item.id}`} class="block rounded-2xl border border-green bg-black bg-opacity-40 backdrop-blur-md p-6 transition-all hover:bg-opacity-60">
+              <span class="text-xs uppercase font-bold text-green tracking-wider">Guild · {item.data.status}</span>
+              <h3 class="font-volkhov text-2xl text-yellow mt-2">{item.data.name}</h3>
+              {item.data.summary && <p class="text-white text-sm mt-3">{item.data.summary}</p>}
+            </a>
+          ))}
+        </div>
+      </section>
+    )}
+
+    {pods.length > 0 && (
+      <section>
+        <h2 class="font-volkhov text-2xl text-yellow mb-5">Pods</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {pods.map(item => (
+            <a href={`/guilds/${item.id}`} class="block rounded-2xl border border-green bg-black bg-opacity-40 backdrop-blur-md p-5 transition-all hover:bg-opacity-60">
+              <span class="text-xs uppercase font-bold text-green tracking-wider">Pod · {item.data.status}</span>
+              <h3 class="font-volkhov text-lg text-yellow mt-2">{item.data.name}</h3>
+            </a>
+          ))}
+        </div>
+      </section>
+    )}
+  </main>
+  <Footer />
+  <script>
+    import '../../scripts/mobile-menu';
+  </script>
+</BaseLayout>

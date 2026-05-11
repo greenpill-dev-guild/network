@@ -1,0 +1,40 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Nav from '../../components/Nav.astro';
+import Footer from '../../components/Footer.astro';
+import '../../styles/global.css';
+
+const items = (await getCollection('stories')).sort((a, b) =>
+  (b.data.publishDate || '').localeCompare(a.data.publishDate || '')
+);
+---
+
+<BaseLayout title="Stories · Greenpill Network" description="Field reports, essays, and updates from across the Greenpill network.">
+  <Nav />
+  <main class="pt-32 pb-24 px-4 max-w-5xl mx-auto">
+    <header class="mb-12">
+      <span class="text-xs uppercase font-bold text-green tracking-widest">Stories</span>
+      <h1 class="font-volkhov text-4xl sm:text-5xl text-yellow mt-2">Stories & Updates</h1>
+      <p class="text-white text-base sm:text-lg mt-4 max-w-2xl opacity-80">
+        Field reports, essays, and dispatches from across the Greenpill network.
+      </p>
+    </header>
+    <section class="flex flex-col gap-5">
+      {items.map(item => (
+        <a href={`/stories/${item.id}`} class="block rounded-2xl border border-green bg-black bg-opacity-40 backdrop-blur-md p-6 transition-all hover:bg-opacity-60">
+          <div class="flex items-center gap-3 mb-2">
+            <span class="text-xs uppercase font-bold text-green tracking-wider">{item.data.category}</span>
+            {item.data.publishDate && <span class="text-xs text-white opacity-60">· {item.data.publishDate}</span>}
+          </div>
+          <h2 class="font-volkhov text-2xl text-yellow">{item.data.title}</h2>
+          {item.data.excerpt && <p class="text-white text-sm mt-2 opacity-80">{item.data.excerpt}</p>}
+        </a>
+      ))}
+    </section>
+  </main>
+  <Footer />
+  <script>
+    import '../../scripts/mobile-menu';
+  </script>
+</BaseLayout>

@@ -1,0 +1,12 @@
+{
+  "name": "Dev Guild",
+  "type": "guild",
+  "status": "active",
+  "summary": "Building open-source coordination tools for the regenerative network.",
+  "description": "The Dev Guild ships open-source tooling for impact measurement, capital allocation, community governance, and reputation. Members contribute across projects like Green Goods, GreenWill, and Impact Reef.",
+  "image": "",
+  "stewards": [],
+  "links": [
+    { "label": "GitHub", "url": "https://github.com/greenpill-dev-guild" }
+  ]
+}

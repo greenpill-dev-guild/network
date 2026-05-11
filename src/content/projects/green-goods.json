@@ -1,0 +1,11 @@
+{
+  "name": "Green Goods",
+  "status": "active",
+  "guild": "dev-guild",
+  "summary": "Impact measurement and verification for regenerative outcomes.",
+  "description": "Green Goods provides tools for chapters and projects to capture, attest to, and report regenerative impact onchain.",
+  "image": "",
+  "techStack": ["Solidity", "React", "Node"],
+  "repoUrl": "",
+  "liveUrl": ""
+}

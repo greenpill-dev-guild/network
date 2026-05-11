@@ -1,0 +1,64 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Nav from '../../components/Nav.astro';
+import Footer from '../../components/Footer.astro';
+import '../../styles/global.css';
+
+export async function getStaticPaths() {
+  const items = await getCollection('projects');
+  return items.map(item => ({ params: { slug: item.id }, props: { item } }));
+}
+
+const { item } = Astro.props;
+const { name, status, guild, summary, description, techStack, repoUrl, liveUrl } = item.data;
+---
+
+<BaseLayout title={`${name} · Greenpill Project`} description={summary || ''}>
+  <Nav />
+  <main class="pt-32 pb-24 px-4 max-w-3xl mx-auto">
+    <a href="/projects" class="text-green text-sm hover:text-[var(--mid-green)] inline-block mb-6">← Back to Projects</a>
+    <header class="mb-10">
+      <span class="text-xs uppercase font-bold text-green tracking-widest">Project</span>
+      <h1 class="font-volkhov text-4xl sm:text-5xl text-yellow mt-2">{name}</h1>
+      {summary && <p class="text-white text-lg mt-3 opacity-80">{summary}</p>}
+      <div class="flex flex-wrap gap-2 mt-4">
+        {status && (
+          <span class="px-3 py-1 rounded-full text-xs uppercase font-bold border border-green text-green">{status}</span>
+        )}
+        {guild && (
+          <a href={`/guilds/${guild}`} class="px-3 py-1 rounded-full text-xs uppercase font-bold border border-green text-green hover:bg-green hover:text-[var(--dark-green)] transition-all">
+            {guild}
+          </a>
+        )}
+      </div>
+    </header>
+
+    {description && <p class="text-white text-base leading-relaxed mb-8">{description}</p>}
+
+    {techStack.length > 0 && (
+      <section class="mb-8">
+        <h2 class="font-volkhov text-xl text-yellow mb-3">Tech Stack</h2>
+        <div class="flex flex-wrap gap-2">
+          {techStack.map(tech => (
+            <span class="text-sm px-3 py-1 rounded-full border border-green text-green opacity-80">{tech}</span>
+          ))}
+        </div>
+      </section>
+    )}
+
+    {(repoUrl || liveUrl) && (
+      <section class="mb-8">
+        <h2 class="font-volkhov text-xl text-yellow mb-3">Links</h2>
+        <ul class="flex flex-col gap-2">
+          {repoUrl && <li><a href={repoUrl} target="_blank" rel="noopener" class="text-green hover:text-[var(--mid-green)]">→ Repository</a></li>}
+          {liveUrl && <li><a href={liveUrl} target="_blank" rel="noopener" class="text-green hover:text-[var(--mid-green)]">→ Live</a></li>}
+        </ul>
+      </section>
+    )}
+  </main>
+  <Footer />
+  <script>
+    import '../../scripts/mobile-menu';
+  </script>
+</BaseLayout>

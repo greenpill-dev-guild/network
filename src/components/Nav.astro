@@ -1,13 +1,6 @@
----
-interface Props {
-  variant?: 'main' | 'explorer';
-}
-const { variant = 'main' } = Astro.props;
----
-
 <div id="logo" class="flex justify-start py-3 px-8 absolute top-0 left-0 right-0 cursor-pointer">
   <div style="z-index:9999999;" class="flex gap-2 items-center fixed left-8 z-50">
-    <a href="/#body">
+    <a href="/">
       <div class="flex gap-2 items-center">
         <img src="/images/greenpill-logo.svg" width="40" height="40" class="w-[25px] h-[25px] sm:w-[40px] sm:h-[40px]" />
         <h1 class="text-sm sm:text-base text-green font-bold">Green Pill</h1>
@@ -16,30 +9,27 @@ const { variant = 'main' } = Astro.props;
   </div>
 </div>
 
-<header class="flex justify-end py-3 px-8 absolute top-0 left-0 right-0" style="position: fixed; top: 0em; z-index: 999;">
+<header class="flex justify-end items-center gap-4 py-3 px-8 absolute top-0 left-0 right-0" style="position: fixed; top: 0em; z-index: 999;">
+  <nav class="absolute sm:static sm:block hidden right-0 top-0" id="mobile-menu" aria-label="Primary">
+    <ul class="relative z-40 flex sm:gap-6 gap-8 sm:flex-row flex-col sm:h-auto h-screen justify-center sm:w-auto w-[60vw] sm:items-center items-end sm:px-0 px-8 sm:bg-transparent bg-black bg-opacity-70 sm:backdrop-blur-none backdrop-blur-md">
+      <a href="/chapters"><li class="sm:text-left text-right link !font-bold">Chapters</li></a>
+      <a href="/guilds"><li class="sm:text-left text-right link !font-bold">Guilds</li></a>
+      <a href="/library"><li class="sm:text-left text-right link !font-bold">Library</li></a>
+      <a href="/stories"><li class="sm:text-left text-right link !font-bold">Stories</li></a>
+    </ul>
+  </nav>
+
   <div class="sm:hidden z-50 text-green hover:text-white cursor-pointer" id="mobile-menu-icon">
     <svg role="img" fill="none" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
       <title>menu icon</title>
       <path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
     </svg>
   </div>
-  <nav class="absolute sm:static sm:block hidden right-0 top-0" id="mobile-menu">
-    <ul class="relative z-40 flex gap-8 sm:flex-row flex-col sm:h-auto h-screen justify-center sm:w-auto w-[50vw] sm:items-start items-end sm:px-0 px-8 sm:bg-transparent bg-black bg-opacity-70 sm:backdrop-blur-none backdrop-blur-md">
-      {variant === 'main' ? (
-        <>
-          <a href="#book"><li class="sm:text-left text-right link !font-bold">Learn</li></a>
-          <a href="#participate" data-section="participate"><li class="sm:text-left text-right link !font-bold">Participate</li></a>
-          <a href="/explorer"><li class="sm:text-left text-right link !font-bold">Graph</li></a>
-          <a href="#explore" data-section="explore"><li class="sm:text-left text-right link !font-bold">Explore</li></a>
-        </>
-      ) : (
-        <>
-          <a href="/#network"><li class="sm:text-left text-right link !font-bold">Network</li></a>
-          <a href="/#podcast"><li class="sm:text-left text-right link !font-bold">Podcast</li></a>
-          <a href="/#participate"><li class="sm:text-left text-right link !font-bold">Participate</li></a>
-          <a href="/#explore"><li class="sm:text-left text-right link !font-bold">Home</li></a>
-        </>
-      )}
-    </ul>
-  </nav>
+
+  <a
+    href="/join"
+    class="z-50 inline-block px-5 py-2 rounded-full bg-green text-[var(--dark-green)] font-bold text-sm hover:bg-[var(--mid-green)] transition-all whitespace-nowrap"
+  >
+    Join
+  </a>
 </header>

@@ -1,0 +1,47 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Nav from '../../components/Nav.astro';
+import Footer from '../../components/Footer.astro';
+import '../../styles/global.css';
+
+const steps = [
+  { n: 1, title: 'What is Greenpill?', body: 'A global regenerative network — local chapters, builders, writers, and stewards using web3 tools to coordinate real-world impact.' },
+  { n: 2, title: 'The Regen Thesis', body: 'Greenpill exists to accelerate the shift from extractive to regenerative coordination. Read the books, listen to the podcast, find your starting point.' },
+  { n: 3, title: 'How the Network Works', body: 'Chapters are local. Guilds are skill-based. Pods are topic-based. Stewards hold it together. Projects are what we ship.' },
+  { n: 4, title: 'Find Your Path', body: 'Pick a direction: organize a chapter, join a guild, contribute to a project, or just keep learning.' },
+  { n: 5, title: 'Take Action', body: 'Visit the Chapters page, the Guilds page, or jump straight into the Telegram or Discord.' },
+];
+---
+
+<BaseLayout title="Taking the Greenpill · Onboarding" description="A guided introduction to the Greenpill network.">
+  <Nav />
+  <main class="pt-32 pb-24 px-4 max-w-3xl mx-auto">
+    <header class="mb-10">
+      <span class="text-xs uppercase font-bold text-green tracking-widest">Onboarding</span>
+      <h1 class="font-volkhov text-4xl sm:text-5xl text-yellow mt-2">Taking the Greenpill</h1>
+      <p class="text-white text-base sm:text-lg mt-4 opacity-80">
+        A guided introduction to the network — five short steps. This is a stub; deeper onboarding content is coming.
+      </p>
+    </header>
+    <ol class="flex flex-col gap-5">
+      {steps.map(s => (
+        <li class="rounded-2xl border border-green bg-black bg-opacity-40 backdrop-blur-md p-6">
+          <div class="flex items-baseline gap-3">
+            <span class="font-volkhov text-2xl text-green">{s.n}</span>
+            <h2 class="font-volkhov text-xl text-yellow">{s.title}</h2>
+          </div>
+          <p class="text-white text-base mt-3 opacity-90">{s.body}</p>
+        </li>
+      ))}
+    </ol>
+    <div class="mt-10 flex flex-wrap gap-4">
+      <a href="/chapters" class="text-green hover:text-[var(--mid-green)] font-bold">→ Browse Chapters</a>
+      <a href="/guilds" class="text-green hover:text-[var(--mid-green)] font-bold">→ See Guilds</a>
+      <a href="/join" class="text-green hover:text-[var(--mid-green)] font-bold">→ Find Your Path</a>
+    </div>
+  </main>
+  <Footer />
+  <script>
+    import '../../scripts/mobile-menu';
+  </script>
+</BaseLayout>

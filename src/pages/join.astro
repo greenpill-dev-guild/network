@@ -1,0 +1,41 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/global.css';
+
+const paths = [
+  { title: 'I am curious', desc: 'Understand the basics and find a starting point.', href: '/learn/onboarding', cta: 'Take the Greenpill' },
+  { title: 'I want to organize locally', desc: 'Start or join a chapter in your city.', href: '/chapters', cta: 'See Chapters' },
+  { title: 'I build', desc: 'Join a guild and contribute to network tools.', href: '/guilds', cta: 'See Guilds' },
+  { title: 'I want to ship a project', desc: 'See what the network is building.', href: '/projects', cta: 'See Projects' },
+  { title: 'I write or research', desc: 'Find the Writers Guild and editorial pathways.', href: '/guilds/writers-guild', cta: 'Writers Guild' },
+  { title: 'I want to follow along', desc: 'Read field reports and updates from the network.', href: '/stories', cta: 'Read Stories' },
+];
+---
+
+<BaseLayout title="Join · Greenpill Network" description="Find your path into the Greenpill regenerative network.">
+  <Nav />
+  <main class="pt-32 pb-24 px-4 max-w-5xl mx-auto">
+    <header class="mb-10">
+      <span class="text-xs uppercase font-bold text-green tracking-widest">Join</span>
+      <h1 class="font-volkhov text-4xl sm:text-5xl text-yellow mt-2">Find Your Path</h1>
+      <p class="text-white text-base sm:text-lg mt-4 max-w-2xl opacity-80">
+        Greenpill is a network of chapters, guilds, builders, and storytellers. Pick a direction below — you can always wander between them.
+      </p>
+    </header>
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-5">
+      {paths.map(p => (
+        <a href={p.href} class="block rounded-2xl border border-green bg-black bg-opacity-40 backdrop-blur-md p-6 transition-all hover:bg-opacity-60">
+          <h2 class="font-volkhov text-2xl text-yellow">{p.title}</h2>
+          <p class="text-white text-sm mt-2 opacity-80">{p.desc}</p>
+          <span class="inline-block mt-4 text-green text-sm font-bold">{p.cta} →</span>
+        </a>
+      ))}
+    </section>
+  </main>
+  <Footer />
+  <script>
+    import '../scripts/mobile-menu';
+  </script>
+</BaseLayout>

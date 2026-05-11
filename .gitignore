@@ -1,11 +1,21 @@
 **/node_modules
-src/.DS_Store
-.DS_Store
+**/.DS_Store
 
 # Astro
 dist/
 .astro/
 
+# Vercel
+.vercel/
+
+# Generated outputs
+output/
+tmp/
+
 # Environment
 .env
 .env.*
+
+# Logs
+*.log
+npm-debug.log*

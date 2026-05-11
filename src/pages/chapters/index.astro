@@ -1,0 +1,49 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Nav from '../../components/Nav.astro';
+import Footer from '../../components/Footer.astro';
+import '../../styles/global.css';
+
+const items = (await getCollection('chapters')).sort((a, b) =>
+  a.data.name.localeCompare(b.data.name)
+);
+---
+
+<BaseLayout title="Chapters · Greenpill Network" description="The local chapters of the Greenpill regenerative network.">
+  <Nav />
+  <main class="pt-32 pb-24 px-4 max-w-6xl mx-auto">
+    <header class="mb-12">
+      <span class="text-xs uppercase font-bold text-green tracking-widest">Chapters</span>
+      <h1 class="font-volkhov text-4xl sm:text-5xl text-yellow mt-2">Greenpill Chapters</h1>
+      <p class="text-white text-base sm:text-lg mt-4 max-w-2xl opacity-80">
+        Local nodes of the Greenpill network — chapters work in their cities and regions to coordinate regenerative impact.
+      </p>
+    </header>
+    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      {items.map(item => (
+        <a
+          href={`/chapters/${item.id}`}
+          class="block rounded-2xl border border-green bg-black bg-opacity-40 backdrop-blur-md p-6 transition-all hover:bg-opacity-60"
+        >
+          <span class="text-xs uppercase font-bold text-green tracking-wider">
+            Chapter{item.data.region && ` · ${item.data.region}`}
+          </span>
+          <h2 class="font-volkhov text-2xl text-yellow mt-2">{item.data.name}</h2>
+          {item.data.city && (
+            <p class="text-white text-sm mt-1 opacity-70">
+              {item.data.city}{item.data.country && `, ${item.data.country}`}
+            </p>
+          )}
+          {item.data.summary && (
+            <p class="text-white text-sm mt-3 line-clamp-3">{item.data.summary}</p>
+          )}
+        </a>
+      ))}
+    </section>
+  </main>
+  <Footer />
+  <script>
+    import '../../scripts/mobile-menu';
+  </script>
+</BaseLayout>
