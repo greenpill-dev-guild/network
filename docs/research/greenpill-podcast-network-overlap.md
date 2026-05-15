@@ -4,9 +4,9 @@ Research date: March 9, 2026
 
 Primary outputs from this pass:
 
-- [podcast overlap graph](/Users/afo/Code/greenpill/network-website/data/greenpill-graph/podcast/greenpill-podcast-network-overlap.graph.json)
-- [podcast overlay graph](/Users/afo/Code/greenpill/network-website/data/greenpill-graph/podcast/greenpill-podcast.graph.json)
-- [expanded network graph](/Users/afo/Code/greenpill/network-website/data/greenpill-graph/greenpill-network-expanded.graph.json)
+- [podcast overlap graph](../../data/greenpill-graph/podcast/greenpill-podcast-network-overlap.graph.json)
+- [podcast overlay graph](../../data/greenpill-graph/podcast/greenpill-podcast.graph.json)
+- [expanded network graph](../../data/greenpill-graph/greenpill-network-expanded.graph.json)
 
 Primary public sources:
 
@@ -186,7 +186,7 @@ For the graph explorer, the podcast should be modeled in two layers:
    - JournoDAO
    - Hypercerts
 
-That is why this pass adds the [podcast overlap graph](/Users/afo/Code/greenpill/network-website/data/greenpill-graph/podcast/greenpill-podcast-network-overlap.graph.json).
+That is why this pass adds the [podcast overlap graph](../../data/greenpill-graph/podcast/greenpill-podcast-network-overlap.graph.json).
 
 It gives us a browser-friendly structure for showing:
 

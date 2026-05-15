@@ -20,18 +20,26 @@ const items = (await getCollection('stories')).sort((a, b) =>
         Field reports, essays, and dispatches from across the Greenpill network.
       </p>
     </header>
-    <section class="flex flex-col gap-5">
-      {items.map(item => (
-        <a href={`/stories/${item.id}`} class="block rounded-2xl border border-green bg-black bg-opacity-40 backdrop-blur-md p-6 transition-all hover:bg-opacity-60">
-          <div class="flex items-center gap-3 mb-2">
-            <span class="text-xs uppercase font-bold text-green tracking-wider">{item.data.category}</span>
-            {item.data.publishDate && <span class="text-xs text-white opacity-60">· {item.data.publishDate}</span>}
-          </div>
-          <h2 class="font-volkhov text-2xl text-yellow">{item.data.title}</h2>
-          {item.data.excerpt && <p class="text-white text-sm mt-2 opacity-80">{item.data.excerpt}</p>}
-        </a>
-      ))}
-    </section>
+    {items.length > 0 ? (
+      <section class="flex flex-col gap-5">
+        {items.map(item => (
+          <a href={`/stories/${item.id}`} class="block rounded-2xl border border-green bg-black bg-opacity-40 backdrop-blur-md p-6 transition-all hover:bg-opacity-60">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs uppercase font-bold text-green tracking-wider">{item.data.category}</span>
+              {item.data.publishDate && <span class="text-xs text-white opacity-60">· {item.data.publishDate}</span>}
+            </div>
+            <h2 class="font-volkhov text-2xl text-yellow">{item.data.title}</h2>
+            {item.data.excerpt && <p class="text-white text-sm mt-2 opacity-80">{item.data.excerpt}</p>}
+          </a>
+        ))}
+      </section>
+    ) : (
+      <section class="rounded-2xl border border-green bg-black bg-opacity-40 backdrop-blur-md p-6">
+        <p class="text-white text-base opacity-80">
+          Field reports and updates will appear here as chapters and guilds publish them.
+        </p>
+      </section>
+    )}
   </main>
   <Footer />
   <script>

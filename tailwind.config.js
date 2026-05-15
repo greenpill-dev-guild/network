@@ -1,7 +1,6 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
- content: ["./src/**/*.{astro,ts}"],
-  
+export default {
+  content: ["./src/**/*.{astro,ts}"],
   theme: {
     extend: {
       fontFamily: {
@@ -17,5 +16,4 @@ module.exports = {
     },
   },
   plugins: [],
-}
-
+};

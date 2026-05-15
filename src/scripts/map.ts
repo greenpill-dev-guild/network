@@ -18,36 +18,19 @@ const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 if (canvas) {
   const ctx = canvas.getContext('2d')!;
 
-  window.addEventListener('load', () => {
+  const updateScale = () => {
     const elem = canvas.getBoundingClientRect();
     const newWidth = Math.abs(elem.right - elem.left);
-    scale = width / newWidth;
-  });
+    scale = newWidth ? width / newWidth : 1;
+  };
 
-  const mapContainer = document.getElementById('map-container')!;
+  updateScale();
+  window.addEventListener('load', updateScale);
+  window.addEventListener('resize', updateScale);
+
   const mapSelectedLink = document.querySelector('.map-selected-link') as HTMLAnchorElement;
   const mapSelectedName = document.querySelector('.map-selected-name') as HTMLElement;
   const mapSelectedMoreText = document.getElementById('more-text')!;
-
-  fetch('/locations.json')
-    .then(response => response.json())
-    .then((json: Location[]) => {
-      locations = json;
-      if (mapLoaded) {
-        createLocations();
-        locationsLoaded = true;
-      }
-    });
-
-  img.addEventListener('load', () => {
-    if (!locationsLoaded && locations) {
-      createLocations();
-    }
-    ctx.drawImage(img, 0, 0, width, height);
-    mapLoaded = true;
-  }, false);
-
-  img.src = '/images/map.png';
 
   const getCoords = (latitude: number, longitude: number) => {
     const x = width * (180 + longitude) / 360 - 25;
@@ -56,6 +39,15 @@ if (canvas) {
   };
 
   const LOCATION_RADIUS = 6;
+
+  const drawMap = () => {
+    if (!mapLoaded) return;
+    ctx.clearRect(0, 0, width, height);
+    ctx.drawImage(img, 0, 0, width, height);
+    if (locationsLoaded) {
+      createLocations();
+    }
+  };
 
   const createLocations = () => {
     locations.forEach(location => {
@@ -76,12 +68,14 @@ if (canvas) {
   };
 
   const isMapElement = (e: MouseEvent | TouchEvent) => {
+    if (!locationsLoaded || !locations?.length || !scale) return undefined;
     const { x, y } = getClickCoords(e);
     return locations.find(element => {
       const { x: elemX, y: elemY } = getCoords(element.lat, element.long);
       const xDiff = Math.abs(elemX / scale - x);
       const yDiff = Math.abs(elemY / scale - y);
-      return xDiff <= LOCATION_RADIUS && yDiff <= LOCATION_RADIUS;
+      const hitRadius = Math.max(LOCATION_RADIUS / scale, 12);
+      return xDiff <= hitRadius && yDiff <= hitRadius;
     });
   };
 
@@ -112,6 +106,21 @@ if (canvas) {
   canvas.addEventListener('click', (e) => handleMapClick(e), false);
   canvas.addEventListener('touchstart', (e) => handleMapClick(e), false);
   canvas.addEventListener('mousemove', (e) => {
-    if (isMapElement(e)) canvas.style.cursor = 'pointer';
+    canvas.style.cursor = isMapElement(e) ? 'pointer' : 'default';
   });
+
+  fetch('/locations.json')
+    .then(response => response.json())
+    .then((json: Location[]) => {
+      locations = json;
+      locationsLoaded = true;
+      drawMap();
+    });
+
+  img.addEventListener('load', () => {
+    mapLoaded = true;
+    drawMap();
+  }, false);
+
+  img.src = '/images/map.png';
 }

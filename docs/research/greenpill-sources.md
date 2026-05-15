@@ -5,8 +5,8 @@ Source list assembled on March 9, 2026.
 ## Repo and current site
 
 - Current repo site snapshot
-  - Local files: `index.html`, `src/locations.json`
-  - Why it matters: shows the current narrative and structural gaps in the checked-out website code.
+  - Local files: `src/pages/index.astro`, `public/locations.json`, `src/content/`
+  - Why it matters: shows the current narrative, public map data, and file-backed content model in the checked-out website code.
 - Live site
   - https://greenpill.network
   - Why it matters: production framing is more recent than this repo snapshot, but still largely content-first.

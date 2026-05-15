@@ -122,7 +122,7 @@
       "id": "src_repo_locations_2026",
       "title": "Current repo chapter map",
       "type": "repo_file",
-      "path": "src/locations.json",
+      "path": "public/locations.json",
       "date": "2026-03-09",
       "note": "Current chapter nodes and coordinates used in the checked-out website."
     },

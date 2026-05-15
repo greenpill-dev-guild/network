@@ -1,13 +1,17 @@
 import { defineConfig, passthroughImageService } from 'astro/config';
 import tailwind from '@astrojs/tailwind';
-import react from '@astrojs/react';
 import keystatic from '@keystatic/astro';
-import node from '@astrojs/node';
+
+const isDevCommand =
+  process.env.npm_lifecycle_event === 'dev' ||
+  process.argv.some((arg) => arg === 'dev' || arg.endsWith('/astro dev'));
 
 export default defineConfig({
-  integrations: [tailwind(), react(), keystatic()],
+  integrations: [
+    tailwind(),
+    ...(isDevCommand ? [keystatic()] : []),
+  ],
   output: 'static',
-  adapter: node({ mode: 'standalone' }),
   image: {
     service: passthroughImageService(),
   },

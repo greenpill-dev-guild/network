@@ -2,21 +2,21 @@
 
 Files in this folder:
 
-- [greenpill-podcast-feed.json](/Users/afo/Code/greenpill/network-website/data/greenpill-graph/podcast/greenpill-podcast-feed.json)
+- [greenpill-podcast-feed.json](greenpill-podcast-feed.json)
   - normalized feed catalog with episode metadata and base themes
-- [greenpill-podcast-theme-summary.json](/Users/afo/Code/greenpill/network-website/data/greenpill-graph/podcast/greenpill-podcast-theme-summary.json)
+- [greenpill-podcast-theme-summary.json](greenpill-podcast-theme-summary.json)
   - theme and series summary derived from the feed catalog
-- [greenpill-podcast.graph.json](/Users/afo/Code/greenpill/network-website/data/greenpill-graph/podcast/greenpill-podcast.graph.json)
+- [greenpill-podcast.graph.json](greenpill-podcast.graph.json)
   - graph overlay with series, episodes, guests, curated entities, and podcast-specific capital flows
-- [greenpill-podcast-entity-index.json](/Users/afo/Code/greenpill/network-website/data/greenpill-graph/podcast/greenpill-podcast-entity-index.json)
+- [greenpill-podcast-entity-index.json](greenpill-podcast-entity-index.json)
   - flattened guest/entity index for quick filtering, legend building, and analysis
-- [greenpill-podcast-network-overlap.graph.json](/Users/afo/Code/greenpill/network-website/data/greenpill-graph/podcast/greenpill-podcast-network-overlap.graph.json)
+- [greenpill-podcast-network-overlap.graph.json](greenpill-podcast-network-overlap.graph.json)
   - focused overlap graph showing how the podcast maps to Greenpill chapters, guilds, active people, and the shared operating stack
 
 Generator:
 
-- [build_greenpill_podcast_graph.py](/Users/afo/Code/greenpill/network-website/scripts/build_greenpill_podcast_graph.py)
-- [build_greenpill_podcast_network_overlap.py](/Users/afo/Code/greenpill/network-website/scripts/build_greenpill_podcast_network_overlap.py)
+- [build_greenpill_podcast_graph.py](../../../scripts/build_greenpill_podcast_graph.py)
+- [build_greenpill_podcast_network_overlap.py](../../../scripts/build_greenpill_podcast_network_overlap.py)
 
 Notes:
 

@@ -1,0 +1,4 @@
+[install]
+# Only resolve package versions published at least 3 days ago.
+minimumReleaseAge = 259200
+saveTextLockfile = true

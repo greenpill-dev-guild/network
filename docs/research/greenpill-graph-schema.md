@@ -4,7 +4,7 @@ This schema is designed for browser-based graph explorers first, while staying e
 
 Canonical dataset:
 
-- [greenpill-network.graph.json](/Users/afo/Code/greenpill/network-website/data/greenpill-graph/greenpill-network.graph.json)
+- [greenpill-network.graph.json](../../data/greenpill-graph/greenpill-network.graph.json)
 
 ## Design goals
 

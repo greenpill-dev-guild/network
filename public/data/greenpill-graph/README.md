@@ -2,14 +2,14 @@
 
 Core graph files:
 
-- [greenpill-network.graph.json](/Users/afo/Code/greenpill/network-website/data/greenpill-graph/greenpill-network.graph.json)
+- [greenpill-network.graph.json](/data/greenpill-graph/greenpill-network.graph.json)
   - original network graph
-- [greenpill-network-expanded.graph.json](/Users/afo/Code/greenpill/network-website/data/greenpill-graph/greenpill-network-expanded.graph.json)
+- [greenpill-network-expanded.graph.json](/data/greenpill-graph/greenpill-network-expanded.graph.json)
   - expanded graph with the podcast overlay merged in
 
 Podcast-specific graph files:
 
-- [podcast/README.md](/Users/afo/Code/greenpill/network-website/data/greenpill-graph/podcast/README.md)
+- [podcast/README.md](/data/greenpill-graph/podcast/README.md)
 
 These files are structured for easy loading into browser-based graph explorers.
 
@@ -22,4 +22,4 @@ It separates:
 
 Schema notes:
 
-- [greenpill-graph-schema.md](/Users/afo/Code/greenpill/network-website/docs/research/greenpill-graph-schema.md)
+- `docs/research/greenpill-graph-schema.md`
