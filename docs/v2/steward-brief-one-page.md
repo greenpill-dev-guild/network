@@ -1,8 +1,8 @@
 # Greenpill V2 Steward Brief
-Prepared April 19, 2026
+Prepared for the V2 steward decision pass
 
 ## Why now
-Charmverse goes away on **April 30, 2026**. That gives us a short window to make Greenpill easier to understand, remove public dead ends, and create a dependable home for steward work. The goal is not a full redesign. It is to lock the few choices that most affect the public story, onboarding experience, and first impression.
+The Charmverse transition makes this the moment to make Greenpill easier to understand, remove public dead ends, and create a dependable home for steward work. The goal is not a full redesign. It is to lock the few choices that most affect the public story, onboarding experience, and first impression.
 
 ## What we heard
 - The current site already has real strengths, especially the map, the explorer, and the sense that Greenpill is a living network.

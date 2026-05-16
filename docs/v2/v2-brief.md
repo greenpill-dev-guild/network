@@ -70,5 +70,6 @@ Greenpill V2 turns `greenpill.network` from a link hub into a public knowledge c
 ## Operating cadence
 
 - weekly public progress update
-- biweekly steward review against the active delivery plan
+- biweekly steward review against the active `.plans` hub and delivery plan
 - monthly milestone review that can adjust scope, sequence, or defaults if needed
+- keep open steward decisions in `.plans/active/`, then reflect accepted outcomes back into the canonical V2 docs

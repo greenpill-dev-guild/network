@@ -17,7 +17,7 @@ Please vote on the 3 polls below, then reply to the final nomination prompt.
 **Recommended direction:** Greenpill is a living network of local chapters, builders, and storytellers
 
 ## Poll 2
-**Question:** What should do the most work to prove Greenpill is active right now? Pick up to 3.
+**Question:** What should best prove Greenpill is active right now? Pick up to 3.
 
 **Options:**
 - Featured chapter stories and local examples

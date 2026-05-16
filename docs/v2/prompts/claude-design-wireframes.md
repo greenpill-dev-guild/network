@@ -2,6 +2,8 @@
 
 Paste the block below into Claude Design as a single prompt.
 
+Before using it, check `.plans/active/v2-steward-decision-pack/` for accepted steward decisions and update the homepage promise, proof signals, Greenpill Garden framing, and featured examples if the response summary changes them.
+
 ---
 
 ```text

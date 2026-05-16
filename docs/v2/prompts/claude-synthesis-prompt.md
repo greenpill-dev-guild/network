@@ -16,6 +16,7 @@ Inputs:
   - docs/v2/v2-brief.md
   - docs/v2/v2-architecture.md
   - docs/v2/v2-delivery-plan.md
+  - .plans/active/v2-steward-decision-pack/ when unresolved steward decisions need execution tracking
 
 Your job:
 1. extract decisions, open questions, and parking lot items
@@ -24,14 +25,16 @@ Your job:
    - v2-brief
    - v2-architecture
    - v2-delivery-plan
-4. preserve the current phase order unless the workshop clearly changed it
-5. call out contradictions or unresolved choices explicitly
+4. update or create a plan hub when a decision still needs steward input or follow-up execution
+5. preserve the current phase order unless the workshop clearly changed it
+6. call out contradictions or unresolved choices explicitly
 
 Output format:
 - Decisions
 - Open questions
 - Recommended updates to each doc
 - Changes to phase scope
+- Plan hub updates needed
 - Risks or ambiguities that still need repo-aware validation
 
 Rules:
