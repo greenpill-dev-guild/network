@@ -1,0 +1,198 @@
+version: 1
+status: locked-defaults
+
+repo:
+  name: greenpill_v2
+  framework: Astro 5
+  monorepo_topology: apps-and-packages
+  public_content_system: Keystatic local JSON
+  workspace_frontend: React app
+  current_routes:
+    - /
+    - /explorer
+
+canonical_docs:
+  brief: docs/v2/v2-brief.md
+  architecture: docs/v2/v2-architecture.md
+  delivery: docs/v2/v2-delivery-plan.md
+
+domains:
+  public_site: greenpill.network
+  workspace_app: app.greenpill.network
+  api: api.greenpill.network
+  realtime: realtime.greenpill.network
+  assets: assets.greenpill.network
+  workspace_entrypoint: https://app.greenpill.network/login
+
+hosting:
+  public_site: vercel
+  workspace_frontend: vercel
+  backend: fly
+  database: fly_managed_postgres
+  object_storage: tigris
+
+regions:
+  launch:
+    primary: iad
+    secondary: fra
+    expansion_rule: Add a third region only after launch traffic justifies it.
+
+auth:
+  scope: workspace_only
+  provider_default: privy
+  methods_v1:
+    - email
+    - social
+    - passkey
+    - wallet
+  wallet_entry: login_screen
+
+content:
+  public_content_canonical: keystatic
+  workspace_v1:
+    - docs
+    - databases
+  workspace_publish_mode: manual_export
+
+permissions:
+  roles:
+    - public
+    - member
+    - steward
+
+principles:
+  - Keep Astro and Keystatic as the public foundation unless later scope proves they block required features.
+  - Replace public Charmverse entry points before deeper workspace parity work.
+  - Prefer internal routes over external CTAs for core user journeys.
+  - Keep the existing design language and extend it instead of rebranding.
+  - Treat the graph explorer as a first-class route.
+  - Keep the public site anonymous and start auth only inside the workspace app.
+  - Treat the workspace as an adjacent React app on Vercel backed by Fly services.
+  - Keep public content canonical in Keystatic and publish workspace content manually first.
+
+routes:
+  phase_1:
+    - /
+    - /join
+    - /chapters
+    - /guilds
+    - /learn/onboarding
+    - /explorer
+  phase_2:
+    - /chapters/[slug]
+    - /guilds/[slug]
+    - /projects
+    - /projects/[slug]
+    - /learn
+    - /stories
+    - /stories/[slug]
+
+workspace_surfaces:
+  phase_3:
+    - https://app.greenpill.network/login
+
+content_entities:
+  existing:
+    - books
+    - chapters
+    - siteSettings
+    - podcast
+    - socialLinks
+  target:
+    - guilds
+    - pods
+    - projects
+    - stories
+    - programs
+    - resources
+
+phase_order:
+  - id: P0
+    goal: Align workshop inputs and consolidate them into the canonical V2 docs and implementation manifest.
+    outputs:
+      - updated brief
+      - updated architecture doc
+      - updated delivery plan
+      - validated AI manifest
+  - id: P1
+    goal: Ship the public foundation and remove visible public Charmverse dependency.
+    routes:
+      - /
+      - /join
+      - /chapters
+      - /guilds
+      - /learn/onboarding
+      - /explorer
+    acceptance_criteria:
+      - No public Charmverse CTA remains in homepage components or social links.
+      - New visitors can route into join, chapters, guilds, onboarding, or explorer from the homepage.
+      - Guilds and onboarding have website-native destinations.
+  - id: P2
+    goal: Add deeper entity pages and a real knowledge commons structure.
+    routes:
+      - /chapters/[slug]
+      - /guilds/[slug]
+      - /projects
+      - /projects/[slug]
+      - /learn
+      - /stories
+      - /stories/[slug]
+    acceptance_criteria:
+      - Chapter links resolve to internal routes for supported chapters.
+      - Projects and stories become first-class public entities.
+      - The public content model supports all new public entity types.
+  - id: P3
+    goal: Establish the workspace app and member-operations boundary.
+    surfaces:
+      - https://app.greenpill.network/login
+    acceptance_criteria:
+      - Workspace hostname exists with intentional transition messaging.
+      - Public versus member-operational surfaces are clearly separated.
+      - Future auth and role requirements are documented.
+      - Docs and databases are the first defined workspace primitives.
+
+migration_targets:
+  - key: onboarding_charmverse
+    source: src/components/ParticipateSection.astro
+    current_url: https://app.charmverse.io/greenpill-network/taking-the-greenpill-4871995012783201
+    target_route: /learn/onboarding
+    phase: P1
+  - key: workspace_cta
+    source: src/components/ParticipateSection.astro
+    current_url: https://app.charmverse.io/greenpill-network/
+    target_url: https://app.greenpill.network/login
+    fallback_route: /join
+    phase: P3
+  - key: guild_directory
+    source: src/components/ParticipateSection.astro
+    current_url: https://app.charmverse.io/greenpill-network/guilds-29059086676991
+    target_route: /guilds
+    phase: P1
+  - key: charmverse_invite
+    source: src/components/ExploreSection.astro
+    current_url: https://app.charmverse.io/invite/5e5ee6
+    target_route: /join
+    phase: P1
+  - key: social_links_charmverse
+    source: src/content/social-links.json
+    current_fields:
+      - charmverse
+      - charmverseInvite
+    target_routes:
+      - /join
+    target_urls:
+      - https://app.greenpill.network/login
+    phase: P1
+  - key: chapter_links
+    source:
+      - src/locations.json
+      - src/content/chapters/*.json
+    current_url_pattern: https://app.charmverse.io/greenpill-network/*
+    target_route_pattern: /chapters/[slug]
+    phase: P2
+
+open_inputs_required:
+  - workshop transcript
+  - async forum export
+  - board export
+  - final steward decisions on first-class chapters, guilds, and flagship projects
