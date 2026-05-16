@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "feature": {
+    "slug": "{{FEATURE_SLUG}}",
+    "title": "{{FEATURE_TITLE}}",
+    "kind": "feature",
+    "stage": "{{STAGE}}"
+  },
+  "workflow": {
+    "overall_status": "{{WORKFLOW_STATUS}}",
+    "priority": "p2",
+    "created_at": "{{DATE}}",
+    "updated_at": "{{DATE}}"
+  },
+  "links": {
+    "brief": "brief.md",
+    "spec": "spec.md",
+    "plan": "plan.todo.md",
+    "eval": "eval.md"
+  },
+  "notes": [
+    "status.json is authoritative for hub state.",
+    "docs/v2 remains the canonical product and architecture document surface.",
+    "This repo uses manual plan updates plus validation in v1."
+  ],
+  "taxonomy": {
+    "initiative": "public-experience",
+    "tracks": [],
+    "work_types": ["implementation"],
+    "surfaces": [],
+    "depends_on_features": []
+  },
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "todo",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "content": {
+      "owner": "claude",
+      "status": "todo",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "platform": {
+      "owner": "codex",
+      "status": "todo",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "qa_pass_1": {
+      "owner": "claude",
+      "status": "blocked",
+      "depends_on": ["ui", "content", "platform"],
+      "handoff": "handoffs/README.md"
+    },
+    "qa_pass_2": {
+      "owner": "codex",
+      "status": "blocked",
+      "depends_on": ["qa_pass_1"],
+      "handoff": "handoffs/README.md"
+    }
+  },
+  "history": [
+    {
+      "timestamp": "{{DATE}}",
+      "actor": "codex",
+      "lane": "system",
+      "status": "scaffolded",
+      "note": "Scaffolded feature hub in {{STAGE}}"
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "feature": {
+    "slug": "self-hosting-and-git-sovereignty",
+    "title": "Self-Hosting and Git Sovereignty",
+    "kind": "feature",
+    "stage": "backlog"
+  },
+  "workflow": {
+    "overall_status": "backlog",
+    "priority": "p2",
+    "created_at": "2026-05-15T00:00:00.000Z",
+    "updated_at": "2026-05-15T00:00:00.000Z"
+  },
+  "links": {
+    "brief": "brief.md",
+    "spec": "spec.md",
+    "plan": "plan.todo.md",
+    "eval": "eval.md"
+  },
+  "notes": [
+    "status.json is authoritative for hub state.",
+    "docs/v2 remains the canonical product and architecture document surface.",
+    "This repo uses manual plan updates plus validation in v1.",
+    "Default posture is hybrid-first: self-host Git first, treat home-hosted website production as a staged proof path, and defer backend-class self-hosting behind stronger evidence."
+  ],
+  "taxonomy": {
+    "initiative": "infrastructure-sovereignty",
+    "tracks": ["docs", "platform"],
+    "work_types": ["ops", "research"],
+    "surfaces": ["docs/v2", ".plans"],
+    "depends_on_features": []
+  },
+  "lanes": {
+    "ui": {
+      "owner": "shared",
+      "status": "n/a",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "content": {
+      "owner": "claude",
+      "status": "todo",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "platform": {
+      "owner": "codex",
+      "status": "todo",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "qa_pass_1": {
+      "owner": "claude",
+      "status": "blocked",
+      "depends_on": ["ui", "content", "platform"],
+      "handoff": "handoffs/README.md"
+    },
+    "qa_pass_2": {
+      "owner": "codex",
+      "status": "blocked",
+      "depends_on": ["qa_pass_1"],
+      "handoff": "handoffs/README.md"
+    }
+  },
+  "history": [
+    {
+      "timestamp": "2026-05-15T00:00:00.000Z",
+      "actor": "codex",
+      "lane": "system",
+      "status": "scaffolded",
+      "note": "Saved the self-hosting and Git sovereignty roadmap as a backlog hub under the new .plans contract."
+    }
+  ]
+}

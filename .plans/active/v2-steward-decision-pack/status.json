@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "feature": {
+    "slug": "v2-steward-decision-pack",
+    "title": "V2 Steward Decision Pack",
+    "kind": "feature",
+    "stage": "active"
+  },
+  "workflow": {
+    "overall_status": "active",
+    "priority": "p0",
+    "created_at": "2026-05-16T02:58:17.624Z",
+    "updated_at": "2026-05-16T03:10:08.000Z"
+  },
+  "links": {
+    "brief": "brief.md",
+    "spec": "spec.md",
+    "plan": "plan.todo.md",
+    "eval": "eval.md"
+  },
+  "notes": [
+    "status.json is authoritative for hub state.",
+    "docs/v2 remains the canonical product and architecture document surface.",
+    "This repo uses manual plan updates plus validation in v1.",
+    "This hub tracks the steward decision pass for homepage narrative, proof signals, Greenpill Garden framing, and featured examples."
+  ],
+  "taxonomy": {
+    "initiative": "public-experience",
+    "tracks": ["content", "ui"],
+    "work_types": ["decision-pack", "synthesis", "content"],
+    "surfaces": [
+      "docs/v2",
+      "docs/v2/prompts",
+      ".plans/active/v2-steward-decision-pack"
+    ],
+    "depends_on_features": []
+  },
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "blocked",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "content": {
+      "owner": "claude",
+      "status": "in_progress",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "platform": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "qa_pass_1": {
+      "owner": "claude",
+      "status": "blocked",
+      "depends_on": ["ui", "content", "platform"],
+      "handoff": "handoffs/README.md"
+    },
+    "qa_pass_2": {
+      "owner": "codex",
+      "status": "blocked",
+      "depends_on": ["qa_pass_1"],
+      "handoff": "handoffs/README.md"
+    }
+  },
+  "history": [
+    {
+      "timestamp": "2026-05-16T02:58:17.624Z",
+      "actor": "codex",
+      "lane": "system",
+      "status": "scaffolded",
+      "note": "Scaffolded feature hub in active"
+    },
+    {
+      "timestamp": "2026-05-16T02:58:44.000Z",
+      "actor": "codex",
+      "lane": "content",
+      "status": "in_progress",
+      "note": "Aligned the steward brief and Telegram polls with the new active plan hub contract."
+    },
+    {
+      "timestamp": "2026-05-16T03:03:57.000Z",
+      "actor": "codex",
+      "lane": "system",
+      "status": "validated",
+      "note": "Validated the plan hub contract and AI build manifest after aligning the docs."
+    },
+    {
+      "timestamp": "2026-05-16T03:09:17.000Z",
+      "actor": "codex",
+      "lane": "content",
+      "status": "reviewed",
+      "note": "Removed repo-internal paths from steward-facing docs and separated decision artifacts from canonical docs in the manifest."
+    },
+    {
+      "timestamp": "2026-05-16T03:10:08.000Z",
+      "actor": "codex",
+      "lane": "content",
+      "status": "reviewed",
+      "note": "Cleaned the Telegram poll wording during the production-quality review pass."
+    }
+  ]
+}
