@@ -9,12 +9,25 @@ repo:
   workspace_frontend: React app
   current_routes:
     - /
-    - /explorer
 
 canonical_docs:
   brief: docs/v2/v2-brief.md
   architecture: docs/v2/v2-architecture.md
   delivery: docs/v2/v2-delivery-plan.md
+
+decision_artifacts:
+  steward_brief: docs/v2/steward-brief-one-page.md
+  steward_polls: docs/v2/steward-telegram-polls.md
+  active_steward_decision_hub: .plans/active/v2-steward-decision-pack
+  pending_response_summary: .plans/active/v2-steward-decision-pack/reports/steward-response-summary.md
+
+planning:
+  system: .plans
+  validation_command: node scripts/plan-hub.mjs validate
+  active_hubs:
+    - .plans/active/v2-steward-decision-pack
+  backlog_hubs:
+    - .plans/backlog/knowledge-commons-graph-explorer
 
 domains:
   public_site: greenpill.network
@@ -65,7 +78,7 @@ principles:
   - Replace public Charmverse entry points before deeper workspace parity work.
   - Prefer internal routes over external CTAs for core user journeys.
   - Keep the existing design language and extend it instead of rebranding.
-  - Treat the graph explorer as a first-class route.
+  - Defer the Knowledge Commons Graph Explorer until source lineage, maturity states, relationship grammar, public-use boundaries, and stewardship are ready.
   - Keep the public site anonymous and start auth only inside the workspace app.
   - Treat the workspace as an adjacent React app on Vercel backed by Fly services.
   - Keep public content canonical in Keystatic and publish workspace content manually first.
@@ -77,7 +90,6 @@ routes:
     - /chapters
     - /guilds
     - /learn/onboarding
-    - /explorer
   phase_2:
     - /chapters/[slug]
     - /guilds/[slug]
@@ -114,6 +126,7 @@ phase_order:
       - updated architecture doc
       - updated delivery plan
       - validated AI manifest
+      - active steward decision hub
   - id: P1
     goal: Ship the public foundation and remove visible public Charmverse dependency.
     routes:
@@ -122,11 +135,11 @@ phase_order:
       - /chapters
       - /guilds
       - /learn/onboarding
-      - /explorer
     acceptance_criteria:
       - No public Charmverse CTA remains in homepage components or social links.
-      - New visitors can route into join, chapters, guilds, onboarding, or explorer from the homepage.
+      - New visitors can route into join, chapters, guilds, or onboarding from the homepage.
       - Guilds and onboarding have website-native destinations.
+      - The public graph explorer is removed and tracked as future knowledge commons work.
   - id: P2
     goal: Add deeper entity pages and a real knowledge commons structure.
     routes:
@@ -191,8 +204,10 @@ migration_targets:
     target_route_pattern: /chapters/[slug]
     phase: P2
 
-open_inputs_required:
+synthesized_inputs:
   - workshop transcript
   - async forum export
   - board export
-  - final steward decisions on first-class chapters, guilds, and flagship projects
+
+open_inputs_required:
+  - accepted report from .plans/active/v2-steward-decision-pack/reports/steward-response-summary.md

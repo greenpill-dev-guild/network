@@ -10,13 +10,14 @@ Primary docs:
 - docs/v2/v2-architecture.md
 - docs/v2/v2-delivery-plan.md
 - docs/v2/ai-build-manifest.yaml
+- .plans/active/v2-steward-decision-pack/
 
 Repo context to verify:
 - Astro routes and layouts
 - Keystatic configuration
 - current content collections and singletons
 - current Charmverse-dependent links
-- graph explorer and chapter map behavior
+- deferred knowledge commons graph plan and chapter map behavior
 
 Tasks:
 1. confirm that the proposed routes and entities fit the current Astro and Keystatic foundation
@@ -24,10 +25,12 @@ Tasks:
 3. sharpen acceptance criteria so an implementation agent can code without inventing behavior
 4. identify any hidden migration work caused by hardcoded links or data shape limitations
 5. refresh the AI build manifest so it becomes the canonical implementation handoff
+6. validate that active follow-up state lives in `.plans/`, not as loose planning notes in `docs/v2/`
 
 Deliver:
 - findings or risks
 - recommended doc changes
 - updated manifest and phase scopes
+- plan hub updates or validation notes
 - a suggested implementation order for the next coding pass
 ```

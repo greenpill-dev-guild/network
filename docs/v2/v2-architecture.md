@@ -8,16 +8,15 @@ The current repo already provides:
 - `Keystatic` with file-backed public content
 - existing public routes:
   - `/`
-  - `/explorer`
-- a working graph explorer and baseline design language
+- a baseline design language and non-public graph research data
 
-The main gap is not framework choice. It is missing route depth, content model breadth, and a clear split between the public website and member operations.
+The main gap is not framework choice. It is missing route depth, content model breadth, and a clear split between the public website and member operations. The Knowledge Commons Graph Explorer is deferred until source lineage, relationship grammar, maturity labels, public-use boundaries, and stewardship are ready.
 
 ## Domain and runtime model
 
 | Surface | Hostname | Platform | Responsibility |
 | --- | --- | --- | --- |
-| Public site | `greenpill.network` | Vercel | marketing, onboarding, chapters, guilds, stories, explorer |
+| Public site | `greenpill.network` | Vercel | marketing, onboarding, chapters, guilds, stories, and library |
 | Workspace frontend | `app.greenpill.network` | Vercel | authenticated React app for member operations |
 | App API | `api.greenpill.network` | Fly | auth/session, app APIs, publishing helpers |
 | Realtime | `realtime.greenpill.network` | Fly | Yjs/Hocuspocus collaboration |
@@ -49,7 +48,8 @@ Recommended shape:
 - `/learn/onboarding`
 - `/stories`
 - `/stories/[slug]`
-- `/explorer`
+
+The former graph explorer is not a public route in the current architecture. Future graph work is tracked in `.plans/backlog/knowledge-commons-graph-explorer/`.
 
 ### Public content boundary
 
@@ -123,7 +123,7 @@ New public entities to support:
 - treat the workspace as an adjacent React app on Vercel backed by Fly-hosted services
 - favor internal public routes over raw external CTAs
 - keep the existing design language and extend it instead of rebranding
-- use the graph explorer as a first-class route
+- defer the Knowledge Commons Graph Explorer until it is source-aware, reviewed, stewarded, and safe to publish
 - treat migration messaging as part of the UX, not an afterthought
 
 ## Current constraints
@@ -132,3 +132,4 @@ New public entities to support:
 - the homepage and chapter map still point to external systems for important flows
 - Keystatic is still in local-file mode in the current repo
 - the current repo does not yet represent the future monorepo split between public site and workspace app
+- non-public graph research exists in `data/greenpill-graph/`, but the public explorer has been removed pending a knowledge commons plan hub

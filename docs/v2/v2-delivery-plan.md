@@ -11,11 +11,14 @@ Turn the workshop, async thread, and board into aligned docs and one machine han
 - aligned V2 brief, architecture, and delivery docs
 - finalized migration mapping
 - validated `ai-build-manifest.yaml`
+- active steward decision pack in `.plans/active/v2-steward-decision-pack/`
+- short steward brief and Telegram question set for unresolved narrative decisions
 
 ### Acceptance criteria
 
 - the canonical docs do not contradict one another on routes, hosting, auth, or phase order
 - every visible public Charmverse entry point has a mapped destination
+- unresolved steward decisions are tracked in the active plan hub, not as loose notes
 - implementation can describe P1 in one sentence and estimate it without another synthesis pass
 
 ## P1: Public foundation and Charmverse replacements
@@ -27,13 +30,14 @@ Ship the first public-facing version of V2 that fixes the most visible broken de
 ### In scope
 
 - homepage rewrite around Greenpill as a living network
+- homepage promise and proof model informed by the steward decision pack
 - real navigation instead of section-only anchors
 - `/join`
 - `/chapters`
 - `/guilds`
 - `/learn/onboarding`
-- `/explorer` elevated in navigation
 - removal of public Charmverse links from homepage components and the social link singleton
+- Knowledge Commons Graph Explorer deferred into `.plans/backlog/knowledge-commons-graph-explorer/`
 
 ### Acceptance criteria
 
@@ -41,16 +45,18 @@ Ship the first public-facing version of V2 that fixes the most visible broken de
   - `src/components/ParticipateSection.astro`
   - `src/components/ExploreSection.astro`
   - `src/content/social-links.json`
-- homepage clearly routes to `/join`, `/chapters`, `/guilds`, `/learn/onboarding`, and `/explorer`
+- homepage clearly routes to `/join`, `/chapters`, `/guilds`, and `/learn/onboarding`
 - `/join` explains pathways instead of acting as a generic dump of external links
 - `/guilds` exists as an internal destination
 - `/learn/onboarding` exists as an internal destination
+- the former public explorer route is not shipped until the graph has source lineage, relationship grammar, maturity states, and stewardship review
 
 ### Non-goals
 
 - workspace auth or collaboration tooling
 - chapter detail pages for every chapter
 - project and story detail systems
+- public graph explorer implementation
 
 ## P2: Public entity pages and knowledge commons
 

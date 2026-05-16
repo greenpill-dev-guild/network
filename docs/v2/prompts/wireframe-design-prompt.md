@@ -1,6 +1,6 @@
 # Wireframe Design Prompt — Homepage + 4 Sub-Pages
 
-Use this prompt with a design generation tool (Claude artifacts, Stitch, or similar) to wireframe the V2 homepage and four sub-pages. Pull together repo strategy from `docs/v2/v2-brief.md`, `docs/research/greenpill-ui-ux-audit.md`, and the steward-aligned narrative direction in `steward-brief-one-page.md` and `steward-telegram-polls.md`.
+Use this prompt with a design generation tool (Claude artifacts, Stitch, or similar) to wireframe the V2 homepage and four sub-pages. Pull together repo strategy from `docs/v2/v2-brief.md`, `docs/research/greenpill-ui-ux-audit.md`, the steward-aligned narrative direction in `docs/v2/steward-brief-one-page.md` and `docs/v2/steward-telegram-polls.md`, and the active decision hub at `.plans/active/v2-steward-decision-pack/`.
 
 For Claude artifacts, paste the whole prompt block at once. For Stitch or image-generation tools, split at section boundaries — feed brand foundation + section 1 first, then each subsequent section + sub-page on its own.
 
@@ -38,7 +38,7 @@ The public site is anonymous by default. Auth lives in a separate workspace app 
 | Display font | Volkhov (serif) | Often uppercase for hero moments, gold or yellow color |
 | UI / body font | Inter (medium weight) | Body, nav, UI |
 | Buttons | 35px border-radius pills, ~160px min-width, bold | Lime fill + dark-green text for primary; outlined for secondary |
-| Card pattern | Glass-morphism: rgba(9, 25, 18, 0.82) panel, lime-tinted border (rgba(194, 232, 18, 0.16)), backdrop-filter: blur(18px) | Promote this from the existing graph explorer to the default card pattern site-wide |
+| Card pattern | Glass-morphism: rgba(9, 25, 18, 0.82) panel, lime-tinted border (rgba(194, 232, 18, 0.16)), backdrop-filter: blur(18px) | Use as the default card pattern site-wide |
 | Atmosphere | Parallax floating organic elements (leaves, plant motifs), scroll-driven image sequences for hero moments | Use selectively — atmospheric on home, calm on dense content pages |
 
 Tone: warm, organic, alive. We are an ecosystem, not a brochure. Avoid generic SaaS layouts (feature grid + testimonial + CTA stack). Avoid stock imagery — prefer real chapter photos, organic textures.
@@ -52,7 +52,7 @@ Tone: warm, organic, alive. We are an ecosystem, not a brochure. Avoid generic S
 A single-screen impact moment that establishes who Greenpill is and shows the global network as a living thing in one view.
 
 - Hero copy (left or top): "Turning Degens to Regens" in Volkhov gold, uppercase, large display size. Subhead in white: "(one green pill at a time)" or a one-line network description like "A global regenerative network of chapters, builders, and storytellers."
-- Global Map — invent something fresh. Do NOT default to a flat 2D map with circular pins, and do NOT mimic a force-directed graph (the site already has a separate /explorer for that). Treat this as the brand's signature visualization moment. Some directions to riff on (pick one or propose better):
+- Global Map — invent something fresh. Do NOT default to a flat 2D map with circular pins, and do NOT mimic a force-directed graph. The public graph explorer is deferred into `.plans/backlog/knowledge-commons-graph-explorer/`, so this map should be a chapter-discovery moment rather than a knowledge graph. Treat this as the brand's signature visualization moment. Some directions to riff on (pick one or propose better):
   - A stylized 3D globe with chapters appearing as growing organic forms (sprouts, leaves, vines), where size or animation reflects activity.
   - A generative "living world" — abstract topographic or garden-like terrain where chapters surface as glowing nodes with regional clusters.
   - A layered cartographic view — illustrated, painterly, with chapters as bespoke icons or photo-thumbnails, gold/lime accents on a dark organic background.
@@ -61,7 +61,7 @@ A single-screen impact moment that establishes who Greenpill is and shows the gl
 - Hovering a chapter shows the chapter name + city in a small tooltip; clicking opens a peek card overlay with steward, latest activity, and a "View chapter →" link.
 - No-login add-yourself affordance (critical interaction): a persistent pill button on the map — "+ Add yourself to the map" — opens a tiny inline form (name, location auto-detected or typed, role: visitor / starting a chapter / regen project) with a one-click submit. New entries appear immediately in a "pending" state, visually distinct from established chapters.
 - Filter chips below or alongside the map: All / Chapters / Builders / Projects / New this month.
-- Section footer: a faint scroll-cue and one secondary CTA — "Open the network graph →" linking out to the separate /explorer.
+- Section footer: a faint scroll-cue and one secondary CTA — "See all chapters ->" linking to `/chapters`.
 
 Wireframe states to deliver: (a) default hero + map, (b) hover state on a chapter showing tooltip / peek card, (c) "+ Add yourself" form open, (d) submitted-entry pending state.
 
@@ -114,7 +114,7 @@ Wireframe states to deliver: (a) section default with 4 entry cards, (b) Regen A
 
 ## Global chrome
 
-- Top nav (replacing the current 4-anchor nav): logo + Chapters / Library / Stories / Explorer / Garden. Mobile: hamburger → vertical list with backdrop blur.
+- Top nav (replacing the current 4-anchor nav): logo + Chapters / Library / Stories / Garden. Mobile: hamburger → vertical list with backdrop blur.
 - Footer: site nav (mirror top nav), social links (Discord, Telegram, Twitter, Warpcast, YouTube, Paragraph, GitHub), newsletter input, Supermodular attribution. No Charmverse links anywhere.
 
 ## Sub-pages to wireframe in this batch
@@ -133,7 +133,7 @@ For each, deliver desktop (1440px) + mobile (375px), with section breakdowns and
 
 - Generic SaaS landing patterns (hero + 3-feature row + testimonial + CTA stack).
 - Wallet connect, login prompts, or auth UI on the public site.
-- Charmverse links or references — the platform is being sunset April 30, 2026.
+- Charmverse links or references as final destinations.
 - The "Beginner / Intermediate / Advanced" progression framing — too abstract, replace with role-based and journey-based language.
 - Treating books as the brand's main identity — they're one part of the Library now.
 - Stock imagery — prefer real chapter photos, organic textures, the existing image-sequence aesthetic.
