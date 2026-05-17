@@ -44,8 +44,8 @@ Greenpill V2 turns `greenpill.network` from a link hub into a public knowledge c
 
 - `greenpill.network` on `Vercel` for the public Astro site
 - `app.greenpill.network` on `Vercel` for the workspace frontend
-- `api.greenpill.network` and `realtime.greenpill.network` on `Fly`
-- `Fly Postgres` as the default database
+- `agent.greenpill.network` and `realtime.greenpill.network` on `Fly`
+- `Fly Managed Postgres` as the default production database
 - `Tigris` as the default object storage provider
 - launch regions: `IAD` primary, `FRA` secondary
 - repo posture: explicit monorepo `apps/` + `packages/`

@@ -11,5 +11,12 @@
   "long": -46.63,
   "link": "https://app.charmverse.io/greenpill-network/greenpill-brasil-0228652595639951",
   "stewards": [],
-  "links": []
+  "stewardSlugs": [],
+  "themeSlugs": ["local-regeneration", "public-goods"],
+  "links": [],
+  "impactSources": {
+    "impactEnabled": true,
+    "greenGoodsGardenAddress": "0x749F84CA070cD2F98d9353F49eCE77C1A3fED532",
+    "greenGoodsChainId": 42161
+  }
 }

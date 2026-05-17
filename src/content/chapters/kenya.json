@@ -2,5 +2,10 @@
   "name": "Kenya",
   "lat": -1.29,
   "long": 36.82,
-  "link": "https://twitter.com/GreenpillKenya"
+  "link": "https://twitter.com/GreenpillKenya",
+  "impactSources": {
+    "impactEnabled": true,
+    "greenGoodsGardenAddress": "0x3f0f1551C7E08a2cf6800BD7D72aBfE23E3E32a0",
+    "greenGoodsChainId": 42161
+  }
 }

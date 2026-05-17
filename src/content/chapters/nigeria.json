@@ -2,5 +2,10 @@
   "name": "Nigeria",
   "lat": 10.62,
   "long": 7.47,
-  "link": "https://app.charmverse.io/greenpill-network/greenpill-nigeria-6194911177203088"
+  "link": "https://app.charmverse.io/greenpill-network/greenpill-nigeria-6194911177203088",
+  "impactSources": {
+    "impactEnabled": true,
+    "greenGoodsGardenAddress": "0x35722eEdf3F7566A23FA871f0a04267AEe78E0dB",
+    "greenGoodsChainId": 42161
+  }
 }

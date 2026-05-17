@@ -18,19 +18,28 @@ The main gap is not framework choice. It is missing route depth, content model b
 | --- | --- | --- | --- |
 | Public site | `greenpill.network` | Vercel | marketing, onboarding, chapters, guilds, stories, and library |
 | Workspace frontend | `app.greenpill.network` | Vercel | authenticated React app for member operations |
-| App API | `api.greenpill.network` | Fly | auth/session, app APIs, publishing helpers |
+| Agent service | `agent.greenpill.network` | Fly | deterministic routes, auth/session, cache jobs, publishing helpers, and future interactive agent workflows |
 | Realtime | `realtime.greenpill.network` | Fly | Yjs/Hocuspocus collaboration |
 | Assets | `assets.greenpill.network` | Tigris-backed delivery | uploads, media, exports |
 
 ## Monorepo default
 
-The default repo posture is an explicit monorepo with `apps/` and `packages/` boundaries.
+The default repo posture is an explicit package workspace using `packages/*`, matching the sibling Greenpill repos.
 
 Recommended shape:
 
-- one app for the public website
-- one app for the workspace frontend
+- `packages/public` for the public website
+- `packages/workspace` for the workspace frontend
+- `packages/agent` for the Fly-hosted agent/cache service
 - shared packages for UI, config, auth helpers, and shared types
+
+Current incremental shape:
+
+- the Astro public site still lives at the repo root to avoid a disruptive move during the content scaffold
+- `packages/shared` owns reusable public/private-boundary contracts that must be shared by the future public app, workspace app, and agent service
+- `packages/agent` reserves the Fly agent/cache service boundary with a Hono app scaffold, route constants, and privacy contracts, but no deployed service yet
+- `packages/workspace` reserves the authenticated workspace boundary, but no workspace UI yet
+- future `packages/public`, `packages/workspace`, and `packages/agent` work should depend on shared packages instead of re-creating contracts inside each package
 
 ## Public site architecture
 
@@ -71,6 +80,35 @@ New public entities to support:
 - stories
 - programs
 - resources
+- themes
+- people/stewards
+
+### Public map data
+
+Chapter map data is generated from the `chapters` collection through `/locations.json`. `public/locations.json` is no longer a hand-maintained content source. Approved user-submitted nodes should enter the public map only through a private-store projection that exposes safe public fields.
+
+### Chapter impact data
+
+Chapter pages can opt into public impact feeds through `impactSources` on chapter content. These bindings are public-safe source pointers only: Green Goods garden address and chain, KarmaGAP project UID/slug, KarmaGAP community slug, and an `impactEnabled` flag.
+
+The public site exposes enabled source bindings through `/impact-sources.json`. `agent.greenpill.network` should run the server-side cache that reads those bindings, fetches KarmaGAP public REST data, queries the Green Goods public indexer, normalizes the result with `@greenpill/network-shared/chapter-impact`, stores it in Fly Managed Postgres, and exposes `GET /impact/chapters/:slug` for chapter pages.
+
+The agent service starts with deterministic Hono routes, but it is intentionally named as an agent because it should also become the place for future interactive or less deterministic workflows: steward review assistance, source reconciliation, publishing helpers, and guided member operations.
+
+The browser does not call Karma write SDK flows. Raw EAS work feedback, media arrays, private node-intake data, emails, notes, IP addresses, and moderation metadata are never part of the public impact payload.
+
+## Private node intake architecture
+
+User-submitted map/member nodes are private operational data, not Keystatic public content.
+
+- `Postgres` is the durable private data plane.
+- `map_node_submissions` stores submitted public-safe fields plus private moderation metadata.
+- `map_node_private_contacts` stores email and contact consent separately.
+- `map_node_reviews` stores steward moderation history and private notes.
+- `public_map_nodes` is the approved-only projection for public map consumers.
+- Emails, raw notes, IP addresses, rate-limit keys, spam signals, and review notes must never be committed to the repo, public assets, Keystatic JSON, or public map payloads.
+
+The admin layer remains undecided. Directus is the first candidate to evaluate, but the schema stays CMS-agnostic so Payload, NocoDB, Baserow, Strapi, or a later workspace-native admin can still be used.
 
 ## Workspace app architecture
 
@@ -111,16 +149,24 @@ New public entities to support:
 ## Infrastructure defaults
 
 - `Vercel + Fly` is the chosen stack
-- `Fly Postgres` is the default database
+- `Fly Managed Postgres` is the production database default
 - `Tigris` is the default object storage provider
 - launch with `IAD` primary and `FRA` secondary
 - do not add a third region until real traffic justifies it
+
+### Postgres hosting
+
+Use Fly.io Managed Postgres for production. The older unmanaged Fly Postgres app path is not the default production choice because Fly now points production users toward Managed Postgres and does not provide support or guidance for unmanaged Postgres.
+
+`agent.greenpill.network` should receive `DATABASE_URL` as a Fly app secret from `fly mpg attach`. The Vercel public site must never receive database credentials. Private admin tools can attach to the same Managed Postgres cluster with restricted roles after the admin layer is chosen.
+
+The first cluster should live in `iad` with schemas for `intake`, `impact`, future `workspace`, and future `audit` data. See `docs/v2/fly-postgres-hosting.md` for the deployment and connection model.
 
 ## Implementation principles
 
 - keep Astro and Keystatic as the public foundation unless later scope proves they block required features
 - keep the public site anonymous by default and start auth only inside the workspace
-- treat the workspace as an adjacent React app on Vercel backed by Fly-hosted services
+- treat the workspace as an adjacent package-hosted React app on Vercel backed by Fly-hosted services
 - favor internal public routes over raw external CTAs
 - keep the existing design language and extend it instead of rebranding
 - defer the Knowledge Commons Graph Explorer until it is source-aware, reviewed, stewarded, and safe to publish
@@ -131,5 +177,5 @@ New public entities to support:
 - current content schema only models books and chapters
 - the homepage and chapter map still point to external systems for important flows
 - Keystatic is still in local-file mode in the current repo
-- the current repo does not yet represent the future monorepo split between public site and workspace app
+- the current repo only partially represents the future package split: `packages/shared`, `packages/agent`, and `packages/workspace` exist, but the public Astro app has not yet moved under `packages/public`
 - non-public graph research exists in `data/greenpill-graph/`, but the public explorer has been removed pending a knowledge commons plan hub

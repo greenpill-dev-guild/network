@@ -1,0 +1,136 @@
+{
+  "version": 1,
+  "feature": {
+    "slug": "chapter-impact-data-integration",
+    "title": "Chapter Impact Data Integration",
+    "kind": "feature",
+    "stage": "backlog"
+  },
+  "workflow": {
+    "overall_status": "backlog",
+    "priority": "p1",
+    "created_at": "2026-05-16T18:47:25.557Z",
+    "updated_at": "2026-05-17T13:25:00.000-07:00"
+  },
+  "links": {
+    "brief": "brief.md",
+    "spec": "spec.md",
+    "plan": "plan.todo.md",
+    "eval": "eval.md"
+  },
+  "notes": [
+    "status.json is authoritative for hub state.",
+    "docs/v2 remains the canonical product and architecture document surface.",
+    "This repo uses manual plan updates plus validation in v1.",
+    "This hub tracks chapter-page impact data and stays separate from the private node-intake scaffold."
+  ],
+  "taxonomy": {
+    "initiative": "public-experience",
+    "tracks": ["content", "platform", "ui"],
+    "work_types": ["contracts", "implementation", "docs", "testing"],
+    "surfaces": [
+      "src/content/config.ts",
+      "keystatic.config.ts",
+      "src/pages/impact-sources.json.ts",
+      "src/pages/chapters/[slug].astro",
+      "packages/shared/src/chapter-impact.js",
+      "packages/agent/src/app.js",
+      "packages/agent/src/db.js",
+      "packages/agent/src/impact.js",
+      "packages/agent/src/server.js",
+      "packages/agent/Dockerfile",
+      "packages/workspace",
+      "scripts/agent-db.migrate.mjs",
+      "packages/agent/fly.toml",
+      "packages/agent/docker-compose.yml",
+      ".env.example",
+      "docs/v2/impact-data-integration.md",
+      "docs/v2/fly-postgres-hosting.md",
+      ".plans/backlog/chapter-impact-data-integration"
+    ],
+    "depends_on_features": []
+  },
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "ready",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "content": {
+      "owner": "shared",
+      "status": "ready",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "platform": {
+      "owner": "codex",
+      "status": "ready",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "qa_pass_1": {
+      "owner": "claude",
+      "status": "blocked",
+      "depends_on": ["ui", "content", "platform"],
+      "handoff": "handoffs/README.md"
+    },
+    "qa_pass_2": {
+      "owner": "codex",
+      "status": "blocked",
+      "depends_on": ["qa_pass_1"],
+      "handoff": "handoffs/README.md"
+    }
+  },
+  "history": [
+    {
+      "timestamp": "2026-05-16T18:47:25.557Z",
+      "actor": "codex",
+      "lane": "system",
+      "status": "scaffolded",
+      "note": "Scaffolded feature hub in backlog"
+    },
+    {
+      "timestamp": "2026-05-16T18:58:00.000Z",
+      "actor": "codex",
+      "lane": "content",
+      "status": "ready",
+      "note": "Added public chapter impact-source fields, source bindings, and /impact-sources.json contract."
+    },
+    {
+      "timestamp": "2026-05-16T18:58:00.000Z",
+      "actor": "codex",
+      "lane": "platform",
+      "status": "ready",
+      "note": "Added chapter-impact normalizers, privacy tests, and Fly agent cache contract documentation."
+    },
+    {
+      "timestamp": "2026-05-16T18:58:00.000Z",
+      "actor": "codex",
+      "lane": "ui",
+      "status": "ready",
+      "note": "Added the chapter-page impact section with loading, empty, and unavailable states."
+    },
+    {
+      "timestamp": "2026-05-16T19:19:00.000Z",
+      "actor": "codex",
+      "lane": "platform",
+      "status": "ready",
+      "note": "Moved contracts into package workspaces, added Hono agent and workspace package scaffolds, gated inactive impact UI, and hardened private-field checks."
+    },
+    {
+      "timestamp": "2026-05-16T20:05:00.000Z",
+      "actor": "codex",
+      "lane": "platform",
+      "status": "ready",
+      "note": "Renamed the Fly service boundary to agent across packages, docs, and plan hub references."
+    },
+    {
+      "timestamp": "2026-05-17T13:25:00.000-07:00",
+      "actor": "codex",
+      "lane": "platform",
+      "status": "ready",
+      "note": "Added local runnable agent server, database readiness checks, SQL migration runner, local Postgres compose file, and Fly agent deployment config."
+    }
+  ]
+}

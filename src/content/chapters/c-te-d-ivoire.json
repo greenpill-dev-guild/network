@@ -2,5 +2,10 @@
   "name": "Côte d'ivoire",
   "lat": 5.34,
   "long": -4.02,
-  "link": "https://app.charmverse.io/greenpill-network/greenpill-civ-9247962745590004"
+  "link": "https://app.charmverse.io/greenpill-network/greenpill-civ-9247962745590004",
+  "impactSources": {
+    "impactEnabled": true,
+    "greenGoodsGardenAddress": "0x7bE6eAeb2FB5842Da06A34Af4fAe418347427cd1",
+    "greenGoodsChainId": 42161
+  }
 }

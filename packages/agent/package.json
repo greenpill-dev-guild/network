@@ -1,0 +1,39 @@
+{
+  "name": "@greenpill/network-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --env-file-if-exists=../../.env.local --watch src/server.js",
+    "start": "node --env-file-if-exists=../../.env.local src/server.js",
+    "db:local:up": "docker compose up -d agent-postgres",
+    "db:local:down": "docker compose down"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./impact": {
+      "types": "./src/impact.d.ts",
+      "default": "./src/impact.js"
+    },
+    "./app": {
+      "types": "./src/app.d.ts",
+      "default": "./src/app.js"
+    },
+    "./db": {
+      "types": "./src/db.d.ts",
+      "default": "./src/db.js"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "dependencies": {
+    "@greenpill/network-shared": "workspace:*",
+    "@hono/node-server": "^2.0.2",
+    "hono": "^4.12.18",
+    "postgres": "^3.4.9"
+  }
+}

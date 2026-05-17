@@ -1,0 +1,10 @@
+.astro
+.git
+.plans
+dist
+node_modules
+.env
+.env.*
+design
+Greenpill Website LoFi.zip
+*.log

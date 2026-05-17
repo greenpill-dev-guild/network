@@ -1,11 +1,24 @@
+import {
+  loadLocalPendingNodes,
+  PENDING_NODE_STORAGE_KEY,
+  PENDING_NODE_UPDATED_EVENT,
+} from '@greenpill/network-shared/map-nodes';
+
 interface Location {
+  id?: string;
   name: string;
+  place?: string;
   lat: number;
   long: number;
   link?: string;
+  kind?: string;
+  status?: string;
+  source?: string;
+  themes?: string[];
 }
 
-let locations: Location[];
+let publicLocations: Location[] = [];
+let locations: Location[] = [];
 let mapLoaded = false;
 let locationsLoaded = false;
 
@@ -40,6 +53,25 @@ if (canvas) {
 
   const LOCATION_RADIUS = 6;
 
+  const getLocalPendingLocations = (): Location[] => loadLocalPendingNodes(window.localStorage)
+    .map((node) => ({
+      id: node.id,
+      name: node.name ? `${node.name} (pending)` : 'Your pending node',
+      place: node.place,
+      lat: node.lat as number,
+      long: node.long as number,
+      status: 'pending',
+      source: 'local-pending',
+      themes: node.themes,
+    }));
+
+  const updateLocations = (nextPublicLocations: Location[]) => {
+    publicLocations = nextPublicLocations;
+    locations = [...publicLocations, ...getLocalPendingLocations()];
+    locationsLoaded = true;
+    drawMap();
+  };
+
   const drawMap = () => {
     if (!mapLoaded) return;
     ctx.clearRect(0, 0, width, height);
@@ -52,10 +84,14 @@ if (canvas) {
   const createLocations = () => {
     locations.forEach(location => {
       const { x, y } = getCoords(location.lat, location.long);
+      const isPending = location.status === 'pending';
       ctx.beginPath();
-      ctx.arc(x, y, LOCATION_RADIUS, 0, 2 * Math.PI);
+      ctx.arc(x, y, isPending ? LOCATION_RADIUS + 2 : LOCATION_RADIUS, 0, 2 * Math.PI);
+      ctx.setLineDash(isPending ? [3, 3] : []);
+      ctx.strokeStyle = isPending ? '#FFD972' : '#000000';
       ctx.stroke();
-      ctx.fillStyle = '#C2E812';
+      ctx.setLineDash([]);
+      ctx.fillStyle = isPending ? 'rgba(255, 217, 114, 0.82)' : '#C2E812';
       ctx.fill();
     });
   };
@@ -82,7 +118,7 @@ if (canvas) {
   const handleMapClick = (e: MouseEvent | TouchEvent) => {
     const element = isMapElement(e);
     if (element) {
-      if (element.link?.length) {
+      if (element.link?.length && element.status !== 'pending') {
         mapSelectedLink.href = element.link;
         mapSelectedMoreText.style.display = 'block';
         mapSelectedLink.style.pointerEvents = 'auto';
@@ -112,10 +148,18 @@ if (canvas) {
   fetch('/locations.json')
     .then(response => response.json())
     .then((json: Location[]) => {
-      locations = json;
-      locationsLoaded = true;
-      drawMap();
+      updateLocations(json);
     });
+
+  window.addEventListener('storage', (event) => {
+    if (event.key === PENDING_NODE_STORAGE_KEY) {
+      updateLocations(publicLocations);
+    }
+  });
+
+  window.addEventListener(PENDING_NODE_UPDATED_EVENT, () => {
+    updateLocations(publicLocations);
+  });
 
   img.addEventListener('load', () => {
     mapLoaded = true;

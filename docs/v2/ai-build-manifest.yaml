@@ -14,6 +14,8 @@ canonical_docs:
   brief: docs/v2/v2-brief.md
   architecture: docs/v2/v2-architecture.md
   delivery: docs/v2/v2-delivery-plan.md
+  private_node_intake: docs/v2/private-node-intake.md
+  private_map_node_schema: docs/v2/private-map-node-schema.sql
 
 decision_artifacts:
   steward_brief: docs/v2/steward-brief-one-page.md
@@ -26,13 +28,15 @@ planning:
   validation_command: node scripts/plan-hub.mjs validate
   active_hubs:
     - .plans/active/v2-steward-decision-pack
+    - .plans/active/content-private-node-scaffold
   backlog_hubs:
+    - .plans/backlog/chapter-impact-data-integration
     - .plans/backlog/knowledge-commons-graph-explorer
 
 domains:
   public_site: greenpill.network
   workspace_app: app.greenpill.network
-  api: api.greenpill.network
+  agent: agent.greenpill.network
   realtime: realtime.greenpill.network
   assets: assets.greenpill.network
   workspace_entrypoint: https://app.greenpill.network/login
@@ -62,6 +66,10 @@ auth:
 
 content:
   public_content_canonical: keystatic
+  public_map_source: src/content/chapters
+  private_node_intake_store: postgres
+  private_node_public_projection: public_map_nodes
+  private_admin_default_to_evaluate_first: directus
   workspace_v1:
     - docs
     - databases
@@ -82,6 +90,8 @@ principles:
   - Keep the public site anonymous and start auth only inside the workspace app.
   - Treat the workspace as an adjacent React app on Vercel backed by Fly services.
   - Keep public content canonical in Keystatic and publish workspace content manually first.
+  - Keep submitted node emails, raw notes, review notes, spam metadata, IP addresses, and rate-limit keys out of public content and map payloads.
+  - Let visitors see their own pending node locally, but publish submitted nodes to everyone only after steward approval.
 
 routes:
   phase_1:
@@ -117,6 +127,47 @@ content_entities:
     - stories
     - programs
     - resources
+    - themes
+    - people
+
+private_node_intake:
+  agent_route_contracts:
+    - POST /map-nodes creates a pending submission with private email storage.
+    - GET /map-nodes/public returns approved public_map_nodes only.
+  postgres_contracts:
+    - map_node_submissions
+    - map_node_private_contacts
+    - map_node_reviews
+    - public_map_nodes
+  public_fields:
+    - name
+    - place
+    - city
+    - region
+    - country
+    - lat
+    - long
+    - role
+    - themes
+    - public_note
+  private_fields_never_public:
+    - email
+    - raw_note
+    - review_notes
+    - ip_address
+    - rate_limit_key
+    - spam_score
+    - spam_signals
+    - user_agent
+  cms_admin_options:
+    leading_candidate: directus
+    keep_schema_cms_agnostic: true
+    compare:
+      - directus
+      - payload
+      - nocodb
+      - baserow
+      - strapi
 
 phase_order:
   - id: P0
@@ -154,6 +205,8 @@ phase_order:
       - Chapter links resolve to internal routes for supported chapters.
       - Projects and stories become first-class public entities.
       - The public content model supports all new public entity types.
+      - Chapter map locations are generated from the chapters collection.
+      - Private node-intake contracts prove public map payloads exclude private fields and pending submissions.
   - id: P3
     goal: Establish the workspace app and member-operations boundary.
     surfaces:
@@ -198,9 +251,9 @@ migration_targets:
     phase: P1
   - key: chapter_links
     source:
-      - src/locations.json
+      - src/pages/locations.json.ts
       - src/content/chapters/*.json
-    current_url_pattern: https://app.charmverse.io/greenpill-network/*
+    current_url_pattern: legacy chapter content may still include https://app.charmverse.io/greenpill-network/*
     target_route_pattern: /chapters/[slug]
     phase: P2
 

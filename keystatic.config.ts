@@ -18,6 +18,40 @@ const linkField = fields.array(
   { label: 'Links', itemLabel: (props) => props.fields.label.value },
 );
 
+const slugListField = (label: string, itemLabel = 'Slug') => fields.array(
+  fields.text({ label: itemLabel }),
+  { label, itemLabel: (props) => props.value },
+);
+
+const impactSourcesField = fields.object({
+  impactEnabled: fields.checkbox({
+    label: 'Show Impact Feed',
+    defaultValue: false,
+    description: 'Enable only after at least one public impact source is mapped.',
+  }),
+  greenGoodsGardenAddress: fields.text({
+    label: 'Green Goods Garden Address',
+    description: 'Public garden contract address, e.g. 0x...',
+  }),
+  greenGoodsChainId: fields.number({
+    label: 'Green Goods Chain ID',
+    defaultValue: 42161,
+    description: 'Arbitrum is 42161.',
+  }),
+  karmaProjectUID: fields.text({
+    label: 'KarmaGAP Project UID',
+    description: 'Optional 0x project UID from KarmaGAP.',
+  }),
+  karmaProjectSlug: fields.text({
+    label: 'KarmaGAP Project Slug',
+    description: 'Optional public project slug from KarmaGAP.',
+  }),
+  karmaCommunitySlug: fields.text({
+    label: 'KarmaGAP Community Slug',
+    description: 'Optional community slug for aggregate impact endpoints.',
+  }),
+}, { label: 'Impact Sources' });
+
 const regionOptions = [
   { label: 'Americas', value: 'americas' },
   { label: 'Africa', value: 'africa' },
@@ -51,6 +85,34 @@ export default config({
   storage: { kind: 'local' },
 
   collections: {
+    themes: collection({
+      label: 'Themes',
+      slugField: 'name',
+      path: 'src/content/themes/*',
+      format: { data: 'json' },
+      columns: ['sortOrder'],
+      schema: {
+        name: fields.slug({ name: { label: 'Theme Name' } }),
+        summary: fields.text({ label: 'Summary', multiline: true }),
+        sortOrder: fields.number({ label: 'Sort Order', defaultValue: 0 }),
+      },
+    }),
+
+    people: collection({
+      label: 'People & Stewards',
+      slugField: 'displayName',
+      path: 'src/content/people/*',
+      format: { data: 'json' },
+      schema: {
+        displayName: fields.slug({ name: { label: 'Display Name' } }),
+        role: fields.text({ label: 'Public Role' }),
+        avatar: fields.text({ label: 'Avatar Path' }),
+        bio: fields.text({ label: 'Public Bio', multiline: true }),
+        themeSlugs: slugListField('Public Theme Slugs', 'Theme Slug'),
+        links: linkField,
+      },
+    }),
+
     chapters: collection({
       label: 'Chapters',
       slugField: 'name',
@@ -69,7 +131,10 @@ export default config({
         long: fields.number({ label: 'Longitude', validation: { isRequired: true } }),
         link: fields.url({ label: 'Primary Link (legacy / external)' }),
         stewards: stewardField,
+        stewardSlugs: slugListField('Reusable Steward Slugs', 'Person Slug'),
+        themeSlugs: slugListField('Theme Slugs', 'Theme Slug'),
         links: linkField,
+        impactSources: impactSourcesField,
       },
     }),
 
@@ -93,6 +158,8 @@ export default config({
         description: fields.text({ label: 'Description', multiline: true }),
         image: fields.text({ label: 'Image Path' }),
         stewards: stewardField,
+        stewardSlugs: slugListField('Reusable Steward Slugs', 'Person Slug'),
+        themeSlugs: slugListField('Theme Slugs', 'Theme Slug'),
         links: linkField,
       },
     }),
@@ -115,6 +182,8 @@ export default config({
         }),
         repoUrl: fields.url({ label: 'Repository URL' }),
         liveUrl: fields.url({ label: 'Live URL' }),
+        stewardSlugs: slugListField('Reusable Steward Slugs', 'Person Slug'),
+        themeSlugs: slugListField('Theme Slugs', 'Theme Slug'),
       },
     }),
 
@@ -138,6 +207,8 @@ export default config({
         authorAvatar: fields.text({ label: 'Author Avatar Path' }),
         relatedChapter: fields.text({ label: 'Related Chapter (slug)' }),
         relatedGuild: fields.text({ label: 'Related Guild (slug)' }),
+        relatedProjectSlugs: slugListField('Related Project Slugs', 'Project Slug'),
+        themeSlugs: slugListField('Theme Slugs', 'Theme Slug'),
       },
     }),
 
@@ -170,6 +241,17 @@ export default config({
           }),
           { label: 'Translations', itemLabel: (props) => props.fields.language.value },
         ),
+        sections: fields.array(
+          fields.object({
+            title: fields.text({ label: 'Section / Chapter Title' }),
+            summary: fields.text({ label: 'Summary', multiline: true }),
+            anchor: fields.text({ label: 'Anchor (optional)' }),
+          }),
+          { label: 'Sections / Chapters', itemLabel: (props) => props.fields.title.value },
+        ),
+        themeSlugs: slugListField('Theme Slugs', 'Theme Slug'),
+        relatedStorySlugs: slugListField('Related Story Slugs', 'Story Slug'),
+        relatedProjectSlugs: slugListField('Related Project Slugs', 'Project Slug'),
         group: fields.select({
           label: 'Book Group',
           options: [

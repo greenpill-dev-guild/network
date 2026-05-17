@@ -2,5 +2,10 @@
   "name": "London, Ontario",
   "lat": 42.98,
   "long": -81.25,
-  "link": "https://x.com/greenpillLDN"
+  "link": "https://x.com/greenpillLDN",
+  "impactSources": {
+    "impactEnabled": true,
+    "greenGoodsGardenAddress": "0x4055530dB392FB2B56037065A512c5b283D90A10",
+    "greenGoodsChainId": 42161
+  }
 }

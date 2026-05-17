@@ -7,5 +7,7 @@
   "image": "",
   "techStack": ["Solidity", "React", "Node"],
   "repoUrl": "",
-  "liveUrl": ""
+  "liveUrl": "",
+  "stewardSlugs": [],
+  "themeSlugs": ["coordination-tools", "local-regeneration", "public-goods"]
 }

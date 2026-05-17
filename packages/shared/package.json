@@ -1,0 +1,23 @@
+{
+  "name": "@greenpill/network-shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./chapter-impact": {
+      "types": "./src/chapter-impact.d.ts",
+      "default": "./src/chapter-impact.js"
+    },
+    "./map-nodes": {
+      "types": "./src/map-nodes.d.ts",
+      "default": "./src/map-nodes.js"
+    }
+  },
+  "files": [
+    "src"
+  ]
+}

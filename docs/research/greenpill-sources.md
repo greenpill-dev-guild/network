@@ -5,7 +5,7 @@ Source list assembled on March 9, 2026.
 ## Repo and current site
 
 - Current repo site snapshot
-  - Local files: `src/pages/index.astro`, `public/locations.json`, `src/content/`
+  - Local files: `src/pages/index.astro`, `src/pages/locations.json.ts`, `src/content/`
   - Why it matters: shows the current narrative, public map data, and file-backed content model in the checked-out website code.
 - Live site
   - https://greenpill.network

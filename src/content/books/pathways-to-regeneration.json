@@ -14,6 +14,16 @@
     }
   ],
   "translations": [],
+  "sections": [
+    {
+      "title": "Pathways",
+      "summary": "A guide to regeneration as a practical social, ecological, and economic transition.",
+      "anchor": "pathways"
+    }
+  ],
+  "themeSlugs": ["local-regeneration", "knowledge-commons"],
+  "relatedStorySlugs": [],
+  "relatedProjectSlugs": [],
   "group": "main",
   "sortOrder": 1
 }

@@ -75,6 +75,8 @@ Deepen the public site so it reflects the actual network structure and gives peo
 - `/learn`
 - expanded Keystatic content model
 - replacement of chapter-level external map destinations with internal chapter routes
+- public themes and reusable people/steward profile contracts
+- private node-intake contracts for submitted map/member nodes, email privacy, and approved public projections
 
 ### Acceptance criteria
 
@@ -83,12 +85,15 @@ Deepen the public site so it reflects the actual network structure and gives peo
 - projects become first-class public proof of network activity
 - the site has a coherent `learn` surface beyond homepage sections
 - Keystatic can author the new public entities without ad hoc hardcoding
+- the public map reads chapter data from the `chapters` collection rather than a separate hand-maintained JSON file
+- private map-node contracts prove public payloads exclude email, private notes, spam metadata, and pending submissions
 
 ### Non-goals
 
 - full workspace parity
 - gated experiences
 - governance and allocation execution
+- choosing or deploying the private CMS/admin layer
 
 ## P3: Workspace app foundation
 
@@ -100,7 +105,7 @@ Create the first real Greenpill workspace application and define the boundary be
 
 - `app.greenpill.network` as the workspace hostname
 - workspace frontend on Vercel
-- Fly-backed auth/session, API, and realtime collaboration services
+- Fly-backed agent, auth/session, and realtime collaboration services
 - Privy-first auth with email, social, passkey, and wallet
 - collaborative docs and structured databases as the first workspace primitives
 - `public / member / steward` permissions
@@ -111,7 +116,7 @@ Create the first real Greenpill workspace application and define the boundary be
 - workspace hostname exists
 - login lives only in the workspace, not on the public site
 - member-operation CTAs route directly to `https://app.greenpill.network/login`
-- backend responsibilities for API, auth, and realtime are explicit
+- backend responsibilities for the agent service, auth, and realtime are explicit
 - docs and databases are the first defined workspace primitives
 - wallet is supported on the workspace login surface
 - manual export to public content is the only publishing mode described for V1
@@ -143,7 +148,7 @@ Create the first real Greenpill workspace application and define the boundary be
 | Guild directory CTA | `src/components/ParticipateSection.astro` | `https://app.charmverse.io/greenpill-network/guilds-29059086676991` | `/guilds` | P1 | Guild index page replaces the single external guild link |
 | Charmverse invite CTA | `src/components/ExploreSection.astro` | `https://app.charmverse.io/invite/5e5ee6` | `/join` | P1 | This should become a public routing page, not a workspace dependency |
 | Social singleton Charmverse links | `src/content/social-links.json` | workspace and invite URLs | `/join` and `https://app.greenpill.network/login` | P1 / P3 | Use `/join` for public orientation and workspace login for member operations |
-| Chapter map links | `src/locations.json` | chapter-specific Charmverse pages | `/chapters/[slug]` | P2 | Replace external map links with internal chapter detail routes |
+| Chapter map links | `src/pages/locations.json.ts` + `src/content/chapters/*.json` | chapter-specific Charmverse pages | `/chapters/[slug]` | P2 | Generate public map data from chapter content and replace external map links with internal chapter detail routes |
 | Chapter content links | `src/content/chapters/*.json` | chapter-specific Charmverse pages | `/chapters/[slug]` | P2 | Chapter profiles should become the canonical destination |
 
 ### Follow-up inventory outside the repo

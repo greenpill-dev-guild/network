@@ -3,6 +3,7 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Nav from '../../components/Nav.astro';
 import Footer from '../../components/Footer.astro';
+import { buildChapterImpactEndpoint, shouldRenderChapterImpactUi } from '@greenpill/network-shared/chapter-impact';
 import '../../styles/global.css';
 
 export async function getStaticPaths() {
@@ -12,6 +13,9 @@ export async function getStaticPaths() {
 
 const { item } = Astro.props;
 const { name, city, country, region, status, summary, stewards, links, link } = item.data;
+const impactSources = item.data.impactSources ?? {};
+const showImpact = shouldRenderChapterImpactUi(impactSources);
+const impactEndpoint = showImpact ? buildChapterImpactEndpoint(item.id) : '';
 ---
 
 <BaseLayout title={`${name} · Greenpill Chapter`} description={summary || `${name} chapter of the Greenpill Network.`}>
@@ -58,8 +62,154 @@ const { name, city, country, region, status, summary, stewards, links, link } = 
         </ul>
       </section>
     )}
+
+    {showImpact && (
+      <section
+        class="mb-8 rounded-2xl border border-green bg-black bg-opacity-40 backdrop-blur-md p-5"
+        data-impact-section
+        data-impact-endpoint={impactEndpoint}
+      >
+        <div class="mb-4">
+          <div>
+            <span class="text-xs uppercase font-bold text-green tracking-widest">Impact</span>
+            <h2 class="font-volkhov text-2xl text-yellow mt-1">Chapter Impact Feed</h2>
+          </div>
+        </div>
+
+        <p class="text-white text-sm opacity-75" data-impact-loading>
+          Loading chapter impact data...
+        </p>
+        <p class="text-white text-sm opacity-75 hidden" data-impact-empty>
+          Impact source connected. Public updates will appear here after the cache publishes.
+        </p>
+        <p class="text-white text-sm opacity-75 hidden" data-impact-error>
+          Impact source connected. Live impact data is temporarily unavailable.
+        </p>
+
+        <div class="hidden" data-impact-loaded>
+          <dl class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+            <div class="rounded-xl border border-green border-opacity-40 p-3">
+              <dt class="text-xs uppercase text-green font-bold">Actions</dt>
+              <dd class="text-white text-2xl font-bold" data-impact-stat="actionCount">0</dd>
+            </div>
+            <div class="rounded-xl border border-green border-opacity-40 p-3">
+              <dt class="text-xs uppercase text-green font-bold">Milestones</dt>
+              <dd class="text-white text-2xl font-bold" data-impact-stat="milestoneCount">0</dd>
+            </div>
+            <div class="rounded-xl border border-green border-opacity-40 p-3">
+              <dt class="text-xs uppercase text-green font-bold">Updates</dt>
+              <dd class="text-white text-2xl font-bold" data-impact-stat="updateCount">0</dd>
+            </div>
+            <div class="rounded-xl border border-green border-opacity-40 p-3">
+              <dt class="text-xs uppercase text-green font-bold">Proofs</dt>
+              <dd class="text-white text-2xl font-bold" data-impact-stat="proofLinkCount">0</dd>
+            </div>
+          </dl>
+
+          <ul class="space-y-3" data-impact-events></ul>
+        </div>
+
+        <noscript>
+          <p class="text-white text-sm opacity-75">Impact source connected. Enable JavaScript for live updates.</p>
+        </noscript>
+      </section>
+    )}
   </main>
   <Footer />
+  {showImpact && (
+    <script is:inline>
+      const numberFormatter = new Intl.NumberFormat('en');
+      const visible = (element, shouldShow) => {
+        if (!element) return;
+        element.classList.toggle('hidden', !shouldShow);
+      };
+
+      const setText = (root, selector, value) => {
+        const element = root.querySelector(selector);
+        if (element) element.textContent = String(value);
+      };
+
+      const renderEvents = (root, payload) => {
+        const list = root.querySelector('[data-impact-events]');
+        if (!list) return;
+        list.textContent = '';
+
+        const events = [
+          ...(payload?.karma?.milestones ?? []),
+          ...(payload?.karma?.updates ?? []),
+          ...(payload?.proofLinks ?? []),
+        ].slice(0, 5);
+
+        for (const event of events) {
+          const item = document.createElement('li');
+          item.className = 'rounded-xl border border-green border-opacity-30 px-3 py-2 text-sm text-white';
+          const label = event.title || event.label || event.url || 'Impact proof';
+          if (event.url) {
+            const link = document.createElement('a');
+            link.href = event.url;
+            link.target = '_blank';
+            link.rel = 'noopener';
+            link.className = 'text-green hover:text-[var(--mid-green)]';
+            link.textContent = label;
+            item.append(link);
+          } else {
+            item.textContent = label;
+          }
+          list.append(item);
+        }
+      };
+
+      const renderImpact = (root, payload) => {
+        const summary = payload?.summary ?? {};
+        for (const key of ['actionCount', 'milestoneCount', 'updateCount', 'proofLinkCount']) {
+          setText(root, `[data-impact-stat="${key}"]`, numberFormatter.format(summary[key] ?? 0));
+        }
+        renderEvents(root, payload);
+        visible(root.querySelector('[data-impact-loading]'), false);
+        visible(root.querySelector('[data-impact-error]'), false);
+        visible(root.querySelector('[data-impact-empty]'), false);
+        visible(root.querySelector('[data-impact-loaded]'), true);
+      };
+
+      const renderEmpty = (root) => {
+        visible(root.querySelector('[data-impact-loading]'), false);
+        visible(root.querySelector('[data-impact-loaded]'), false);
+        visible(root.querySelector('[data-impact-error]'), false);
+        visible(root.querySelector('[data-impact-empty]'), true);
+      };
+
+      const renderError = (root) => {
+        visible(root.querySelector('[data-impact-loading]'), false);
+        visible(root.querySelector('[data-impact-loaded]'), false);
+        visible(root.querySelector('[data-impact-empty]'), false);
+        visible(root.querySelector('[data-impact-error]'), true);
+      };
+
+      for (const root of document.querySelectorAll('[data-impact-section]')) {
+        const endpoint = root.getAttribute('data-impact-endpoint');
+        if (!endpoint) {
+          renderEmpty(root);
+          continue;
+        }
+
+        fetch(endpoint, { headers: { Accept: 'application/json' } })
+          .then((response) => {
+            if (!response.ok) throw new Error(`Impact request failed with ${response.status}`);
+            return response.json();
+          })
+          .then((payload) => {
+            const summary = payload?.summary ?? {};
+            const hasAnyData = Object.values(summary).some((value) => Number(value) > 0);
+            if (!hasAnyData && !payload?.karma && !payload?.greenGoods) {
+              renderEmpty(root);
+              return;
+            }
+            renderImpact(root, payload);
+          })
+          .catch(() => renderError(root));
+      }
+    </script>
+  )}
   <script>
     import '../../scripts/mobile-menu';
   </script>

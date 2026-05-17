@@ -25,6 +25,14 @@ The repo now uses `.plans/` for execution sequencing, live decision packs, hando
   - workshop facilitation guide
 - `workshop-notes-template.md`
   - workshop capture template
+- `private-node-intake.md`
+  - contracts-first scaffold for user-submitted map nodes, private email handling, and CMS/admin options
+- `private-map-node-schema.sql`
+  - Postgres table/view contract for private submissions and approved public map projections
+- `impact-data-integration.md`
+  - chapter-page impact source bindings, KarmaGAP/Green Goods read model, server cache contract, and public payload privacy rules
+- `fly-postgres-hosting.md`
+  - Fly Managed Postgres hosting model, access boundaries, connection flow, and migration path
 - `prompts/`
   - synthesis and repo-refinement prompts
 
@@ -32,9 +40,13 @@ The repo now uses `.plans/` for execution sequencing, live decision packs, hando
 
 - `.plans/active/v2-steward-decision-pack/`
   - tracks steward decisions for homepage promise, proof of activity, Greenpill Garden framing, and first featured examples
+- `.plans/active/content-private-node-scaffold/`
+  - tracks public content expansion, private map-node intake contracts, approved public projections, and CMS/admin follow-up
 
 ## Backlog Plan Hubs
 
+- `.plans/backlog/chapter-impact-data-integration/`
+  - tracks chapter-page impact source bindings, server-cache implementation, and UI follow-up
 - `.plans/backlog/knowledge-commons-graph-explorer/`
   - tracks the deferred graph as a future source-aware, reviewed, stewarded knowledge commons artifact
 
@@ -44,6 +56,10 @@ Use `node scripts/plan-hub.mjs validate` after editing active or backlog plan hu
 
 - public site on Vercel
 - workspace frontend on Vercel
-- API, auth, realtime, and Postgres on Fly
+- agent, auth, realtime, and Postgres on Fly
+- Fly Managed Postgres for the production database
 - Tigris for uploads and media
 - Keystatic as canonical public content
+- shared contracts in `packages/shared`
+- agent service contracts in `packages/agent`
+- workspace boundary scaffold in `packages/workspace`
