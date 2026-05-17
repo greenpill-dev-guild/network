@@ -16,8 +16,8 @@ The main gap is not framework choice. It is missing route depth, content model b
 
 | Surface | Hostname | Platform | Responsibility |
 | --- | --- | --- | --- |
-| Public site | `greenpill.network` | Vercel | marketing, onboarding, chapters, guilds, stories, and library |
-| Workspace frontend | `app.greenpill.network` | Vercel | authenticated React app for member operations |
+| Public site | `greenpill.network` | GitHub Pages currently; Vercel optional later | marketing, onboarding, chapters, guilds, stories, and library |
+| Workspace frontend | `app.greenpill.network` | TBD; Vercel candidate | authenticated React app for member operations |
 | Agent service | `agent.greenpill.network` | Fly | deterministic routes, auth/session, cache jobs, publishing helpers, and future interactive agent workflows |
 | Realtime | `realtime.greenpill.network` | Fly | Yjs/Hocuspocus collaboration |
 | Assets | `assets.greenpill.network` | Tigris-backed delivery | uploads, media, exports |
@@ -141,7 +141,7 @@ The admin layer remains undecided. Directus is the first candidate to evaluate, 
 
 ## Infrastructure defaults
 
-- `Vercel + Fly` is the chosen stack
+- current public site deployment stays on GitHub Pages while Fly hosts backend-class services
 - `Fly Managed Postgres` is the production database default
 - `Tigris` is the default object storage provider
 - launch with `IAD` primary and `FRA` secondary
@@ -151,7 +151,7 @@ The admin layer remains undecided. Directus is the first candidate to evaluate, 
 
 Use Fly.io Managed Postgres for production. The older unmanaged Fly Postgres app path is not the default production choice because Fly now points production users toward Managed Postgres and does not provide support or guidance for unmanaged Postgres.
 
-`agent.greenpill.network` should receive `DATABASE_URL` as a Fly app secret from `fly mpg attach`. The Vercel public site must never receive database credentials. Private admin tools can attach to the same Managed Postgres cluster with restricted roles after the admin layer is chosen.
+`agent.greenpill.network` should receive `DATABASE_URL` as a Fly app secret from `fly mpg attach`. The public website deploy must never receive database credentials. Private admin tools can attach to the same Managed Postgres cluster with restricted roles after the admin layer is chosen.
 
 The first cluster should live in `iad` with schemas for `intake`, `impact`, future `workspace`, and future `audit` data. See `docs/v2/fly-postgres-hosting.md` for the deployment and connection model.
 
@@ -159,7 +159,7 @@ The first cluster should live in `iad` with schemas for `intake`, `impact`, futu
 
 - keep Astro and Keystatic as the public foundation unless later scope proves they block required features
 - keep the public site anonymous by default and start auth only inside the workspace
-- treat the workspace as an adjacent package-hosted React app on Vercel backed by Fly-hosted services
+- treat the workspace as an adjacent package-hosted app backed by Fly-hosted services; choose the frontend host when workspace implementation starts
 - favor internal public routes over raw external CTAs
 - keep the existing design language and extend it instead of rebranding
 - defer the Knowledge Commons Graph Explorer until it is source-aware, reviewed, stewarded, and safe to publish

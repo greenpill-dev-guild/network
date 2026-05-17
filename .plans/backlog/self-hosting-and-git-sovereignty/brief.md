@@ -24,5 +24,5 @@ Produce a decision-ready roadmap that:
 ## Non-Goals
 
 - immediate migration of the public website to home-hosted production
-- immediate replacement of Vercel, Fly, Tigris, or other managed services across the stack
+- immediate replacement of GitHub Pages, future Vercel candidates, Fly, Tigris, or other managed services across the stack
 - premature planning of self-hosted auth, Postgres, realtime, or object storage without exit criteria

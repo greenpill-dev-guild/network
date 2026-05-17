@@ -54,8 +54,8 @@ Use `node scripts/plan-hub.mjs validate` after editing active or backlog plan hu
 
 ## Current Defaults
 
-- public site on Vercel
-- workspace frontend on Vercel
+- public site currently on GitHub Pages
+- workspace frontend deployment TBD; Vercel remains a candidate
 - agent, auth, realtime, and Postgres on Fly
 - Fly Managed Postgres for the production database
 - Tigris for uploads and media

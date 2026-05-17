@@ -58,7 +58,7 @@ The agent package owns private runtime concerns. `/health` is process health, `/
 
 - The current public site can remain on GitHub Pages. If the project later migrates to Vercel, use repo root, `bun run build:website`, and `packages/website/dist`.
 - Fly deploys should run from the repo root with `fly deploy --config packages/agent/fly.toml`.
-- `DATABASE_URL` belongs only on private Fly services, starting with the agent app. Do not expose database credentials to Vercel, Keystatic content, generated JSON, or browser bundles.
+- `DATABASE_URL` belongs only on private Fly services, starting with the agent app. Do not expose database credentials to the public website deploy, Keystatic content, generated JSON, browser bundles, or any future Vercel project.
 
 ## Privacy Boundary
 

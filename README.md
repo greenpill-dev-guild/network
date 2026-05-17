@@ -75,7 +75,7 @@ fly deploy --config packages/agent/fly.toml
 
 The agent Dockerfile is `packages/agent/Dockerfile`. The production database direction is Fly Managed Postgres attached to the Fly agent app so `DATABASE_URL` is available only as a private Fly secret.
 
-Do not expose `DATABASE_URL` or direct database credentials to Vercel, Keystatic content, generated JSON, or browser bundles.
+Do not expose `DATABASE_URL` or direct database credentials to the public website deploy, Keystatic content, generated JSON, browser bundles, or any future Vercel project.
 
 ## Validation
 

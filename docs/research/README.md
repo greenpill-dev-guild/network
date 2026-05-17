@@ -8,7 +8,7 @@ Current adopted default:
 
 - The canonical V2 architecture decision now lives in `docs/v2`.
 - Older references in this research pack to a public `/workspace` route are exploratory and no longer the active default.
-- The active stack direction is `Vercel + Fly` with `app.greenpill.network` as the workspace entrypoint.
+- The current public site remains on GitHub Pages; Fly is the backend direction, and Vercel remains a candidate for the future workspace frontend or a later public-site migration.
 
 What is in here:
 

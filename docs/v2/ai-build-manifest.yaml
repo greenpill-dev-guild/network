@@ -42,8 +42,8 @@ domains:
   workspace_entrypoint: https://app.greenpill.network/login
 
 hosting:
-  public_site: vercel
-  workspace_frontend: vercel
+  public_site: github_pages
+  workspace_frontend: vercel_candidate
   backend: fly
   database: fly_managed_postgres
   object_storage: tigris
@@ -88,7 +88,7 @@ principles:
   - Keep the existing design language and extend it instead of rebranding.
   - Defer the Knowledge Commons Graph Explorer until source lineage, maturity states, relationship grammar, public-use boundaries, and stewardship are ready.
   - Keep the public site anonymous and start auth only inside the workspace app.
-  - Treat the workspace as an adjacent React app on Vercel backed by Fly services.
+  - Treat the workspace as an adjacent package-hosted app backed by Fly services; choose the frontend host when workspace implementation starts.
   - Keep public content canonical in Keystatic and publish workspace content manually first.
   - Keep submitted node emails, raw notes, review notes, spam metadata, IP addresses, and rate-limit keys out of public content and map payloads.
   - Let visitors see their own pending node locally, but publish submitted nodes to everyone only after steward approval.

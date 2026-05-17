@@ -104,7 +104,7 @@ Create the first real Greenpill workspace application and define the boundary be
 ### In scope
 
 - `app.greenpill.network` as the workspace hostname
-- workspace frontend on Vercel
+- workspace frontend deployment target TBD; Vercel remains a candidate
 - Fly-backed agent, auth/session, and realtime collaboration services
 - Privy-first auth with email, social, passkey, and wallet
 - collaborative docs and structured databases as the first workspace primitives

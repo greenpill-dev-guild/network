@@ -27,7 +27,7 @@ Define a hybrid-first sovereignty roadmap for the Greenpill website and adjacent
 ### Phase 3: Future app and backend boundary
 
 - preserve the current managed-default posture for workspace and backend-class services
-- keep the current Vercel and Fly style split as the baseline until there is a concrete reason to replace it
+- keep the current managed public-site and Fly backend split as the baseline until there is a concrete reason to replace it
 - define explicit exit criteria before planning self-hosted auth, Postgres, realtime, or object storage
 
 ## Decision Defaults

@@ -7,7 +7,7 @@ Greenpill V2 should use Fly.io Managed Postgres for production operational data.
 - Use Fly.io Managed Postgres as the production Postgres service.
 - Do not use the older unmanaged Fly Postgres app path for production unless there is a specific short-lived development reason.
 - Keep `DATABASE_URL` only on Fly-hosted private services such as `agent.greenpill.network` and any future private admin service.
-- Never expose database credentials to the Vercel public site, Keystatic content, generated JSON, or browser bundles.
+- Never expose database credentials to the public website deploy, Keystatic content, generated JSON, browser bundles, or any future Vercel project.
 
 ## Why Managed Postgres
 
@@ -19,7 +19,7 @@ The unmanaged Fly Postgres docs now explicitly say Fly is not able to provide su
 
 | Surface | Host | Database Access |
 | --- | --- | --- |
-| Public site | Vercel, `greenpill.network` | No direct Postgres access |
+| Public site | GitHub Pages, `greenpill.network` | No direct Postgres access |
 | Agent service | Fly, `agent.greenpill.network` | `DATABASE_URL` secret from Fly Managed Postgres |
 | Admin/CMS candidate | Fly or workspace-only private app | Restricted Postgres role, not public-site credentials |
 | Local development | Developer machine | `fly mpg proxy` or `fly mpg connect` |

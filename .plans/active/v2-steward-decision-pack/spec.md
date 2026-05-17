@@ -27,7 +27,7 @@ Resolve the open steward-facing content and narrative choices that affect V2 hom
 - `.plans/` carries execution sequencing, readiness, handoffs, and follow-up truth.
 - This repo starts with manual plan updates plus validation, not automation claiming.
 - Keep `status.json` taxonomy current enough for future filtering and dependency checks.
-- Do not reopen the Vercel plus Fly architecture, Privy-first auth posture, workspace boundary, or Keystatic public-content default from this decision pack.
+- Do not reopen the current GitHub Pages public deploy, Fly backend direction, Privy-first auth posture, workspace boundary, or Keystatic public-content default from this decision pack.
 - The brief should stay short enough for stewards to read before answering the polls.
 
 ## Decision Areas

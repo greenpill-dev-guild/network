@@ -42,8 +42,8 @@ Greenpill V2 turns `greenpill.network` from a link hub into a public knowledge c
 
 ### Platform defaults
 
-- `greenpill.network` on `Vercel` for the public Astro site
-- `app.greenpill.network` on `Vercel` for the workspace frontend
+- `greenpill.network` currently on `GitHub Pages` for the public Astro site; Vercel remains a later option
+- `app.greenpill.network` deployment target TBD for the future workspace frontend; Vercel remains a candidate
 - `agent.greenpill.network` and `realtime.greenpill.network` on `Fly`
 - `Fly Managed Postgres` as the default production database
 - `Tigris` as the default object storage provider
