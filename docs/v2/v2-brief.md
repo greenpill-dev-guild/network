@@ -48,7 +48,7 @@ Greenpill V2 turns `greenpill.network` from a link hub into a public knowledge c
 - `Fly Managed Postgres` as the default production database
 - `Tigris` as the default object storage provider
 - launch regions: `IAD` primary, `FRA` secondary
-- repo posture: explicit monorepo `apps/` + `packages/`
+- repo posture: explicit `packages/*` monorepo
 
 ### Auth defaults
 

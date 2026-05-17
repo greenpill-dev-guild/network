@@ -29,9 +29,9 @@
     "tracks": ["content", "platform"],
     "work_types": ["implementation", "contracts", "decision-pack"],
     "surfaces": [
-      "src/content",
-      "keystatic.config.ts",
-      "src/pages/locations.json.ts",
+      "packages/website/src/content",
+      "packages/website/keystatic.config.ts",
+      "packages/website/src/pages/locations.json.ts",
       "packages/shared/src",
       "docs/v2",
       ".plans/active/content-private-node-scaffold"

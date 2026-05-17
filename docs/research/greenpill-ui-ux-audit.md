@@ -26,7 +26,7 @@ The network says: "We are a global coordination network of chapters, guilds, bui
 
 That gap is the single biggest UX problem. Every other issue flows from it.
 
-**Evidence:** The page flow in `src/pages/index.astro` is Hero -> ChapterMap -> BookSection -> PodcastSection -> ParticipateSection -> ExploreSection -> Footer. Books and podcast get two full-screen sections. Guilds, pods, projects, builders, stories, and programs get zero sections.
+**Evidence:** The page flow in `packages/website/src/pages/index.astro` is Hero -> ChapterMap -> BookSection -> PodcastSection -> ParticipateSection -> ExploreSection -> Footer. Books and podcast get two full-screen sections. Guilds, pods, projects, builders, stories, and programs get zero sections.
 
 ### 2. The site is a single page with no information architecture
 
@@ -40,35 +40,33 @@ This means:
 
 ### 3. The participation model is a dead-end link list
 
-The ParticipateSection (`src/components/ParticipateSection.astro`) uses a Beginner / Intermediate / Advanced ladder. This was fine for a book-centric era. It is now a wall of green arrow links pointing to external services, many of them Charmverse URLs about to break.
+The ParticipateSection (`packages/website/src/components/ParticipateSection.astro`) uses a Beginner / Intermediate / Advanced ladder. This was fine for a book-centric era. It is now a wall of green arrow links pointing to external services, many of them Charmverse URLs about to break.
 
 The section communicates "here are things you could click" instead of "here is how you belong to this network."
 
 ### 4. The Explore section is mislabeled and redundant
 
-The ExploreSection (`src/components/ExploreSection.astro`) is not exploration. It is a social link bar (Discord, Charmverse, Twitter, Telegram) with large inline SVGs. The name "Explore" is also used in the nav, creating confusion with the actual Graph Explorer page.
+The ExploreSection (`packages/website/src/components/ExploreSection.astro`) is not exploration. It is a social link bar (Discord, Charmverse, Twitter, Telegram) with large inline SVGs. The name "Explore" is also used in the nav, creating confusion with the actual Graph Explorer page.
 
 ### 5. Charmverse links are embedded throughout and about to break
 
 Hard Charmverse links appear in:
 - `ParticipateSection.astro` (beginner onboarding, guild entry)
 - `ExploreSection.astro` (Charmverse workspace link with invite code)
-- `src/content/social-links.json` (charmverse and charmverseInvite fields)
+- `packages/website/src/content/social-links.json` (charmverse and charmverseInvite fields)
 - Several chapter JSON files may link to Charmverse spaces
 
 These are P0 migration targets. Every one needs a website-native destination before Charmverse goes dark.
 
 ### 6. The chapter map is a pin map without stories
 
-The ChapterMap (`src/components/ChapterMap.astro`) is a canvas with clickable dots. Each dot links out to an external URL (often a Telegram or Charmverse page). There are no chapter profiles, no stories, no activity signals, no steward names.
+The ChapterMap (`packages/website/src/components/ChapterMap.astro`) is a canvas with clickable dots. Each dot links out to an external URL (often a Telegram or Charmverse page). There are no chapter profiles, no stories, no activity signals, no steward names.
 
 The map is technically functional but narratively empty. It says "we exist in these places" without saying what is happening there.
 
-### 7. The explorer is the most forward-looking piece and should be elevated
+### 7. The graph data is forward-looking but no longer has a public explorer
 
-The Graph Explorer (`src/components/GraphExplorer.astro`, `src/styles/explorer.css`) is well-designed: glass-morphism panels, clear legend, responsive layout, search, inspector. It is the best proof that the site can present network relationships visually.
-
-But it is buried behind a button on the homepage. It should be a first-class navigation destination and the visual backbone of the network story.
+The checked-in graph research data in `data/greenpill-graph/` is still useful, but the public Graph Explorer implementation has been removed from the current website package and deferred into `.plans/backlog/knowledge-commons-graph-explorer/`. Future explorer work should start from that plan instead of assuming a live route exists.
 
 ### 8. The design language is good and should be extended, not replaced
 
@@ -1414,19 +1412,17 @@ Lean into the editorial quality. Larger typography, more whitespace within glass
 
 | File | Role in audit |
 | --- | --- |
-| `src/pages/index.astro` | Current homepage structure and section order |
-| `src/components/Hero.astro` | Hero section: tagline and image sequence |
-| `src/components/ChapterMap.astro` | Canvas-based chapter map with external links |
-| `src/components/BookSection.astro` | Book library grid with translations |
-| `src/components/PodcastSection.astro` | Podcast section with CTAs |
-| `src/components/ParticipateSection.astro` | Beginner/Intermediate/Advanced link ladder; multiple Charmverse links |
-| `src/components/ExploreSection.astro` | Social links section (Discord, Charmverse, Twitter, Telegram) |
-| `src/components/GraphExplorer.astro` | Graph explorer: glass panels, search, inspector |
-| `src/components/Nav.astro` | Navigation: 4 anchor links, mobile hamburger |
-| `src/components/Footer.astro` | Supermodular attribution only |
-| `src/styles/global.css` | Brand colors, type, button styles, modal |
-| `src/styles/explorer.css` | Explorer-specific glass-morphism design system |
-| `keystatic.config.ts` | Content model: chapters, books, podcast, social links |
+| `packages/website/src/pages/index.astro` | Current homepage structure and section order |
+| `packages/website/src/components/Hero.astro` | Hero section: tagline and image sequence |
+| `packages/website/src/components/ChapterMap.astro` | Canvas-based chapter map with external links |
+| `packages/website/src/components/BookSection.astro` | Book library grid with translations |
+| `packages/website/src/components/PodcastSection.astro` | Podcast section with CTAs |
+| `packages/website/src/components/ParticipateSection.astro` | Beginner/Intermediate/Advanced link ladder; multiple Charmverse links |
+| `packages/website/src/components/ExploreSection.astro` | Social links section (Discord, Charmverse, Twitter, Telegram) |
+| `packages/website/src/components/Nav.astro` | Navigation: 4 anchor links, mobile hamburger |
+| `packages/website/src/components/Footer.astro` | Supermodular attribution only |
+| `packages/website/src/styles/global.css` | Brand colors, type, button styles, modal |
+| `packages/website/keystatic.config.ts` | Content model: chapters, books, podcast, social links |
 | `docs/research/greenpill-current-state.md` | Network research: what Greenpill actually is now |
 | `docs/research/greenpill-website-direction.md` | IA and audience strategy |
 | `docs/research/greenpill-knowledge-map.md` | Network relationship model |

@@ -14,7 +14,7 @@ This contract keeps `greenpill.network` anonymous and public by default while al
 - `themes` is the shared public taxonomy for books, chapters, projects, stories, people/stewards, and approved submitted nodes.
 - `people` stores reusable public steward profiles only: display name, role, avatar, bio, public links, and themes.
 - `books` can now carry optional `sections`, `themeSlugs`, `relatedStorySlugs`, and `relatedProjectSlugs` while preserving existing PDFs and translations.
-- Chapter map data is generated from the `chapters` collection through `/locations.json`; `public/locations.json` is no longer a hand-maintained source of truth.
+- Chapter map data is generated from the `chapters` collection through `/locations.json`; a checked-in public `locations.json` file is no longer a hand-maintained source of truth.
 
 ## Private Intake Data
 

@@ -1,4 +1,4 @@
-app = "greenpill-network-agent"
+app = "network-agent"
 primary_region = "iad"
 
 [build]

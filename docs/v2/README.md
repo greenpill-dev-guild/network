@@ -60,6 +60,7 @@ Use `node scripts/plan-hub.mjs validate` after editing active or backlog plan hu
 - Fly Managed Postgres for the production database
 - Tigris for uploads and media
 - Keystatic as canonical public content
+- public website package in `packages/website`
 - shared contracts in `packages/shared`
 - agent service contracts in `packages/agent`
 - workspace boundary scaffold in `packages/workspace`

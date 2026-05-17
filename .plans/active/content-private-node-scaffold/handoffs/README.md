@@ -6,10 +6,10 @@ Implemented the contracts-first scaffold for public content and private node int
 
 Changed surfaces:
 
-- `src/content/config.ts`
-- `keystatic.config.ts`
-- `src/pages/locations.json.ts`
-- `src/scripts/map.ts`
+- `packages/website/src/content/config.ts`
+- `packages/website/keystatic.config.ts`
+- `packages/website/src/pages/locations.json.ts`
+- `packages/website/src/scripts/map.ts`
 - `packages/shared/src/map-nodes.js`
 - `packages/agent/src/app.js`
 - `packages/agent/src/db.js`

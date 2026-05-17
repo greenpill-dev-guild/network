@@ -1,7 +1,8 @@
 {
-  "name": "greenpill_v2",
+  "name": "@greenpill/network",
   "version": "1.0.0",
-  "description": "Greenpill Network public website — Astro + Keystatic",
+  "private": true,
+  "description": "Greenpill Network monorepo",
   "type": "module",
   "packageManager": "bun@1.3.10",
   "workspaces": [
@@ -11,12 +12,15 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "astro dev",
+    "dev": "bun run dev:website",
+    "dev:website": "bun run --cwd packages/website dev",
     "dev:agent": "bun run --cwd packages/agent dev",
-    "build": "astro build",
-    "preview": "astro preview",
+    "build": "bun run build:website",
+    "build:website": "bun run --cwd packages/website build",
+    "preview": "bun run preview:website",
+    "preview:website": "bun run --cwd packages/website preview",
     "start:agent": "bun run --cwd packages/agent start",
-    "astro": "astro",
+    "astro": "bun run --cwd packages/website astro",
     "db:local:up": "bun run --cwd packages/agent db:local:up",
     "db:local:down": "bun run --cwd packages/agent db:local:down",
     "db:migrate": "node --env-file-if-exists=.env.local scripts/agent-db.migrate.mjs",
@@ -31,20 +35,6 @@
   "license": "ISC",
   "devDependencies": {
     "@greenpill/network-agent": "workspace:*",
-    "autoprefixer": "^10.4.27",
-    "eslint": "^8.42.0",
-    "postcss": "^8.5.8",
-    "prettier": "^2.8.8",
-    "tailwindcss": "^3.4.19"
-  },
-  "dependencies": {
-    "@greenpill/network-shared": "workspace:*",
-    "@astrojs/tailwind": "^5.1.5",
-    "@keystatic/astro": "^5.0.6",
-    "@keystatic/core": "^0.5.48",
-    "astro": "^5.18.1",
-    "gsap": "^3.14.2",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "@greenpill/network-shared": "workspace:*"
   }
 }

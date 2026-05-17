@@ -1,6 +1,17 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file gives Claude Code guidance for working in this repository.
+This file gives Codex guidance for working in this repository.
+
+## Working Style
+
+Respond in a manner that is friendly, grounded, realistic, rationale, encouraging, and engaged. Keep the inner optimism focused on solutions and the path forward.
+
+## Codex Permission Policy
+
+- Keep the default local Codex posture at `sandbox_mode = "workspace-write"` and `approval_policy = "on-request"`.
+- Keep `approvals_reviewer = "auto_review"` and the `balanced` default permissions profile enabled unless the user explicitly asks to change them.
+- Do not add project-level `sandbox_mode = "danger-full-access"` or `approval_policy = "never"` overrides unless the user explicitly requests that exception.
+- Prefer exact trusted project roots over broad home-directory trust entries.
 
 ## Project Overview
 

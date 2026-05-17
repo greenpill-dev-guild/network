@@ -4,7 +4,7 @@
 
 ## Why This Exists
 
-`network-website` needed a repo-local execution-truth surface for later follow-up work without overloading `docs/v2/`, which should stay focused on product and architecture direction.
+`network` needed a repo-local execution-truth surface for later follow-up work without overloading `docs/v2/`, which should stay focused on product and architecture direction.
 
 This hub defines the first-pass planning contract for the repo:
 

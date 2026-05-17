@@ -14,5 +14,5 @@ serve({
   hostname,
   port,
 }, (info) => {
-  console.log(`greenpill-network-agent listening on http://${info.address}:${info.port}`);
+  console.log(`network-agent listening on http://${info.address}:${info.port}`);
 });

@@ -76,9 +76,9 @@ bun run dev:agent
 Production Fly path:
 
 ```sh
-fly apps create greenpill-network-agent
-fly mpg create --name greenpill-network-prod --region iad --plan basic
-fly mpg attach <clusterID> -a greenpill-network-agent
+fly apps create network-agent
+fly mpg create --name greenpill-prod --region iad --plan basic
+fly mpg attach <clusterID> -a network-agent
 fly deploy --config packages/agent/fly.toml
 ```
 

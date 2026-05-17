@@ -11,7 +11,7 @@ export function createAgentApp({ checkDatabase = checkDatabaseConnection } = {})
 
   app.get('/health', (context) => context.json({
     ok: true,
-    service: 'greenpill-network-agent',
+    service: 'network-agent',
   }));
 
   app.get('/ready', async (context) => {
@@ -20,7 +20,7 @@ export function createAgentApp({ checkDatabase = checkDatabaseConnection } = {})
 
     return context.json({
       ok,
-      service: 'greenpill-network-agent',
+      service: 'network-agent',
       database,
     }, ok ? 200 : 503);
   });

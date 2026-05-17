@@ -26,20 +26,13 @@ The main gap is not framework choice. It is missing route depth, content model b
 
 The default repo posture is an explicit package workspace using `packages/*`, matching the sibling Greenpill repos.
 
-Recommended shape:
+Current package shape:
 
-- `packages/public` for the public website
-- `packages/workspace` for the workspace frontend
-- `packages/agent` for the Fly-hosted agent/cache service
-- shared packages for UI, config, auth helpers, and shared types
-
-Current incremental shape:
-
-- the Astro public site still lives at the repo root to avoid a disruptive move during the content scaffold
-- `packages/shared` owns reusable public/private-boundary contracts that must be shared by the future public app, workspace app, and agent service
-- `packages/agent` reserves the Fly agent/cache service boundary with a Hono app scaffold, route constants, and privacy contracts, but no deployed service yet
-- `packages/workspace` reserves the authenticated workspace boundary, but no workspace UI yet
-- future `packages/public`, `packages/workspace`, and `packages/agent` work should depend on shared packages instead of re-creating contracts inside each package
+- `packages/website` owns the public Astro + Keystatic website for `greenpill.network`.
+- `packages/workspace` reserves the authenticated workspace boundary, but no workspace UI yet.
+- `packages/agent` owns the Fly-hosted agent/cache service scaffold.
+- `packages/shared` owns reusable public/private-boundary contracts that must be shared by the website, workspace app, and agent service.
+- future package work should depend on shared packages instead of re-creating contracts inside each package
 
 ## Public site architecture
 
@@ -85,7 +78,7 @@ New public entities to support:
 
 ### Public map data
 
-Chapter map data is generated from the `chapters` collection through `/locations.json`. `public/locations.json` is no longer a hand-maintained content source. Approved user-submitted nodes should enter the public map only through a private-store projection that exposes safe public fields.
+Chapter map data is generated from the `chapters` collection through `/locations.json`. a checked-in public `locations.json` file is no longer a hand-maintained content source. Approved user-submitted nodes should enter the public map only through a private-store projection that exposes safe public fields.
 
 ### Chapter impact data
 
@@ -177,5 +170,5 @@ The first cluster should live in `iad` with schemas for `intake`, `impact`, futu
 - current content schema only models books and chapters
 - the homepage and chapter map still point to external systems for important flows
 - Keystatic is still in local-file mode in the current repo
-- the current repo only partially represents the future package split: `packages/shared`, `packages/agent`, and `packages/workspace` exist, but the public Astro app has not yet moved under `packages/public`
+- the repo now uses a packages-first split for `packages/website`, `packages/shared`, `packages/agent`, and the scaffolded `packages/workspace` boundary
 - non-public graph research exists in `data/greenpill-graph/`, but the public explorer has been removed pending a knowledge commons plan hub

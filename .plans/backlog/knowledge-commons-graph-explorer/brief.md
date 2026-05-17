@@ -22,6 +22,6 @@ The future explorer should help people understand:
 ## Non-Goals
 
 - Do not ship a public explorer in the current website release.
-- Do not serve graph JSON from `public/data`.
+- Do not serve graph JSON from `packages/website/public/data`.
 - Do not adopt a graph database before relationship grammar and stewardship capacity are clear.
 - Do not publish people maps, indigenous knowledge, local chapter details, or relationship claims without review and public-use boundaries.

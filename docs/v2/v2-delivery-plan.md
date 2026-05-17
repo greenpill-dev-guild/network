@@ -42,9 +42,9 @@ Ship the first public-facing version of V2 that fixes the most visible broken de
 ### Acceptance criteria
 
 - no public Charmverse CTA remains in:
-  - `src/components/ParticipateSection.astro`
-  - `src/components/ExploreSection.astro`
-  - `src/content/social-links.json`
+  - `packages/website/src/components/ParticipateSection.astro`
+  - `packages/website/src/components/ExploreSection.astro`
+  - `packages/website/src/content/social-links.json`
 - homepage clearly routes to `/join`, `/chapters`, `/guilds`, and `/learn/onboarding`
 - `/join` explains pathways instead of acting as a generic dump of external links
 - `/guilds` exists as an internal destination
@@ -143,13 +143,13 @@ Create the first real Greenpill workspace application and define the boundary be
 
 | Surface | Source | Current destination | Intended replacement | Phase | Notes |
 | --- | --- | --- | --- | --- | --- |
-| Taking the Greenpill onboarding | `src/components/ParticipateSection.astro` | `https://app.charmverse.io/greenpill-network/taking-the-greenpill-4871995012783201` | `/learn/onboarding` | P1 | Replace with guided onboarding page and migration note if needed |
-| Charmverse workspace CTA | `src/components/ParticipateSection.astro` | `https://app.charmverse.io/greenpill-network/` | `https://app.greenpill.network/login` | P3 | Member-operation CTA should go directly to workspace login instead of an in-site route |
-| Guild directory CTA | `src/components/ParticipateSection.astro` | `https://app.charmverse.io/greenpill-network/guilds-29059086676991` | `/guilds` | P1 | Guild index page replaces the single external guild link |
-| Charmverse invite CTA | `src/components/ExploreSection.astro` | `https://app.charmverse.io/invite/5e5ee6` | `/join` | P1 | This should become a public routing page, not a workspace dependency |
-| Social singleton Charmverse links | `src/content/social-links.json` | workspace and invite URLs | `/join` and `https://app.greenpill.network/login` | P1 / P3 | Use `/join` for public orientation and workspace login for member operations |
-| Chapter map links | `src/pages/locations.json.ts` + `src/content/chapters/*.json` | chapter-specific Charmverse pages | `/chapters/[slug]` | P2 | Generate public map data from chapter content and replace external map links with internal chapter detail routes |
-| Chapter content links | `src/content/chapters/*.json` | chapter-specific Charmverse pages | `/chapters/[slug]` | P2 | Chapter profiles should become the canonical destination |
+| Taking the Greenpill onboarding | `packages/website/src/components/ParticipateSection.astro` | `https://app.charmverse.io/greenpill-network/taking-the-greenpill-4871995012783201` | `/learn/onboarding` | P1 | Replace with guided onboarding page and migration note if needed |
+| Charmverse workspace CTA | `packages/website/src/components/ParticipateSection.astro` | `https://app.charmverse.io/greenpill-network/` | `https://app.greenpill.network/login` | P3 | Member-operation CTA should go directly to workspace login instead of an in-site route |
+| Guild directory CTA | `packages/website/src/components/ParticipateSection.astro` | `https://app.charmverse.io/greenpill-network/guilds-29059086676991` | `/guilds` | P1 | Guild index page replaces the single external guild link |
+| Charmverse invite CTA | `packages/website/src/components/ExploreSection.astro` | `https://app.charmverse.io/invite/5e5ee6` | `/join` | P1 | This should become a public routing page, not a workspace dependency |
+| Social singleton Charmverse links | `packages/website/src/content/social-links.json` | workspace and invite URLs | `/join` and `https://app.greenpill.network/login` | P1 / P3 | Use `/join` for public orientation and workspace login for member operations |
+| Chapter map links | `packages/website/src/pages/locations.json.ts` + `packages/website/src/content/chapters/*.json` | chapter-specific Charmverse pages | `/chapters/[slug]` | P2 | Generate public map data from chapter content and replace external map links with internal chapter detail routes |
+| Chapter content links | `packages/website/src/content/chapters/*.json` | chapter-specific Charmverse pages | `/chapters/[slug]` | P2 | Chapter profiles should become the canonical destination |
 
 ### Follow-up inventory outside the repo
 

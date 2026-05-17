@@ -32,7 +32,7 @@ Create the public-safe contracts and follow-up queue for chapter-page impact fee
 - Emails, private notes, private map-node fields, raw EAS work feedback, raw media arrays, and moderation metadata must never appear in public impact payloads.
 - Current Green Goods gardens may not have `gapProjectUID` populated, so v1 relies on curated Keystatic mappings.
 - This repo does not yet contain the deployed Fly agent service; agent/cache work remains a contract until that service exists.
-- Shared contracts live in `packages/shared` so future `packages/public`, `packages/workspace`, and `packages/agent` code can consume the same payload and privacy rules.
+- Shared contracts live in `packages/shared` so future `packages/website`, `packages/workspace`, and `packages/agent` code can consume the same payload and privacy rules.
 
 ## Open Questions
 

@@ -41,11 +41,11 @@ If Greenpill needs the fastest rescue path for docs before the custom workspace 
 
 The repo is not starting from zero. It already has several pieces that can become the transition foundation:
 
-- Astro with React and Keystatic integration in `astro.config.mjs`
-- structured public content collections for chapters and books in `src/content` and `keystatic.config.ts`
+- Astro with React and Keystatic integration in `packages/website/astro.config.mjs`
+- structured public content collections for chapters and books in `packages/website/src/content` and `packages/website/keystatic.config.ts`
 - a research pack in `docs/research`
-- a graph explorer in `src/pages/explorer.astro` and `src/components/GraphExplorer.astro`
-- a simple but usable design language in `src/styles/global.css`
+- graph research data in `data/greenpill-graph/`, with public graph-explorer implementation deferred into `.plans/backlog/knowledge-commons-graph-explorer/`
+- a simple but usable design language in `packages/website/src/styles/global.css`
 
 That means the website can credibly become:
 
@@ -62,11 +62,11 @@ The current site is still mainly a one-page public brochure with external links.
 Key repo-level gaps:
 
 - Charmverse is still the operational backend for multiple flows:
-  - beginner onboarding links in `src/components/ParticipateSection.astro`
-  - guild entry links in `src/components/ParticipateSection.astro`
-  - explore CTA links in `src/components/ExploreSection.astro`
-  - chapter links in `src/content/chapters/*.json`
-  - social links in `src/content/social-links.json`
+  - beginner onboarding links in `packages/website/src/components/ParticipateSection.astro`
+  - guild entry links in `packages/website/src/components/ParticipateSection.astro`
+  - explore CTA links in `packages/website/src/components/ExploreSection.astro`
+  - chapter links in `packages/website/src/content/chapters/*.json`
+  - social links in `packages/website/src/content/social-links.json`
 - there is no member auth layer
 - there is no wallet session layer
 - there is no token/NFT gating layer

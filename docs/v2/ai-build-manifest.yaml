@@ -2,7 +2,7 @@ version: 1
 status: locked-defaults
 
 repo:
-  name: greenpill_v2
+  name: @greenpill/network
   framework: Astro 5
   monorepo_topology: apps-and-packages
   public_content_system: Keystatic local JSON
@@ -66,7 +66,7 @@ auth:
 
 content:
   public_content_canonical: keystatic
-  public_map_source: src/content/chapters
+  public_map_source: packages/website/src/content/chapters
   private_node_intake_store: postgres
   private_node_public_projection: public_map_nodes
   private_admin_default_to_evaluate_first: directus
@@ -219,28 +219,28 @@ phase_order:
 
 migration_targets:
   - key: onboarding_charmverse
-    source: src/components/ParticipateSection.astro
+    source: packages/website/src/components/ParticipateSection.astro
     current_url: https://app.charmverse.io/greenpill-network/taking-the-greenpill-4871995012783201
     target_route: /learn/onboarding
     phase: P1
   - key: workspace_cta
-    source: src/components/ParticipateSection.astro
+    source: packages/website/src/components/ParticipateSection.astro
     current_url: https://app.charmverse.io/greenpill-network/
     target_url: https://app.greenpill.network/login
     fallback_route: /join
     phase: P3
   - key: guild_directory
-    source: src/components/ParticipateSection.astro
+    source: packages/website/src/components/ParticipateSection.astro
     current_url: https://app.charmverse.io/greenpill-network/guilds-29059086676991
     target_route: /guilds
     phase: P1
   - key: charmverse_invite
-    source: src/components/ExploreSection.astro
+    source: packages/website/src/components/ExploreSection.astro
     current_url: https://app.charmverse.io/invite/5e5ee6
     target_route: /join
     phase: P1
   - key: social_links_charmverse
-    source: src/content/social-links.json
+    source: packages/website/src/content/social-links.json
     current_fields:
       - charmverse
       - charmverseInvite
@@ -251,8 +251,8 @@ migration_targets:
     phase: P1
   - key: chapter_links
     source:
-      - src/pages/locations.json.ts
-      - src/content/chapters/*.json
+      - packages/website/src/pages/locations.json.ts
+      - packages/website/src/content/chapters/*.json
     current_url_pattern: legacy chapter content may still include https://app.charmverse.io/greenpill-network/*
     target_route_pattern: /chapters/[slug]
     phase: P2

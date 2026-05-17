@@ -11,7 +11,7 @@ const SCRIPT_PATH = join(REPO_ROOT, "scripts", "plan-hub.mjs");
 const TEMPLATE_ROOT = join(REPO_ROOT, ".plans", "_templates", "feature");
 
 function createFixture() {
-  const root = mkdtempSync(join(tmpdir(), "network-website-plan-hub-"));
+  const root = mkdtempSync(join(tmpdir(), "network-plan-hub-"));
   mkdirSync(join(root, "scripts"), { recursive: true });
   for (const planDir of [
     ".plans",

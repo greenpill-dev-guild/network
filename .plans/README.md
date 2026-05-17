@@ -1,6 +1,6 @@
 # Plan Hub
 
-`.plans/` is the repo-local planning surface for later execution work in `network-website`.
+`.plans/` is the repo-local planning surface for later execution work in `network`.
 
 `docs/v2/` remains the canonical product, information architecture, and hosting-direction surface. Use `.plans/` for execution sequencing, readiness state, handoffs, and future follow-up packs that should live beside the code.
 

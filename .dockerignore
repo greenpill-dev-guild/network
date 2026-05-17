@@ -1,8 +1,14 @@
-.astro
 .git
 .plans
-dist
 node_modules
+**/node_modules
+.astro
+**/.astro
+dist
+**/dist
+.vercel
+output
+tmp
 .env
 .env.*
 design

@@ -36,7 +36,7 @@ test('agent package exposes a Hono app with scaffolded routes', async () => {
   assert.equal(health.status, 200);
   assert.deepEqual(await health.json(), {
     ok: true,
-    service: 'greenpill-network-agent',
+    service: 'network-agent',
   });
 
   const ready = await app.request('/ready');

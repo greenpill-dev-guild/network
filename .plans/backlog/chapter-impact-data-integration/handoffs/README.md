@@ -12,8 +12,8 @@ Read first:
 - `packages/agent/src/impact.js`
 - `packages/agent/fly.toml`
 - `scripts/agent-db.migrate.mjs`
-- `src/pages/impact-sources.json.ts`
-- `src/pages/chapters/[slug].astro`
+- `packages/website/src/pages/impact-sources.json.ts`
+- `packages/website/src/pages/chapters/[slug].astro`
 
 Implemented in this repo:
 
