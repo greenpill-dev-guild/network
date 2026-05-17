@@ -7,7 +7,12 @@
   "imageHeight": 300,
   "imageStyle": "",
   "ebookLink": "/pdf/ethereum-localism.pdf",
-  "formats": [],
+  "formats": [
+    {
+      "label": "Website",
+      "link": "https://www.ethereumlocalism.xyz"
+    }
+  ],
   "translations": [],
   "group": "main",
   "sortOrder": 2
