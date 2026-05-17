@@ -44,7 +44,7 @@ The repo is not starting from zero. It already has several pieces that can becom
 - Astro with React and Keystatic integration in `packages/website/astro.config.mjs`
 - structured public content collections for chapters and books in `packages/website/src/content` and `packages/website/keystatic.config.ts`
 - research artifacts in the relevant `.plans` hubs
-- graph research data in `data/greenpill-graph/`, with public graph-explorer implementation deferred into `.plans/backlog/knowledge-commons-graph-explorer/`
+- graph research data in `.plans/backlog/knowledge-commons-graph-explorer/artifacts/greenpill-graph/`, with public graph-explorer implementation deferred into `.plans/backlog/knowledge-commons-graph-explorer/`
 - a simple but usable design language in `packages/website/src/styles/global.css`
 
 That means the website can credibly become:

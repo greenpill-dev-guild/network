@@ -171,4 +171,4 @@ The first cluster should live in `iad` with schemas for `intake`, `impact`, futu
 - the homepage and chapter map still point to external systems for important flows
 - Keystatic is still in local-file mode in the current repo
 - the repo now uses a packages-first split for `packages/website`, `packages/shared`, `packages/agent`, and the scaffolded `packages/workspace` boundary
-- non-public graph research exists in `data/greenpill-graph/`, but the public explorer has been removed pending a knowledge commons plan hub
+- non-public graph research exists in `.plans/backlog/knowledge-commons-graph-explorer/artifacts/greenpill-graph/`, but the public explorer has been removed pending a knowledge commons plan hub

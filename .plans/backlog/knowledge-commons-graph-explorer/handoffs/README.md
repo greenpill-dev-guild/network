@@ -4,12 +4,12 @@ This hub supersedes the public graph explorer implementation. The current releas
 
 ## Inputs
 
-- `data/greenpill-graph/`
+- `.plans/backlog/knowledge-commons-graph-explorer/artifacts/greenpill-graph/`
 - `.plans/backlog/knowledge-commons-graph-explorer/research/greenpill-graph-schema.md`
 - `.plans/backlog/knowledge-commons-graph-explorer/research/greenpill-podcast-deep-dive.md`
 - `.plans/backlog/knowledge-commons-graph-explorer/research/greenpill-podcast-network-overlap.md`
-- `scripts/build_greenpill_podcast_graph.py`
-- `scripts/build_greenpill_podcast_network_overlap.py`
+- `.plans/backlog/knowledge-commons-graph-explorer/artifacts/generators/build_greenpill_podcast_graph.py`
+- `.plans/backlog/knowledge-commons-graph-explorer/artifacts/generators/build_greenpill_podcast_network_overlap.py`
 - Regen Knowledge Commons Toolkit
 - Greenpill Podcast strategy compass artifact
 

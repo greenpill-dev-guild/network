@@ -9,6 +9,13 @@ Packages-first monorepo for the Greenpill Network public website, Fly-hosted age
 - `packages/shared`: reusable payload normalization and privacy-boundary contracts.
 - `packages/workspace`: placeholder for the future authenticated workspace at `app.greenpill.network`.
 
+## Repo Truth And Artifacts
+
+- `.plans/` is the durable planning, research, handoff, and design-artifact surface.
+- Runtime code, migrations, and shared contracts belong under `packages/`.
+- Root-level `data/` is intentionally unused; graph research data lives with `.plans/backlog/knowledge-commons-graph-explorer/` until that backlog work becomes product code.
+- Root `scripts/` should stay limited to active repo validation, migration, and package tooling. One-off plan generators belong beside the plan artifacts they produce.
+
 ## Requirements
 
 - Bun `1.3.10` from the checked-in `packageManager` field.

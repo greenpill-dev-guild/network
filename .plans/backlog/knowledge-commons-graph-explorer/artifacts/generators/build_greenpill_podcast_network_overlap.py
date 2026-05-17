@@ -5,7 +5,7 @@ Build a graph-friendly overlap graph between the GreenPill podcast layer and
 the current Greenpill network graph.
 
 Output:
-- data/greenpill-graph/podcast/greenpill-podcast-network-overlap.graph.json
+- artifacts/greenpill-graph/podcast/greenpill-podcast-network-overlap.graph.json
 
 This dataset is intentionally narrower than the full merged graph. It focuses
 on the question:
@@ -22,13 +22,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[1]
-MAIN_GRAPH_PATH = ROOT / "data/greenpill-graph/greenpill-network.graph.json"
-PODCAST_GRAPH_PATH = ROOT / "data/greenpill-graph/podcast/greenpill-podcast.graph.json"
-FEED_PATH = ROOT / "data/greenpill-graph/podcast/greenpill-podcast-feed.json"
-OUT_PATH = (
-    ROOT / "data/greenpill-graph/podcast/greenpill-podcast-network-overlap.graph.json"
-)
+HUB_ROOT = Path(__file__).resolve().parents[2]
+GRAPH_ROOT = HUB_ROOT / "artifacts" / "greenpill-graph"
+MAIN_GRAPH_PATH = GRAPH_ROOT / "greenpill-network.graph.json"
+PODCAST_GRAPH_PATH = GRAPH_ROOT / "podcast" / "greenpill-podcast.graph.json"
+FEED_PATH = GRAPH_ROOT / "podcast" / "greenpill-podcast-feed.json"
+OUT_PATH = GRAPH_ROOT / "podcast" / "greenpill-podcast-network-overlap.graph.json"
 
 
 SELECTED_MAIN_NODE_IDS = [

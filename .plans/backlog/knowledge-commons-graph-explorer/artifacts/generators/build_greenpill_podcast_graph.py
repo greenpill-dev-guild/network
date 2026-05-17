@@ -4,9 +4,9 @@
 Build graph-friendly podcast datasets from the GreenPill feed catalog.
 
 Outputs:
-- data/greenpill-graph/podcast/greenpill-podcast.graph.json
-- data/greenpill-graph/podcast/greenpill-podcast-entity-index.json
-- data/greenpill-graph/greenpill-network-expanded.graph.json
+- artifacts/greenpill-graph/podcast/greenpill-podcast.graph.json
+- artifacts/greenpill-graph/podcast/greenpill-podcast-entity-index.json
+- artifacts/greenpill-graph/greenpill-network-expanded.graph.json
 
 The generator is intentionally hybrid:
 - episode/theme/series layers are automated from the feed catalog
@@ -24,14 +24,13 @@ from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[1]
-MAIN_GRAPH_PATH = ROOT / "data/greenpill-graph/greenpill-network.graph.json"
-FEED_PATH = ROOT / "data/greenpill-graph/podcast/greenpill-podcast-feed.json"
-OUT_GRAPH_PATH = ROOT / "data/greenpill-graph/podcast/greenpill-podcast.graph.json"
-OUT_INDEX_PATH = (
-    ROOT / "data/greenpill-graph/podcast/greenpill-podcast-entity-index.json"
-)
-OUT_COMBINED_PATH = ROOT / "data/greenpill-graph/greenpill-network-expanded.graph.json"
+HUB_ROOT = Path(__file__).resolve().parents[2]
+GRAPH_ROOT = HUB_ROOT / "artifacts" / "greenpill-graph"
+MAIN_GRAPH_PATH = GRAPH_ROOT / "greenpill-network.graph.json"
+FEED_PATH = GRAPH_ROOT / "podcast" / "greenpill-podcast-feed.json"
+OUT_GRAPH_PATH = GRAPH_ROOT / "podcast" / "greenpill-podcast.graph.json"
+OUT_INDEX_PATH = GRAPH_ROOT / "podcast" / "greenpill-podcast-entity-index.json"
+OUT_COMBINED_PATH = GRAPH_ROOT / "greenpill-network-expanded.graph.json"
 
 
 HOSTS = {
@@ -1564,7 +1563,7 @@ def build_overlay(main_graph: dict, feed: dict) -> tuple[dict, dict, dict]:
                 "id": "src_greenpill_podcast_feed_catalog_2026",
                 "title": "GreenPill feed catalog",
                 "type": "repo_file",
-                "path": "data/greenpill-graph/podcast/greenpill-podcast-feed.json",
+                "path": ".plans/backlog/knowledge-commons-graph-explorer/artifacts/greenpill-graph/podcast/greenpill-podcast-feed.json",
                 "date": datetime.now(UTC).date().isoformat(),
                 "note": "Structured repo copy of the feed used for graph generation and theme tagging.",
             },
@@ -1572,7 +1571,7 @@ def build_overlay(main_graph: dict, feed: dict) -> tuple[dict, dict, dict]:
                 "id": "src_greenpill_podcast_graph_generator_2026",
                 "title": "GreenPill podcast graph generator",
                 "type": "repo_file",
-                "path": "scripts/build_greenpill_podcast_graph.py",
+                "path": ".plans/backlog/knowledge-commons-graph-explorer/artifacts/generators/build_greenpill_podcast_graph.py",
                 "date": datetime.now(UTC).date().isoformat(),
                 "note": "Generator that augments themes and resolves curated entities for graph use.",
             },

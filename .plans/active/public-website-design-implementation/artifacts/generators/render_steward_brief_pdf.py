@@ -15,11 +15,18 @@ try:
 except ModuleNotFoundError as exc:
     raise SystemExit(
         "Missing optional PDF rendering dependency. Install pypdf and reportlab "
-        "before running scripts/render_steward_brief_pdf.py."
+        "before running .plans/active/public-website-design-implementation/artifacts/generators/render_steward_brief_pdf.py."
     ) from exc
 
 
-ROOT = Path(__file__).resolve().parents[1]
+def find_repo_root(path: Path) -> Path:
+    for parent in (path, *path.parents):
+        if (parent / "package.json").is_file() and (parent / ".plans").is_dir():
+            return parent
+    raise SystemExit("Could not locate repo root for steward brief rendering.")
+
+
+ROOT = find_repo_root(Path(__file__).resolve())
 SOURCE = (
     ROOT
     / ".plans"

@@ -3,7 +3,7 @@
 ## Sequencing
 
 - [x] Remove the public explorer route, component, layout, script, style, served graph JSON, and runtime dependency.
-- [x] Preserve non-public graph source data in `data/greenpill-graph/`.
+- [x] Preserve non-public graph source data in `.plans/backlog/knowledge-commons-graph-explorer/artifacts/greenpill-graph/`.
 - [x] Update V2 docs and manifest so they no longer promise a public explorer route.
 - [x] Create this backlog hub for future graph explorer planning.
 - [ ] Inventory the current graph data against Resource, Concept, Option, Deployment, and Signal.

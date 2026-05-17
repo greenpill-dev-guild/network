@@ -22,4 +22,4 @@ It separates:
 
 Schema notes:
 
-- [greenpill-graph-schema.md](../../docs/research/greenpill-graph-schema.md)
+- [greenpill-graph-schema.md](../../research/greenpill-graph-schema.md)

@@ -15,8 +15,8 @@ Files in this folder:
 
 Generator:
 
-- [build_greenpill_podcast_graph.py](../../../scripts/build_greenpill_podcast_graph.py)
-- [build_greenpill_podcast_network_overlap.py](../../../scripts/build_greenpill_podcast_network_overlap.py)
+- [build_greenpill_podcast_graph.py](../../generators/build_greenpill_podcast_graph.py)
+- [build_greenpill_podcast_network_overlap.py](../../generators/build_greenpill_podcast_network_overlap.py)
 
 Notes:
 

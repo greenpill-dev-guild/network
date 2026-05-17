@@ -10,7 +10,7 @@
     "overall_status": "backlog",
     "priority": "p1",
     "created_at": "2026-05-16T04:02:59.016Z",
-    "updated_at": "2026-05-16T04:03:06.000Z"
+    "updated_at": "2026-05-17T23:55:00.000-07:00"
   },
   "links": {
     "brief": "brief.md",
@@ -26,10 +26,26 @@
   ],
   "taxonomy": {
     "initiative": "knowledge-commons",
-    "tracks": ["content", "platform", "ui"],
-    "work_types": ["planning", "research", "data-model", "implementation"],
-    "surfaces": [".plans", "data/greenpill-graph", ".plans/active/public-website-design-implementation/research"],
-    "depends_on_features": ["v2-steward-decision-pack"]
+    "tracks": [
+      "content",
+      "platform",
+      "ui"
+    ],
+    "work_types": [
+      "planning",
+      "research",
+      "data-model",
+      "implementation"
+    ],
+    "surfaces": [
+      ".plans",
+      ".plans/backlog/knowledge-commons-graph-explorer/artifacts/greenpill-graph",
+      ".plans/backlog/knowledge-commons-graph-explorer/artifacts/generators",
+      ".plans/active/public-website-design-implementation/research"
+    ],
+    "depends_on_features": [
+      "v2-steward-decision-pack"
+    ]
   },
   "lanes": {
     "ui": {
@@ -53,13 +69,19 @@
     "qa_pass_1": {
       "owner": "claude",
       "status": "blocked",
-      "depends_on": ["ui", "content", "platform"],
+      "depends_on": [
+        "ui",
+        "content",
+        "platform"
+      ],
       "handoff": "handoffs/README.md"
     },
     "qa_pass_2": {
       "owner": "codex",
       "status": "blocked",
-      "depends_on": ["qa_pass_1"],
+      "depends_on": [
+        "qa_pass_1"
+      ],
       "handoff": "handoffs/README.md"
     }
   },
@@ -77,6 +99,13 @@
       "lane": "platform",
       "status": "planned",
       "note": "Reframed the removed public explorer as a future Knowledge Commons Graph Explorer with source lineage, review state, stewardship, and public-readiness gates."
+    },
+    {
+      "timestamp": "2026-05-17T23:55:00.000-07:00",
+      "actor": "codex",
+      "lane": "platform",
+      "status": "reorganized",
+      "note": "Moved graph data and generator scripts out of root data/scripts into this backlog hub artifacts directory."
     }
   ]
 }

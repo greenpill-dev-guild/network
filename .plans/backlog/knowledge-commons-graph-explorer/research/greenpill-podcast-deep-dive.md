@@ -12,10 +12,10 @@ Supporting public source:
 
 Graph outputs produced from this research:
 
-- [podcast graph overlay](../../data/greenpill-graph/podcast/greenpill-podcast.graph.json)
-- [podcast entity index](../../data/greenpill-graph/podcast/greenpill-podcast-entity-index.json)
-- [expanded network graph](../../data/greenpill-graph/greenpill-network-expanded.graph.json)
-- [generator script](../../scripts/build_greenpill_podcast_graph.py)
+- [podcast graph overlay](../artifacts/greenpill-graph/podcast/greenpill-podcast.graph.json)
+- [podcast entity index](../artifacts/greenpill-graph/podcast/greenpill-podcast-entity-index.json)
+- [expanded network graph](../artifacts/greenpill-graph/greenpill-network-expanded.graph.json)
+- [generator script](../artifacts/generators/build_greenpill_podcast_graph.py)
 
 ## Why the podcast matters
 

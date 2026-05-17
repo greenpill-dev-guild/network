@@ -4,7 +4,7 @@
 
 - The public Astro site has no explorer route, explorer component, explorer layout, explorer script, explorer stylesheet, or served graph JSON.
 - `package.json` and `bun.lock` no longer reference the removed graph visualization dependency.
-- `data/greenpill-graph/` remains available as non-public source research data.
+- `.plans/backlog/knowledge-commons-graph-explorer/artifacts/greenpill-graph/` remains available as non-public source research data.
 - The backlog hub validates with `node scripts/plan-hub.mjs validate`.
 - The production build completes and does not generate a public explorer page.
 - Future graph work is framed around source lineage, maturity states, relationship grammar, public-use boundaries, and stewardship.

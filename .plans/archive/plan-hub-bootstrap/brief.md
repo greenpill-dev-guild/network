@@ -1,6 +1,6 @@
 # Plan Hub Bootstrap
 
-**Stage**: `backlog`
+**Stage**: `archive`
 
 ## Why This Exists
 

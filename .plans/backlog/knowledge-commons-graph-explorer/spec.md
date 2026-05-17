@@ -7,7 +7,7 @@ Design the next graph explorer as a Regen Knowledge Commons living artifact, not
 ## Current State
 
 - The public explorer route and served graph data have been removed from the Astro site.
-- Non-public graph source data remains in `data/greenpill-graph/`.
+- Non-public graph source data remains in `.plans/backlog/knowledge-commons-graph-explorer/artifacts/greenpill-graph/`.
 - Research docs and graph-generation scripts remain available as source material.
 - The attached Regen Knowledge Commons Toolkit establishes the required posture: source lineage, maturity states, review states, public-use boundaries, relationship grammar, and stewardship.
 - The podcast compass artifact proposes a BKC-aligned living artifact for Greenpill Podcast, Ma Earth, and Crypto Altruists.

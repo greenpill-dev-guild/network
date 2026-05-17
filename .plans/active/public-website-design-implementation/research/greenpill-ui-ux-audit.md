@@ -66,7 +66,7 @@ The map is technically functional but narratively empty. It says "we exist in th
 
 ### 7. The graph data is forward-looking but no longer has a public explorer
 
-The checked-in graph research data in `data/greenpill-graph/` is still useful, but the public Graph Explorer implementation has been removed from the current website package and deferred into `.plans/backlog/knowledge-commons-graph-explorer/`. Future explorer work should start from that plan instead of assuming a live route exists.
+The checked-in graph research data in `.plans/backlog/knowledge-commons-graph-explorer/artifacts/greenpill-graph/` is still useful, but the public Graph Explorer implementation has been removed from the current website package and deferred into `.plans/backlog/knowledge-commons-graph-explorer/`. Future explorer work should start from that plan instead of assuming a live route exists.
 
 ### 8. The design language is good and should be extended, not replaced
 

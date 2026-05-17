@@ -243,7 +243,7 @@
       "id": "src_greenpill_podcast_feed_catalog_2026",
       "title": "GreenPill feed catalog",
       "type": "repo_file",
-      "path": "data/greenpill-graph/podcast/greenpill-podcast-feed.json",
+      "path": ".plans/backlog/knowledge-commons-graph-explorer/artifacts/greenpill-graph/podcast/greenpill-podcast-feed.json",
       "date": "2026-03-09",
       "note": "Structured repo copy of the feed used for graph generation and theme tagging."
     },

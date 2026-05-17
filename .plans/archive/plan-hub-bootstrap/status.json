@@ -4,13 +4,13 @@
     "slug": "plan-hub-bootstrap",
     "title": "Plan Hub Bootstrap",
     "kind": "feature",
-    "stage": "backlog"
+    "stage": "archive"
   },
   "workflow": {
-    "overall_status": "backlog",
+    "overall_status": "archived",
     "priority": "p2",
     "created_at": "2026-05-15T00:00:00.000Z",
-    "updated_at": "2026-05-15T00:00:00.000Z"
+    "updated_at": "2026-05-17T23:55:00.000-07:00"
   },
   "links": {
     "brief": "brief.md",
@@ -26,9 +26,18 @@
   ],
   "taxonomy": {
     "initiative": "planning-system",
-    "tracks": ["docs", "platform"],
-    "work_types": ["implementation", "maintenance"],
-    "surfaces": [".plans", "scripts"],
+    "tracks": [
+      "docs",
+      "platform"
+    ],
+    "work_types": [
+      "implementation",
+      "maintenance"
+    ],
+    "surfaces": [
+      ".plans",
+      "scripts"
+    ],
     "depends_on_features": []
   },
   "lanes": {
@@ -53,13 +62,19 @@
     "qa_pass_1": {
       "owner": "claude",
       "status": "n/a",
-      "depends_on": ["ui", "content", "platform"],
+      "depends_on": [
+        "ui",
+        "content",
+        "platform"
+      ],
       "handoff": "handoffs/README.md"
     },
     "qa_pass_2": {
       "owner": "codex",
       "status": "n/a",
-      "depends_on": ["qa_pass_1"],
+      "depends_on": [
+        "qa_pass_1"
+      ],
       "handoff": "handoffs/README.md"
     }
   },
@@ -70,6 +85,13 @@
       "lane": "system",
       "status": "scaffolded",
       "note": "Seeded the bootstrap backlog hub alongside the initial .plans implementation."
+    },
+    {
+      "timestamp": "2026-05-17T23:55:00.000-07:00",
+      "actor": "codex",
+      "lane": "system",
+      "status": "archived",
+      "note": "Archived after the plan hub helper, templates, and validation contract were established and reused."
     }
   ]
 }
