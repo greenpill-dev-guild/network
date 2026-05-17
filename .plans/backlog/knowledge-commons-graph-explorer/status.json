@@ -20,7 +20,7 @@
   },
   "notes": [
     "status.json is authoritative for hub state.",
-    "docs/v2 remains the canonical product and architecture document surface.",
+    ".plans carries planning truth; packages carry runtime contracts.",
     "This repo uses manual plan updates plus validation in v1.",
     "The public graph explorer is removed from the website and deferred until the graph is source-aware, reviewed, stewarded, portable, and safe to publish."
   ],
@@ -28,7 +28,7 @@
     "initiative": "knowledge-commons",
     "tracks": ["content", "platform", "ui"],
     "work_types": ["planning", "research", "data-model", "implementation"],
-    "surfaces": [".plans", "data/greenpill-graph", "docs/research"],
+    "surfaces": [".plans", "data/greenpill-graph", ".plans/active/public-website-design-implementation/research"],
     "depends_on_features": ["v2-steward-decision-pack"]
   },
   "lanes": {

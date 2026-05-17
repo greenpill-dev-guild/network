@@ -14,8 +14,8 @@ Describe the relevant repo and product baseline.
 
 ## Constraints
 
-- `docs/v2/` remains the canonical product and architecture document surface.
-- `.plans/` carries execution sequencing, readiness, handoffs, and follow-up truth.
+- `.plans/` carries planning, research, execution sequencing, readiness, handoffs, and follow-up truth.
+- Runtime contracts and executable artifacts live under `packages/`.
 - This repo starts with manual plan updates plus validation, not automation claiming.
 - Keep `status.json` taxonomy current enough for future filtering and dependency checks.
 

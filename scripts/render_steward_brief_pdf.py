@@ -20,7 +20,15 @@ except ModuleNotFoundError as exc:
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "docs" / "v2" / "steward-brief-one-page.md"
+SOURCE = (
+    ROOT
+    / ".plans"
+    / "active"
+    / "public-website-design-implementation"
+    / "artifacts"
+    / "steward"
+    / "steward-brief-one-page.md"
+)
 OUTPUT = ROOT / "output" / "pdf" / "greenpill-v2-steward-brief.pdf"
 
 

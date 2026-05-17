@@ -6,14 +6,14 @@ Use this hub to run the steward decision pass for V2 narrative and featured-cont
 
 Primary steward-facing docs:
 
-- `docs/v2/steward-brief-one-page.md`
-- `docs/v2/steward-telegram-polls.md`
+- `.plans/active/public-website-design-implementation/artifacts/steward/steward-brief-one-page.md`
+- `.plans/active/public-website-design-implementation/artifacts/steward/steward-telegram-polls.md`
 
 Repo-facing source docs:
 
-- `docs/v2/v2-brief.md`
-- `docs/v2/v2-delivery-plan.md`
-- `docs/v2/ai-build-manifest.yaml`
+- `.plans/active/public-website-design-implementation/artifacts/v2/v2-brief.md`
+- `.plans/active/public-website-design-implementation/artifacts/v2/v2-delivery-plan.md`
+- `.plans/active/public-website-design-implementation/artifacts/v2/ai-build-manifest.yaml`
 
 After the polls and nomination replies come in, add a short decision summary to `reports/steward-response-summary.md` and then update the canonical docs only where the steward decisions change first-release priorities.
 

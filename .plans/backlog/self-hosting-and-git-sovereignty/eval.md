@@ -18,7 +18,7 @@ The finished decision pack should be able to answer:
 
 ## Review Bar
 
-- recommendations stay grounded in the current repo and `docs/v2/` architecture direction
+- recommendations stay grounded in the current repo and `.plans/active/public-website-design-implementation/artifacts/v2/` architecture direction
 - sovereignty benefits are separated from operational burden
 - staging proof is required before any production recommendation
 - the plan does not quietly expand into full-stack self-hosting without new evidence

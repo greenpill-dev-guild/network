@@ -6,7 +6,7 @@ Introduce a Green Goods-shaped but lighter-weight planning surface to this repo 
 
 ## Current State
 
-- `docs/v2/` already carries the current website product and architecture direction
+- short-lived website strategy, research, prompts, and generated design artifacts needed a home inside the relevant plan hub instead of a root docs tree
 - the repo did not previously have a structured `.plans/` surface
 - later follow-up work, including self-hosting and Git sovereignty planning, needed a durable home inside the repo
 
@@ -20,8 +20,8 @@ Introduce a Green Goods-shaped but lighter-weight planning surface to this repo 
 
 ## Contract Decisions
 
-- `docs/v2/` stays canonical for website and product architecture
-- `.plans/` is for execution sequencing, readiness, handoffs, and later follow-ups
+- `.plans/` stays canonical for execution sequencing, research context, readiness, handoffs, and later follow-ups
+- runtime contracts and executable artifacts stay under `packages/`
 - `status.json` is the machine-readable source of truth for hub state
 - this repo starts with manual plan updates plus validation, not automation claiming
 - the v1 helper validates root layout, templates, required hub files, lane names, lane status values, taxonomy shape, hub dependency references, and the stage-to-status contract
@@ -37,4 +37,4 @@ Introduce a Green Goods-shaped but lighter-weight planning surface to this repo 
 
 - importing Green Goods lane names that do not fit this repo, especially `contracts`
 - copying Green Goods automation prompts, branch triggers, or Linear integration
-- moving older research or `docs/v2/` material into `.plans/`
+- reintroducing root-level docs as a long-lived planning or research surface

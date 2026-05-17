@@ -1,8 +1,8 @@
 # Plan Hub
 
-`.plans/` is the repo-local planning surface for later execution work in `network`.
+`.plans/` is the repo-local planning surface and source of truth for execution work in `network`.
 
-`docs/v2/` remains the canonical product, information architecture, and hosting-direction surface. Use `.plans/` for execution sequencing, readiness state, handoffs, and future follow-up packs that should live beside the code.
+The repo no longer keeps a root `docs/` knowledge base for short-lived strategy, research, prompts, or implementation handoffs. Put evolving planning context, research evidence, artifacts, reports, and handoffs in the relevant plan hub. Put runtime contracts that code imports or executes under `packages/`.
 
 ## Layout
 
@@ -29,20 +29,9 @@ plan.todo.md
 eval.md
 status.json
 handoffs/README.md
-reports/
-artifacts/
+reports/README.md
+artifacts/README.md
 ```
-
-Required validation files:
-
-- `brief.md`
-- `spec.md`
-- `plan.todo.md`
-- `eval.md`
-- `status.json`
-- `handoffs/README.md`
-- `reports/README.md`
-- `artifacts/README.md`
 
 `status.json` is the machine-readable source of truth for hub state.
 
@@ -56,13 +45,14 @@ The Markdown files are the human-readable context:
 - `reports/`: durable review outputs and recommendation summaries
 - `artifacts/`: supporting evidence that should stay near the plan
 
-## Repo Truth and Memory
+## Repo Truth
 
-`.plans/` is the durable repo-truth surface for feature state, follow-up plans, handoffs, and evaluation context.
+`.plans/` is the durable repo-truth surface for feature state, follow-up plans, research context, handoffs, and evaluation context.
 
 - Tool-local memory and chat summaries can help an agent resume work, but they do not outrank a hub.
 - When a hub and a local note disagree, update the hub or record the blocker in the hub.
-- Do not create another repo-level memory surface unless a future plan explicitly defines freshness, ownership, and validation rules.
+- Do not create another repo-level memory or docs surface unless a future plan explicitly defines freshness, ownership, and validation rules.
+- Runtime contracts that need to be executed or imported belong in `packages/`, with plans linking to them.
 
 ## Repo-Specific Lanes
 
@@ -102,15 +92,7 @@ Use the fastest honest validation loop for the touched surface:
 - `node --test scripts/plan-hub.test.mjs` when touching the helper or templates
 - `bun run build` only when the changed work touches the runtime website
 
-The helper validates:
-
-- required root README and stage files
-- required template files
-- required hub files
-- stage and workflow status consistency
-- exact lane names and lane dependencies
-- allowed lane statuses and owners
-- basic taxonomy shape and hub dependency references
+The helper validates required root files, templates, hub files, lane contracts, lane statuses and owners, taxonomy shape, and dependency references.
 
 ## Backlog Quality Bar
 
@@ -142,4 +124,4 @@ node scripts/plan-hub.mjs validate
 
 ## Legacy Compatibility
 
-The foldered hub layout is the only supported planning surface in this repo. Do not create new flat plan files in `.plans/` or parallel planning folders unless a future bootstrap follow-up changes the contract.
+The foldered hub layout is the only supported planning surface in this repo. Do not create new flat plan files, a root docs tree, or parallel planning folders unless a future bootstrap follow-up changes the contract.

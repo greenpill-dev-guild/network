@@ -14,8 +14,8 @@ Changed surfaces:
 - `packages/agent/src/app.js`
 - `packages/agent/src/db.js`
 - `packages/agent/src/server.js`
-- `docs/v2/private-node-intake.md`
-- `docs/v2/private-map-node-schema.sql`
+- `.plans/active/content-private-node-scaffold/artifacts/private-node-intake.md`
+- `packages/agent/migrations/001_private_map_node_schema.sql`
 - `packages/agent/fly.toml`
 - `scripts/agent-db.migrate.mjs`
 - `scripts/map-node-contract.test.mjs`

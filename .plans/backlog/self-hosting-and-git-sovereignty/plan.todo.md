@@ -2,7 +2,7 @@
 
 ## Sequencing
 
-- [ ] Capture the current managed baseline from `docs/v2/` and the live repo shape
+- [ ] Capture the current managed baseline from `.plans/active/public-website-design-implementation/artifacts/v2/` and the live repo shape
 - [ ] Compare `Forgejo` and `Gitea` against the Git sovereignty requirements
 - [ ] Compare public website hosting topologies, including Cloudflare-fronted home hosting
 - [ ] Define the home-lab operational prerequisites for the Mac Mini path

@@ -9,8 +9,8 @@ Create a contracts-first foundation for richer public content and private user-s
 - The public website is a static Astro site with file-backed Keystatic content.
 - Public collections now include richer book fields, themes, reusable public people/stewards, and theme/steward references across chapters, guilds, projects, and stories.
 - `/locations.json` is generated from `packages/website/src/content/chapters/*` through `packages/website/src/pages/locations.json.ts`.
-- Private node intake is documented in `docs/v2/private-node-intake.md`.
-- The Postgres table/view contract is documented in `docs/v2/private-map-node-schema.sql`.
+- Private node intake is documented in `.plans/active/content-private-node-scaffold/artifacts/private-node-intake.md`.
+- The Postgres table/view contract is documented in `packages/agent/migrations/001_private_map_node_schema.sql`.
 - Privacy contract tests live in `scripts/map-node-contract.test.mjs`.
 
 ## Scope
@@ -23,7 +23,7 @@ Create a contracts-first foundation for richer public content and private user-s
 
 ## Constraints
 
-- `docs/v2/` remains the canonical product and architecture document surface.
+- `.plans/active/public-website-design-implementation/artifacts/v2/` remains the canonical product and architecture artifact surface.
 - `.plans/` carries execution sequencing, readiness, handoffs, and follow-up truth.
 - This repo starts with manual plan updates plus validation, not automation claiming.
 - Keep `status.json` taxonomy current enough for future filtering and dependency checks.

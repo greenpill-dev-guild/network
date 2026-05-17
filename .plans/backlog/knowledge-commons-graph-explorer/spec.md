@@ -38,7 +38,7 @@ Design the next graph explorer as a Regen Knowledge Commons living artifact, not
 
 ## Constraints
 
-- `docs/v2/` remains the canonical product and architecture document surface.
+- `.plans/active/public-website-design-implementation/artifacts/v2/` remains the canonical product and architecture artifact surface.
 - `.plans/` carries execution sequencing, readiness, handoffs, and follow-up truth.
 - Do not rebuild the public explorer until the public readiness gate is satisfied.
 - Use structured Markdown/JSON/CSV first; graph database work is later-stage.

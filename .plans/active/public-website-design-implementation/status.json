@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "feature": {
+    "slug": "public-website-design-implementation",
+    "title": "Public Website Design Implementation",
+    "kind": "feature",
+    "stage": "active"
+  },
+  "workflow": {
+    "overall_status": "active",
+    "priority": "p0",
+    "created_at": "2026-05-17T23:16:40.923Z",
+    "updated_at": "2026-05-17T23:25:00.000-07:00"
+  },
+  "links": {
+    "brief": "brief.md",
+    "spec": "spec.md",
+    "plan": "plan.todo.md",
+    "eval": "eval.md"
+  },
+  "notes": [
+    "status.json is authoritative for hub state.",
+    ".plans carries planning, research, handoffs, readiness, and evolving implementation context.",
+    "Runtime contracts that code depends on belong under packages.",
+    "This hub owns the public website design package, research inputs, and implementation sequence."
+  ],
+  "taxonomy": {
+    "initiative": "public-experience",
+    "tracks": [
+      "ui",
+      "content"
+    ],
+    "work_types": [
+      "design-implementation",
+      "content-model",
+      "docs-cleanup",
+      "visual-qa"
+    ],
+    "surfaces": [
+      "packages/website",
+      "packages/shared",
+      ".plans/active/public-website-design-implementation"
+    ],
+    "depends_on_features": [
+      "v2-steward-decision-pack"
+    ]
+  },
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "todo",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "content": {
+      "owner": "claude",
+      "status": "in_progress",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "platform": {
+      "owner": "codex",
+      "status": "ready",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "qa_pass_1": {
+      "owner": "claude",
+      "status": "blocked",
+      "depends_on": [
+        "ui",
+        "content",
+        "platform"
+      ],
+      "handoff": "handoffs/README.md"
+    },
+    "qa_pass_2": {
+      "owner": "codex",
+      "status": "blocked",
+      "depends_on": [
+        "qa_pass_1"
+      ],
+      "handoff": "handoffs/README.md"
+    }
+  },
+  "history": [
+    {
+      "timestamp": "2026-05-17T23:16:40.923Z",
+      "actor": "codex",
+      "lane": "system",
+      "status": "scaffolded",
+      "note": "Scaffolded feature hub in active"
+    },
+    {
+      "timestamp": "2026-05-17T23:25:00.000-07:00",
+      "actor": "codex",
+      "lane": "system",
+      "status": "reorganized",
+      "note": "Folded temporary docs, research, prompts, and high-fidelity design artifacts into this active hub so root docs do not become stale parallel truth."
+    }
+  ]
+}

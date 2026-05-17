@@ -7,7 +7,7 @@ Define a hybrid-first sovereignty roadmap for the Greenpill website and adjacent
 ## Current State
 
 - the current website repo is an Astro public site with file-backed content
-- the durable architecture direction in `docs/v2/` keeps the public site and workspace frontend managed, with backend-class services separated from the public site
+- the durable architecture direction in `.plans/active/public-website-design-implementation/artifacts/v2/` keeps the public site and workspace frontend managed, with backend-class services separated from the public site
 - the current sovereignty interest starts with self-hosted Git and broader feasibility questions around self-hosting the public website origin
 
 ## Scope

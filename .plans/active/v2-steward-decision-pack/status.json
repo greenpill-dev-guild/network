@@ -20,7 +20,7 @@
   },
   "notes": [
     "status.json is authoritative for hub state.",
-    "docs/v2 remains the canonical product and architecture document surface.",
+    ".plans carries planning truth; packages carry runtime contracts.",
     "This repo uses manual plan updates plus validation in v1.",
     "This hub tracks the steward decision pass for homepage narrative, proof signals, Greenpill Garden framing, and featured examples."
   ],
@@ -29,8 +29,8 @@
     "tracks": ["content", "ui"],
     "work_types": ["decision-pack", "synthesis", "content"],
     "surfaces": [
-      "docs/v2",
-      "docs/v2/prompts",
+      ".plans/active/public-website-design-implementation/artifacts/v2",
+      ".plans/active/public-website-design-implementation/artifacts/prompts",
       ".plans/active/v2-steward-decision-pack"
     ],
     "depends_on_features": []

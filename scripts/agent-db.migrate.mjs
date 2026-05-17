@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { createDatabaseClient, getDatabaseUrl } from '../packages/agent/src/db.js';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const privateMapSchemaPath = resolve(rootDir, 'docs/v2/private-map-node-schema.sql');
+const privateMapSchemaPath = resolve(rootDir, 'packages/agent/migrations/001_private_map_node_schema.sql');
 
 const chapterImpactSchema = `
 create table if not exists chapter_impact_snapshots (

@@ -1,0 +1,235 @@
+/* ──────────────────────────────────────────────────────────────────
+   Greenpill Network — colors_and_type.css
+   The single canonical token file. Drop into <head> on any HTML
+   artifact. All cards and UI kit components reference these vars.
+   ────────────────────────────────────────────────────────────────── */
+
+@import url("https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Manrope:wght@300;400;500;600;700;800&display=swap");
+
+:root {
+  /* let variable fonts pick their own optical size from the rendered size */
+  font-optical-sizing: auto;
+
+  /* ── Color: Greens (the canvas) ─────────────────────────────── */
+  --gp-green-950: #0A2D21;
+  --gp-green-900: #0F3D2E;   /* Default background — "Deep Forest" */
+  --gp-green-800: #143F30;   /* Surface */
+  --gp-green-700: #1A4D3A;   /* Card / Surface-muted — "Mid Forest" */
+  --gp-green-600: #235C46;   /* Elevated card */
+  --gp-green-500: #2A6B52;   /* Border / contour line */
+  --gp-green-400: #3F8A6C;
+  --gp-green-300: #5BA889;
+  --gp-green-200: #8DC9AE;
+  --gp-green-100: #C8E6D6;
+
+  /* ── Color: Lime (the accent) ───────────────────────────────── */
+  --gp-lime-700: #7FA61F;    /* Use on light bg */
+  --gp-lime-600: #9BC326;    /* Active state */
+  --gp-lime-500: #B8E835;    /* = primary "Greenpill Lime" */
+  --gp-lime-400: #C4F02C;    /* Hover / glow */
+  --gp-lime-300: #D4F564;
+  --gp-lime-200: #E5FA9A;
+  --gp-lime-100: #F2FCCC;
+
+  /* ── Color: Gold (display headlines) ────────────────────────── */
+  --gp-gold-600: #D4B97A;
+  --gp-gold-500: #F0DCA0;    /* = secondary "Steward Gold" */
+  --gp-gold-400: #F5D896;
+  --gp-gold-300: #FAE8C2;
+  --gp-gold-200: #FCF1D8;
+
+  /* ── Color: Off-whites ──────────────────────────────────────── */
+  --gp-off-white:       #FAF7EE;   /* Body text */
+  --gp-off-white-muted: #E8E2D4;
+  --gp-off-white-dim:   #B8B0A0;
+
+  /* ── Color: Semantic ────────────────────────────────────────── */
+  --gp-success: #B8E835;
+  --gp-warning: #F0DCA0;
+  --gp-info:    #5BA889;
+  --gp-error:   #E07856;     /* Earthy terracotta — never red-red */
+
+  /* ── Semantic role tokens (what UI code references) ─────────── */
+  --gp-bg:           var(--gp-green-900);
+  --gp-fg:           var(--gp-off-white);
+  --gp-fg-muted:     var(--gp-off-white-muted);
+  --gp-fg-dim:       var(--gp-off-white-dim);
+  --gp-surface:      var(--gp-green-800);
+  --gp-card:         var(--gp-green-700);
+  --gp-card-elev:    var(--gp-green-600);
+  --gp-border:       var(--gp-green-500);
+  --gp-border-soft:  rgba(42, 107, 82, 0.4);
+  --gp-primary:      var(--gp-lime-500);
+  --gp-primary-hover:var(--gp-lime-400);
+  --gp-primary-fg:   var(--gp-green-900);
+  --gp-secondary:    var(--gp-gold-500);   /* Display headlines */
+  --gp-ring:         var(--gp-lime-500);
+
+  /* ── Type: Families ─────────────────────────────────────────── */
+  --gp-font-display: "Spectral", Georgia, "Times New Roman", serif;
+  --gp-font-body:    "Manrope", "Helvetica Neue", system-ui, -apple-system, sans-serif;
+  --gp-font-mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* ── Type: Display + headline scale (Spectral) ──────────────── */
+  --gp-display-size: 72px;
+  --gp-display-lh: 1.05;
+  --gp-display-ls: -0.02em;
+  --gp-display-vs: normal;
+
+  --gp-h1-size: 56px;  --gp-h1-lh: 1.08; --gp-h1-ls: -0.015em;
+  --gp-h2-size: 40px;  --gp-h2-lh: 1.15; --gp-h2-ls: -0.01em;
+  --gp-h3-size: 28px;  --gp-h3-lh: 1.2;  --gp-h3-ls: -0.005em;
+
+  /* ── Type: UI scale (Manrope) ───────────────────────────────── */
+  --gp-title-lg: 22px; --gp-title-md: 18px;
+  --gp-body-lg:  18px; --gp-body-md:  16px; --gp-body-sm: 14px;
+  --gp-label-md: 14px; --gp-label-sm: 12px;
+  --gp-overline: 12px; --gp-caption:  12px;
+
+  /* ── Spacing (8px base) ─────────────────────────────────────── */
+  --gp-space-xs:  4px;
+  --gp-space-sm:  8px;
+  --gp-space-md:  16px;
+  --gp-space-lg:  24px;
+  --gp-space-xl:  32px;
+  --gp-space-2xl: 48px;
+  --gp-space-3xl: 64px;
+  --gp-space-4xl: 96px;
+  --gp-space-5xl: 128px;
+
+  /* ── Radii ──────────────────────────────────────────────────── */
+  --gp-radius-sm:   6px;
+  --gp-radius-md:   12px;
+  --gp-radius-lg:   20px;
+  --gp-radius-xl:   32px;
+  --gp-radius-pill: 9999px;
+
+  /* ── Shadows + glow ─────────────────────────────────────────── */
+  --gp-shadow-card:    0 1px 0 0 rgba(255, 255, 255, 0.04) inset, 0 8px 24px -12px rgba(0, 0, 0, 0.4);
+  --gp-shadow-card-lg: 0 1px 0 0 rgba(255, 255, 255, 0.06) inset, 0 16px 48px -16px rgba(0, 0, 0, 0.5);
+  --gp-shadow-pill:    0 0 32px 0 rgba(184, 232, 53, 0.35), 0 0 80px 0 rgba(184, 232, 53, 0.15);
+  --gp-shadow-deep:    -7px 7px 28px 0px rgba(22, 50, 31, 0.6);
+  --gp-shadow-focus:   0 0 0 3px rgba(184, 232, 53, 0.4);
+
+  /* ── Layout ─────────────────────────────────────────────────── */
+  --gp-container-md: 768px;
+  --gp-container-lg: 1024px;
+  --gp-container-xl: 1280px;
+  --gp-container-2xl: 1440px;
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   Element defaults — opt in by setting class="gp-root" on <body>
+   or any container. Avoids polluting hosts that load this file
+   alongside their own resets.
+   ────────────────────────────────────────────────────────────────── */
+.gp-root,
+.gp-root * { box-sizing: border-box; }
+
+.gp-root {
+  background: var(--gp-bg);
+  color: var(--gp-fg);
+  font-family: var(--gp-font-body);
+  font-size: var(--gp-body-md);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.gp-root .gp-display,
+.gp-root h1.gp-display {
+  font-family: var(--gp-font-display);
+  font-size: var(--gp-display-size);
+  line-height: var(--gp-display-lh);
+  letter-spacing: var(--gp-display-ls);
+  font-weight: 500;
+  font-variation-settings: var(--gp-display-vs);
+  color: var(--gp-secondary);
+  text-wrap: pretty;
+  margin: 0;
+}
+
+.gp-root h1, .gp-root .gp-h1 {
+  font-family: var(--gp-font-display);
+  font-size: var(--gp-h1-size); line-height: var(--gp-h1-lh); letter-spacing: var(--gp-h1-ls);
+  font-weight: 500;
+  font-variation-settings: var(--gp-display-vs);
+  color: var(--gp-secondary);
+  text-wrap: pretty;
+  margin: 0;
+}
+
+.gp-root h2, .gp-root .gp-h2 {
+  font-family: var(--gp-font-display);
+  font-size: var(--gp-h2-size); line-height: var(--gp-h2-lh); letter-spacing: var(--gp-h2-ls);
+  font-weight: 500;
+  font-variation-settings: var(--gp-display-vs);
+  color: var(--gp-secondary);
+  margin: 0;
+}
+
+.gp-root h3, .gp-root .gp-h3 {
+  font-family: var(--gp-font-display);
+  font-size: var(--gp-h3-size); line-height: var(--gp-h3-lh); letter-spacing: var(--gp-h3-ls);
+  font-weight: 500;
+  font-variation-settings: var(--gp-display-vs);
+  color: var(--gp-secondary);
+  margin: 0;
+}
+
+.gp-root .gp-title-lg { font-family: var(--gp-font-body); font-size: var(--gp-title-lg); font-weight: 600; line-height: 1.3; letter-spacing: -0.005em; }
+.gp-root .gp-title-md { font-family: var(--gp-font-body); font-size: var(--gp-title-md); font-weight: 600; line-height: 1.35; }
+
+.gp-root p,
+.gp-root .gp-body { font-family: var(--gp-font-body); font-size: var(--gp-body-md); font-weight: 400; line-height: 1.6; color: var(--gp-fg); margin: 0; }
+.gp-root .gp-body-lg { font-size: var(--gp-body-lg); line-height: 1.6; }
+.gp-root .gp-body-sm { font-size: var(--gp-body-sm); line-height: 1.55; letter-spacing: 0.005em; }
+
+.gp-root .gp-label    { font-family: var(--gp-font-body); font-size: var(--gp-label-md); font-weight: 600; line-height: 1.2; letter-spacing: 0.01em; }
+.gp-root .gp-label-sm { font-family: var(--gp-font-body); font-size: var(--gp-label-sm); font-weight: 600; line-height: 1.2; letter-spacing: 0.02em; }
+
+.gp-root .gp-overline {
+  font-family: var(--gp-font-body);
+  font-size: var(--gp-overline);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gp-primary);
+}
+
+.gp-root .gp-caption  { font-family: var(--gp-font-body); font-size: var(--gp-caption); font-weight: 400; line-height: 1.4; color: var(--gp-fg-muted); }
+
+/* ──────────────────────────────────────────────────────────────────
+   Topographic background utility — apply to a section or page
+   shell. Layered over the base bg with low opacity so it reads
+   as terrain, not wallpaper.
+   ────────────────────────────────────────────────────────────────── */
+.gp-topo {
+  position: relative;
+  background: var(--gp-bg);
+}
+.gp-topo::before {
+  content: "";
+  position: absolute; inset: 0;
+  background-image: url("./assets/topo-bg.png");
+  background-size: cover;
+  background-position: center;
+  opacity: 0.12;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+/* Focus ring — applies to all interactive elements inside .gp-root */
+.gp-root :focus-visible {
+  outline: none;
+  box-shadow: var(--gp-shadow-focus);
+  border-radius: var(--gp-radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gp-root *, .gp-root *::before, .gp-root *::after {
+    animation-duration: 0.001s !important;
+    transition-duration: 0.001s !important;
+  }
+}

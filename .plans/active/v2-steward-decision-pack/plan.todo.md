@@ -6,8 +6,8 @@
 - [x] Create the active `.plans` hub for steward decisions
 - [x] Refine scope and defaults in `spec.md`
 - [x] Link the steward-facing docs from this hub
-- [ ] Share `docs/v2/steward-brief-one-page.md` with stewards
-- [ ] Share `docs/v2/steward-telegram-polls.md` in Telegram
+- [ ] Share `.plans/active/public-website-design-implementation/artifacts/steward/steward-brief-one-page.md` with stewards
+- [ ] Share `.plans/active/public-website-design-implementation/artifacts/steward/steward-telegram-polls.md` in Telegram
 - [ ] Collect poll results and nomination replies
 - [ ] Summarize responses in `reports/steward-response-summary.md`
 - [ ] Update canonical V2 docs if the responses change narrative or first-release priorities

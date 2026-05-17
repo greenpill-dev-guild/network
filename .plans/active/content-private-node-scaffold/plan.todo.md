@@ -19,7 +19,7 @@
 - [ ] Add first real `people` content entries when stewards are confirmed
 - [ ] Add first real `stories` content entries or decide whether empty story routes should stay in the current build
 - [ ] Run a hands-on Directus spike against the Postgres schema
-- [ ] Compare Directus against Payload, NocoDB, Baserow, and Strapi using the criteria in `docs/v2/private-node-intake.md`
+- [ ] Compare Directus against Payload, NocoDB, Baserow, and Strapi using the criteria in `.plans/active/content-private-node-scaffold/artifacts/private-node-intake.md`
 - [x] Choose `agent.greenpill.network` as the first deployed home for `POST /map-nodes` and `GET /map-nodes/public`
 - [ ] Provision the Fly agent app and Managed Postgres cluster after org/app/plan approval
 - [ ] Implement the add-node form and dispatch `greenpill:pending-map-node` after public-safe local storage

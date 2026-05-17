@@ -4,7 +4,7 @@
 
 Read first:
 
-- `docs/v2/impact-data-integration.md`
+- `.plans/backlog/chapter-impact-data-integration/artifacts/impact-data-integration.md`
 - `packages/shared/src/chapter-impact.js`
 - `packages/agent/src/app.js`
 - `packages/agent/src/server.js`

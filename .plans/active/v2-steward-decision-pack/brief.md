@@ -6,7 +6,7 @@
 
 The workshop synthesis produced enough alignment to move toward V2 execution, but a few narrative and visual-content decisions still need steward input before the homepage and first public routes should be treated as locked.
 
-This hub keeps that decision process in `.plans/`, while `docs/v2/` remains the product and architecture source of truth.
+This hub keeps that decision process in `.plans/`, while `.plans/active/public-website-design-implementation/artifacts/v2/` remains the product and architecture source of truth.
 
 ## Desired Outcome
 

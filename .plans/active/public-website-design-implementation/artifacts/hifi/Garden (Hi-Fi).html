@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Greenpill Garden — Hi-Fi</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="stylesheet" href="hifi/gp-tokens.css" />
+<style>
+  html, body { margin: 0; padding: 0; min-height: 100%; background: #0A2D21; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: var(--gp-font-body);
+    color: var(--gp-fg);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .hf-gallery {
+    min-height: 100vh;
+    padding: 32px 24px 120px;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(184,232,53,0.04), transparent 50%),
+      radial-gradient(circle at 80% 90%, rgba(240,220,160,0.04), transparent 50%),
+      #0A2D21;
+  }
+  .hf-bar {
+    max-width: 1440px;
+    margin: 0 auto 24px;
+    display: flex; justify-content: space-between; align-items: baseline;
+    color: rgba(250,247,238,0.45);
+    font-family: var(--gp-font-mono);
+    font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .hf-bar .lhs { display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+  .hf-bar .lhs b {
+    color: var(--gp-secondary);
+    font-family: var(--gp-font-display);
+    font-size: 14px; font-weight: 500;
+    letter-spacing: -0.005em;
+    text-transform: none;
+  }
+  .hf-bar .sep { opacity: 0.5; }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="hifi/gp-shell.jsx"></script>
+<!-- Garden modules -->
+<script type="text/babel" src="hifi/gd-data.jsx"></script>
+<script type="text/babel" src="hifi/gd-bits.jsx"></script>
+<script type="text/babel" src="hifi/gd-sections.jsx"></script>
+<script type="text/babel" src="hifi/gd-page.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+const TWEAK_DEFAULTS = {
+  "breakpoint": "desktop",
+  "heroVariant": "globe",
+  "stepLayout": "card",
+  "indicator": "bars",
+  "rampMode": "growth",
+  "accentMix": "balanced",
+  "showRamp": false,
+  "showAfter": true,
+  "ctaPlacement": "inline",
+  "topoOpacity": 0.11,
+  "gardenOverlay": false
+};
+
+function App() {
+  const t = TWEAK_DEFAULTS;
+  const raw = useGpRawMode();
+  const autoBp = useGpAutoBp();
+
+  if (raw) {
+    return (
+      <>
+        <GdPage
+          bp={autoBp}
+          heroVariant={t.heroVariant}
+          stepLayout={t.stepLayout}
+          indicator={t.indicator}
+          rampMode={t.rampMode}
+          accentMix={t.accentMix}
+          showAfter={t.showAfter}
+          showRamp={t.showRamp}
+          ctaPlacement={t.ctaPlacement}
+          topoOpacity={t.topoOpacity}
+          gardenOverlay={t.gardenOverlay}
+        />
+        <GpViewToggle />
+      </>
+    );
+  }
+
+  const bpLabel = t.breakpoint === 'desktop' ? '1440' : t.breakpoint === 'tablet' ? '1024' : '375';
+  const heroLabel = ({
+    typographic: 'Typographic',
+    pill: 'Pill capsule',
+    globe: 'Coordination globe',
+    photo: 'Cinematic photo',
+  })[t.heroVariant];
+  const layoutLabel = ({
+    stripe:  'Stripe rail',
+    stacked: 'Stacked',
+    threecol:'Three column',
+    card:    'Unified card',
+  })[t.stepLayout];
+  const indicatorLabel = ({
+    bars: 'Friction bars',
+    growth: 'Growth glyph',
+    elevation: 'Elevation lines',
+    none: 'No indicator',
+  })[t.indicator];
+
+  return (
+    <div className="hf-gallery">
+      <div className="hf-bar">
+        <span className="lhs">
+          <b>Garden · /garden — Hi-Fi</b>
+          <span>{heroLabel} hero</span>
+          <span className="sep">·</span>
+          <span>{layoutLabel} steps</span>
+          <span className="sep">·</span>
+          <span>{indicatorLabel}</span>
+          <span className="sep">·</span>
+          <span>{bpLabel}px</span>
+        </span>
+        <GpViewToggle />
+      </div>
+
+      <GdFrame
+        bp={t.breakpoint}
+        heroVariant={t.heroVariant}
+        stepLayout={t.stepLayout}
+        indicator={t.indicator}
+        rampMode={t.rampMode}
+        accentMix={t.accentMix}
+        showAfter={t.showAfter}
+        showRamp={t.showRamp}
+        ctaPlacement={t.ctaPlacement}
+        topoOpacity={t.topoOpacity}
+        gardenOverlay={t.gardenOverlay}
+      />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

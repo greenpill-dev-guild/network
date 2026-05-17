@@ -12,7 +12,7 @@ Create the public-safe contracts and follow-up queue for chapter-page impact fee
 - `packages/shared/src/chapter-impact.js` defines public payload normalization and privacy checks.
 - `packages/agent/src/app.js` defines the Hono app scaffold, while `packages/agent/src/impact.js` reserves the agent route contract and public payload guard.
 - The chapter-page impact UI is scaffold-gated until the agent endpoint exists.
-- `docs/v2/impact-data-integration.md` documents the server cache and agent route contract.
+- `.plans/backlog/chapter-impact-data-integration/artifacts/impact-data-integration.md` documents the server cache and agent route contract.
 - The chapter detail page contains the impact UI scaffold, but it stays hidden until the shared UI flag is enabled after the agent is live.
 
 ## Scope
@@ -24,7 +24,7 @@ Create the public-safe contracts and follow-up queue for chapter-page impact fee
 
 ## Constraints
 
-- `docs/v2/` remains the canonical product and architecture document surface.
+- `.plans/active/public-website-design-implementation/artifacts/v2/` remains the canonical product and architecture artifact surface.
 - `.plans/` carries execution sequencing, readiness, handoffs, and follow-up truth.
 - This repo starts with manual plan updates plus validation, not automation claiming.
 - Keep `status.json` taxonomy current enough for future filtering and dependency checks.

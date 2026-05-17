@@ -16,7 +16,7 @@
 - [x] Add Fly agent Dockerfile and `packages/agent/fly.toml`
 - [x] Harden privacy checks for snake_case upstream fields
 - [x] Use distinct Green Goods role addresses for public member counts when arrays are available
-- [x] Document the KarmaGAP/Green Goods server-cache contract in `docs/v2`
+- [x] Document the KarmaGAP/Green Goods server-cache contract in `.plans/active/public-website-design-implementation/artifacts/v2`
 - [x] Refine scope and defaults in `spec.md`
 - [x] Update `status.json` as decisions or readiness change
 - [x] Capture the handoff or follow-up note in `handoffs/README.md`

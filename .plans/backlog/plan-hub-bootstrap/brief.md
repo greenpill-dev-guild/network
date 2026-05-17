@@ -4,7 +4,7 @@
 
 ## Why This Exists
 
-`network` needed a repo-local execution-truth surface for later follow-up work without overloading `docs/v2/`, which should stay focused on product and architecture direction.
+`network` needed a repo-local execution-truth surface for later follow-up work without recreating a root docs folder that would become stale parallel truth.
 
 This hub defines the first-pass planning contract for the repo:
 
@@ -17,8 +17,8 @@ This hub defines the first-pass planning contract for the repo:
 
 The repo gains a planning surface that is small, clear, and reusable:
 
-- `docs/v2/` remains canonical for product and IA work
-- `.plans/` holds execution sequencing, readiness, handoffs, and later follow-up packs
+- `.plans/` holds execution sequencing, research context, readiness, handoffs, and follow-up packs
+- runtime contracts and executable artifacts stay under `packages/`
 - the initial helper is enough to scaffold new hubs and catch structural drift
 
 ## Non-Goals
@@ -26,4 +26,4 @@ The repo gains a planning surface that is small, clear, and reusable:
 - introducing Linear sync
 - introducing branch-trigger orchestration
 - introducing automation claiming or scheduler behavior in v1
-- replacing `docs/v2/` as the product/architecture source of truth
+- reintroducing root-level `docs/` as long-lived plan truth

@@ -89,7 +89,7 @@ test('privacy guard catches snake_case private map-node fields', () => {
 });
 
 test('public SQL view is approved-only and excludes private fields', async () => {
-  const sql = await readFile(new URL('../docs/v2/private-map-node-schema.sql', import.meta.url), 'utf8');
+  const sql = await readFile(new URL('../packages/agent/migrations/001_private_map_node_schema.sql', import.meta.url), 'utf8');
   const viewStart = sql.indexOf('create or replace view public_map_nodes as');
   assert.notEqual(viewStart, -1);
 

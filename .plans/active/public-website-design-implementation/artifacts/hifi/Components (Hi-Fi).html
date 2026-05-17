@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Greenpill Network — Components (Hi-Fi)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="stylesheet" href="hifi/gp-tokens.css" />
+<style>
+  html, body { margin: 0; padding: 0; min-height: 100%; background: #0A2D21; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: var(--gp-font-body);
+    color: var(--gp-fg);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* ─────────────── gallery shell (matches sibling hi-fi pages) ─────────────── */
+  .hf-gallery {
+    min-height: 100vh;
+    padding: 32px 24px 120px;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(184,232,53,0.04), transparent 50%),
+      radial-gradient(circle at 80% 90%, rgba(240,220,160,0.04), transparent 50%),
+      #0A2D21;
+  }
+  .hf-bar {
+    max-width: 1440px;
+    margin: 0 auto 24px;
+    display: flex; justify-content: space-between; align-items: baseline;
+    color: rgba(250,247,238,0.45);
+    font-family: var(--gp-font-mono);
+    font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .hf-bar .lhs { display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+  .hf-bar .lhs b {
+    color: var(--gp-secondary);
+    font-family: var(--gp-font-display);
+    font-size: 14px; font-weight: 500;
+    letter-spacing: -0.005em;
+    text-transform: none;
+  }
+  .hf-bar .sep { opacity: 0.5; }
+
+  /* ─────────────── page shell ─────────────── */
+  .comp-page {
+    position: relative;
+    background: var(--gp-green-900);
+    color: var(--gp-fg);
+    min-height: 100%;
+    overflow: hidden;
+  }
+  .comp-page-topo {
+    position: absolute; inset: 0;
+    background-image: url("hifi/assets/topo-bg.png");
+    background-size: cover; background-position: center;
+    opacity: 0.11; mix-blend-mode: overlay;
+    pointer-events: none;
+  }
+  .comp-page-inner { position: relative; z-index: 1; max-width: 1440px; margin: 0 auto; }
+
+  /* ─────────────── hero ─────────────── */
+  .comp-hero {
+    padding: clamp(56px, 7vw, 96px) clamp(20px, 5vw, 96px) clamp(48px, 6vw, 80px);
+    display: flex; flex-direction: column; gap: 18px;
+    max-width: 1100px;
+  }
+  .comp-hero-title {
+    margin: 0;
+    font-family: var(--gp-font-display);
+    font-size: clamp(48px, 7vw, 96px);
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--gp-secondary);
+    font-variation-settings: var(--gp-display-vs);
+    text-wrap: pretty;
+  }
+  .comp-hero-body {
+    margin: 0;
+    font-size: clamp(15px, 1.4vw, 18px);
+    line-height: 1.55;
+    color: var(--gp-fg-muted);
+    max-width: 740px;
+  }
+
+  /* ─────────────── body layout ─────────────── */
+  .comp-body {
+    display: grid;
+    grid-template-columns: 232px 1fr;
+    gap: clamp(28px, 3vw, 56px);
+    padding: 0 clamp(20px, 5vw, 96px) 96px;
+  }
+  @media (max-width: 1023px) {
+    .comp-body { grid-template-columns: 1fr; }
+    .comp-nav { display: none; }
+  }
+
+  /* ─────────────── left rail ─────────────── */
+  .comp-nav {
+    position: sticky;
+    top: 24px;
+    align-self: start;
+    display: flex; flex-direction: column; gap: 2px;
+    border-left: 1px solid var(--gp-border-soft);
+    padding-left: 18px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+  }
+  .comp-nav-title {
+    font-family: var(--gp-font-mono);
+    font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--gp-primary);
+    margin-bottom: 14px;
+  }
+  .comp-nav-item {
+    display: block;
+    padding: 6px 0;
+    font-family: var(--gp-font-body);
+    font-size: 13px;
+    color: var(--gp-fg-muted);
+    text-decoration: none;
+    transition: color 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .comp-nav-item:hover { color: var(--gp-fg); }
+  .comp-nav-item.is-active {
+    color: var(--gp-primary);
+    font-weight: 600;
+  }
+
+  /* ─────────────── main column ─────────────── */
+  .comp-main {
+    min-width: 0;
+    display: flex; flex-direction: column; gap: clamp(56px, 7vw, 96px);
+  }
+
+  /* ─────────────── section ─────────────── */
+  .comp-section { display: flex; flex-direction: column; gap: 28px; }
+  .comp-section-header { display: flex; flex-direction: column; gap: 14px; max-width: 760px; }
+  .comp-section-lead {
+    font-family: var(--gp-font-body);
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--gp-fg-muted);
+    max-width: 680px;
+  }
+  .comp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .comp-cols-1 .comp-grid { grid-template-columns: 1fr; }
+  @media (max-width: 1199px) { .comp-grid { grid-template-columns: 1fr; } }
+
+  /* ─────────────── spec card ─────────────── */
+  .comp-card {
+    display: flex; flex-direction: column;
+    gap: 18px;
+    padding: 24px;
+    background: var(--gp-green-800);
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-lg);
+    min-width: 0;
+  }
+  .comp-card-full { grid-column: 1 / -1; }
+
+  .comp-card-header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .comp-card-name {
+    font-family: var(--gp-font-display);
+    font-variation-settings: var(--gp-display-vs);
+    font-size: 22px; font-weight: 500;
+    color: var(--gp-secondary);
+    letter-spacing: -0.005em;
+  }
+  .comp-card-file {
+    font-family: var(--gp-font-mono);
+    font-size: 11px; letter-spacing: 0.06em;
+    color: var(--gp-fg-dim);
+  }
+  .comp-card-desc {
+    font-family: var(--gp-font-body);
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--gp-fg-muted);
+    max-width: 720px;
+  }
+
+  /* ─────────────── preview area ─────────────── */
+  .comp-preview {
+    position: relative;
+    border-radius: var(--gp-radius-md);
+    background: var(--gp-green-950);
+    border: 1px solid var(--gp-border-soft);
+    overflow: hidden;
+  }
+  .comp-preview::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: url("hifi/assets/topo-bg.png");
+    background-size: cover;
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+  }
+  .comp-preview > * { position: relative; }
+
+  /* ─────────────── props table ─────────────── */
+  .comp-props {
+    display: flex; flex-direction: column;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-md);
+    background: rgba(15, 61, 46, 0.4);
+    overflow: hidden;
+  }
+  .comp-props-head, .comp-props-row {
+    display: grid;
+    grid-template-columns: 1.4fr 1.6fr 1.4fr 3fr;
+    gap: 14px;
+    padding: 10px 14px;
+    align-items: baseline;
+    font-size: 12px;
+  }
+  .comp-props-head {
+    font-family: var(--gp-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gp-fg-dim);
+    background: rgba(184,232,53,0.04);
+    border-bottom: 1px solid var(--gp-border-soft);
+  }
+  .comp-props-row { border-top: 1px solid var(--gp-border-soft); }
+  .comp-props-row:first-of-type { border-top: 0; }
+  .comp-props-name { color: var(--gp-primary); font-weight: 600; }
+  .comp-props-type { color: var(--gp-fg); }
+  .comp-props-default { color: var(--gp-fg-muted); }
+  .comp-props-notes { color: var(--gp-fg-muted); line-height: 1.5; }
+  .comp-props code {
+    font-family: var(--gp-font-mono);
+    font-size: 11.5px;
+    background: rgba(184,232,53,0.06);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(184,232,53,0.12);
+    color: inherit;
+  }
+  .comp-props-notes code { background: transparent; border: 0; padding: 0; color: var(--gp-fg); }
+  @media (max-width: 720px) {
+    .comp-props-head, .comp-props-row { grid-template-columns: 1fr 1fr; }
+    .comp-props-default, .comp-props-notes { display: none; }
+  }
+
+  /* ─────────────── notes ─────────────── */
+  .comp-notes { display: flex; flex-direction: column; gap: 6px; }
+  .comp-note {
+    display: flex; gap: 10px;
+    font-family: var(--gp-font-body);
+    font-size: 13px; line-height: 1.55;
+    color: var(--gp-fg-muted);
+  }
+  .comp-note-bullet { color: var(--gp-primary); flex: none; }
+
+  /* ─────────────── variant strip (used inside previews) ─────────────── */
+  .comp-variants {
+    display: flex; flex-wrap: wrap;
+    align-items: center;
+  }
+  .comp-variant {
+    display: flex; flex-direction: column; gap: 8px; align-items: center;
+  }
+  .comp-variant-label {
+    font-family: var(--gp-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gp-fg-dim);
+  }
+
+  /* ─────────────── foundations hero ─────────────── */
+  .comp-foundation-hero { display: flex; flex-direction: column; gap: 24px; }
+  .comp-foundation-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  }
+  .comp-foundation-tile {
+    display: flex; flex-direction: column; gap: 6px;
+    padding: 24px;
+    border-radius: var(--gp-radius-md);
+    border: 1px solid var(--gp-border-soft);
+    min-height: 140px;
+  }
+  .comp-foundation-bigtoken {
+    font-family: var(--gp-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.65;
+  }
+  .comp-foundation-bighex {
+    font-family: var(--gp-font-display);
+    font-variation-settings: var(--gp-display-vs);
+    font-size: 32px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    margin-top: auto;
+  }
+  .comp-foundation-tilelabel {
+    font-family: var(--gp-font-body);
+    font-size: 12px;
+    opacity: 0.8;
+  }
+  .comp-foundation-headlines {
+    display: flex; gap: 32px; align-items: baseline;
+    padding: 24px;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-md);
+    background: var(--gp-green-900);
+  }
+  @media (max-width: 720px) {
+    .comp-foundation-grid { grid-template-columns: 1fr; }
+    .comp-foundation-headlines { flex-direction: column; gap: 12px; }
+  }
+
+  /* ─────────────── color swatches ─────────────── */
+  .comp-color-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  .comp-swatch { display: flex; flex-direction: column; gap: 6px; }
+  .comp-swatch-tile {
+    height: 88px;
+    border-radius: var(--gp-radius-md);
+    border: 1px solid var(--gp-border-soft);
+    display: flex; align-items: flex-end; padding: 12px;
+  }
+  .comp-swatch-meta { display: flex; flex-direction: column; gap: 2px; }
+  .comp-swatch-token { font-family: var(--gp-font-mono); font-size: 11px; color: var(--gp-fg); }
+  .comp-swatch-label { font-family: var(--gp-font-body); font-size: 12px; color: var(--gp-fg-muted); }
+
+  /* ─────────────── type ─────────────── */
+  .comp-type-stack { display: flex; flex-direction: column; gap: 22px; }
+  .comp-type-row {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 24px;
+    align-items: baseline;
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--gp-border-soft);
+  }
+  .comp-type-row:last-child { border-bottom: 0; padding-bottom: 0; }
+  .comp-type-render { min-width: 0; }
+  .comp-type-meta { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+  .comp-type-name {
+    font-family: var(--gp-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--gp-primary);
+    text-transform: uppercase;
+  }
+  .comp-type-meta code {
+    font-family: var(--gp-font-mono);
+    font-size: 11px;
+    color: var(--gp-fg-dim);
+  }
+  @media (max-width: 720px) {
+    .comp-type-row { grid-template-columns: 1fr; }
+    .comp-type-meta { align-items: flex-start; }
+  }
+
+  /* ─────────────── spacing ─────────────── */
+  .comp-space-stack { display: flex; flex-direction: column; gap: 10px; }
+  .comp-space-bar {
+    display: grid;
+    grid-template-columns: 140px 1fr 56px;
+    gap: 16px;
+    align-items: center;
+  }
+  .comp-space-bar code {
+    font-family: var(--gp-font-mono);
+    font-size: 11px;
+    color: var(--gp-fg);
+  }
+  .comp-space-rule {
+    height: 8px;
+    background: linear-gradient(90deg, var(--gp-primary), rgba(184,232,53,0.4));
+    border-radius: 4px;
+  }
+  .comp-space-bar span {
+    font-family: var(--gp-font-mono);
+    font-size: 11px;
+    color: var(--gp-fg-dim);
+    text-align: right;
+  }
+
+  /* ─────────────── radii ─────────────── */
+  .comp-radii-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 16px;
+  }
+  .comp-radii-cell {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .comp-radii-tile {
+    background: var(--gp-primary);
+    border: 1px solid rgba(184,232,53,0.6);
+  }
+  .comp-radii-cell code { font-family: var(--gp-font-mono); font-size: 11px; color: var(--gp-fg); }
+  .comp-radii-meta { font-family: var(--gp-font-mono); font-size: 10px; color: var(--gp-fg-dim); }
+
+  /* ─────────────── shadows ─────────────── */
+  .comp-shadow-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 20px;
+  }
+  .comp-shadow-tile {
+    height: 100px;
+    border-radius: var(--gp-radius-md);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--gp-fg);
+    font-family: var(--gp-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .comp-shadow-tile span { background: rgba(15,61,46,0.7); padding: 4px 10px; border-radius: 6px; color: var(--gp-fg); }
+
+  /* ─────────────── tonal layering ─────────────── */
+  .comp-tonal-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border-radius: var(--gp-radius-md);
+    overflow: hidden;
+    border: 1px solid var(--gp-border-soft);
+  }
+  .comp-tonal-card {
+    height: 120px;
+    padding: 18px;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .comp-tonal-card code { font-family: var(--gp-font-mono); font-size: 11px; color: var(--gp-fg); }
+  .comp-tonal-card span { font-family: var(--gp-font-body); font-size: 13px; color: var(--gp-fg-muted); }
+  @media (max-width: 720px) {
+    .comp-tonal-row { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ─────────────── icon-badge cells ─────────────── */
+  .comp-iconbadge-row {
+    display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-end;
+  }
+  .comp-iconbadge-cell {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .comp-iconbadge {
+    background: var(--gp-primary);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 20px rgba(184,232,53,0.25);
+  }
+  .comp-iconbadge-cell span {
+    font-family: var(--gp-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--gp-fg-dim);
+  }
+
+  /* ─────────────── topo preview ─────────────── */
+  .comp-topo-preview {
+    position: relative;
+    height: 160px;
+    border-radius: var(--gp-radius-md);
+    background: var(--gp-green-900);
+    border: 1px solid var(--gp-border-soft);
+    overflow: hidden;
+    display: flex; align-items: flex-end; padding: 14px;
+  }
+  .comp-topo-bg {
+    position: absolute; inset: 0;
+    background-image: url("hifi/assets/topo-bg.png");
+    background-size: cover;
+    background-position: center;
+    opacity: 0.11;
+    mix-blend-mode: overlay;
+  }
+  .comp-topo-label {
+    position: relative;
+    font-family: var(--gp-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gp-fg-dim);
+  }
+
+  /* ─────────────── chrome preview ─────────────── */
+  .comp-chrome-wrap {
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-md);
+    overflow: hidden;
+    background: var(--gp-green-900);
+    position: relative;
+  }
+  .comp-chrome-divider {
+    padding: 8px 16px;
+    background: rgba(15,61,46,0.6);
+    border-top: 1px solid var(--gp-border-soft);
+    font-family: var(--gp-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gp-fg-dim);
+  }
+
+  /* ─────────────── hero thumbs ─────────────── */
+  .comp-hero-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  .comp-hero-thumb {
+    padding: 24px;
+    background: var(--gp-green-700);
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-md);
+    display: flex; flex-direction: column; gap: 10px;
+    min-height: 140px;
+  }
+  .comp-hero-thumb-label {
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  .comp-hero-thumb-label code {
+    font-family: var(--gp-font-mono);
+    font-size: 11px;
+    color: var(--gp-primary);
+    background: rgba(184,232,53,0.06);
+    border: 1px solid rgba(184,232,53,0.18);
+    padding: 1px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.06em;
+  }
+  .comp-hero-thumb-label span {
+    font-family: var(--gp-font-display);
+    font-variation-settings: var(--gp-display-vs);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--gp-secondary);
+  }
+  .comp-hero-thumb-body {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--gp-fg-muted);
+  }
+  @media (max-width: 720px) {
+    .comp-hero-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- Tweaks panel + shared shell. -->
+<script type="text/babel" src="hifi/gp-shell.jsx"></script>
+
+<!-- Page-specific bits + data, so spec cards can demo their actual components. -->
+<script type="text/babel" src="hifi/lib-data.jsx"></script>
+<script type="text/babel" src="hifi/lib-bits.jsx"></script>
+<script type="text/babel" src="hifi/ch-data.jsx"></script>
+<script type="text/babel" src="hifi/ch-bits.jsx"></script>
+<script type="text/babel" src="hifi/cd-data.jsx"></script>
+<script type="text/babel" src="hifi/cd-bits.jsx"></script>
+<script type="text/babel" src="hifi/st-data.jsx"></script>
+<script type="text/babel" src="hifi/st-bits.jsx"></script>
+<script type="text/babel" src="hifi/sd-data.jsx"></script>
+<script type="text/babel" src="hifi/sd-bits.jsx"></script>
+<script type="text/babel" src="hifi/gld-data.jsx"></script>
+<script type="text/babel" src="hifi/gld-bits.jsx"></script>
+<script type="text/babel" src="hifi/gd-data.jsx"></script>
+<script type="text/babel" src="hifi/gd-bits.jsx"></script>
+<script type="text/babel" src="hifi/home-data.jsx"></script>
+<script type="text/babel" src="hifi/home-sections.jsx"></script>
+
+<!-- Components page. -->
+<script type="text/babel" src="hifi/comp-shell.jsx"></script>
+<script type="text/babel" src="hifi/comp-foundations.jsx"></script>
+<script type="text/babel" src="hifi/comp-components.jsx"></script>
+<script type="text/babel" src="hifi/comp-blocks.jsx"></script>
+<script type="text/babel" src="hifi/comp-page.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+const TWEAK_DEFAULTS = {
+  "displayFont": "spectral",
+  "breakpoint": "desktop"
+};
+
+function App() {
+  const t = TWEAK_DEFAULTS;
+  const raw = useGpRawMode();
+  const autoBp = useGpAutoBp();
+
+  if (raw) {
+    return (
+      <>
+        <CompApp bp={autoBp} />
+        <GpViewToggle />
+      </>
+    );
+  }
+
+  const bpLabel = t.breakpoint === 'desktop' ? '1440' : t.breakpoint === 'tablet' ? '1024' : '375';
+
+  return (
+    <div className="hf-gallery">
+      <div className="hf-bar">
+        <span className="lhs">
+          <b>Components — Hi-Fi</b>
+          <span>{bpLabel}px</span>
+        </span>
+        <GpViewToggle />
+      </div>
+
+      <GP_Frame bp={t.breakpoint}>
+        <CompApp bp={t.breakpoint} />
+      </GP_Frame>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
