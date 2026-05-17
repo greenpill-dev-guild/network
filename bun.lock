@@ -3,32 +3,32 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@greenpill/network",
+      "name": "greenpill-network",
       "devDependencies": {
-        "@greenpill/network-agent": "workspace:*",
-        "@greenpill/network-shared": "workspace:*",
+        "@greenpill-network/agent": "workspace:*",
+        "@greenpill-network/shared": "workspace:*",
       },
     },
     "packages/agent": {
-      "name": "@greenpill/network-agent",
+      "name": "@greenpill-network/agent",
       "version": "0.1.0",
       "dependencies": {
-        "@greenpill/network-shared": "workspace:*",
+        "@greenpill-network/shared": "workspace:*",
         "@hono/node-server": "^2.0.2",
         "hono": "^4.12.18",
         "postgres": "^3.4.9",
       },
     },
     "packages/shared": {
-      "name": "@greenpill/network-shared",
+      "name": "@greenpill-network/shared",
       "version": "0.1.0",
     },
     "packages/website": {
-      "name": "@greenpill/network-website",
+      "name": "@greenpill-network/website",
       "version": "0.1.0",
       "dependencies": {
         "@astrojs/tailwind": "^5.1.5",
-        "@greenpill/network-shared": "workspace:*",
+        "@greenpill-network/shared": "workspace:*",
         "@keystatic/astro": "^5.0.6",
         "@keystatic/core": "^0.5.48",
         "astro": "^5.18.1",
@@ -44,10 +44,10 @@
       },
     },
     "packages/workspace": {
-      "name": "@greenpill/network-workspace",
+      "name": "@greenpill-network/workspace",
       "version": "0.1.0",
       "dependencies": {
-        "@greenpill/network-shared": "workspace:*",
+        "@greenpill-network/shared": "workspace:*",
       },
     },
   },
@@ -196,13 +196,13 @@
 
     "@graphql-typed-document-node/core": ["@graphql-typed-document-node/core@3.2.0", "", { "peerDependencies": { "graphql": "^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0" } }, "sha512-mB9oAsNCm9aM3/SOv4YtBMqZbYj10R7dkq8byBqxGY/ncFwhf2oQzMV+LCRlWoDSEBJ3COiR1yeDvMtsoOsuFQ=="],
 
-    "@greenpill/network-agent": ["@greenpill/network-agent@workspace:packages/agent"],
+    "@greenpill-network/agent": ["@greenpill-network/agent@workspace:packages/agent"],
 
-    "@greenpill/network-shared": ["@greenpill/network-shared@workspace:packages/shared"],
+    "@greenpill-network/shared": ["@greenpill-network/shared@workspace:packages/shared"],
 
-    "@greenpill/network-website": ["@greenpill/network-website@workspace:packages/website"],
+    "@greenpill-network/website": ["@greenpill-network/website@workspace:packages/website"],
 
-    "@greenpill/network-workspace": ["@greenpill/network-workspace@workspace:packages/workspace"],
+    "@greenpill-network/workspace": ["@greenpill-network/workspace@workspace:packages/workspace"],
 
     "@hono/node-server": ["@hono/node-server@2.0.2", "", { "peerDependencies": { "hono": "^4" } }, "sha512-tXlTi1h/4V7sDe7i97IVP+9re9ZU7wXZZggnR5ucCRclf1+AX6YhGStrR5w8bLj+3Mlyl0pKfBh9gqTqqnGKfQ=="],
 

@@ -113,7 +113,7 @@ Forbidden:
 - raw work media arrays
 - pending private map/member submissions
 
-The first chapter-page UI is scaffold-gated by `CHAPTER_IMPACT_UI_ENABLED` in `@greenpill/network-shared/chapter-impact`. Keep that flag false until the agent cache endpoint is deployed; `/impact-sources.json` can still publish source bindings for the worker.
+The first chapter-page UI is scaffold-gated by `CHAPTER_IMPACT_UI_ENABLED` in `@greenpill-network/shared/chapter-impact`. Keep that flag false until the agent cache endpoint is deployed; `/impact-sources.json` can still publish source bindings for the worker.
 
 ## Validation
 

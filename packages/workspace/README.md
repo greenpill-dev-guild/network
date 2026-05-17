@@ -1,4 +1,4 @@
-# @greenpill/network-workspace
+# @greenpill-network/workspace
 
 Scaffold package for the future authenticated workspace at `app.greenpill.network`.
 

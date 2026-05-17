@@ -1,5 +1,5 @@
 {
-  "name": "@greenpill/network-website",
+  "name": "@greenpill-network/website",
   "version": "0.1.0",
   "private": true,
   "description": "Greenpill Network public website - Astro + Keystatic",
@@ -11,7 +11,7 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@greenpill/network-shared": "workspace:*",
+    "@greenpill-network/shared": "workspace:*",
     "@astrojs/tailwind": "^5.1.5",
     "@keystatic/astro": "^5.0.6",
     "@keystatic/core": "^0.5.48",

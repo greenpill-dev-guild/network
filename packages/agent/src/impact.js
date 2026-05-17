@@ -2,7 +2,7 @@ import {
   CHAPTER_IMPACT_AGENT_BASE,
   buildChapterImpactEndpoint,
   containsPrivateChapterImpactField,
-} from '@greenpill/network-shared/chapter-impact';
+} from '@greenpill-network/shared/chapter-impact';
 
 export const AGENT_HOSTNAME = 'agent.greenpill.network';
 export const MAP_NODE_SUBMISSIONS_ROUTE = '/map-nodes';

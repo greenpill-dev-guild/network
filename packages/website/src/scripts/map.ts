@@ -2,7 +2,7 @@ import {
   loadLocalPendingNodes,
   PENDING_NODE_STORAGE_KEY,
   PENDING_NODE_UPDATED_EVENT,
-} from '@greenpill/network-shared/map-nodes';
+} from '@greenpill-network/shared/map-nodes';
 
 interface Location {
   id?: string;

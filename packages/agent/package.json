@@ -1,5 +1,5 @@
 {
-  "name": "@greenpill/network-agent",
+  "name": "@greenpill-network/agent",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -31,7 +31,7 @@
     "src"
   ],
   "dependencies": {
-    "@greenpill/network-shared": "workspace:*",
+    "@greenpill-network/shared": "workspace:*",
     "@hono/node-server": "^2.0.2",
     "hono": "^4.12.18",
     "postgres": "^3.4.9"

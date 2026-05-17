@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   createAgentApp,
-} from '@greenpill/network-agent/app';
+} from '@greenpill-network/agent/app';
 import {
   assertPublicImpactPayload,
   buildChapterImpactPath,
@@ -10,7 +10,7 @@ import {
   CHAPTER_IMPACT_ROUTE,
   MAP_NODE_SUBMISSIONS_ROUTE,
   PUBLIC_MAP_NODES_ROUTE,
-} from '@greenpill/network-agent/impact';
+} from '@greenpill-network/agent/impact';
 
 test('agent package exposes stable public route contracts', () => {
   assert.equal(MAP_NODE_SUBMISSIONS_ROUTE, '/map-nodes');

@@ -2,7 +2,7 @@ import { getCollection } from 'astro:content';
 import {
   CHAPTER_IMPACT_SOURCES_VERSION,
   toPublicImpactSourceBinding,
-} from '@greenpill/network-shared/chapter-impact';
+} from '@greenpill-network/shared/chapter-impact';
 
 const isImpactBinding = (binding: ReturnType<typeof toPublicImpactSourceBinding>) => binding !== null;
 

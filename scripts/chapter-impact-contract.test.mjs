@@ -8,7 +8,7 @@ import {
   shouldRenderChapterImpactUi,
   toPublicChapterImpactPayload,
   toPublicImpactSourceBinding,
-} from '@greenpill/network-shared/chapter-impact';
+} from '@greenpill-network/shared/chapter-impact';
 
 test('chapter impact source bindings are public and opt-in', () => {
   const binding = toPublicImpactSourceBinding({

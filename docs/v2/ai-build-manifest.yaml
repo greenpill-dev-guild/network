@@ -2,7 +2,7 @@ version: 1
 status: locked-defaults
 
 repo:
-  name: @greenpill/network
+  name: greenpill-network
   framework: Astro 5
   monorepo_topology: apps-and-packages
   public_content_system: Keystatic local JSON

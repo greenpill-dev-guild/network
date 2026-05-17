@@ -84,7 +84,7 @@ Chapter map data is generated from the `chapters` collection through `/locations
 
 Chapter pages can opt into public impact feeds through `impactSources` on chapter content. These bindings are public-safe source pointers only: Green Goods garden address and chain, KarmaGAP project UID/slug, KarmaGAP community slug, and an `impactEnabled` flag.
 
-The public site exposes enabled source bindings through `/impact-sources.json`. `agent.greenpill.network` should run the server-side cache that reads those bindings, fetches KarmaGAP public REST data, queries the Green Goods public indexer, normalizes the result with `@greenpill/network-shared/chapter-impact`, stores it in Fly Managed Postgres, and exposes `GET /impact/chapters/:slug` for chapter pages.
+The public site exposes enabled source bindings through `/impact-sources.json`. `agent.greenpill.network` should run the server-side cache that reads those bindings, fetches KarmaGAP public REST data, queries the Green Goods public indexer, normalizes the result with `@greenpill-network/shared/chapter-impact`, stores it in Fly Managed Postgres, and exposes `GET /impact/chapters/:slug` for chapter pages.
 
 The agent service starts with deterministic Hono routes, but it is intentionally named as an agent because it should also become the place for future interactive or less deterministic workflows: steward review assistance, source reconciliation, publishing helpers, and guided member operations.
 

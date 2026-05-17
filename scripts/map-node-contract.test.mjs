@@ -6,7 +6,7 @@ import {
   PRIVATE_MAP_NODE_FIELDS,
   saveLocalPendingNode,
   toPublicMapNode,
-} from '@greenpill/network-shared/map-nodes';
+} from '@greenpill-network/shared/map-nodes';
 
 class MemoryStorage {
   #values = new Map();

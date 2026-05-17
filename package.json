@@ -1,5 +1,5 @@
 {
-  "name": "@greenpill/network",
+  "name": "greenpill-network",
   "version": "1.0.0",
   "private": true,
   "description": "Greenpill Network monorepo",
@@ -34,7 +34,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@greenpill/network-agent": "workspace:*",
-    "@greenpill/network-shared": "workspace:*"
+    "@greenpill-network/agent": "workspace:*",
+    "@greenpill-network/shared": "workspace:*"
   }
 }
