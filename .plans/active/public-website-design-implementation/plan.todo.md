@@ -7,6 +7,9 @@
 - [x] Refine scope and defaults in `spec.md`
 - [x] Update `status.json` for the design implementation hub
 - [x] Capture the handoff in `handoffs/README.md`
+- [x] Run the data-first foundation wave before token/component/page implementation
+- [x] Complete the Schema Delta Pass for the public Keystatic/Astro content model in `996ce51`
+- [x] Document local-only Keystatic access control and public/private content boundaries
 - [ ] Audit `artifacts/hifi/CLAUDE_CODE_HANDOFF.md` for stale repo paths before using it as an implementation prompt
 - [ ] Port `artifacts/hifi/hifi/gp-tokens.css` into `packages/website`
 - [ ] Build a temporary token/component review surface for visual QA

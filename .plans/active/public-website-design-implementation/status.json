@@ -10,7 +10,7 @@
     "overall_status": "active",
     "priority": "p0",
     "created_at": "2026-05-17T23:16:40.923Z",
-    "updated_at": "2026-05-17T23:25:00.000-07:00"
+    "updated_at": "2026-05-18T08:20:39.000Z"
   },
   "links": {
     "brief": "brief.md",
@@ -39,6 +39,7 @@
     "surfaces": [
       "packages/website",
       "packages/shared",
+      "packages/agent",
       ".plans/active/public-website-design-implementation"
     ],
     "depends_on_features": [
@@ -97,6 +98,20 @@
       "lane": "system",
       "status": "reorganized",
       "note": "Folded temporary docs, research, prompts, and high-fidelity design artifacts into this active hub so root docs do not become stale parallel truth."
+    },
+    {
+      "timestamp": "2026-05-18T03:55:00.000Z",
+      "actor": "codex",
+      "lane": "platform",
+      "status": "ready",
+      "note": "Recorded the data-first foundation wave before visual implementation: Keystatic shape, private intake APIs, normalized migrations, and Green Goods impact cache wiring."
+    },
+    {
+      "timestamp": "2026-05-18T08:20:39.000Z",
+      "actor": "codex",
+      "lane": "content",
+      "status": "ready_for_page_wiring",
+      "note": "Completed the public Schema Delta Pass in 996ce51: Astro/Keystatic schemas now cover HiFi home, garden, library, stories, chapters, guilds, resources, and book compatibility surfaces; Keystatic access control is documented as local file-backed authoring only."
     }
   ]
 }
