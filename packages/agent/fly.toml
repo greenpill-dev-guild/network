@@ -1,24 +1,28 @@
-app = "network-agent"
-primary_region = "iad"
+# fly.toml app configuration file generated for network-admin on 2026-05-18T06:32:39Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'network-admin'
+primary_region = 'iad'
 
 [build]
-  # The Fly app config lives beside the Dockerfile. Keep the deploy/build
-  # context at the repo root so bun.lock and packages/shared are available.
-  dockerfile = "Dockerfile"
+  dockerfile = 'Dockerfile'
 
 [env]
-  NODE_ENV = "production"
-  PORT = "8080"
+  NODE_ENV = 'production'
+  PORT = '8080'
 
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = "stop"
+  auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 1
-  processes = ["app"]
+  processes = ['app']
 
 [[vm]]
-  cpu_kind = "shared"
+  memory = '1gb'
+  cpu_kind = 'shared'
   cpus = 1
-  memory = "1gb"
+  memory_mb = 1024
