@@ -2,8 +2,9 @@ app = "network-agent"
 primary_region = "iad"
 
 [build]
-  # Run Fly deploys from the repo root so the workspace packages and lockfile are in context.
-  dockerfile = "packages/agent/Dockerfile"
+  # The Fly app config lives beside the Dockerfile. Keep the deploy/build
+  # context at the repo root so bun.lock and packages/shared are available.
+  dockerfile = "Dockerfile"
 
 [env]
   NODE_ENV = "production"

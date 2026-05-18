@@ -32,8 +32,8 @@ Residual risk:
 
 - The private CMS/admin layer is not chosen or deployed.
 - `POST /map-nodes` and `GET /map-nodes/public` are still scaffolded `501` contracts under the agent app.
-- No Fly app or Managed Postgres cluster exists yet in the Greenpill org.
-- Docker is not installed on this local machine, so the Docker Compose Postgres path is documented but not runnable here until Docker is installed.
+- `network-agent` is deployed on Fly with Managed Postgres attached, and the production agent schema has been applied.
+- Docker Desktop is available locally through `/usr/local/bin/docker`; shells that miss `/usr/local/bin` may not find `docker` without an absolute path or PATH update.
 - Add-node UI is not implemented yet, so local optimistic rendering is helper-level proof only.
 - Empty `people` and `stories` collections produce build warnings until real content exists.
 

@@ -28,7 +28,8 @@
 ## Remaining Follow-Up
 
 - [ ] Curate KarmaGAP project/community identifiers for mapped chapters
-- [ ] Provision the Fly agent app and Managed Postgres cluster after org/app/plan approval
+- [x] Provision the Fly agent app and Managed Postgres cluster after org/app/plan approval
+- [x] Apply the production agent DB schema for `chapter_impact_snapshots`
 - [ ] Implement the Fly agent cache job against `chapter_impact_snapshots`
 - [ ] Wire `GET /impact/chapters/:slug` to cached normalized payloads
 - [ ] Add browser proof for loaded, empty, stale, and unavailable chapter impact states once the agent exists

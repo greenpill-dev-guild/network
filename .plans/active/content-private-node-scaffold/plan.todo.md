@@ -21,6 +21,7 @@
 - [ ] Run a hands-on Directus spike against the Postgres schema
 - [ ] Compare Directus against Payload, NocoDB, Baserow, and Strapi using the criteria in `.plans/active/content-private-node-scaffold/artifacts/private-node-intake.md`
 - [x] Choose `agent.greenpill.network` as the first deployed home for `POST /map-nodes` and `GET /map-nodes/public`
-- [ ] Provision the Fly agent app and Managed Postgres cluster after org/app/plan approval
+- [x] Provision the Fly agent app and Managed Postgres cluster after org/app/plan approval
+- [x] Apply the production agent DB schema for private map-node intake and chapter impact cache tables
 - [ ] Implement the add-node form and dispatch `greenpill:pending-map-node` after public-safe local storage
 - [ ] Add browser/UI proof for local pending-node rendering once the form exists
