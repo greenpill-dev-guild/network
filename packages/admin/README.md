@@ -38,6 +38,8 @@ DIRECTUS_ADMIN_EMAIL=you@example.com
 DIRECTUS_ADMIN_PASSWORD=replace-with-a-local-password
 DIRECTUS_SECRET=replace-with-a-local-random-value
 DIRECTUS_DB_HEALTHCHECK_THRESHOLD=2000
+DIRECTUS_FILES_MAX_UPLOAD_SIZE=25mb
+DIRECTUS_MAX_PAYLOAD_SIZE=25mb
 ```
 
 The local Directus container connects to the existing local agent database at
@@ -85,6 +87,62 @@ fly postgres attach <postgres-app-name> \
 Prefer a direct Postgres URL for the first Directus bootstrap if the managed
 cluster offers both pooled and direct URLs. The admin service is low-traffic, and
 Directus owns its own system migrations on first boot.
+
+### Upload Storage
+
+Production uploads use Tigris through Directus' S3 storage adapter. Keep the
+bucket private and serve files through Directus permissions/API routes rather
+than exposing the raw bucket.
+
+Create the bucket and copy the generated access key output immediately:
+
+```sh
+fly storage create \
+  --app network-admin \
+  --name greenpill-network-admin-uploads
+```
+
+`fly storage create` sets standard `AWS_*` secrets on the app, but Directus
+expects storage-specific names. Set the Directus aliases from the command output:
+
+```sh
+fly secrets set --app network-admin \
+  STORAGE_TIGRIS_BUCKET="greenpill-network-admin-uploads" \
+  STORAGE_TIGRIS_KEY="<AWS_ACCESS_KEY_ID from fly storage create>" \
+  STORAGE_TIGRIS_SECRET="<AWS_SECRET_ACCESS_KEY from fly storage create>"
+```
+
+The non-secret storage settings live in `packages/admin/fly.toml`:
+
+- `STORAGE_LOCATIONS=tigris`
+- `STORAGE_TIGRIS_DRIVER=s3`
+- `STORAGE_TIGRIS_ENDPOINT=https://t3.storage.dev`
+- `STORAGE_TIGRIS_REGION=auto`
+- `STORAGE_TIGRIS_ROOT=directus`
+- `FILES_MAX_UPLOAD_SIZE=25mb`
+
+Local development intentionally keeps uploads on disk at
+`packages/admin/uploads`.
+
+### Email
+
+Production email is configured for SMTP with Resend-compatible defaults:
+
+- Host: `smtp.resend.com`
+- Port: `587`
+- Username: `resend`
+- Security: STARTTLS (`EMAIL_SMTP_SECURE=false`)
+
+After verifying the sending domain in Resend, set the SMTP API key as a Fly
+secret:
+
+```sh
+fly secrets set --app network-admin \
+  EMAIL_SMTP_PASSWORD="<resend-api-key>"
+```
+
+The sender defaults to `Greenpill Network <no-reply@greenpill.network>`.
+Change `EMAIL_FROM` in `packages/admin/fly.toml` if the verified sender differs.
 
 ## Production Boundary
 

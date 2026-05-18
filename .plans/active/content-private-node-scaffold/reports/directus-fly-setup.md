@@ -29,6 +29,9 @@ bun run db:migrate
 - Initial URL: `https://network-admin.fly.dev`.
 - Future custom URL: `https://admin.greenpill.network`.
 - Database env var: `DB_CONNECTION_STRING`.
+- Upload storage: private Tigris bucket through Directus' S3 adapter.
+- Email: SMTP, with Resend-compatible defaults and password stored as a Fly
+  secret.
 - Directus image: `directus/directus:11.17.0`.
 
 Required first-deploy secrets:
@@ -49,11 +52,34 @@ fly mpg attach <cluster-id> \
   --variable-name DB_CONNECTION_STRING
 ```
 
+Create private Tigris storage and set Directus-specific S3 secret aliases:
+
+```sh
+fly storage create \
+  --app network-admin \
+  --name greenpill-network-admin-uploads
+
+fly secrets set --app network-admin \
+  STORAGE_TIGRIS_BUCKET="greenpill-network-admin-uploads" \
+  STORAGE_TIGRIS_KEY="<AWS_ACCESS_KEY_ID from fly storage create>" \
+  STORAGE_TIGRIS_SECRET="<AWS_SECRET_ACCESS_KEY from fly storage create>"
+```
+
+Configure SMTP after the sending domain is verified:
+
+```sh
+fly secrets set --app network-admin \
+  EMAIL_SMTP_PASSWORD="<resend-api-key>"
+```
+
 ## Safety Notes
 
 Back up or snapshot the production database before the first Directus boot.
 Directus will create its own `directus_*` system tables in the connected
 database.
+
+Keep the Tigris bucket private. Directus file access should be controlled
+through `directus_files` permissions and API routes, not raw bucket ACLs.
 
 Greenpill-owned schema remains canonical in `packages/agent/migrations`.
 Directus may configure Data Studio displays, roles, policies, and workflows, but
