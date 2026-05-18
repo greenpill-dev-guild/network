@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --env-file-if-exists=../../.env.local --watch src/server.js",
+    "dev": "bun --env-file=../../.env.local --watch src/server.js",
     "start": "node --env-file-if-exists=../../.env.local src/server.js",
     "db:local:up": "docker compose up -d agent-postgres",
     "db:local:down": "docker compose down"
