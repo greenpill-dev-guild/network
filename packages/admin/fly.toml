@@ -56,7 +56,7 @@ primary_region = "iad"
   grace_period = "30s"
   interval = "30s"
   method = "GET"
-  path = "/server/health"
+  path = "/server/ping"
   timeout = "10s"
 
 [[vm]]
