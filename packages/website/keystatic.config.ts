@@ -4,24 +4,191 @@ const stewardField = fields.array(
   fields.object({
     name: fields.text({ label: 'Name' }),
     role: fields.text({ label: 'Role' }),
+    bio: fields.text({ label: 'Public Bio', multiline: true }),
+    location: fields.text({ label: 'Public Location' }),
+    personSlug: fields.text({ label: 'Person Slug' }),
+    chapterSlug: fields.text({ label: 'Chapter Slug' }),
     avatar: fields.text({ label: 'Avatar Path' }),
     wallet: fields.text({ label: 'Wallet (optional)' }),
   }),
   { label: 'Stewards', itemLabel: (props) => props.fields.name.value },
 );
 
-const linkField = fields.array(
-  fields.object({
-    label: fields.text({ label: 'Label' }),
-    url: fields.url({ label: 'URL' }),
+const linkItemField = fields.object({
+  label: fields.text({ label: 'Label' }),
+  url: fields.text({ label: 'URL or Path' }),
+  subtext: fields.text({ label: 'Card Subtext' }),
+  handle: fields.text({ label: 'Handle or Detail' }),
+  action: fields.text({ label: 'Action Label' }),
+  icon: fields.text({ label: 'Icon Key' }),
+  kind: fields.select({
+    label: 'Kind',
+    options: [
+      { label: 'Internal', value: 'internal' },
+      { label: 'External', value: 'external' },
+      { label: 'Email', value: 'email' },
+      { label: 'Form', value: 'form' },
+      { label: 'Booking', value: 'booking' },
+      { label: 'Social', value: 'social' },
+    ],
+    defaultValue: 'external',
   }),
+});
+
+const linkField = fields.array(
+  linkItemField,
   { label: 'Links', itemLabel: (props) => props.fields.label.value },
+);
+
+const connectLinkCardsField = fields.array(
+  linkItemField,
+  { label: 'Connect Link Cards', itemLabel: (props) => props.fields.label.value },
 );
 
 const slugListField = (label: string, itemLabel = 'Slug') => fields.array(
   fields.text({ label: itemLabel }),
   { label, itemLabel: (props) => props.value },
 );
+
+const seoField = fields.object({
+  title: fields.text({ label: 'SEO Title' }),
+  description: fields.text({ label: 'SEO Description', multiline: true }),
+  ogImage: fields.text({ label: 'OG Image Path' }),
+  canonicalPath: fields.text({ label: 'Canonical Path' }),
+  noindex: fields.checkbox({ label: 'Noindex', defaultValue: false }),
+}, { label: 'SEO' });
+
+const mediaField = fields.object({
+  image: fields.text({ label: 'Primary Image Path' }),
+  imageAlt: fields.text({ label: 'Primary Image Alt Text' }),
+  ogImage: fields.text({ label: 'OG Image Path' }),
+}, { label: 'Media' });
+
+const ctaField = fields.object({
+  label: fields.text({ label: 'Label' }),
+  href: fields.text({ label: 'URL or Path' }),
+  kind: fields.select({
+    label: 'Kind',
+    options: [
+      { label: 'Internal', value: 'internal' },
+      { label: 'External', value: 'external' },
+      { label: 'Email', value: 'email' },
+      { label: 'Form', value: 'form' },
+      { label: 'Booking', value: 'booking' },
+    ],
+    defaultValue: 'internal',
+  }),
+}, { label: 'CTA' });
+
+const proofSignalsField = fields.array(
+  fields.object({
+    label: fields.text({ label: 'Label' }),
+    value: fields.text({ label: 'Value' }),
+    source: fields.text({ label: 'Source' }),
+    href: fields.text({ label: 'Proof URL or Path' }),
+  }),
+  { label: 'Proof Signals', itemLabel: (props) => props.fields.label.value },
+);
+
+const translationsField = fields.array(
+  fields.object({
+    language: fields.text({ label: 'Language' }),
+    label: fields.text({ label: 'Display Label' }),
+    href: fields.text({ label: 'URL or Path' }),
+    slug: fields.text({ label: 'Related Entry Slug' }),
+  }),
+  { label: 'Translations', itemLabel: (props) => props.fields.language.value },
+);
+
+const publicPersonRefsField = fields.array(
+  fields.object({
+    personSlug: fields.text({ label: 'Person Slug' }),
+    name: fields.text({ label: 'Fallback Name' }),
+    role: fields.text({ label: 'Public Role' }),
+    bio: fields.text({ label: 'Public Bio', multiline: true }),
+    location: fields.text({ label: 'Public Location' }),
+    chapterSlug: fields.text({ label: 'Chapter Slug' }),
+    avatar: fields.text({ label: 'Avatar Path' }),
+  }),
+  { label: 'Public Members', itemLabel: (props) => props.fields.personSlug.value || props.fields.name.value },
+);
+
+const libraryCardField = fields.object({
+  eyebrow: fields.text({ label: 'Eyebrow' }),
+  title: fields.text({ label: 'Card Title Override' }),
+  summary: fields.text({ label: 'Card Summary Override', multiline: true }),
+  badge: fields.text({ label: 'Badge' }),
+  surfaceType: fields.select({
+    label: 'Surface Type',
+    options: [
+      { label: 'Book', value: 'book' },
+      { label: 'Podcast', value: 'podcast' },
+      { label: 'Playbook', value: 'playbook' },
+      { label: 'Garden', value: 'garden' },
+      { label: 'Tool', value: 'tool' },
+      { label: 'Article', value: 'article' },
+      { label: 'Video', value: 'video' },
+      { label: 'External', value: 'external' },
+    ],
+    defaultValue: 'external',
+  }),
+  image: fields.text({ label: 'Card Image Path' }),
+  imageAlt: fields.text({ label: 'Card Image Alt Text' }),
+  href: fields.text({ label: 'Card URL or Path' }),
+}, { label: 'Library / Garden Card Metadata' });
+
+const featuredRefsField = fields.array(
+  fields.object({
+    collection: fields.select({
+      label: 'Collection',
+      options: [
+        { label: 'Chapters', value: 'chapters' },
+        { label: 'Guilds', value: 'guilds' },
+        { label: 'Projects', value: 'projects' },
+        { label: 'Stories', value: 'stories' },
+        { label: 'Resources', value: 'resources' },
+        { label: 'Books', value: 'books' },
+      ],
+      defaultValue: 'chapters',
+    }),
+    slug: fields.text({ label: 'Slug' }),
+    label: fields.text({ label: 'Display Label' }),
+  }),
+  { label: 'Featured References', itemLabel: (props) => props.fields.slug.value },
+);
+
+const pageHeroField = fields.object({
+  overline: fields.text({ label: 'Overline' }),
+  title: fields.text({ label: 'Title' }),
+  dek: fields.text({ label: 'Dek / Subtitle', multiline: true }),
+  body: fields.text({ label: 'Body Copy', multiline: true }),
+  primaryCta: ctaField,
+  secondaryCta: ctaField,
+  media: mediaField,
+}, { label: 'Hero' });
+
+const pageSectionField = fields.array(
+  fields.object({
+    key: fields.text({ label: 'Section Key' }),
+    overline: fields.text({ label: 'Overline' }),
+    title: fields.text({ label: 'Title' }),
+    dek: fields.text({ label: 'Dek / Subtitle', multiline: true }),
+    body: fields.text({ label: 'Body Copy', multiline: true }),
+    cta: ctaField,
+    featuredRefs: featuredRefsField,
+  }),
+  { label: 'Editable Page Sections', itemLabel: (props) => props.fields.key.value || props.fields.title.value },
+);
+
+const previewCardField = fields.object({
+  kicker: fields.text({ label: 'Kicker' }),
+  title: fields.text({ label: 'Title' }),
+  body: fields.text({ label: 'Body', multiline: true }),
+  meta: fields.text({ label: 'Meta' }),
+  image: fields.text({ label: 'Image Path' }),
+  imageAlt: fields.text({ label: 'Image Alt Text' }),
+  cta: ctaField,
+}, { label: 'Preview Card' });
 
 const impactSourcesField = fields.object({
   impactEnabled: fields.checkbox({
@@ -81,6 +248,23 @@ const storyCategoryOptions = [
   { label: 'Field Report', value: 'field-report' },
 ];
 
+const resourceKindOptions = [
+  { label: 'Book', value: 'book' },
+  { label: 'Podcast', value: 'podcast' },
+  { label: 'Guide', value: 'guide' },
+  { label: 'Tool', value: 'tool' },
+  { label: 'Deck', value: 'deck' },
+  { label: 'Article', value: 'article' },
+  { label: 'Video', value: 'video' },
+  { label: 'External', value: 'external' },
+];
+
+const resourceStatusOptions = [
+  { label: 'Draft', value: 'draft' },
+  { label: 'Published', value: 'published' },
+  { label: 'Archived', value: 'archived' },
+];
+
 export default config({
   storage: { kind: 'local' },
 
@@ -110,6 +294,8 @@ export default config({
         bio: fields.text({ label: 'Public Bio', multiline: true }),
         themeSlugs: slugListField('Public Theme Slugs', 'Theme Slug'),
         links: linkField,
+        media: mediaField,
+        seo: seoField,
       },
     }),
 
@@ -125,6 +311,8 @@ export default config({
         region: fields.select({ label: 'Region', options: regionOptions, defaultValue: 'americas' }),
         status: fields.select({ label: 'Status', options: entityStatusOptions, defaultValue: 'active' }),
         summary: fields.text({ label: 'Summary', multiline: true }),
+        introQuote: fields.text({ label: 'Intro Quote', multiline: true }),
+        introQuoteAttribution: fields.text({ label: 'Intro Quote Attribution' }),
         image: fields.text({ label: 'Image Path' }),
         founded: fields.text({ label: 'Founded (year)' }),
         lat: fields.number({ label: 'Latitude', validation: { isRequired: true } }),
@@ -134,7 +322,22 @@ export default config({
         stewardSlugs: slugListField('Reusable Steward Slugs', 'Person Slug'),
         themeSlugs: slugListField('Theme Slugs', 'Theme Slug'),
         links: linkField,
+        connectLinks: connectLinkCardsField,
+        relatedChapterSlugs: slugListField('Related Chapter Slugs', 'Chapter Slug'),
+        featuredStory: fields.object({
+          storySlug: fields.text({ label: 'Story Slug' }),
+          headline: fields.text({ label: 'Headline Override' }),
+          blurb: fields.text({ label: 'Blurb Override', multiline: true }),
+          image: fields.text({ label: 'Image Path' }),
+          imageAlt: fields.text({ label: 'Image Alt Text' }),
+        }, { label: 'Featured Story Card' }),
+        featuredStorySlugs: slugListField('Featured Story Slugs', 'Story Slug'),
+        authoredResourceSlugs: slugListField('Chapter-authored Resource Slugs', 'Resource Slug'),
         impactSources: impactSourcesField,
+        featuredWeight: fields.number({ label: 'Featured Weight', defaultValue: 0 }),
+        proofSignals: proofSignalsField,
+        media: mediaField,
+        seo: seoField,
       },
     }),
 
@@ -156,11 +359,46 @@ export default config({
         status: fields.select({ label: 'Status', options: entityStatusOptions, defaultValue: 'active' }),
         summary: fields.text({ label: 'Summary' }),
         description: fields.text({ label: 'Description', multiline: true }),
+        foundedYear: fields.number({ label: 'Founded Year' }),
+        oneliner: fields.text({ label: 'Public Oneliner' }),
+        outputs: fields.array(
+          fields.object({
+            label: fields.text({ label: 'Output Label' }),
+            summary: fields.text({ label: 'Summary', multiline: true }),
+            href: fields.text({ label: 'URL or Path' }),
+          }),
+          { label: 'Outputs', itemLabel: (props) => props.fields.label.value },
+        ),
+        mandateParagraphs: fields.array(
+          fields.text({ label: 'Paragraph', multiline: true }),
+          { label: 'Mandate Paragraphs', itemLabel: (props) => props.value },
+        ),
+        cadence: fields.object({
+          summary: fields.text({ label: 'Cadence Summary', multiline: true }),
+          callTime: fields.text({ label: 'Call Time' }),
+          format: fields.text({ label: 'Format' }),
+          recordingsHref: fields.text({ label: 'Recordings URL or Path' }),
+        }, { label: 'Cadence' }),
+        principles: fields.array(
+          fields.object({
+            order: fields.number({ label: 'Order', defaultValue: 0 }),
+            title: fields.text({ label: 'Title' }),
+            body: fields.text({ label: 'Body', multiline: true }),
+          }),
+          { label: 'Principles', itemLabel: (props) => props.fields.title.value },
+        ),
         image: fields.text({ label: 'Image Path' }),
         stewards: stewardField,
         stewardSlugs: slugListField('Reusable Steward Slugs', 'Person Slug'),
+        memberSlugs: slugListField('Public Member Slugs', 'Person Slug'),
+        publicMembers: publicPersonRefsField,
         themeSlugs: slugListField('Theme Slugs', 'Theme Slug'),
         links: linkField,
+        connectLinks: connectLinkCardsField,
+        featuredWeight: fields.number({ label: 'Featured Weight', defaultValue: 0 }),
+        proofSignals: proofSignalsField,
+        media: mediaField,
+        seo: seoField,
       },
     }),
 
@@ -184,6 +422,10 @@ export default config({
         liveUrl: fields.url({ label: 'Live URL' }),
         stewardSlugs: slugListField('Reusable Steward Slugs', 'Person Slug'),
         themeSlugs: slugListField('Theme Slugs', 'Theme Slug'),
+        featuredWeight: fields.number({ label: 'Featured Weight', defaultValue: 0 }),
+        proofSignals: proofSignalsField,
+        media: mediaField,
+        seo: seoField,
       },
     }),
 
@@ -200,15 +442,80 @@ export default config({
           defaultValue: 'chapter',
         }),
         publishDate: fields.text({ label: 'Publish Date (YYYY-MM-DD)' }),
+        updatedDate: fields.text({ label: 'Updated Date (YYYY-MM-DD)' }),
+        dek: fields.text({ label: 'Dek / Subtitle', multiline: true }),
         excerpt: fields.text({ label: 'Excerpt', multiline: true }),
-        body: fields.text({ label: 'Body (Markdown)', multiline: true }),
+        region: fields.select({
+          label: 'Region',
+          options: [
+            { label: 'Global', value: 'global' },
+            ...regionOptions,
+          ],
+          defaultValue: 'global',
+        }),
+        tag: fields.text({ label: 'Primary Tag' }),
+        tags: slugListField('Tags', 'Tag'),
+        body: fields.text({
+          label: 'Body (Markdown)',
+          multiline: true,
+          description: 'HiFi article convention: paragraphs separated by blank lines, ## headings, > pull quotes, markdown lists, and a final ## Thanks or ## Acknowledgements section when needed.',
+        }),
         image: fields.text({ label: 'Header Image Path' }),
         author: fields.text({ label: 'Author' }),
+        authorRole: fields.text({ label: 'Author Role' }),
+        authorBio: fields.text({ label: 'Author Bio', multiline: true }),
+        authorSlug: fields.text({ label: 'Author Person Slug' }),
         authorAvatar: fields.text({ label: 'Author Avatar Path' }),
         relatedChapter: fields.text({ label: 'Related Chapter (slug)' }),
         relatedGuild: fields.text({ label: 'Related Guild (slug)' }),
         relatedProjectSlugs: slugListField('Related Project Slugs', 'Project Slug'),
+        relatedStorySlugs: slugListField('Related Story Slugs', 'Story Slug'),
+        continueReadingStorySlugs: slugListField('Continue Reading Story Slugs', 'Story Slug'),
         themeSlugs: slugListField('Theme Slugs', 'Theme Slug'),
+        translations: translationsField,
+        proofSignals: proofSignalsField,
+        featuredWeight: fields.number({ label: 'Featured Weight', defaultValue: 0 }),
+        readTime: fields.text({ label: 'Read Time' }),
+        media: mediaField,
+        seo: seoField,
+      },
+    }),
+
+    resources: collection({
+      label: 'Resources',
+      slugField: 'title',
+      path: 'src/content/resources/*',
+      format: { data: 'json' },
+      columns: ['kind', 'status', 'featuredWeight'],
+      schema: {
+        title: fields.slug({ name: { label: 'Title' } }),
+        kind: fields.select({ label: 'Kind', options: resourceKindOptions, defaultValue: 'external' }),
+        status: fields.select({ label: 'Status', options: resourceStatusOptions, defaultValue: 'draft' }),
+        summary: fields.text({ label: 'Summary', multiline: true }),
+        description: fields.text({ label: 'Description', multiline: true }),
+        author: fields.text({ label: 'Author / Host' }),
+        publishDate: fields.text({ label: 'Publish Date (YYYY-MM-DD)' }),
+        updatedDate: fields.text({ label: 'Updated Date (YYYY-MM-DD)' }),
+        primaryUrl: fields.text({ label: 'Primary URL' }),
+        resourcePath: fields.text({ label: 'Local Asset Path' }),
+        image: fields.text({ label: 'Image Path' }),
+        imageAlt: fields.text({ label: 'Image Alt Text' }),
+        duration: fields.text({ label: 'Duration / Length' }),
+        readTime: fields.text({ label: 'Read Time' }),
+        episodeNumber: fields.text({ label: 'Podcast Episode Number' }),
+        guest: fields.text({ label: 'Guest' }),
+        host: fields.text({ label: 'Host' }),
+        pages: fields.number({ label: 'Pages' }),
+        edition: fields.text({ label: 'Edition' }),
+        tags: slugListField('Tags', 'Tag'),
+        themeSlugs: slugListField('Theme Slugs', 'Theme Slug'),
+        relatedChapterSlugs: slugListField('Related Chapter Slugs', 'Chapter Slug'),
+        relatedGuildSlugs: slugListField('Related Guild Slugs', 'Guild Slug'),
+        relatedProjectSlugs: slugListField('Related Project Slugs', 'Project Slug'),
+        featuredWeight: fields.number({ label: 'Featured Weight', defaultValue: 0 }),
+        card: libraryCardField,
+        media: mediaField,
+        seo: seoField,
       },
     }),
 
@@ -221,6 +528,12 @@ export default config({
       schema: {
         title: fields.slug({ name: { label: 'Book Title' } }),
         description: fields.text({ label: 'Description', multiline: true }),
+        author: fields.text({ label: 'Author' }),
+        publishYear: fields.text({ label: 'Publish Year' }),
+        pages: fields.number({ label: 'Pages' }),
+        edition: fields.text({ label: 'Edition' }),
+        updatedDate: fields.text({ label: 'Updated Date (YYYY-MM-DD)' }),
+        readTime: fields.text({ label: 'Read Time' }),
         image: fields.text({ label: 'Cover Image Path', description: 'e.g. /images/greenpill-cover.png' }),
         imageAlt: fields.text({ label: 'Image Alt Text' }),
         imageWidth: fields.number({ label: 'Image Width', defaultValue: 200 }),
@@ -261,6 +574,9 @@ export default config({
           defaultValue: 'main',
         }),
         sortOrder: fields.number({ label: 'Sort Order', defaultValue: 0 }),
+        card: libraryCardField,
+        media: mediaField,
+        seo: seoField,
       },
     }),
   },
@@ -275,6 +591,153 @@ export default config({
         description: fields.text({ label: 'Site Description', multiline: true }),
         ogImage: fields.text({ label: 'OG Image URL' }),
         analyticsId: fields.text({ label: 'Google Analytics ID' }),
+        seo: seoField,
+      },
+    }),
+
+    homePage: singleton({
+      label: 'Home Page',
+      path: 'src/content/home-page',
+      format: { data: 'json' },
+      schema: {
+        overline: fields.text({ label: 'Overline' }),
+        title: fields.text({ label: 'Title' }),
+        dek: fields.text({ label: 'Dek / Subtitle', multiline: true }),
+        promise: fields.text({ label: 'Homepage Promise', multiline: true }),
+        summary: fields.text({ label: 'Summary', multiline: true }),
+        hero: pageHeroField,
+        sections: pageSectionField,
+        primaryCta: ctaField,
+        secondaryCta: ctaField,
+        proofSignals: proofSignalsField,
+        featuredRefs: featuredRefsField,
+        featuredChapterSlugs: slugListField('Featured Chapter Slugs', 'Chapter Slug'),
+        featuredStorySlugs: slugListField('Featured Story Slugs', 'Story Slug'),
+        featuredResourceSlugs: slugListField('Featured Resource Slugs', 'Resource Slug'),
+        media: mediaField,
+        seo: seoField,
+      },
+    }),
+
+    library: singleton({
+      label: 'Library Index',
+      path: 'src/content/library',
+      format: { data: 'json' },
+      schema: {
+        hero: pageHeroField,
+        sections: pageSectionField,
+        featuredBookSlugs: slugListField('Featured Book Slugs', 'Book Slug'),
+        featuredResourceSlugs: slugListField('Featured Resource Slugs', 'Resource Slug'),
+        featuredGuildSlugs: slugListField('Featured Guild Slugs', 'Guild Slug'),
+        gardenCard: libraryCardField,
+        proofSignals: proofSignalsField,
+        seo: seoField,
+      },
+    }),
+
+    storiesIndex: singleton({
+      label: 'Stories Index',
+      path: 'src/content/stories-index',
+      format: { data: 'json' },
+      schema: {
+        hero: pageHeroField,
+        sections: pageSectionField,
+        featuredStorySlugs: slugListField('Featured Story Slugs', 'Story Slug'),
+        topicTags: slugListField('Topic Filter Tags', 'Tag'),
+        chapterTags: slugListField('Chapter Filter Slugs', 'Chapter Slug'),
+        topicSpotlight: fields.object({
+          topic: fields.text({ label: 'Topic' }),
+          blurb: fields.text({ label: 'Blurb', multiline: true }),
+          storySlugs: slugListField('Story Slugs', 'Story Slug'),
+          proofSignals: proofSignalsField,
+        }, { label: 'Topic Spotlight' }),
+        translations: translationsField,
+        newsletterCta: ctaField,
+        submitStoryCta: ctaField,
+        seo: seoField,
+      },
+    }),
+
+    chaptersIndex: singleton({
+      label: 'Chapters Index',
+      path: 'src/content/chapters-index',
+      format: { data: 'json' },
+      schema: {
+        hero: pageHeroField,
+        sections: pageSectionField,
+        featuredChapterSlugs: slugListField('Featured Chapter Slugs', 'Chapter Slug'),
+        filterCopy: fields.object({
+          regionLabel: fields.text({ label: 'Region Filter Label' }),
+          statusLabel: fields.text({ label: 'Status Filter Label' }),
+          searchPlaceholder: fields.text({ label: 'Search Placeholder' }),
+          emptyState: fields.text({ label: 'Empty State', multiline: true }),
+        }, { label: 'Filter Copy' }),
+        proofSignals: proofSignalsField,
+        seo: seoField,
+      },
+    }),
+
+    garden: singleton({
+      label: 'Garden',
+      path: 'src/content/garden',
+      format: { data: 'json' },
+      schema: {
+        title: fields.text({ label: 'Title' }),
+        summary: fields.text({ label: 'Summary', multiline: true }),
+        framing: fields.select({
+          label: 'First-Release Framing',
+          options: [
+            { label: 'Flagship', value: 'flagship' },
+            { label: 'Program', value: 'program' },
+            { label: 'Support Example', value: 'support-example' },
+            { label: 'Bridge', value: 'bridge' },
+            { label: 'Light Mention', value: 'light-mention' },
+          ],
+          defaultValue: 'bridge',
+        }),
+        steps: fields.array(
+          fields.object({
+            level: fields.number({ label: 'Step Level' }),
+            stage: fields.text({ label: 'Stage' }),
+            levelLabel: fields.text({ label: 'Level Label' }),
+            surfaceType: fields.select({
+              label: 'Surface Type',
+              options: [
+                { label: 'Email', value: 'email' },
+                { label: 'Telegram', value: 'telegram' },
+                { label: 'Assessment', value: 'assessment' },
+                { label: 'Steward Call', value: 'steward-call' },
+                { label: 'Garden', value: 'garden' },
+                { label: 'Playbook', value: 'playbook' },
+              ],
+              defaultValue: 'garden',
+            }),
+            kicker: fields.text({ label: 'Kicker' }),
+            title: fields.text({ label: 'Title' }),
+            body: fields.text({ label: 'Body', multiline: true }),
+            meta: fields.text({ label: 'Meta' }),
+            friction: fields.text({ label: 'Friction Label' }),
+            cta: ctaField,
+          }),
+          { label: 'Steps', itemLabel: (props) => props.fields.title.value },
+        ),
+        afterCards: fields.array(
+          fields.object({
+            kicker: fields.text({ label: 'Kicker' }),
+            title: fields.text({ label: 'Title' }),
+            body: fields.text({ label: 'Body', multiline: true }),
+            cta: ctaField,
+          }),
+          { label: 'After Garden Cards', itemLabel: (props) => props.fields.title.value },
+        ),
+        proofSignals: proofSignalsField,
+        stickyCta: ctaField,
+        emailPreview: previewCardField,
+        telegramPreview: previewCardField,
+        assessmentPreview: previewCardField,
+        stewardCallPreview: previewCardField,
+        media: mediaField,
+        seo: seoField,
       },
     }),
 
@@ -290,6 +753,7 @@ export default config({
         youtubeLink: fields.url({ label: 'YouTube URL' }),
         guestRecommendLink: fields.url({ label: 'Recommend Guest URL' }),
         coverImage: fields.text({ label: 'Cover Image Path' }),
+        seo: seoField,
       },
     }),
 

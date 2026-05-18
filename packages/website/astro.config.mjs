@@ -1,4 +1,5 @@
 import { defineConfig, passthroughImageService } from 'astro/config';
+import react from '@astrojs/react';
 import tailwind from '@astrojs/tailwind';
 import keystatic from '@keystatic/astro';
 
@@ -9,7 +10,7 @@ const isDevCommand =
 export default defineConfig({
   integrations: [
     tailwind(),
-    ...(isDevCommand ? [keystatic()] : []),
+    ...(isDevCommand ? [react(), keystatic()] : []),
   ],
   output: 'static',
   image: {

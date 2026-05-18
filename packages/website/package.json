@@ -11,8 +11,9 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@greenpill-network/shared": "workspace:*",
+    "@astrojs/react": "^4.4.2",
     "@astrojs/tailwind": "^5.1.5",
+    "@greenpill-network/shared": "workspace:*",
     "@keystatic/astro": "^5.0.6",
     "@keystatic/core": "^0.5.48",
     "astro": "^5.18.1",

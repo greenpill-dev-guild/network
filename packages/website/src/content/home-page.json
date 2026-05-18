@@ -1,0 +1,32 @@
+{
+  "title": "",
+  "promise": "",
+  "summary": "",
+  "primaryCta": {
+    "label": "",
+    "href": "",
+    "kind": "internal"
+  },
+  "secondaryCta": {
+    "label": "",
+    "href": "",
+    "kind": "internal"
+  },
+  "proofSignals": [],
+  "featuredRefs": [],
+  "featuredChapterSlugs": [],
+  "featuredStorySlugs": [],
+  "featuredResourceSlugs": [],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "",
+    "description": "",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}
