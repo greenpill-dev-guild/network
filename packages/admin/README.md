@@ -52,7 +52,7 @@ and `audit` schema boundaries as the agent.
 The Fly app name is `network-admin`. Deploy from the repo root:
 
 ```sh
-fly deploy packages/admin --config packages/admin/fly.toml
+fly deploy --config fly.toml packages/admin
 ```
 
 Before the first deploy, set production secrets:

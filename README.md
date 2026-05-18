@@ -105,7 +105,7 @@ The agent Dockerfile is `packages/agent/Dockerfile`. The production database dir
 The Directus admin app is `network-admin` and deploys from `packages/admin`:
 
 ```sh
-fly deploy packages/admin --config packages/admin/fly.toml
+fly deploy --config fly.toml packages/admin
 ```
 
 Attach the Fly Postgres connection to Directus as `DB_CONNECTION_STRING`, not as
