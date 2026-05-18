@@ -14,6 +14,10 @@
 - [x] Add local runnable agent server with `/health` and `/ready`
 - [x] Add local/Fly Postgres migration baseline for `chapter_impact_snapshots`
 - [x] Add Fly agent Dockerfile and `packages/agent/fly.toml`
+- [x] Promote this hub from backlog to active for the data-first implementation wave
+- [x] Add schema-qualified impact cache storage under `impact.chapter_impact_snapshots`
+- [x] Add the Green Goods-first impact sync script and source/cache env configuration
+- [x] Wire `GET /impact/chapters/:slug` to cached normalized payloads
 - [x] Harden privacy checks for snake_case upstream fields
 - [x] Use distinct Green Goods role addresses for public member counts when arrays are available
 - [x] Document the KarmaGAP/Green Goods server-cache contract in `.plans/active/public-website-design-implementation/artifacts/v2`
@@ -30,7 +34,6 @@
 - [ ] Curate KarmaGAP project/community identifiers for mapped chapters
 - [x] Provision the Fly agent app and Managed Postgres cluster after org/app/plan approval
 - [x] Apply the production agent DB schema for `chapter_impact_snapshots`
-- [ ] Implement the Fly agent cache job against `chapter_impact_snapshots`
-- [ ] Wire `GET /impact/chapters/:slug` to cached normalized payloads
+- [ ] Decide the Fly schedule/runner for `bun run impact:sync`
 - [ ] Add browser proof for loaded, empty, stale, and unavailable chapter impact states once the agent exists
 - [ ] Decide whether Hypercert and GreenWill evidence should be added to v2 payloads
