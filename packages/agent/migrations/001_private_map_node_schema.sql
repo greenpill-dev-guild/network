@@ -1,20 +1,47 @@
 -- Greenpill private map-node intake contract.
--- This is a scaffold contract, not a migration wired to production yet.
--- Private fields stay in base tables; public consumers read only public_map_nodes.
+-- Private fields stay in intake base tables; public consumers read only
+-- approved public projections.
 
 create extension if not exists pgcrypto;
 create extension if not exists citext;
 
+create schema if not exists intake;
+create schema if not exists impact;
+create schema if not exists workspace;
+create schema if not exists audit;
+
 do $$
 begin
-  create type map_node_status as enum ('pending', 'approved', 'rejected', 'archived');
-exception
-  when duplicate_object then null;
+  if to_regtype('intake.map_node_status') is null then
+    if to_regtype('public.map_node_status') is not null then
+      execute 'alter type public.map_node_status set schema intake';
+    else
+      execute 'create type intake.map_node_status as enum (''pending'', ''approved'', ''rejected'', ''archived'')';
+    end if;
+  end if;
 end $$;
 
-create table if not exists map_node_submissions (
+drop view if exists public.public_map_nodes;
+drop view if exists intake.public_map_nodes;
+
+do $$
+begin
+  if to_regclass('intake.map_node_submissions') is null and to_regclass('public.map_node_submissions') is not null then
+    alter table public.map_node_submissions set schema intake;
+  end if;
+
+  if to_regclass('intake.map_node_private_contacts') is null and to_regclass('public.map_node_private_contacts') is not null then
+    alter table public.map_node_private_contacts set schema intake;
+  end if;
+
+  if to_regclass('intake.map_node_reviews') is null and to_regclass('public.map_node_reviews') is not null then
+    alter table public.map_node_reviews set schema intake;
+  end if;
+end $$;
+
+create table if not exists intake.map_node_submissions (
   id uuid primary key default gen_random_uuid(),
-  status map_node_status not null default 'pending',
+  status intake.map_node_status not null default 'pending',
   display_name text not null,
   place_name text not null,
   city text,
@@ -39,24 +66,27 @@ create table if not exists map_node_submissions (
   constraint map_node_submissions_raw_note_length check (char_length(coalesce(raw_note, '')) <= 2000)
 );
 
-create table if not exists map_node_private_contacts (
-  submission_id uuid primary key references map_node_submissions(id) on delete cascade,
+create table if not exists intake.map_node_private_contacts (
+  submission_id uuid primary key references intake.map_node_submissions(id) on delete cascade,
   email citext not null,
   contact_consent boolean not null default true,
   created_at timestamptz not null default now()
 );
 
-create table if not exists map_node_reviews (
+create table if not exists intake.map_node_reviews (
   id uuid primary key default gen_random_uuid(),
-  submission_id uuid not null references map_node_submissions(id) on delete cascade,
+  submission_id uuid not null references intake.map_node_submissions(id) on delete cascade,
   reviewer_id text,
-  review_status map_node_status not null,
+  review_status intake.map_node_status not null,
   review_notes text,
   created_at timestamptz not null default now(),
   constraint map_node_reviews_status_check check (review_status in ('approved', 'rejected', 'archived'))
 );
 
-create or replace view public_map_nodes as
+create index if not exists map_node_submissions_status_created_at_idx
+  on intake.map_node_submissions (status, created_at desc);
+
+create or replace view intake.public_map_nodes as
 select
   id,
   display_name as name,
@@ -71,5 +101,8 @@ select
   public_note,
   status,
   approved_at
-from map_node_submissions
+from intake.map_node_submissions
 where status = 'approved';
+
+create or replace view public.public_map_nodes as
+select * from intake.public_map_nodes;

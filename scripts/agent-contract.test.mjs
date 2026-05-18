@@ -11,10 +11,31 @@ import {
   MAP_NODE_SUBMISSIONS_ROUTE,
   PUBLIC_MAP_NODES_ROUTE,
 } from '@greenpill-network/agent/impact';
+import {
+  containsPrivateMapNodeField,
+} from '@greenpill-network/shared/map-nodes';
+import {
+  containsPrivateChapterImpactField,
+} from '@greenpill-network/shared/chapter-impact';
+import {
+  getPublicMapState,
+  PUBLIC_COUNTS_ROUTE,
+  PUBLIC_MAP_STATE_ROUTE,
+} from '@greenpill-network/agent/map-state';
+import {
+  AgentDataError,
+} from '@greenpill-network/agent/map-nodes';
+import {
+  containsPrivateMapStateField,
+  toPublicAggregateCountsPayload,
+  toPublicMapStatePayload,
+} from '@greenpill-network/shared/map-state';
 
 test('agent package exposes stable public route contracts', () => {
   assert.equal(MAP_NODE_SUBMISSIONS_ROUTE, '/map-nodes');
   assert.equal(PUBLIC_MAP_NODES_ROUTE, '/map-nodes/public');
+  assert.equal(PUBLIC_MAP_STATE_ROUTE, '/map/state');
+  assert.equal(PUBLIC_COUNTS_ROUTE, '/public-counts');
   assert.equal(CHAPTER_IMPACT_ROUTE, '/impact/chapters/:slug');
   assert.equal(buildChapterImpactPath('greenpill nigeria'), '/impact/chapters/greenpill%20nigeria');
   assert.equal(
@@ -23,13 +44,141 @@ test('agent package exposes stable public route contracts', () => {
   );
 });
 
-test('agent package exposes a Hono app with scaffolded routes', async () => {
+test('agent package exposes a Hono app with data-backed public routes', async () => {
   const app = createAgentApp({
     checkDatabase: async () => ({
       configured: true,
       connected: true,
       status: 'ok',
     }),
+    impactRepository: {
+      async getChapterImpact(chapterSlug) {
+        return {
+          version: 1,
+          chapterSlug,
+          chapterName: 'Nigeria',
+          generatedAt: '2026-05-16T18:00:00.000Z',
+          sourceStatus: [
+            { source: 'karma', configured: false, status: 'missing' },
+            { source: 'green-goods', configured: true, status: 'ok' },
+          ],
+          summary: {
+            milestoneCount: 0,
+            updateCount: 0,
+            grantCount: 0,
+            gardenMemberCount: 2,
+            actionCount: 3,
+            assessmentCount: 1,
+            hypercertCount: 1,
+            proofLinkCount: 0,
+          },
+          karma: null,
+          greenGoods: {
+            garden: {
+              address: '0x35722eedf3f7566a23fa871f0a04267aee78e0db',
+              chainId: 42161,
+              name: 'Greenpill Nigeria',
+              location: 'Nigeria',
+              gapProjectUID: '',
+              roleCounts: {
+                gardeners: 2,
+                operators: 1,
+                evaluators: 0,
+              },
+              memberCount: 2,
+              url: '',
+            },
+            activity: {
+              actionCount: 3,
+              assessmentCount: 1,
+              hypercertCount: 1,
+            },
+          },
+          proofLinks: [],
+          cache: {
+            status: 'fresh',
+            syncedAt: '2026-05-16T18:00:00.000Z',
+            staleAfter: '2026-05-17T00:00:00.000Z',
+          },
+        };
+      },
+    },
+    mapNodeRepository: {
+      async createSubmission(input) {
+        return {
+          id: 'node-1',
+          name: input.name,
+          place: input.place,
+          city: 'Oakland',
+          region: 'California',
+          country: 'United States',
+          lat: Number(input.lat),
+          long: Number(input.long),
+          role: 'chapter organizer',
+          themes: ['local-regeneration'],
+          publicNote: 'Looking for local collaborators.',
+          status: 'pending',
+          source: 'submitted-pending',
+          createdAt: '2026-05-16T18:00:00.000Z',
+        };
+      },
+      async listPublic() {
+        return [{
+          id: 'node-approved-1',
+          name: 'Approved Member',
+          place: 'Lisbon',
+          city: 'Lisbon',
+          region: '',
+          country: 'Portugal',
+          lat: 38.7223,
+          long: -9.1393,
+          role: 'builder',
+          themes: ['knowledge-commons'],
+          publicNote: 'Running public-goods meetups.',
+          status: 'approved',
+          source: 'approved-submission',
+        }];
+      },
+    },
+    mapStateRepository: {
+      async getMapState() {
+        return toPublicMapStatePayload({
+          generatedAt: '2026-05-17T12:00:00.000Z',
+          chapterLocations: [{
+            id: 'nigeria',
+            name: 'Nigeria',
+            lat: 9.082,
+            long: 8.6753,
+            link: '/chapters/nigeria',
+            status: 'active',
+            themes: ['public'],
+            raw_note: 'private chapter context',
+          }],
+          publicMapNodes: [{
+            id: 'node-approved-1',
+            name: 'Approved Member',
+            place: 'Lisbon',
+            city: 'Lisbon',
+            region: '',
+            country: 'Portugal',
+            lat: 38.7223,
+            long: -9.1393,
+            role: 'member',
+            themes: ['public'],
+            publicNote: 'Running public-goods meetups.',
+            status: 'approved',
+            source: 'approved-submission',
+          }],
+        });
+      },
+      async getPublicCounts() {
+        return toPublicAggregateCountsPayload({
+          generatedAt: '2026-05-17T12:00:00.000Z',
+          chapters: { value: 1, status: 'ok', source: 'map-state' },
+          members: { status: 'not_configured', source: 'private-admin-boundary' },
+        });
+      },
+    },
   });
 
   const health = await app.request('/health');
@@ -44,10 +193,139 @@ test('agent package exposes a Hono app with scaffolded routes', async () => {
   assert.equal((await ready.json()).database.status, 'ok');
 
   const impact = await app.request('/impact/chapters/nigeria');
-  assert.equal(impact.status, 501);
+  assert.equal(impact.status, 200);
   const impactPayload = await impact.json();
   assert.equal(impactPayload.chapterSlug, 'nigeria');
+  assert.equal(impactPayload.cache.status, 'fresh');
   assert.equal(Object.hasOwn(impactPayload, 'expectedCacheTable'), false);
+  assert.equal(containsPrivateChapterImpactField(impactPayload), false);
+
+  const submission = await app.request('/map-nodes', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-forwarded-for': '127.0.0.1',
+      'user-agent': 'node-test',
+    },
+    body: JSON.stringify({
+      name: 'Afo',
+      place: 'Oakland',
+      lat: 37.8044,
+      long: -122.2712,
+      email: 'private@example.com',
+      rawNote: 'steward-only context',
+    }),
+  });
+  assert.equal(submission.status, 201);
+  const submissionPayload = await submission.json();
+  assert.equal(submissionPayload.node.status, 'pending');
+  assert.equal(containsPrivateMapNodeField(submissionPayload), false);
+
+  const publicNodes = await app.request('/map-nodes/public');
+  assert.equal(publicNodes.status, 200);
+  const publicNodesPayload = await publicNodes.json();
+  assert.equal(publicNodesPayload.nodes.length, 1);
+  assert.equal(publicNodesPayload.nodes[0].status, 'approved');
+  assert.equal(containsPrivateMapNodeField(publicNodesPayload), false);
+
+  const mapState = await app.request('/map/state');
+  assert.equal(mapState.status, 200);
+  const mapStatePayload = await mapState.json();
+  assert.equal(mapStatePayload.counts.chapterNodes, 1);
+  assert.equal(mapStatePayload.counts.approvedSubmittedNodes, 1);
+  assert.equal(mapStatePayload.edges.length, 1);
+  assert.equal(containsPrivateMapStateField(mapStatePayload), false);
+
+  const counts = await app.request('/public-counts');
+  assert.equal(counts.status, 200);
+  const countsPayload = await counts.json();
+  const countsById = Object.fromEntries(countsPayload.counts.map((count) => [count.id, count]));
+  assert.equal(countsById.chapters.value, 1);
+  assert.equal(countsById.members.status, 'not_configured');
+  assert.equal(containsPrivateMapStateField(countsPayload), false);
+
+  const corsMapState = await app.request('/map/state', {
+    headers: {
+      origin: 'https://greenpill.network',
+    },
+  });
+  assert.equal(corsMapState.headers.get('access-control-allow-origin'), 'https://greenpill.network');
+
+  const blockedOrigin = await app.request('/map/state', {
+    headers: {
+      origin: 'https://example.com',
+    },
+  });
+  assert.equal(blockedOrigin.headers.get('access-control-allow-origin'), null);
+
+  const preflight = await app.request('/map-nodes', {
+    method: 'OPTIONS',
+    headers: {
+      origin: 'https://greenpill.network',
+      'access-control-request-method': 'POST',
+      'access-control-request-headers': 'content-type',
+    },
+  });
+  assert.equal(preflight.headers.get('access-control-allow-origin'), 'https://greenpill.network');
+  assert.match(preflight.headers.get('access-control-allow-methods') ?? '', /POST/);
+});
+
+test('default map-state repository reports partial public source availability', async () => {
+  const payload = await getPublicMapState({
+    fetchImpl: async () => Response.json([{
+      id: 'nigeria',
+      name: 'Nigeria',
+      lat: 9.082,
+      long: 8.6753,
+      status: 'active',
+      themes: ['public'],
+      private_notes: 'must not leak',
+    }]),
+    mapNodeRepository: {
+      async listPublic() {
+        throw new AgentDataError('database_not_configured', 'missing database');
+      },
+    },
+    now: '2026-05-17T12:00:00.000Z',
+  });
+
+  assert.equal(payload.counts.chapterNodes, 1);
+  assert.equal(payload.counts.approvedSubmittedNodes, 0);
+  assert.deepEqual(payload.counts.sources, [
+    { source: 'chapter-locations', status: 'ok', count: 1, message: '' },
+    {
+      source: 'approved-map-nodes',
+      status: 'not_configured',
+      count: 0,
+      message: 'Approved map-node source is not configured.',
+    },
+  ]);
+  assert.equal(containsPrivateMapStateField(payload), false);
+});
+
+test('chapter impact route reports cache misses without leaking internals', async () => {
+  const app = createAgentApp({
+    impactRepository: {
+      async getChapterImpact() {
+        return null;
+      },
+    },
+    mapNodeRepository: {
+      async createSubmission() {
+        throw new Error('not used');
+      },
+      async listPublic() {
+        return [];
+      },
+    },
+  });
+
+  const impact = await app.request('/impact/chapters/nigeria');
+  assert.equal(impact.status, 404);
+  const payload = await impact.json();
+  assert.equal(payload.error.code, 'impact_cache_miss');
+  assert.equal(payload.chapterSlug, 'nigeria');
+  assert.equal(containsPrivateChapterImpactField(payload), false);
 });
 
 test('agent public impact guard rejects private upstream fields', () => {

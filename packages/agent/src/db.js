@@ -10,6 +10,10 @@ export function getDatabaseUrl(env = process.env) {
   return cleanString(env.DATABASE_URL);
 }
 
+export function getMigrationDatabaseUrl(env = process.env) {
+  return cleanString(env.DIRECT_DATABASE_URL) || getDatabaseUrl(env);
+}
+
 export function createDatabaseClient({
   url = getDatabaseUrl(),
   max = 5,

@@ -26,6 +26,7 @@
     "db:local:up": "node scripts/docker-compose.mjs -f packages/agent/docker-compose.yml up -d agent-postgres",
     "db:local:down": "node scripts/docker-compose.mjs -f packages/agent/docker-compose.yml down",
     "db:migrate": "node --env-file-if-exists=.env.local scripts/agent-db.migrate.mjs",
+    "impact:sync": "node --env-file-if-exists=.env.local scripts/agent-impact-sync.mjs",
     "plans:scaffold": "node scripts/plan-hub.mjs scaffold",
     "plans:validate": "node scripts/plan-hub.mjs validate",
     "test:agent": "node --test scripts/agent-contract.test.mjs",

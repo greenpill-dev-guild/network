@@ -9,6 +9,12 @@ import {
   toPublicChapterImpactPayload,
   toPublicImpactSourceBinding,
 } from '@greenpill-network/shared/chapter-impact';
+import {
+  decorateCachedImpactPayload,
+} from '@greenpill-network/agent/impact-cache';
+import {
+  syncChapterImpactSnapshots,
+} from '@greenpill-network/agent/green-goods-impact';
 
 test('chapter impact source bindings are public and opt-in', () => {
   const binding = toPublicImpactSourceBinding({
@@ -154,4 +160,115 @@ test('public chapter impact payload excludes private fields and reports source o
     { source: 'green-goods', configured: true, status: 'unavailable' },
   ]);
   assert.equal(containsPrivateChapterImpactField(payload), false);
+});
+
+test('cached impact payload reports stale source status without raw upstream data', () => {
+  const payload = decorateCachedImpactPayload({
+    payload: toPublicChapterImpactPayload({
+      chapterSlug: 'nigeria',
+      chapterName: 'Nigeria',
+      generatedAt: '2026-05-16T18:00:00.000Z',
+      sources: {
+        impactEnabled: true,
+        greenGoodsGardenAddress: '0x35722eEdf3F7566A23FA871f0a04267AEe78E0dB',
+      },
+      greenGoods: {
+        garden: {
+          id: '0x35722eEdf3F7566A23FA871f0a04267AEe78E0dB',
+          chainId: 42161,
+          name: 'Greenpill Nigeria',
+          location: 'Nigeria',
+        },
+        activity: {
+          actionCount: 2,
+          assessmentCount: 1,
+          hypercertCount: 1,
+        },
+      },
+    }),
+    sourceStatus: [
+      { source: 'karma', configured: false, status: 'missing' },
+      { source: 'green-goods', configured: true, status: 'ok' },
+    ],
+    syncedAt: '2026-05-16T18:00:00.000Z',
+    staleAfter: '2026-05-17T00:00:00.000Z',
+  }, new Date('2026-05-17T00:00:01.000Z'));
+
+  assert.equal(payload.cache.status, 'stale');
+  assert.equal(payload.sourceStatus[1].status, 'ok');
+  assert.equal(containsPrivateChapterImpactField(payload), false);
+});
+
+test('green goods sync saves normalized snapshots and leaves karma unfetched without IDs', async () => {
+  const calls = [];
+  const saved = [];
+  const fetchImpl = async (url, options = {}) => {
+    calls.push({ url, options });
+
+    if (url === 'https://example.org/impact-sources.json') {
+      return Response.json({
+        chapters: [{
+          chapterSlug: 'nigeria',
+          chapterName: 'Nigeria',
+          sources: {
+            impactEnabled: true,
+            greenGoodsGardenAddress: '0x35722eEdf3F7566A23FA871f0a04267AEe78E0dB',
+            greenGoodsChainId: 42161,
+          },
+        }],
+      });
+    }
+
+    if (url === 'https://example.org/greengoods/graphql') {
+      return Response.json({
+        data: {
+          Garden: [{
+            id: '0x35722eedf3f7566a23fa871f0a04267aee78e0db',
+            chainId: 42161,
+            name: 'Greenpill Nigeria',
+            location: 'Nigeria',
+            gardeners: ['0x1', '0x2'],
+            operators: ['0x2'],
+            evaluators: [],
+            gapProjectUID: null,
+          }],
+          Hypercert: [{ id: 'hypercert-1' }],
+        },
+      });
+    }
+
+    throw new Error(`Unexpected fetch URL: ${url}`);
+  };
+
+  const result = await syncChapterImpactSnapshots({
+    fetchImpl,
+    repository: {
+      async saveSnapshot(snapshot) {
+        saved.push(snapshot);
+      },
+    },
+    now: new Date('2026-05-16T18:00:00.000Z'),
+    config: {
+      impactSourcesUrl: 'https://example.org/impact-sources.json',
+      greenGoodsIndexerUrl: 'https://example.org/greengoods/graphql',
+      karmaApiBase: 'https://example.org/karma',
+      cacheTtlSeconds: 3600,
+      defaultChainId: 42161,
+    },
+  });
+
+  assert.deepEqual(result, {
+    checked: 1,
+    saved: 1,
+    failed: 0,
+    failures: [],
+  });
+  assert.equal(calls.length, 2);
+  assert.equal(saved.length, 1);
+  assert.equal(saved[0].chapterSlug, 'nigeria');
+  assert.equal(saved[0].payload.summary.gardenMemberCount, 2);
+  assert.equal(saved[0].payload.summary.hypercertCount, 1);
+  assert.equal(saved[0].payload.sourceStatus[0].status, 'missing');
+  assert.equal(saved[0].payload.sourceStatus[1].status, 'ok');
+  assert.equal(containsPrivateChapterImpactField(saved[0].payload), false);
 });

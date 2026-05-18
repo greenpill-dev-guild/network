@@ -8,7 +8,7 @@ export const AGENT_HOSTNAME = 'agent.greenpill.network';
 export const MAP_NODE_SUBMISSIONS_ROUTE = '/map-nodes';
 export const PUBLIC_MAP_NODES_ROUTE = '/map-nodes/public';
 export const CHAPTER_IMPACT_ROUTE = '/impact/chapters/:slug';
-export const CHAPTER_IMPACT_CACHE_TABLE = 'chapter_impact_snapshots';
+export const CHAPTER_IMPACT_CACHE_TABLE = 'impact.chapter_impact_snapshots';
 
 export function buildChapterImpactPath(chapterSlug) {
   return `/impact/chapters/${encodeURIComponent(String(chapterSlug ?? '').trim())}`;

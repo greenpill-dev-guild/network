@@ -176,17 +176,18 @@ export function toPublicImpactSourceBinding(chapter) {
 }
 
 export function normalizeKarmaImpactSnapshot(snapshot = {}) {
-  const project = snapshot.project && typeof snapshot.project === 'object'
-    ? snapshot.project
-    : snapshot;
+  const source = snapshot && typeof snapshot === 'object' ? snapshot : {};
+  const project = source.project && typeof source.project === 'object'
+    ? source.project
+    : source;
   const milestones = normalizeEvents(
-    snapshot.milestones || snapshot.projectMilestones || project.milestones,
+    source.milestones || source.projectMilestones || project.milestones,
     'milestone'
   );
-  const updates = normalizeEvents(snapshot.updates || snapshot.activities || project.updates, 'update');
-  const grants = normalizeEvents(snapshot.grants || project.grants, 'grant');
-  const communityImpact = snapshot.communityImpact && typeof snapshot.communityImpact === 'object'
-    ? snapshot.communityImpact
+  const updates = normalizeEvents(source.updates || source.activities || project.updates, 'update');
+  const grants = normalizeEvents(source.grants || project.grants, 'grant');
+  const communityImpact = source.communityImpact && typeof source.communityImpact === 'object'
+    ? source.communityImpact
     : null;
 
   const hasProject = Boolean(
@@ -214,23 +215,24 @@ export function normalizeKarmaImpactSnapshot(snapshot = {}) {
 }
 
 export function normalizeGreenGoodsImpactSnapshot(snapshot = {}) {
-  const garden = snapshot.garden && typeof snapshot.garden === 'object'
-    ? snapshot.garden
-    : snapshot;
-  const address = firstString(garden.address, garden.id, snapshot.gardenAddress);
+  const source = snapshot && typeof snapshot === 'object' ? snapshot : {};
+  const garden = source.garden && typeof source.garden === 'object'
+    ? source.garden
+    : source;
+  const address = firstString(garden.address, garden.id, source.gardenAddress);
   const hasGarden = Boolean(address || garden.name || garden.location);
   if (!hasGarden) return null;
 
-  const activity = snapshot.activity && typeof snapshot.activity === 'object' ? snapshot.activity : snapshot;
+  const activity = source.activity && typeof source.activity === 'object' ? source.activity : source;
   const roleCounts = {
-    gardeners: countValue(garden.gardeners ?? snapshot.gardeners),
-    operators: countValue(garden.operators ?? snapshot.operators),
-    evaluators: countValue(garden.evaluators ?? snapshot.evaluators),
+    gardeners: countValue(garden.gardeners ?? source.gardeners),
+    operators: countValue(garden.operators ?? source.operators),
+    evaluators: countValue(garden.evaluators ?? source.evaluators),
   };
   const roleAddresses = [
-    ...asArray(garden.gardeners ?? snapshot.gardeners),
-    ...asArray(garden.operators ?? snapshot.operators),
-    ...asArray(garden.evaluators ?? snapshot.evaluators),
+    ...asArray(garden.gardeners ?? source.gardeners),
+    ...asArray(garden.operators ?? source.operators),
+    ...asArray(garden.evaluators ?? source.evaluators),
   ]
     .map((address) => cleanString(address).toLowerCase())
     .filter(Boolean);
@@ -246,7 +248,7 @@ export function normalizeGreenGoodsImpactSnapshot(snapshot = {}) {
       gapProjectUID: cleanString(garden.gapProjectUID),
       roleCounts,
       memberCount: distinctMemberCount || roleAssignmentCount,
-      url: firstUrl(garden.url, garden.link, snapshot.url),
+      url: firstUrl(garden.url, garden.link, source.url),
     },
     activity: {
       actionCount: countValue(activity.actionCount ?? activity.actionsCount ?? activity.actions),

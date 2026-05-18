@@ -16,6 +16,7 @@ export interface DatabaseStatus {
 }
 
 export function getDatabaseUrl(env?: Record<string, string | undefined>): string;
+export function getMigrationDatabaseUrl(env?: Record<string, string | undefined>): string;
 export function createDatabaseClient(options?: DatabaseClientOptions): postgres.Sql | null;
 export function checkDatabaseConnection(options?: DatabaseClientOptions & {
   sql?: postgres.Sql;

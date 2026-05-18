@@ -1,35 +1,52 @@
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createDatabaseClient, getDatabaseUrl } from '../packages/agent/src/db.js';
+import { createDatabaseClient, getMigrationDatabaseUrl } from '../packages/agent/src/db.js';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const privateMapSchemaPath = resolve(rootDir, 'packages/agent/migrations/001_private_map_node_schema.sql');
+const migrationsDir = resolve(rootDir, 'packages/agent/migrations');
 
-const chapterImpactSchema = `
-create table if not exists chapter_impact_snapshots (
-  chapter_slug text primary key,
-  payload jsonb not null,
-  source_status jsonb not null default '[]'::jsonb,
-  synced_at timestamptz not null default now(),
-  stale_after timestamptz not null default now() + interval '6 hours',
-  error_count integer not null default 0,
-  last_error text
-);
-`;
+const migrationUrl = getMigrationDatabaseUrl();
 
-if (!getDatabaseUrl()) {
+if (!migrationUrl) {
   console.error('DATABASE_URL is required. Copy .env.example to .env.local or run fly mpg proxy and set DATABASE_URL.');
   process.exit(1);
 }
 
-const sql = createDatabaseClient({ max: 1 });
+const sql = createDatabaseClient({ url: migrationUrl, max: 1 });
 
 try {
-  const privateMapSchema = await readFile(privateMapSchemaPath, 'utf8');
-  await sql.unsafe(privateMapSchema);
-  await sql.unsafe(chapterImpactSchema);
-  console.log('Applied agent database schema: map node intake and chapter impact cache.');
+  await sql.unsafe(`
+    create schema if not exists audit;
+    create table if not exists audit.agent_schema_migrations (
+      version text primary key,
+      applied_at timestamptz not null default now()
+    );
+  `);
+
+  const migrationFiles = (await readdir(migrationsDir))
+    .filter((file) => file.endsWith('.sql'))
+    .sort((a, b) => a.localeCompare(b));
+
+  for (const file of migrationFiles) {
+    const [existing] = await sql`
+      select version from audit.agent_schema_migrations where version = ${file}
+    `;
+
+    if (existing) {
+      console.log(`Skipping already applied migration: ${file}`);
+      continue;
+    }
+
+    const migration = await readFile(resolve(migrationsDir, file), 'utf8');
+    await sql.unsafe(migration);
+    await sql`
+      insert into audit.agent_schema_migrations (version) values (${file})
+    `;
+    console.log(`Applied migration: ${file}`);
+  }
+
+  console.log('Applied agent database migrations.');
 } finally {
   await sql.end({ timeout: 3 });
 }
