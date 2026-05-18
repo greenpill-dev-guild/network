@@ -1,0 +1,11 @@
+{
+  "name": "@greenpill-network/admin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node ../../scripts/docker-compose.mjs --env-file-if-exists ../../.env.local -f docker-compose.yml up admin-directus",
+    "down": "node ../../scripts/docker-compose.mjs -f docker-compose.yml down",
+    "compose:config": "node ../../scripts/docker-compose.mjs --env-file-if-exists ../../.env.local -f docker-compose.yml config"
+  }
+}

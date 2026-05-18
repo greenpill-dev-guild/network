@@ -6,6 +6,7 @@ Packages-first monorepo for the Greenpill Network public website, Fly-hosted age
 
 - `packages/website`: static Astro + Keystatic public website for `greenpill.network`.
 - `packages/agent`: Hono service scaffold for `agent.greenpill.network`, local Postgres readiness, and future cache/intake jobs.
+- `packages/admin`: self-hosted Directus admin service for `network-admin` / future `admin.greenpill.network`.
 - `packages/shared`: reusable payload normalization and privacy-boundary contracts.
 - `packages/workspace`: placeholder for the future authenticated workspace at `app.greenpill.network`.
 
@@ -71,6 +72,25 @@ curl http://127.0.0.1:8787/impact/chapters/nigeria
 
 `/health` is process-level health. `/ready` checks `DATABASE_URL` connectivity. `/impact/chapters/:slug`, `POST /map-nodes`, and `GET /map-nodes/public` are still scaffolded route contracts until the cache and intake implementations land.
 
+## Directus Admin
+
+Directus is self-hosted as a separate admin service, not as part of the public
+Astro website.
+
+```sh
+bun run db:local:up
+bun run db:migrate
+bun run dev:admin
+```
+
+The local Directus service runs at `http://localhost:8055` and connects to the
+same local Postgres database as the agent. Use it for steward moderation and
+internal data review only; keep public intake and public API traffic behind the
+agent routes.
+
+If Docker Desktop is installed but `docker` is not on your shell PATH, the local
+Docker scripts fall back to Docker Desktop's bundled CLI path on macOS.
+
 ## Fly Deployment
 
 Run Fly commands from the repo root so the workspace lockfile and package manifests are in Docker context.
@@ -81,6 +101,16 @@ fly deploy --config packages/agent/fly.toml
 ```
 
 The agent Dockerfile is `packages/agent/Dockerfile`. The production database direction is Fly Managed Postgres attached to the Fly agent app so `DATABASE_URL` is available only as a private Fly secret.
+
+The Directus admin app is `network-admin` and deploys from `packages/admin`:
+
+```sh
+fly deploy packages/admin --config packages/admin/fly.toml
+```
+
+Attach the Fly Postgres connection to Directus as `DB_CONNECTION_STRING`, not as
+`DATABASE_URL`, because Directus reads `DB_CONNECTION_STRING` for PostgreSQL
+connection-string configuration.
 
 Do not expose `DATABASE_URL` or direct database credentials to the public website deploy, Keystatic content, generated JSON, browser bundles, or any future Vercel project.
 

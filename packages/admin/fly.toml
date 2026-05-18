@@ -1,0 +1,41 @@
+app = "network-admin"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  HOST = "0.0.0.0"
+  PORT = "8055"
+  PUBLIC_URL = "https://network-admin.fly.dev"
+  DB_CLIENT = "pg"
+  DB_HEALTHCHECK_THRESHOLD = "2000"
+  WEBSOCKETS_ENABLED = "true"
+  CORS_ENABLED = "true"
+  CORS_ORIGIN = "https://greenpill.network,https://www.greenpill.network,https://network-admin.fly.dev,https://admin.greenpill.network"
+  CORS_CREDENTIALS = "true"
+  PASSWORD_RESET_URL_ALLOW_LIST = "https://network-admin.fly.dev,https://admin.greenpill.network"
+  USER_INVITE_URL_ALLOW_LIST = "https://network-admin.fly.dev,https://admin.greenpill.network"
+  REFRESH_TOKEN_COOKIE_SECURE = "true"
+  SESSION_COOKIE_SECURE = "true"
+  HSTS_ENABLED = "true"
+  RATE_LIMITER_ENABLED = "true"
+  RATE_LIMITER_POINTS = "50"
+  RATE_LIMITER_DURATION = "1"
+  MAX_PAYLOAD_SIZE = "1mb"
+  IMPORT_IP_DENY_LIST = "0.0.0.0,127.0.0.1,::1,169.254.169.254"
+  TELEMETRY = "false"
+
+[http_service]
+  internal_port = 8055
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "1gb"

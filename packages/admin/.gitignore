@@ -1,0 +1,4 @@
+uploads/*
+extensions/*
+templates/*
+!.gitignore

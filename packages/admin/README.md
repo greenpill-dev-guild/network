@@ -1,0 +1,109 @@
+# @greenpill-network/admin
+
+Directus admin service for steward moderation and internal data operations.
+
+This service is intentionally separate from the static website. The public site
+stays at `greenpill.network`, the Hono API stays at `agent.greenpill.network`,
+and Directus runs as the private admin surface for `network-admin` on Fly.
+
+## Local Runtime
+
+Start the local Postgres database and apply the Greenpill schema first:
+
+```sh
+bun run db:local:up
+bun run db:migrate
+```
+
+Then start Directus:
+
+```sh
+bun run dev:admin
+```
+
+Directus will be available at `http://localhost:8055`.
+
+Default local bootstrap credentials are:
+
+- Email: `admin@greenpill.network`
+- Password: `directus-local-password`
+
+Override them in your shell or root `.env.local` before first boot if you want a
+different local admin user. `bun run dev:admin` reads the root `.env.local` when
+it exists and otherwise uses the Docker Compose defaults. See
+`packages/admin/.env.example` for the supported local Directus variables.
+
+```sh
+DIRECTUS_ADMIN_EMAIL=you@example.com
+DIRECTUS_ADMIN_PASSWORD=replace-with-a-local-password
+DIRECTUS_SECRET=replace-with-a-local-random-value
+DIRECTUS_DB_HEALTHCHECK_THRESHOLD=2000
+```
+
+The local Directus container connects to the existing local agent database at
+`postgres://greenpill:greenpill@host.docker.internal:54329/greenpill_network`.
+This keeps the admin pilot pointed at the same `intake`, `impact`, `workspace`,
+and `audit` schema boundaries as the agent.
+
+## Fly Deployment
+
+The Fly app name is `network-admin`. Deploy from the repo root:
+
+```sh
+fly deploy packages/admin --config packages/admin/fly.toml
+```
+
+Before the first deploy, set production secrets:
+
+```sh
+fly secrets set --app network-admin \
+  SECRET="$(openssl rand -hex 32)" \
+  ADMIN_EMAIL="admin@greenpill.network" \
+  ADMIN_PASSWORD="replace-with-a-strong-password"
+```
+
+Attach the existing Fly Managed Postgres cluster using Directus' expected
+connection variable name:
+
+```sh
+fly mpg attach <cluster-id> \
+  --app network-admin \
+  --database greenpill_network \
+  --variable-name DB_CONNECTION_STRING
+```
+
+If the database is an unmanaged Fly Postgres app instead, use:
+
+```sh
+fly postgres attach <postgres-app-name> \
+  --app network-admin \
+  --database-name greenpill_network \
+  --database-user network_admin \
+  --variable-name DB_CONNECTION_STRING
+```
+
+Prefer a direct Postgres URL for the first Directus bootstrap if the managed
+cluster offers both pooled and direct URLs. The admin service is low-traffic, and
+Directus owns its own system migrations on first boot.
+
+## Production Boundary
+
+Directus may create and manage its `directus_*` system tables in the connected
+database. Greenpill-owned product schema still belongs in
+`packages/agent/migrations`.
+
+Do not expose Directus generated APIs as public intake APIs. Public submissions
+should continue through `POST /map-nodes` on the agent so privacy filtering,
+rate-limiting, and public projection contracts remain centralized.
+
+After login, configure Directus roles before inviting stewards:
+
+- Public role: no access to `intake`, `impact`, `workspace`, or `audit`.
+- Steward moderator: read review-safe submission fields, update moderation
+  status fields, and append review rows.
+- Trusted steward/admin: steward access plus private contact visibility.
+- Operator/admin: Directus configuration, emergency correction, and migrations.
+
+Standard stewards must not receive field access to `ip_address`, `user_agent`,
+`rate_limit_key`, `spam_signals`, raw operational metadata, or private contact
+email unless they are in a trusted role.

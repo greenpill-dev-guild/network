@@ -10,6 +10,7 @@ Canonical package boundaries:
 
 - `packages/website`: static Astro + Keystatic public website for `greenpill.network`.
 - `packages/agent`: Hono service for `agent.greenpill.network`, local Postgres readiness, and future cache/intake jobs.
+- `packages/admin`: self-hosted Directus admin service for `network-admin` / future `admin.greenpill.network`.
 - `packages/shared`: reusable payload normalization and privacy-boundary contracts.
 - `packages/workspace`: scaffold for the future authenticated workspace at `app.greenpill.network`.
 
@@ -22,6 +23,7 @@ Run installs and validation from the repo root.
 - `bun run build` or `bun run build:website` - build the static website into `packages/website/dist/`.
 - `bun run preview` or `bun run preview:website` - preview the built website.
 - `bun run dev:agent` - run the local Hono agent server.
+- `bun run dev:admin` - run the local Directus admin service against local Postgres.
 - `bun run db:local:up` / `bun run db:local:down` - start or stop local Postgres.
 - `bun run db:migrate` - apply the local agent database baseline.
 - `bun run test:agent`, `bun run test:chapter-impact`, `bun run test:map-nodes`, `bun run plans:validate` - focused contract checks.
@@ -43,10 +45,15 @@ Generated public JSON routes include `/locations.json` and `/impact-sources.json
 
 The agent package owns private runtime concerns. `/health` is process health, `/ready` checks `DATABASE_URL`, and the impact/map-node routes are scaffolded route contracts until implementation lands.
 
+The admin package owns the self-hosted Directus deployment surface. Directus may
+manage `directus_*` system tables, roles, permissions, and Data Studio views, but
+Greenpill-owned schema migrations remain in `packages/agent/migrations`.
+
 ## Deployment Notes
 
 - The current public site can remain on GitHub Pages. If the project later migrates to Vercel, use repo root, `bun run build:website`, and `packages/website/dist`.
 - Fly deploys should run from the repo root with `fly deploy --config packages/agent/fly.toml`.
+- The Directus admin Fly app is `network-admin`; deploy it from the repo root with `fly deploy packages/admin --config packages/admin/fly.toml`.
 - `DATABASE_URL` belongs only on private Fly services, starting with the agent app. Do not expose database credentials to the public website deploy, Keystatic content, generated JSON, browser bundles, or any future Vercel project.
 
 ## Privacy Boundary
