@@ -1,6 +1,81 @@
 {
-  "name": "New York City",
-  "lat": 40.73,
-  "long": -73.93,
-  "link": "https://app.charmverse.io/greenpill-network/greenpill-new-york-city-7316586457638989"
+  "name": "Greenpill NYC",
+  "city": "New York City",
+  "country": "United States",
+  "region": "americas",
+  "status": "active",
+  "summary": "Public sources describe Greenpill NYC as a public-goods education chapter with monthly meetups, a Luma calendar, and an active X account.",
+  "introQuote": "",
+  "introQuoteAttribution": "",
+  "image": "",
+  "founded": "",
+  "lat": 40.7128,
+  "long": -74.006,
+  "link": "https://luma.com/GPNYC",
+  "stewards": [],
+  "stewardSlugs": [],
+  "themeSlugs": [
+    "education",
+    "public",
+    "funding",
+    "events"
+  ],
+  "links": [
+    {
+      "label": "Luma",
+      "url": "https://luma.com/GPNYC",
+      "subtext": "Public events",
+      "handle": "GPNYC",
+      "action": "Open calendar",
+      "icon": "calendar",
+      "kind": "external"
+    },
+    {
+      "label": "Regen Hub chapter thread",
+      "url": "https://hub.regencoordination.xyz/t/greenpill-new-york-city/96",
+      "subtext": "Public chapter context",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "hub",
+      "kind": "external"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/greenpillnyc",
+      "subtext": "Public chapter account",
+      "handle": "@greenpillnyc",
+      "action": "Follow",
+      "icon": "x",
+      "kind": "social"
+    }
+  ],
+  "connectLinks": [],
+  "relatedChapterSlugs": [
+    "ottawa",
+    "toronto",
+    "london-ontario"
+  ],
+  "featuredStorySlugs": [],
+  "authoredResourceSlugs": [],
+  "featuredWeight": 75,
+  "proofSignals": [
+    {
+      "label": "Luma calendar",
+      "value": "Monthly meetups",
+      "source": "S029",
+      "href": "https://luma.com/GPNYC"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill NYC · Greenpill Network",
+    "description": "Greenpill NYC hosts source-backed public-goods education and meetup activity through public Luma, Hub, and X sources.",
+    "ogImage": "",
+    "canonicalPath": "/chapters/new-york-city",
+    "noindex": false
+  }
 }

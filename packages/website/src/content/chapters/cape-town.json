@@ -1,6 +1,63 @@
 {
-  "name": "Cape Town",
-  "lat": -33.92,
-  "long": 18.42,
-  "link": "https://app.charmverse.io/greenpill-network/greenpill-cape-town-6075904556872553"
+  "name": "Greenpill Cape Town",
+  "city": "Cape Town",
+  "country": "South Africa",
+  "region": "africa",
+  "status": "forming",
+  "summary": "Held as a steward-review chapter record. The research artifact says Cape Town's public footprint is thin and depends on internal copy / Muizenberg-area references, so launch claims need public backfill.",
+  "introQuote": "",
+  "introQuoteAttribution": "",
+  "image": "",
+  "founded": "",
+  "lat": -33.9249,
+  "long": 18.4241,
+  "link": "https://luma.com/greenpill-network",
+  "stewards": [],
+  "stewardSlugs": [],
+  "themeSlugs": [
+    "events",
+    "education",
+    "currency",
+    "public"
+  ],
+  "links": [
+    {
+      "label": "Greenpill Network Luma",
+      "url": "https://luma.com/greenpill-network",
+      "subtext": "General network calendar; chapter-specific source still needed",
+      "handle": "Luma",
+      "action": "Open",
+      "icon": "calendar",
+      "kind": "external"
+    }
+  ],
+  "connectLinks": [],
+  "relatedChapterSlugs": [
+    "nigeria",
+    "kenya",
+    "c-te-d-ivoire"
+  ],
+  "featuredStorySlugs": [],
+  "authoredResourceSlugs": [],
+  "featuredWeight": 0,
+  "proofSignals": [
+    {
+      "label": "Public-footprint gap",
+      "value": "Needs steward review",
+      "source": "Research artifact gap",
+      "href": "https://luma.com/greenpill-network"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill Cape Town · Greenpill Network",
+    "description": "Greenpill Cape Town needs steward review and a public chapter source before launch claims are featured.",
+    "ogImage": "",
+    "canonicalPath": "/chapters/cape-town",
+    "noindex": true
+  }
 }

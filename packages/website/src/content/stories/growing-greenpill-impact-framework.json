@@ -1,0 +1,66 @@
+{
+  "title": "Growing the Greenpill Impact Framework",
+  "status": "draft",
+  "category": "program",
+  "publishDate": "2025",
+  "updatedDate": "",
+  "dek": "A public thread connects Green Goods v1, strategy, measurement, coordination, and capital formation.",
+  "excerpt": "Launch-safe story copy for the Greenpill Impact Framework should cite the public Hub thread and keep internal framework details review-only.",
+  "region": "global",
+  "tag": "Impact Tracking",
+  "tags": [
+    "impact-framework",
+    "green-goods",
+    "capital-formation"
+  ],
+  "body": "The public Impact Framework thread is the best current source for explaining the impact direction on greenpill.network.\n\nThe research artifact includes richer internal framework language around MDR, CIDS, Y2I, Hypercerts, and anomaly detection. Those details should remain in the seed inventory and steward-review queue unless a public mirror or approval exists.\n\n## Sources\n\n- S043: https://hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411\n- S047: https://docs.greengoods.app/community/why-we-build",
+  "image": "",
+  "author": "Greenpill Network research",
+  "authorRole": "Source-backed seed copy",
+  "authorBio": "",
+  "authorSlug": "",
+  "authorAvatar": "",
+  "relatedChapter": "",
+  "relatedGuild": "dev-guild",
+  "relatedProjectSlugs": [
+    "greenpill-impact-framework",
+    "green-goods"
+  ],
+  "relatedStorySlugs": [
+    "greenpill-garden-season-one",
+    "greenpill-nigeria-water-cup"
+  ],
+  "continueReadingStorySlugs": [
+    "greenpill-garden-season-one",
+    "greenpill-brasil-gg20-climate-milestones"
+  ],
+  "themeSlugs": [
+    "impact",
+    "gov",
+    "public",
+    "ai"
+  ],
+  "translations": [],
+  "proofSignals": [
+    {
+      "label": "Public Impact Framework thread",
+      "value": "Regen Hub",
+      "source": "S043",
+      "href": "https://hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411"
+    }
+  ],
+  "featuredWeight": 75,
+  "readTime": "3 min read",
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Growing the Greenpill Impact Framework · Greenpill Stories",
+    "description": "Source-backed story for the public Greenpill Impact Framework thread and Green Goods direction.",
+    "ogImage": "",
+    "canonicalPath": "/stories/growing-greenpill-impact-framework",
+    "noindex": false
+  }
+}

@@ -1,32 +1,230 @@
 {
-  "title": "",
-  "promise": "",
-  "summary": "",
+  "overline": "Greenpill Network",
+  "title": "A global regenerative network.",
+  "dek": "Local chapters, builder guilds, and storytellers coordinating public goods, regenerative action, and onchain impact infrastructure.",
+  "promise": "Greenpill helps local communities, builders, and storytellers coordinate regenerative action with shared learning, public proof, and web3-native tools.",
+  "summary": "The public site should show Greenpill as a living network: chapters doing local work, guilds building tools and media, the Library carrying the knowledge commons, and the Garden giving newcomers a clear next step.",
+  "hero": {
+    "overline": "Greenpill Network",
+    "title": "A global regenerative network.",
+    "dek": "Chapters, guilds, and public-goods builders coordinating real-world impact.",
+    "body": "Start with the map, read the field notes, browse the public library, or enter through the Garden at the pace that fits.",
+    "primaryCta": {
+      "label": "Find your people",
+      "href": "/garden",
+      "kind": "internal"
+    },
+    "secondaryCta": {
+      "label": "Browse chapters",
+      "href": "/chapters",
+      "kind": "internal"
+    },
+    "media": {
+      "image": "/images/hifi/pill-3d.png",
+      "imageAlt": "Greenpill capsule motif",
+      "ogImage": ""
+    }
+  },
+  "sections": [
+    {
+      "key": "network-map",
+      "overline": "Map",
+      "title": "See the network as living infrastructure.",
+      "dek": "The map should combine chapter anchors with approved public nodes and public-safe aggregate state.",
+      "body": "Use chapter content as the canonical static source and the public agent routes for approved projections and fresh counts.",
+      "cta": {
+        "label": "Open chapters",
+        "href": "/chapters",
+        "kind": "internal"
+      },
+      "featuredRefs": [
+        {
+          "collection": "chapters",
+          "slug": "nigeria",
+          "label": "Greenpill Nigeria"
+        },
+        {
+          "collection": "chapters",
+          "slug": "brasil",
+          "label": "Greenpill Brasil"
+        },
+        {
+          "collection": "chapters",
+          "slug": "greensofa",
+          "label": "GreenSofa"
+        }
+      ]
+    },
+    {
+      "key": "field-stories",
+      "overline": "Stories",
+      "title": "Field notes from chapters and guilds.",
+      "dek": "Real updates from Greenpill Nigeria, Brasil, London Ontario, GreenSofa, the Garden, and the Dev Guild are seeded for editorial review.",
+      "body": "Story cards should appear here only after each story is steward-approved and marked published. Keep draft stories and unsupported HiFi stories out of the public launch path.",
+      "cta": {
+        "label": "Read stories",
+        "href": "/stories",
+        "kind": "internal"
+      },
+      "featuredRefs": []
+    },
+    {
+      "key": "library-preview",
+      "overline": "Library",
+      "title": "A public knowledge commons.",
+      "dek": "Books, podcast conversations, public Hub threads, Dev Guild writing, and Garden materials should sit together instead of being scattered across tools.",
+      "body": "The Library should prioritize public, source-backed resources and avoid pretending draft guides or private docs are launch-ready public content.",
+      "cta": {
+        "label": "Browse library",
+        "href": "/library",
+        "kind": "internal"
+      },
+      "featuredRefs": [
+        {
+          "collection": "books",
+          "slug": "onchain-impact-networks",
+          "label": "Onchain Impact Networks"
+        },
+        {
+          "collection": "resources",
+          "slug": "greenpill-podcast",
+          "label": "Greenpill Podcast"
+        },
+        {
+          "collection": "resources",
+          "slug": "regen-coordination-hub",
+          "label": "Regen Coordination Hub"
+        }
+      ]
+    },
+    {
+      "key": "guilds-projects",
+      "overline": "Guilds",
+      "title": "Builders, writers, and stewards ship the network.",
+      "dek": "The Dev Guild and Writers Guild should be visible pathways, with Green Goods, GreenWill, Cookie Jar, Grant Ships, and Impact Reef as public builder proof.",
+      "body": "Use source-backed project pages and public links. Do not surface private member rosters or application state in the logged-out public site.",
+      "cta": {
+        "label": "Visit guilds",
+        "href": "/guilds",
+        "kind": "internal"
+      },
+      "featuredRefs": [
+        {
+          "collection": "guilds",
+          "slug": "dev-guild",
+          "label": "Dev Guild"
+        },
+        {
+          "collection": "guilds",
+          "slug": "writers-guild",
+          "label": "Writers Guild"
+        },
+        {
+          "collection": "projects",
+          "slug": "green-goods",
+          "label": "Green Goods"
+        }
+      ]
+    },
+    {
+      "key": "garden",
+      "overline": "Garden",
+      "title": "Enter at the right level of commitment.",
+      "dek": "The Garden becomes the public onboarding ramp: subscribe, join the conversation, self-assess, then book a steward conversation when ready.",
+      "body": "Keep the public page illustrative and editorial. Real assessment answers, pledge state, and steward scheduling belong outside public Keystatic content.",
+      "cta": {
+        "label": "Enter the Garden",
+        "href": "/garden",
+        "kind": "internal"
+      },
+      "featuredRefs": [
+        {
+          "collection": "resources",
+          "slug": "greenpill-garden-season-one",
+          "label": "Greenpill Garden Season One"
+        }
+      ]
+    }
+  ],
   "primaryCta": {
-    "label": "",
-    "href": "",
+    "label": "Enter the Garden",
+    "href": "/garden",
     "kind": "internal"
   },
   "secondaryCta": {
-    "label": "",
-    "href": "",
+    "label": "Browse chapters",
+    "href": "/chapters",
     "kind": "internal"
   },
-  "proofSignals": [],
-  "featuredRefs": [],
-  "featuredChapterSlugs": [],
+  "proofSignals": [
+    {
+      "label": "Podcast archive",
+      "value": "293 episodes",
+      "source": "S006 Apple Podcasts",
+      "href": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639"
+    },
+    {
+      "label": "Dev Guild grant",
+      "value": "2.5 ETH",
+      "source": "S013 Crypto Altruists",
+      "href": "https://www.cryptoaltruists.com/blog/trailblazers-of-octant-episode-4-greenpill-dev-guild-scaling-the-regen-movement-with-web3-coordination-tools"
+    },
+    {
+      "label": "Public chapter research",
+      "value": "14 priority chapters",
+      "source": "Research artifact section 3",
+      "href": "https://hub.regencoordination.xyz/c/updates/chapter-updates/14"
+    }
+  ],
+  "featuredRefs": [
+    {
+      "collection": "chapters",
+      "slug": "nigeria",
+      "label": "Greenpill Nigeria"
+    },
+    {
+      "collection": "chapters",
+      "slug": "brasil",
+      "label": "Greenpill Brasil"
+    },
+    {
+      "collection": "guilds",
+      "slug": "dev-guild",
+      "label": "Dev Guild"
+    },
+    {
+      "collection": "projects",
+      "slug": "green-goods",
+      "label": "Green Goods"
+    }
+  ],
+  "featuredChapterSlugs": [
+    "nigeria",
+    "brasil",
+    "greensofa",
+    "koh-pha-ngan",
+    "new-york-city",
+    "c-te-d-ivoire",
+    "germany",
+    "uncommons"
+  ],
   "featuredStorySlugs": [],
-  "featuredResourceSlugs": [],
+  "featuredResourceSlugs": [
+    "greenpill-podcast",
+    "regen-coordination-hub",
+    "green-goods-docs",
+    "trailblazers-octant-ep4-gpdg"
+  ],
   "media": {
-    "image": "",
-    "imageAlt": "",
+    "image": "/images/hifi/pill-3d.png",
+    "imageAlt": "Greenpill capsule motif",
     "ogImage": ""
   },
   "seo": {
-    "title": "",
-    "description": "",
+    "title": "Greenpill Network",
+    "description": "Greenpill is a global regenerative network of chapters, guilds, storytellers, and builders coordinating public goods and onchain impact.",
     "ogImage": "",
-    "canonicalPath": "",
+    "canonicalPath": "/",
     "noindex": false
   }
 }

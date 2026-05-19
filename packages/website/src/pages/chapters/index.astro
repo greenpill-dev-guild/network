@@ -1,16 +1,22 @@
 ---
-import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Nav from '../../components/Nav.astro';
 import Footer from '../../components/Footer.astro';
+import chaptersIndex from '../../content/chapters-index.json';
+import { getOperationalChapters } from '../../lib/operational-content';
 import '../../styles/global.css';
 
-const items = (await getCollection('chapters')).sort((a, b) =>
-  a.data.name.localeCompare(b.data.name)
-);
+const items = (await getOperationalChapters())
+  .sort((a, b) => a.data.name.localeCompare(b.data.name));
 ---
 
-<BaseLayout title="Chapters · Greenpill Network" description="The local chapters of the Greenpill regenerative network.">
+<BaseLayout
+  title={chaptersIndex.seo.title || 'Chapters · Greenpill Network'}
+  description={chaptersIndex.seo.description || 'The local chapters of the Greenpill regenerative network.'}
+  ogImage={chaptersIndex.seo.ogImage || undefined}
+  canonicalPath={chaptersIndex.seo.canonicalPath || '/chapters'}
+  noindex={chaptersIndex.seo.noindex}
+>
   <Nav />
   <main class="pt-32 pb-24 px-4 max-w-6xl mx-auto">
     <header class="mb-12">

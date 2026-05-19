@@ -2,11 +2,171 @@
   "name": "Dev Guild",
   "type": "guild",
   "status": "active",
-  "summary": "Building open-source coordination tools for the regenerative network.",
-  "description": "The Dev Guild ships open-source tooling for impact measurement, capital allocation, community governance, and reputation. Members contribute across projects like Green Goods, GreenWill, and Impact Reef.",
+  "summary": "The engineering arm of Greenpill Network, building open-source coordination tools for chapters, funders, and regenerative communities.",
+  "description": "The Dev Guild ships public tooling for impact measurement, capital allocation, community governance, reputation, and public network surfaces. Public sources connect the guild to Green Goods, GreenWill, Impact Reef, Cookie Jar, Grant Ships, Octant funding, Gitcoin rounds, and recurring builder programming.",
+  "foundedYear": 2023,
+  "oneliner": "Building open-source coordination tools for the regenerative network.",
+  "outputs": [
+    {
+      "label": "Impact verification",
+      "summary": "Green Goods and related tools help communities document and verify regenerative work.",
+      "href": "https://github.com/greenpill-dev-guild/green-goods"
+    },
+    {
+      "label": "Capital allocation",
+      "summary": "Grant Ships, Cookie Jar, and related experiments explore public-goods funding mechanisms.",
+      "href": "https://github.com/greenpill-dev-guild"
+    },
+    {
+      "label": "Reputation primitives",
+      "summary": "GreenWill explores public-good reputation and pay-it-forward activity.",
+      "href": "https://github.com/greenpill-dev-guild/greenwill"
+    },
+    {
+      "label": "Public writing",
+      "summary": "The Dev Guild Paragraph documents builder work and grant-facing updates.",
+      "href": "https://paragraph.com/@greenpilldevguild"
+    }
+  ],
+  "mandateParagraphs": [
+    "The Dev Guild is the engineering arm of Greenpill Network. It designs and ships open-source software that helps chapters and allied communities coordinate without relying on private intermediaries.",
+    "The strongest public proof points are Green Goods, GreenWill, Cookie Jar, Grant Ships, Impact Reef, public GitHub repositories, and the Octant / Gitcoin funding trail.",
+    "Where existing tools already do the job, the public direction should frame the guild as an integrator and steward of coordination infrastructure rather than a team rebuilding every primitive from scratch."
+  ],
+  "cadence": {
+    "summary": "Public sources confirm recurring builder programming, but exact call cadence should be steward-confirmed before launch copy promises a standing schedule.",
+    "callTime": "",
+    "format": "Builder spaces and public async work",
+    "recordingsHref": ""
+  },
+  "principles": [
+    {
+      "order": 1,
+      "title": "Public by default",
+      "body": "Use public repositories, public docs, and public grant updates whenever they can carry the claim."
+    },
+    {
+      "order": 2,
+      "title": "Integrate before rebuilding",
+      "body": "Frame the guild around practical coordination infrastructure and integrations with tools such as EAS, Gitcoin, Allo, KarmaGAP, and Green Goods."
+    },
+    {
+      "order": 3,
+      "title": "Chapter-informed tooling",
+      "body": "Show how tools support local chapters and real regenerative work, not software for its own sake."
+    }
+  ],
   "image": "",
   "stewards": [],
+  "stewardSlugs": [
+    "afo-aiyeloja",
+    "matt-mattycompost",
+    "trinity-morphy",
+    "coi"
+  ],
+  "memberSlugs": [],
+  "publicMembers": [
+    {
+      "personSlug": "afo-aiyeloja",
+      "name": "Afo (Afolabi Aiyeloja)",
+      "role": "Dev Guild contributor",
+      "bio": "Publicly referenced in Dev Guild / Octant research as part of the builder layer.",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "matt-mattycompost",
+      "name": "Matt (mattycompost)",
+      "role": "Dev Guild contributor",
+      "bio": "Publicly referenced in Dev Guild / Octant and Garden-oriented research.",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    }
+  ],
+  "themeSlugs": [
+    "opensrc",
+    "public",
+    "impact",
+    "funding",
+    "education",
+    "coordination-tools"
+  ],
   "links": [
-    { "label": "GitHub", "url": "https://github.com/greenpill-dev-guild" }
-  ]
+    {
+      "label": "GitHub",
+      "url": "https://github.com/greenpill-dev-guild",
+      "subtext": "Public repositories",
+      "handle": "greenpill-dev-guild",
+      "action": "Visit org",
+      "icon": "github",
+      "kind": "external"
+    },
+    {
+      "label": "Dev Guild Paragraph",
+      "url": "https://paragraph.com/@greenpilldevguild",
+      "subtext": "Public writing and updates",
+      "handle": "@greenpilldevguild",
+      "action": "Read",
+      "icon": "article",
+      "kind": "external"
+    },
+    {
+      "label": "Octant proposal",
+      "url": "https://discuss.octant.app/t/greenpill-dev-guild-regeneration-through-collaboration/456",
+      "subtext": "Public funding proposal",
+      "handle": "Octant forum",
+      "action": "Open",
+      "icon": "external",
+      "kind": "external"
+    }
+  ],
+  "connectLinks": [
+    {
+      "label": "GitHub",
+      "url": "https://github.com/greenpill-dev-guild",
+      "subtext": "Public repos, issues, and project code",
+      "handle": "greenpill-dev-guild",
+      "action": "Visit org",
+      "icon": "github",
+      "kind": "external"
+    },
+    {
+      "label": "Dev Guild Paragraph",
+      "url": "https://paragraph.com/@greenpilldevguild",
+      "subtext": "Builder updates and grant context",
+      "handle": "@greenpilldevguild",
+      "action": "Read updates",
+      "icon": "article",
+      "kind": "external"
+    }
+  ],
+  "featuredWeight": 100,
+  "proofSignals": [
+    {
+      "label": "Octant Community Fund grant",
+      "value": "2.5 ETH",
+      "source": "S013 Crypto Altruists",
+      "href": "https://www.cryptoaltruists.com/blog/trailblazers-of-octant-episode-4-greenpill-dev-guild-scaling-the-regen-movement-with-web3-coordination-tools"
+    },
+    {
+      "label": "Octant proposal",
+      "value": "$60k request",
+      "source": "S012 Octant forum",
+      "href": "https://discuss.octant.app/t/greenpill-dev-guild-regeneration-through-collaboration/456"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Dev Guild · Greenpill Network",
+    "description": "The Greenpill Dev Guild builds open-source coordination tools for public goods, impact verification, and regenerative communities.",
+    "ogImage": "",
+    "canonicalPath": "/guilds/dev-guild",
+    "noindex": false
+  }
 }

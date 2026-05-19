@@ -67,6 +67,16 @@
       "link": "/pdf/greenpill-translations/greenpill-turkish.pdf"
     }
   ],
+  "themeSlugs": ["public", "funding", "local-regeneration", "knowledge-commons"],
+  "relatedProjectSlugs": ["greenpill-garden", "greenpill-impact-framework", "greenpill-v2-website"],
+  "card": {
+    "eyebrow": "Foundational book",
+    "title": "Greenpill v0",
+    "summary": "The original Greenpill book sets the network's public-goods and regenerative crypto thesis.",
+    "ctaLabel": "Read the book",
+    "ctaHref": "/pdf/green-pill.pdf",
+    "surfaceType": "book"
+  },
   "group": "main",
   "sortOrder": 8
 }

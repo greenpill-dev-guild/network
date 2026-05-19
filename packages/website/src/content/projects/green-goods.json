@@ -2,12 +2,60 @@
   "name": "Green Goods",
   "status": "active",
   "guild": "dev-guild",
-  "summary": "Impact measurement and verification for regenerative outcomes.",
-  "description": "Green Goods provides tools for chapters and projects to capture, attest to, and report regenerative impact onchain.",
+  "summary": "Offline-first impact verification for regenerative work.",
+  "description": "Green Goods is a mobile-first PWA built by the Greenpill Dev Guild to document and verify ecological and social work. Public sources describe an offline-first flow where operators approve submissions and impact can be anchored with Ethereum Attestation Service on Arbitrum, with Green Goods positioned as core infrastructure for public proof.",
   "image": "",
-  "techStack": ["Solidity", "React", "Node"],
-  "repoUrl": "",
-  "liveUrl": "",
-  "stewardSlugs": [],
-  "themeSlugs": ["coordination-tools", "local-regeneration", "public-goods"]
+  "techStack": [
+    "PWA",
+    "Ethereum Attestation Service",
+    "Arbitrum",
+    "Impact verification"
+  ],
+  "repoUrl": "https://github.com/greenpill-dev-guild/green-goods",
+  "liveUrl": "https://docs.greengoods.app/community/why-we-build",
+  "stewardSlugs": [
+    "afo-aiyeloja",
+    "matt-mattycompost"
+  ],
+  "themeSlugs": [
+    "impact",
+    "trees",
+    "food",
+    "public",
+    "opensrc",
+    "coordination-tools"
+  ],
+  "featuredWeight": 100,
+  "proofSignals": [
+    {
+      "label": "Public repo",
+      "value": "green-goods",
+      "source": "S009 GitHub",
+      "href": "https://github.com/greenpill-dev-guild/green-goods"
+    },
+    {
+      "label": "Public docs",
+      "value": "docs.greengoods.app",
+      "source": "S047",
+      "href": "https://docs.greengoods.app/community/why-we-build"
+    },
+    {
+      "label": "Octant proposal allocation",
+      "value": "$20k earmarked",
+      "source": "S012 Octant forum",
+      "href": "https://discuss.octant.app/t/greenpill-dev-guild-regeneration-through-collaboration/456"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Green Goods · Greenpill Network",
+    "description": "Green Goods is a Greenpill Dev Guild PWA for source-backed regenerative impact verification and public proof.",
+    "ogImage": "",
+    "canonicalPath": "/projects/green-goods",
+    "noindex": false
+  }
 }

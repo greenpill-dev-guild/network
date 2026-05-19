@@ -1,6 +1,114 @@
 {
-  "name": "Koh Pha Ngan",
-  "lat": 9.75,
-  "long": 100.07,
-  "link": "https://app.charmverse.io/greenpill-network/greenpill-phangan-5987585249130283"
+  "name": "Greenpill Koh Phangan",
+  "city": "Koh Phangan",
+  "country": "Thailand",
+  "region": "asia",
+  "status": "active",
+  "summary": "Public sources connect Greenpill Koh Phangan to ReFi Phangan, local regenerative finance, PhanganQF, Re:Plast recycling context, Giveth, X, and a 10 Years of Ethereum Phangan event.",
+  "introQuote": "",
+  "introQuoteAttribution": "",
+  "image": "",
+  "founded": "",
+  "lat": 9.7333,
+  "long": 100.0167,
+  "link": "https://giveth.io/project/greenpill-phangan",
+  "stewards": [
+    {
+      "name": "Paul Burg",
+      "role": "Public steward reference",
+      "bio": "Named publicly on the GreenPill Phangan Giveth source.",
+      "location": "Koh Phangan",
+      "personSlug": "paul-burg",
+      "chapterSlug": "koh-pha-ngan",
+      "avatar": "",
+      "wallet": ""
+    }
+  ],
+  "stewardSlugs": [
+    "paul-burg"
+  ],
+  "themeSlugs": [
+    "water",
+    "events",
+    "currency",
+    "energy",
+    "impact"
+  ],
+  "links": [
+    {
+      "label": "Giveth",
+      "url": "https://giveth.io/project/greenpill-phangan",
+      "subtext": "Public project profile",
+      "handle": "greenpill-phangan",
+      "action": "Open",
+      "icon": "external",
+      "kind": "external"
+    },
+    {
+      "label": "Crypto Altruism episode",
+      "url": "https://www.cryptoaltruism.org/blog/crypto-altruism-podcast-episode-138-refi-phangan-regenerative-finance-quadratic-funding-and-local-impact",
+      "subtext": "ReFi Phangan context",
+      "handle": "Episode 138",
+      "action": "Listen",
+      "icon": "podcast",
+      "kind": "external"
+    },
+    {
+      "label": "10 Years of Ethereum event",
+      "url": "https://luma.com/k057yjjx",
+      "subtext": "Public event page",
+      "handle": "Luma",
+      "action": "Open",
+      "icon": "calendar",
+      "kind": "external"
+    }
+  ],
+  "connectLinks": [
+    {
+      "label": "X",
+      "url": "https://x.com/GreenPillKPG",
+      "subtext": "Public chapter account",
+      "handle": "@GreenPillKPG",
+      "action": "Follow",
+      "icon": "x",
+      "kind": "social"
+    }
+  ],
+  "relatedChapterSlugs": [
+    "greensofa",
+    "brasil",
+    "nigeria"
+  ],
+  "featuredStory": {},
+  "featuredStorySlugs": [],
+  "authoredResourceSlugs": [
+    "crypto-altruism-ep138-refi-phangan"
+  ],
+  "featuredWeight": 80,
+  "proofSignals": [
+    {
+      "label": "Public project profile",
+      "value": "Giveth",
+      "source": "S036",
+      "href": "https://giveth.io/project/greenpill-phangan"
+    },
+    {
+      "label": "Public event",
+      "value": "10 Years of Ethereum",
+      "source": "S038",
+      "href": "https://luma.com/k057yjjx"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill Koh Phangan · Greenpill Network",
+    "description": "Greenpill Koh Phangan connects ReFi Phangan, local impact, PhanganQF, recycling context, and public events.",
+    "ogImage": "",
+    "canonicalPath": "/chapters/koh-pha-ngan",
+    "noindex": false
+  }
 }

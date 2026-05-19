@@ -1,6 +1,62 @@
 {
-  "name": "India",
+  "name": "Greenpill India",
+  "city": "Distributed",
+  "country": "India",
+  "region": "asia",
+  "status": "active",
+  "summary": "Adjacent public source-backed chapter record from the Regen Coordination Hub. It is not one of the priority 14 research rows, so feature only after a steward confirms current public activity.",
+  "introQuote": "",
+  "introQuoteAttribution": "",
+  "image": "",
+  "founded": "",
   "lat": 21.14,
   "long": 79.09,
-  "link": "https://twitter.com/GreenPill_IND"
+  "link": "https://hub.regencoordination.xyz/t/greenpill-india-updates/97",
+  "stewards": [],
+  "stewardSlugs": [],
+  "themeSlugs": [
+    "education",
+    "public",
+    "opensrc"
+  ],
+  "links": [
+    {
+      "label": "Greenpill India updates",
+      "url": "https://hub.regencoordination.xyz/t/greenpill-india-updates/97",
+      "subtext": "Public Hub thread",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "hub",
+      "kind": "external"
+    }
+  ],
+  "connectLinks": [],
+  "relatedChapterSlugs": [
+    "koh-pha-ngan",
+    "greensofa",
+    "uncommons"
+  ],
+  "featuredStorySlugs": [],
+  "authoredResourceSlugs": [],
+  "featuredWeight": 15,
+  "proofSignals": [
+    {
+      "label": "Public Hub thread",
+      "value": "Greenpill India updates",
+      "source": "S040",
+      "href": "https://hub.regencoordination.xyz/t/greenpill-india-updates/97"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill India · Greenpill Network",
+    "description": "Greenpill India has an adjacent public Hub source and needs steward confirmation for launch feature placement.",
+    "ogImage": "",
+    "canonicalPath": "/chapters/india",
+    "noindex": false
+  }
 }

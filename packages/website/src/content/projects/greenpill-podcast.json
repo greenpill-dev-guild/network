@@ -1,0 +1,45 @@
+{
+  "name": "Greenpill Podcast",
+  "status": "active",
+  "guild": "writers-guild",
+  "summary": "Long-running public podcast about crypto-economic systems that create positive externalities.",
+  "description": "The Greenpill Podcast remains one of the network's strongest public media surfaces, with the research artifact citing 293 public episodes from 2022 through 2026 and sub-series including VDAO x Greenpill and Network Nations.",
+  "image": "",
+  "techStack": [
+    "Podcast",
+    "Public media",
+    "Network knowledge"
+  ],
+  "repoUrl": "",
+  "liveUrl": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639",
+  "stewardSlugs": [
+    "kevin-owocki"
+  ],
+  "themeSlugs": [
+    "stories",
+    "education",
+    "public",
+    "gov"
+  ],
+  "featuredWeight": 75,
+  "proofSignals": [
+    {
+      "label": "Podcast archive",
+      "value": "293 episodes",
+      "source": "S006 Apple Podcasts",
+      "href": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill Podcast · Greenpill Network",
+    "description": "The Greenpill Podcast is a long-running public media surface for regenerative crypto and public-goods coordination.",
+    "ogImage": "",
+    "canonicalPath": "/projects/greenpill-podcast",
+    "noindex": false
+  }
+}

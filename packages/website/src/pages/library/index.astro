@@ -3,6 +3,7 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Nav from '../../components/Nav.astro';
 import Footer from '../../components/Footer.astro';
+import library from '../../content/library.json';
 import '../../styles/global.css';
 
 const books = (await getCollection('books')).sort(
@@ -10,7 +11,13 @@ const books = (await getCollection('books')).sort(
 );
 ---
 
-<BaseLayout title="Library · Greenpill Network" description="Books, podcasts, tools, and toolkit from the Greenpill regenerative network.">
+<BaseLayout
+  title={library.seo.title || 'Library · Greenpill Network'}
+  description={library.seo.description || 'Books, podcasts, tools, and toolkit from the Greenpill regenerative network.'}
+  ogImage={library.seo.ogImage || undefined}
+  canonicalPath={library.seo.canonicalPath || '/library'}
+  noindex={library.seo.noindex}
+>
   <Nav />
   <main class="pt-32 pb-24 px-4 max-w-6xl mx-auto">
     <header class="mb-12">

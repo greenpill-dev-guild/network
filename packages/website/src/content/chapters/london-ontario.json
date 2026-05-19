@@ -1,11 +1,71 @@
 {
-  "name": "London, Ontario",
-  "lat": 42.98,
-  "long": -81.25,
-  "link": "https://x.com/greenpillLDN",
+  "name": "Greenpill London Ontario",
+  "city": "London",
+  "country": "Canada",
+  "region": "americas",
+  "status": "active",
+  "summary": "Public TechAlliance listing confirms Greenpill London Ontario presented Vibe Coding for Good, a collaborative build night at Reimagine Co on April 28, 2025.",
+  "introQuote": "",
+  "introQuoteAttribution": "",
+  "image": "",
+  "founded": "",
+  "lat": 42.9849,
+  "long": -81.2453,
+  "link": "https://www.techalliance.ca/news/events/vibe-coding-for-good-a-collaborative-build-night-reimagine-co-presented-by-greenpill-london-ontario/",
+  "stewards": [],
+  "stewardSlugs": [],
+  "themeSlugs": [
+    "opensrc",
+    "events",
+    "education"
+  ],
+  "links": [
+    {
+      "label": "Vibe Coding for Good",
+      "url": "https://www.techalliance.ca/news/events/vibe-coding-for-good-a-collaborative-build-night-reimagine-co-presented-by-greenpill-london-ontario/",
+      "subtext": "Public event listing",
+      "handle": "TechAlliance",
+      "action": "Open",
+      "icon": "calendar",
+      "kind": "external"
+    }
+  ],
+  "connectLinks": [],
+  "relatedChapterSlugs": [
+    "toronto",
+    "ottawa",
+    "new-york-city"
+  ],
+  "featuredStory": {},
+  "featuredStorySlugs": [],
+  "authoredResourceSlugs": [],
   "impactSources": {
     "impactEnabled": true,
     "greenGoodsGardenAddress": "0x4055530dB392FB2B56037065A512c5b283D90A10",
-    "greenGoodsChainId": 42161
+    "greenGoodsChainId": 42161,
+    "karmaProjectUID": "",
+    "karmaProjectSlug": "",
+    "karmaCommunitySlug": ""
+  },
+  "featuredWeight": 45,
+  "proofSignals": [
+    {
+      "label": "Public build night",
+      "value": "April 28, 2025",
+      "source": "S033",
+      "href": "https://www.techalliance.ca/news/events/vibe-coding-for-good-a-collaborative-build-night-reimagine-co-presented-by-greenpill-london-ontario/"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill London Ontario · Greenpill Network",
+    "description": "Greenpill London Ontario has public event proof through the Vibe Coding for Good build night at Reimagine Co.",
+    "ogImage": "",
+    "canonicalPath": "/chapters/london-ontario",
+    "noindex": false
   }
 }

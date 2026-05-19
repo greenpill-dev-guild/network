@@ -1,6 +1,62 @@
 {
-  "name": "Germany",
-  "lat": 51.16,
-  "long": 10.45,
-  "link": "https://app.charmverse.io/greenpill-network/greenpill-germany-6680735615710875"
+  "name": "Greenpill Germany",
+  "city": "Distributed",
+  "country": "Germany / DACH",
+  "region": "europe",
+  "status": "active",
+  "summary": "The public GreenPillGER account frames Greenpill Germany / DACH around decentralized communities, regenerative finance, biodiversity, climate, and social movement work. The previously listed chapter website needs a fresh source check before launch.",
+  "introQuote": "",
+  "introQuoteAttribution": "",
+  "image": "",
+  "founded": "",
+  "lat": 51.1657,
+  "long": 10.4515,
+  "link": "https://twitter.com/GreenPillGER",
+  "stewards": [],
+  "stewardSlugs": [],
+  "themeSlugs": [
+    "public",
+    "education",
+    "trees",
+    "funding"
+  ],
+  "links": [
+    {
+      "label": "X",
+      "url": "https://twitter.com/GreenPillGER",
+      "subtext": "Public account",
+      "handle": "@GreenPillGER",
+      "action": "Follow",
+      "icon": "x",
+      "kind": "social"
+    }
+  ],
+  "connectLinks": [],
+  "relatedChapterSlugs": [
+    "uncommons",
+    "greensofa"
+  ],
+  "featuredStorySlugs": [],
+  "authoredResourceSlugs": [],
+  "featuredWeight": 65,
+  "proofSignals": [
+    {
+      "label": "Public account",
+      "value": "@GreenPillGER",
+      "source": "S035",
+      "href": "https://twitter.com/GreenPillGER"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill Germany · Greenpill Network",
+    "description": "Greenpill Germany / DACH has public social proof around regenerative finance and community coordination.",
+    "ogImage": "",
+    "canonicalPath": "/chapters/germany",
+    "noindex": false
+  }
 }

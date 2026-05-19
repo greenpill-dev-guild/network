@@ -1,0 +1,55 @@
+{
+  "title": "Greenpill Network Luma",
+  "kind": "external",
+  "status": "published",
+  "summary": "Public calendar surface for Greenpill Network calls and events.",
+  "description": "The Luma calendar is a public source for weekly / recurring Greenpill network calls and should be used for event discovery until a dedicated public event projection exists.",
+  "author": "Greenpill Network",
+  "publishDate": "",
+  "updatedDate": "2026",
+  "primaryUrl": "https://luma.com/greenpill-network",
+  "resourcePath": "",
+  "image": "",
+  "imageAlt": "",
+  "duration": "",
+  "readTime": "",
+  "episodeNumber": "",
+  "guest": "",
+  "host": "",
+  "tags": [
+    "events",
+    "calendar",
+    "community-calls"
+  ],
+  "themeSlugs": [
+    "events",
+    "gov",
+    "public"
+  ],
+  "relatedChapterSlugs": [],
+  "relatedGuildSlugs": [],
+  "relatedProjectSlugs": [],
+  "featuredWeight": 45,
+  "card": {
+    "eyebrow": "Calendar",
+    "title": "Greenpill Network Luma",
+    "summary": "Public events and network calls.",
+    "badge": "Source S007",
+    "surfaceType": "external",
+    "image": "",
+    "imageAlt": "",
+    "href": "https://luma.com/greenpill-network"
+  },
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill Network Luma · Greenpill Library",
+    "description": "Open the public Greenpill Network Luma calendar for calls and events.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

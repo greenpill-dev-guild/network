@@ -1,0 +1,42 @@
+{
+  "name": "Grant Ships",
+  "status": "active",
+  "guild": "dev-guild",
+  "summary": "Grant-allocation game and public-goods funding experiment.",
+  "description": "Grant Ships appears in the public Dev Guild funding/project inventory as an allocation game where funders compete to support projects and bring regenerative features into game ecosystems.",
+  "image": "",
+  "techStack": [
+    "Grant allocation",
+    "Retro funding",
+    "Public goods"
+  ],
+  "repoUrl": "",
+  "liveUrl": "https://checker.gitcoin.co/public/project/show/greenpill-dev-guild",
+  "stewardSlugs": [],
+  "themeSlugs": [
+    "funding",
+    "public",
+    "opensrc"
+  ],
+  "featuredWeight": 45,
+  "proofSignals": [
+    {
+      "label": "Gitcoin project",
+      "value": "Greenpill Dev Guild",
+      "source": "S010",
+      "href": "https://checker.gitcoin.co/public/project/show/greenpill-dev-guild"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Grant Ships · Greenpill Network",
+    "description": "Grant Ships is a Greenpill Dev Guild public-goods funding experiment.",
+    "ogImage": "",
+    "canonicalPath": "/projects/grant-ships",
+    "noindex": false
+  }
+}

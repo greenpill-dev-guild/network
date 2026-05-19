@@ -1,0 +1,41 @@
+{
+  "name": "Impact Reef",
+  "status": "experimental",
+  "guild": "dev-guild",
+  "summary": "Qualitative public-good impact capture and evaluation tooling.",
+  "description": "Impact Reef is described in public Dev Guild project context as a tool for capturing qualitative data for public-good projects, backed by community endorsements and designed to help surface value to funders.",
+  "image": "",
+  "techStack": [
+    "Impact evaluation",
+    "Community endorsements",
+    "Public goods"
+  ],
+  "repoUrl": "",
+  "liveUrl": "https://hub.regencoordination.xyz/t/greenpill-dev-guild/61",
+  "stewardSlugs": [],
+  "themeSlugs": [
+    "impact",
+    "public"
+  ],
+  "featuredWeight": 35,
+  "proofSignals": [
+    {
+      "label": "Dev Guild Hub context",
+      "value": "Public project reference",
+      "source": "S008/S003 research inventory",
+      "href": "https://hub.regencoordination.xyz/t/greenpill-dev-guild/61"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Impact Reef · Greenpill Network",
+    "description": "Impact Reef is an experimental Greenpill Dev Guild project for qualitative public-good impact capture.",
+    "ogImage": "",
+    "canonicalPath": "/projects/impact-reef",
+    "noindex": false
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "title": "Greenpill Garden — Season One",
+  "status": "draft",
+  "category": "program",
+  "publishDate": "2025",
+  "updatedDate": "",
+  "dek": "The public Garden thread gives the website a launch-safe onboarding and stewardship story.",
+  "excerpt": "A public Garden story connecting chapters, stewards, tools, impact reporting, and the website revamp.",
+  "region": "global",
+  "tag": "Garden",
+  "tags": [
+    "garden",
+    "onboarding",
+    "stewardship"
+  ],
+  "body": "Greenpill Garden is the best public bridge between the network structure and the new onboarding surface.\n\nThe public thread supports copy about stewardship, chapters, impact reporting, and Greenpill's need for a clearer website. Internal Garden Guide details should stay out of launch content until approved.\n\n## Sources\n\n- S042: https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363",
+  "image": "/images/hifi/garden-overlay.jpg",
+  "author": "Greenpill Network research",
+  "authorRole": "Source-backed seed copy",
+  "authorBio": "",
+  "authorSlug": "",
+  "authorAvatar": "",
+  "relatedChapter": "",
+  "relatedGuild": "writers-guild",
+  "relatedProjectSlugs": [
+    "greenpill-garden",
+    "green-goods"
+  ],
+  "relatedStorySlugs": [
+    "growing-greenpill-impact-framework"
+  ],
+  "continueReadingStorySlugs": [
+    "growing-greenpill-impact-framework",
+    "greenpill-nigeria-water-cup"
+  ],
+  "themeSlugs": [
+    "gov",
+    "currency",
+    "mutual",
+    "public"
+  ],
+  "translations": [],
+  "proofSignals": [
+    {
+      "label": "Public Garden thread",
+      "value": "Season One",
+      "source": "S042",
+      "href": "https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363"
+    }
+  ],
+  "featuredWeight": 85,
+  "readTime": "3 min read",
+  "media": {
+    "image": "/images/hifi/garden-overlay.jpg",
+    "imageAlt": "Garden texture from the high-fidelity design package",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill Garden Season One · Greenpill Stories",
+    "description": "Source-backed Greenpill Garden story connecting onboarding, stewardship, chapters, tools, and impact reporting.",
+    "ogImage": "",
+    "canonicalPath": "/stories/greenpill-garden-season-one",
+    "noindex": false
+  }
+}

@@ -1,11 +1,63 @@
 {
-  "name": "Côte d'ivoire",
-  "lat": 5.34,
-  "long": -4.02,
-  "link": "https://app.charmverse.io/greenpill-network/greenpill-civ-9247962745590004",
-  "impactSources": {
-    "impactEnabled": true,
-    "greenGoodsGardenAddress": "0x7bE6eAeb2FB5842Da06A34Af4fAe418347427cd1",
-    "greenGoodsChainId": 42161
+  "name": "Greenpill Cote d'Ivoire",
+  "city": "Abidjan",
+  "country": "Cote d'Ivoire",
+  "region": "africa",
+  "status": "active",
+  "summary": "Public Green Mission / La Ligne Verte source describes a coordination and environmental action platform around collection, education, and waste valorization. Targets should be published as goals, not completed metrics.",
+  "introQuote": "",
+  "introQuoteAttribution": "",
+  "image": "",
+  "founded": "",
+  "lat": 5.36,
+  "long": -4.0083,
+  "link": "https://hub.regencoordination.xyz/t/greenpill-civ-chapter-update-the-beginning-of-la-ligne-verte/333",
+  "stewards": [],
+  "stewardSlugs": [],
+  "themeSlugs": [
+    "water",
+    "events",
+    "education",
+    "currency"
+  ],
+  "links": [
+    {
+      "label": "La Ligne Verte update",
+      "url": "https://hub.regencoordination.xyz/t/greenpill-civ-chapter-update-the-beginning-of-la-ligne-verte/333",
+      "subtext": "Public chapter update",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "hub",
+      "kind": "external"
+    }
+  ],
+  "connectLinks": [],
+  "relatedChapterSlugs": [
+    "nigeria",
+    "kenya"
+  ],
+  "featuredStory": {},
+  "featuredStorySlugs": [],
+  "authoredResourceSlugs": [],
+  "featuredWeight": 70,
+  "proofSignals": [
+    {
+      "label": "Green Mission targets",
+      "value": "2025-2026 goals",
+      "source": "S022",
+      "href": "https://hub.regencoordination.xyz/t/greenpill-civ-chapter-update-the-beginning-of-la-ligne-verte/333"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill Cote d'Ivoire · Greenpill Network",
+    "description": "Greenpill Cote d'Ivoire is building La Ligne Verte, a public environmental action and coordination platform.",
+    "ogImage": "",
+    "canonicalPath": "/chapters/c-te-d-ivoire",
+    "noindex": false
   }
 }

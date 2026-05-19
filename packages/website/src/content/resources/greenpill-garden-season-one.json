@@ -1,0 +1,62 @@
+{
+  "title": "Greenpill Garden — Season One",
+  "kind": "guide",
+  "status": "published",
+  "summary": "Public Garden thread introducing a seasonal stewardship program and onboarding path for people who do not yet fit a chapter or guild.",
+  "description": "The Garden public thread connects stewardship, 8 Forms of Capital framing, impact reporting, tools, IRL events, and website implications. Treat internal Garden Guide material as review-only until approved.",
+  "author": "Greenpill Network",
+  "publishDate": "2025",
+  "updatedDate": "",
+  "primaryUrl": "https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363",
+  "resourcePath": "",
+  "image": "/images/hifi/garden-overlay.jpg",
+  "imageAlt": "Garden texture from the high-fidelity design package",
+  "duration": "",
+  "readTime": "",
+  "episodeNumber": "",
+  "guest": "",
+  "host": "",
+  "tags": [
+    "garden",
+    "onboarding",
+    "stewardship"
+  ],
+  "themeSlugs": [
+    "gov",
+    "currency",
+    "mutual",
+    "public"
+  ],
+  "relatedChapterSlugs": [],
+  "relatedGuildSlugs": [
+    "writers-guild",
+    "dev-guild"
+  ],
+  "relatedProjectSlugs": [
+    "greenpill-garden",
+    "green-goods"
+  ],
+  "featuredWeight": 80,
+  "card": {
+    "eyebrow": "Garden",
+    "title": "Greenpill Garden Season One",
+    "summary": "The public source for the Garden onboarding and stewardship story.",
+    "badge": "Source S042",
+    "surfaceType": "garden",
+    "image": "/images/hifi/garden-overlay.jpg",
+    "imageAlt": "Garden texture from the high-fidelity design package",
+    "href": "https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363"
+  },
+  "media": {
+    "image": "/images/hifi/garden-overlay.jpg",
+    "imageAlt": "Garden texture from the high-fidelity design package",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill Garden Season One · Greenpill Library",
+    "description": "Read the public Greenpill Garden Season One thread about onboarding, stewardship, and network participation.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

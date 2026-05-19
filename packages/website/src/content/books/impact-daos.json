@@ -19,6 +19,16 @@
       "link": "/pdf/impact-daos/impact-daos-chinese.pdf"
     }
   ],
+  "themeSlugs": ["public", "funding", "impact"],
+  "relatedProjectSlugs": ["green-goods", "grant-ships", "cookie-jar"],
+  "card": {
+    "eyebrow": "Impact library",
+    "title": "Impact DAOs",
+    "summary": "A field guide to web3 organizations using coordination and funding for positive impact.",
+    "ctaLabel": "Read the book",
+    "ctaHref": "/pdf/ImpactDAO.pdf",
+    "surfaceType": "book"
+  },
   "group": "main",
   "sortOrder": 6
 }

@@ -210,6 +210,7 @@ const stories = defineCollection({
   type: 'data',
   schema: z.object({
     title: z.string(),
+    status: z.enum(['draft', 'published', 'archived']).optional().default('draft'),
     category: z.enum(['chapter', 'guild', 'program', 'essay', 'field-report']).default('chapter'),
     publishDate: z.string().optional().default(''),
     updatedDate: z.string().optional().default(''),

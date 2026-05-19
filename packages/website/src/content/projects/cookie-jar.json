@@ -1,0 +1,42 @@
+{
+  "name": "Cookie Jar",
+  "status": "active",
+  "guild": "dev-guild",
+  "summary": "Smart-contract-governed funding pools for DAOs and communities.",
+  "description": "Cookie Jar is listed in the Dev Guild public project surface as a funding primitive for communities: shared jars with allowlists, NFT gating, and configurable withdrawal rules.",
+  "image": "",
+  "techStack": [
+    "Smart contracts",
+    "Funding pools",
+    "Governance"
+  ],
+  "repoUrl": "https://github.com/greenpill-dev-guild/cookie-jar",
+  "liveUrl": "",
+  "stewardSlugs": [],
+  "themeSlugs": [
+    "funding",
+    "opensrc",
+    "public"
+  ],
+  "featuredWeight": 50,
+  "proofSignals": [
+    {
+      "label": "Public repo",
+      "value": "cookie-jar",
+      "source": "S008 GitHub org",
+      "href": "https://github.com/greenpill-dev-guild/cookie-jar"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Cookie Jar · Greenpill Network",
+    "description": "Cookie Jar is a Greenpill Dev Guild funding-pool project for DAOs and communities.",
+    "ogImage": "",
+    "canonicalPath": "/projects/cookie-jar",
+    "noindex": false
+  }
+}

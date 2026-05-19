@@ -1,13 +1,13 @@
 ---
-import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Nav from '../../components/Nav.astro';
 import Footer from '../../components/Footer.astro';
 import { buildChapterImpactEndpoint, shouldRenderChapterImpactUi } from '@greenpill-network/shared/chapter-impact';
+import { getOperationalChapters } from '../../lib/operational-content';
 import '../../styles/global.css';
 
 export async function getStaticPaths() {
-  const items = await getCollection('chapters');
+  const items = await getOperationalChapters();
   return items.map(item => ({ params: { slug: item.id }, props: { item } }));
 }
 
@@ -18,7 +18,13 @@ const showImpact = shouldRenderChapterImpactUi(impactSources);
 const impactEndpoint = showImpact ? buildChapterImpactEndpoint(item.id) : '';
 ---
 
-<BaseLayout title={`${name} · Greenpill Chapter`} description={summary || `${name} chapter of the Greenpill Network.`}>
+<BaseLayout
+  title={item.data.seo?.title || `${name} · Greenpill Chapter`}
+  description={item.data.seo?.description || summary || `${name} chapter of the Greenpill Network.`}
+  ogImage={item.data.seo?.ogImage || item.data.media?.ogImage || undefined}
+  canonicalPath={item.data.seo?.canonicalPath || `/chapters/${item.id}`}
+  noindex={item.data.seo?.noindex}
+>
   <Nav />
   <main class="pt-32 pb-24 px-4 max-w-3xl mx-auto">
     <a href="/chapters" class="text-green text-sm hover:text-[var(--mid-green)] inline-block mb-6">← Back to Chapters</a>

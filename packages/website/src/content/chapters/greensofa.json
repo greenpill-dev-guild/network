@@ -1,6 +1,100 @@
 {
   "name": "GreenSofa",
-  "lat": 23.7,
-  "long": 121,
-  "link": "https://twitter.com/GreenSofa_TW"
+  "city": "Taipei (distributed)",
+  "country": "Taiwan",
+  "region": "asia",
+  "status": "active",
+  "summary": "GreenSofa, also referenced as Greenpill Taiwan, has public HackMD, Giveth, X, Hub, and Taiwan Hypercerts Dashboard sources with itemized public-goods tooling and event funding receipts.",
+  "introQuote": "",
+  "introQuoteAttribution": "",
+  "image": "",
+  "founded": "2023",
+  "lat": 23.6978,
+  "long": 120.9605,
+  "link": "https://hackmd.io/@greensofa/home",
+  "stewards": [],
+  "stewardSlugs": [],
+  "themeSlugs": [
+    "public",
+    "desci",
+    "education",
+    "opensrc",
+    "funding",
+    "impact"
+  ],
+  "links": [
+    {
+      "label": "GreenSofa HackMD",
+      "url": "https://hackmd.io/@greensofa/home",
+      "subtext": "Public intro and receipts",
+      "handle": "GreenSofa",
+      "action": "Read",
+      "icon": "article",
+      "kind": "external"
+    },
+    {
+      "label": "Taiwan Hypercerts Dashboard",
+      "url": "https://fabdaotw.github.io/",
+      "subtext": "Public dashboard",
+      "handle": "FAB DAO",
+      "action": "Open",
+      "icon": "impact",
+      "kind": "external"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/GreenSofa_TW",
+      "subtext": "Public account",
+      "handle": "@GreenSofa_TW",
+      "action": "Follow",
+      "icon": "x",
+      "kind": "social"
+    }
+  ],
+  "connectLinks": [
+    {
+      "label": "HackMD",
+      "url": "https://hackmd.io/@greensofa/home",
+      "subtext": "Public GreenSofa profile",
+      "handle": "GreenSofa",
+      "action": "Read",
+      "icon": "article",
+      "kind": "external"
+    }
+  ],
+  "relatedChapterSlugs": [
+    "uncommons",
+    "koh-pha-ngan",
+    "brasil"
+  ],
+  "featuredStory": {},
+  "featuredStorySlugs": [],
+  "authoredResourceSlugs": [],
+  "featuredWeight": 90,
+  "proofSignals": [
+    {
+      "label": "Public Goods Tooling Retro Funding",
+      "value": "2,794 USDC",
+      "source": "S025 HackMD",
+      "href": "https://hackmd.io/@greensofa/home"
+    },
+    {
+      "label": "Taiwan Hypercerts Dashboard",
+      "value": "Public dashboard",
+      "source": "S058",
+      "href": "https://fabdaotw.github.io/"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "GreenSofa · Greenpill Network",
+    "description": "GreenSofa is a Taiwan Greenpill chapter with public funding receipts, Hypercerts dashboard work, and public-goods tooling proof.",
+    "ogImage": "",
+    "canonicalPath": "/chapters/greensofa",
+    "noindex": false
+  }
 }

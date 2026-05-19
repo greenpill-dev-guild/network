@@ -1,0 +1,61 @@
+{
+  "title": "Greenpill Network Website Revamp",
+  "kind": "article",
+  "status": "published",
+  "summary": "Public April 2026 revamp thread describing the move toward a clearer homepage, interactive chapter map, Library, podcast tags, newsletter, and onboarding funnel.",
+  "description": "This thread is the public source for the current website direction and the reason the implementation pass needs real content before HiFi page builds.",
+  "author": "Greenpill Network",
+  "publishDate": "2026-04",
+  "updatedDate": "",
+  "primaryUrl": "https://hub.regencoordination.xyz/t/greenpill-network-website-revamp/414",
+  "resourcePath": "",
+  "image": "",
+  "imageAlt": "",
+  "duration": "",
+  "readTime": "",
+  "episodeNumber": "",
+  "guest": "",
+  "host": "",
+  "tags": [
+    "website",
+    "public-content",
+    "onboarding"
+  ],
+  "themeSlugs": [
+    "public",
+    "opensrc",
+    "stories",
+    "education"
+  ],
+  "relatedChapterSlugs": [],
+  "relatedGuildSlugs": [
+    "dev-guild",
+    "writers-guild"
+  ],
+  "relatedProjectSlugs": [
+    "greenpill-v2-website"
+  ],
+  "featuredWeight": 65,
+  "card": {
+    "eyebrow": "Website",
+    "title": "Greenpill Network Website Revamp",
+    "summary": "Public direction for the V2 website, map, Library, Stories, and Garden surfaces.",
+    "badge": "Source S044",
+    "surfaceType": "article",
+    "image": "",
+    "imageAlt": "",
+    "href": "https://hub.regencoordination.xyz/t/greenpill-network-website-revamp/414"
+  },
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill Network Website Revamp · Greenpill Library",
+    "description": "Read the public April 2026 Greenpill Network website revamp thread.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

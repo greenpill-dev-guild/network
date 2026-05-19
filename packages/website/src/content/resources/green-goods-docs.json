@@ -1,0 +1,65 @@
+{
+  "title": "Green Goods Docs",
+  "kind": "guide",
+  "status": "published",
+  "summary": "Public docs explaining why Green Goods exists and how it supports regenerative impact verification.",
+  "description": "The Green Goods docs are a public source for the Dev Guild's impact-verification story and the offline-first PWA direction.",
+  "author": "Greenpill Dev Guild",
+  "publishDate": "",
+  "updatedDate": "2026",
+  "primaryUrl": "https://docs.greengoods.app/community/why-we-build",
+  "resourcePath": "",
+  "image": "",
+  "imageAlt": "",
+  "duration": "",
+  "readTime": "",
+  "episodeNumber": "",
+  "guest": "",
+  "host": "",
+  "tags": [
+    "green-goods",
+    "impact-verification",
+    "docs"
+  ],
+  "themeSlugs": [
+    "impact",
+    "opensrc",
+    "public",
+    "trees"
+  ],
+  "relatedChapterSlugs": [
+    "brasil",
+    "nigeria",
+    "kenya",
+    "koh-pha-ngan"
+  ],
+  "relatedGuildSlugs": [
+    "dev-guild"
+  ],
+  "relatedProjectSlugs": [
+    "green-goods"
+  ],
+  "featuredWeight": 85,
+  "card": {
+    "eyebrow": "Docs",
+    "title": "Green Goods Docs",
+    "summary": "Public documentation for Greenpill Dev Guild's impact-verification PWA.",
+    "badge": "Source S047",
+    "surfaceType": "playbook",
+    "image": "",
+    "imageAlt": "",
+    "href": "https://docs.greengoods.app/community/why-we-build"
+  },
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Green Goods Docs · Greenpill Library",
+    "description": "Read the public Green Goods docs for the Greenpill Dev Guild's impact-verification PWA.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

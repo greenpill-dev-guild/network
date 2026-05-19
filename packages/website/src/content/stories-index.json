@@ -1,0 +1,125 @@
+{
+  "hero": {
+    "overline": "Stories",
+    "title": "Field notes from the network.",
+    "dek": "Source-backed chapter updates, guild reports, event recaps, and public program notes.",
+    "body": "Stories are the place for supported narrative, not unsupported metrics. If research supports a direction but not a precise number, the story should keep it as qualitative copy.",
+    "primaryCta": {
+      "label": "Read stories",
+      "href": "/stories",
+      "kind": "internal"
+    },
+    "secondaryCta": {
+      "label": "Submit a story",
+      "href": "/stories#submit",
+      "kind": "form"
+    },
+    "media": {
+      "image": "/images/hifi/topo-bg.png",
+      "imageAlt": "Topographic map texture",
+      "ogImage": ""
+    }
+  },
+  "sections": [
+    {
+      "key": "featured",
+      "overline": "Featured",
+      "title": "Start with approved field work.",
+      "dek": "Nigeria Water Cup, Brasil GG20 climate milestones, GreenSofa funding receipts, and London Ontario's public build night are review candidates rather than public launch cards.",
+      "body": "Feature only stories with a public source URL, clear steward-approved evidence, and `published` status.",
+      "cta": {
+        "label": "Read featured stories",
+        "href": "/stories",
+        "kind": "internal"
+      },
+      "featuredRefs": []
+    },
+    {
+      "key": "newsletter",
+      "overline": "Newsletter",
+      "title": "Follow the public field notes.",
+      "dek": "Newsletter copy can be public, but drafts from Drive remain internal until approved.",
+      "body": "Use Paragraph or another public endpoint as the outgoing link until a newsletter form provider is chosen.",
+      "cta": {
+        "label": "Follow on Paragraph",
+        "href": "https://paragraph.com/@greenpill",
+        "kind": "external"
+      },
+      "featuredRefs": []
+    },
+    {
+      "key": "submit",
+      "overline": "Contribute",
+      "title": "Publish a chapter or guild update.",
+      "dek": "Submission data should go to a private/moderated flow. Keystatic only stores approved public stories.",
+      "body": "The public CTA can exist before the private workflow is implemented, but it should not write raw drafts or contact data into public content.",
+      "cta": {
+        "label": "Submit a story",
+        "href": "/stories#submit",
+        "kind": "form"
+      },
+      "featuredRefs": []
+    }
+  ],
+  "featuredStorySlugs": [],
+  "topicTags": [
+    "public-goods",
+    "local-events",
+    "impact-tracking",
+    "education",
+    "open-source",
+    "garden"
+  ],
+  "chapterTags": [
+    "nigeria",
+    "brasil",
+    "greensofa",
+    "koh-pha-ngan",
+    "london-ontario",
+    "c-te-d-ivoire"
+  ],
+  "topicSpotlight": {
+    "topic": "Impact verification",
+    "blurb": "Green Goods, Greenpill Nigeria's Water Cup proof, Brasil's KarmaGAP milestones, and the public Impact Framework thread show how the network is turning local work into verifiable public claims.",
+    "storySlugs": [],
+    "proofSignals": [
+      {
+        "label": "Green Goods docs",
+        "value": "Public docs",
+        "source": "S047",
+        "href": "https://docs.greengoods.app/community/why-we-build"
+      },
+      {
+        "label": "Impact Framework thread",
+        "value": "Public Hub thread",
+        "source": "S043",
+        "href": "https://hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411"
+      }
+    ]
+  },
+  "translations": [
+    {
+      "language": "Portuguese",
+      "label": "Greenpilled and Impact DAOs translation work is source-backed for Brasil, but final publication copy needs steward review.",
+      "href": "https://hub.regencoordination.xyz/t/greenpill-brasil/44",
+      "slug": ""
+    }
+  ],
+  "newsletterCta": {
+    "label": "Follow Greenpill on Paragraph",
+    "href": "https://paragraph.com/@greenpill",
+    "kind": "external"
+  },
+  "submitStoryCta": {
+    "label": "Submit a story for review",
+    "href": "/stories#submit",
+    "kind": "form"
+  },
+  "seo": {
+    "title": "Stories · Greenpill Network",
+    "description": "Read source-backed Greenpill chapter updates, guild reports, public program notes, event recaps, and field stories.",
+    "ogImage": "",
+    "canonicalPath": "/stories",
+    "noindex": false
+  }
+}

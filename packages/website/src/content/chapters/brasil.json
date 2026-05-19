@@ -1,22 +1,117 @@
 {
-  "name": "Brasil",
-  "city": "São Paulo",
+  "name": "Greenpill Brasil",
+  "city": "Rio de Janeiro (multi-city)",
   "country": "Brazil",
   "region": "americas",
   "status": "active",
-  "summary": "",
+  "summary": "Source-backed public chapter with weekly Greenpilled sessions, Portuguese translations, ImpactEAS work, Green Goods contributions, Gitcoin / KarmaGAP climate milestones, and public events in Rio de Janeiro.",
+  "introQuote": "",
+  "introQuoteAttribution": "",
   "image": "",
   "founded": "",
-  "lat": -23.55,
-  "long": -46.63,
-  "link": "https://app.charmverse.io/greenpill-network/greenpill-brasil-0228652595639951",
+  "lat": -22.9068,
+  "long": -43.1729,
+  "link": "https://hub.regencoordination.xyz/t/greenpill-brasil/44",
   "stewards": [],
   "stewardSlugs": [],
-  "themeSlugs": ["local-regeneration", "public-goods"],
-  "links": [],
+  "themeSlugs": [
+    "education",
+    "stories",
+    "public",
+    "funding",
+    "trees",
+    "currency"
+  ],
+  "links": [
+    {
+      "label": "Regen Hub chapter thread",
+      "url": "https://hub.regencoordination.xyz/t/greenpill-brasil/44",
+      "subtext": "Public chapter context",
+      "handle": "hub.regencoordination.xyz",
+      "action": "Open",
+      "icon": "hub",
+      "kind": "external"
+    },
+    {
+      "label": "KarmaGAP",
+      "url": "https://www.karmahq.xyz/project/greenpill-brasil",
+      "subtext": "GG20 Climate Round milestones",
+      "handle": "greenpill-brasil",
+      "action": "View milestones",
+      "icon": "karma",
+      "kind": "external"
+    },
+    {
+      "label": "Gitcoin project",
+      "url": "https://checker.gitcoin.co/public/project/show/greenpill-brazil",
+      "subtext": "Public grant/project record",
+      "handle": "greenpill-brazil",
+      "action": "Open",
+      "icon": "gitcoin",
+      "kind": "external"
+    }
+  ],
+  "connectLinks": [
+    {
+      "label": "Regen Hub",
+      "url": "https://hub.regencoordination.xyz/t/greenpill-brasil/44",
+      "subtext": "Public chapter updates",
+      "handle": "Greenpill Brasil",
+      "action": "Read",
+      "icon": "hub",
+      "kind": "external"
+    },
+    {
+      "label": "KarmaGAP",
+      "url": "https://www.karmahq.xyz/project/greenpill-brasil",
+      "subtext": "Public milestones",
+      "handle": "greenpill-brasil",
+      "action": "View",
+      "icon": "karma",
+      "kind": "external"
+    }
+  ],
+  "relatedChapterSlugs": [
+    "nigeria",
+    "greensofa",
+    "koh-pha-ngan"
+  ],
+  "featuredStory": {},
+  "featuredStorySlugs": [],
+  "authoredResourceSlugs": [],
   "impactSources": {
     "impactEnabled": true,
     "greenGoodsGardenAddress": "0x749F84CA070cD2F98d9353F49eCE77C1A3fED532",
-    "greenGoodsChainId": 42161
+    "greenGoodsChainId": 42161,
+    "karmaProjectUID": "",
+    "karmaProjectSlug": "greenpill-brasil",
+    "karmaCommunitySlug": ""
+  },
+  "featuredWeight": 100,
+  "proofSignals": [
+    {
+      "label": "KarmaGAP milestones",
+      "value": "GG20 Climate Round",
+      "source": "S018",
+      "href": "https://www.karmahq.xyz/project/greenpill-brasil"
+    },
+    {
+      "label": "Gitcoin project",
+      "value": "Greenpill Brazil",
+      "source": "S020",
+      "href": "https://checker.gitcoin.co/public/project/show/greenpill-brazil"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill Brasil · Greenpill Network",
+    "description": "Greenpill Brasil coordinates public-goods education, translations, climate milestones, Green Goods work, and local events.",
+    "ogImage": "",
+    "canonicalPath": "/chapters/brasil",
+    "noindex": false
   }
 }

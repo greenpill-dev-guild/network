@@ -24,6 +24,14 @@
   "themeSlugs": ["local-regeneration", "knowledge-commons"],
   "relatedStorySlugs": [],
   "relatedProjectSlugs": [],
+  "card": {
+    "eyebrow": "Regeneration guide",
+    "title": "Pathways to Regeneration",
+    "summary": "A bridge between regeneration practice, local coordination, and economic design.",
+    "ctaLabel": "Read the book",
+    "ctaHref": "/pdf/pathways-to-regeneration.pdf",
+    "surfaceType": "book"
+  },
   "group": "main",
   "sortOrder": 1
 }

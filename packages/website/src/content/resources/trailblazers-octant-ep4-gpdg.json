@@ -1,0 +1,60 @@
+{
+  "title": "Trailblazers of Octant Episode 4 — Greenpill Dev Guild",
+  "kind": "podcast",
+  "status": "published",
+  "summary": "Crypto Altruists episode with Afo, Coi, and Matt from the Greenpill Dev Guild discussing regenerative tools, public-goods funding, and Octant.",
+  "description": "This is one of the strongest public Dev Guild proof sources because it documents the Octant Community Fund grant and the guild's role in scaling regenerative web3 coordination tools.",
+  "author": "Crypto Altruists",
+  "publishDate": "2024",
+  "updatedDate": "",
+  "primaryUrl": "https://www.cryptoaltruists.com/blog/trailblazers-of-octant-episode-4-greenpill-dev-guild-scaling-the-regen-movement-with-web3-coordination-tools",
+  "resourcePath": "",
+  "image": "",
+  "imageAlt": "",
+  "duration": "",
+  "readTime": "",
+  "episodeNumber": "4",
+  "guest": "Afo, Coi, Matt",
+  "host": "Drew Simon",
+  "tags": [
+    "dev-guild",
+    "octant",
+    "public-goods"
+  ],
+  "themeSlugs": [
+    "public",
+    "opensrc",
+    "funding",
+    "impact"
+  ],
+  "relatedChapterSlugs": [],
+  "relatedGuildSlugs": [
+    "dev-guild"
+  ],
+  "relatedProjectSlugs": [
+    "green-goods"
+  ],
+  "featuredWeight": 95,
+  "card": {
+    "eyebrow": "Podcast",
+    "title": "Trailblazers of Octant: Greenpill Dev Guild",
+    "summary": "A source-backed Dev Guild episode covering tools, funding, Octant, and regenerative coordination.",
+    "badge": "Source S013",
+    "surfaceType": "podcast",
+    "image": "",
+    "imageAlt": "",
+    "href": "https://www.cryptoaltruists.com/blog/trailblazers-of-octant-episode-4-greenpill-dev-guild-scaling-the-regen-movement-with-web3-coordination-tools"
+  },
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Trailblazers of Octant Episode 4 · Greenpill Library",
+    "description": "Crypto Altruists episode on the Greenpill Dev Guild, Octant funding, and regenerative coordination tooling.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

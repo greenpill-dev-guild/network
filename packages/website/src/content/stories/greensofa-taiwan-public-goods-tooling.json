@@ -1,0 +1,68 @@
+{
+  "title": "GreenSofa Taiwan Public-Goods Tooling Receipts",
+  "status": "draft",
+  "category": "chapter",
+  "publishDate": "2026-03",
+  "updatedDate": "",
+  "dek": "GreenSofa's public HackMD itemizes public-goods tooling funding and links to a Taiwan Hypercerts Dashboard.",
+  "excerpt": "A high-confidence source-backed story for GreenSofa / Greenpill Taiwan.",
+  "region": "asia",
+  "tag": "Impact Tracking",
+  "tags": [
+    "greensofa",
+    "taiwan",
+    "hypercerts",
+    "public-goods-tooling"
+  ],
+  "body": "GreenSofa is one of the stronger public chapter proof surfaces in the research artifact.\n\nThe HackMD source itemizes public funding receipts, and the FAB DAO dashboard gives the website a public Hypercerts-related proof surface. Use the exact receipt claims only with source links visible.\n\n## Sources\n\n- S025: https://hackmd.io/@greensofa/home\n- S058: https://fabdaotw.github.io/\n- S026: https://giveth.io/project/greensofa-greenpill-taiwan",
+  "image": "",
+  "author": "Greenpill Network research",
+  "authorRole": "Source-backed seed copy",
+  "authorBio": "",
+  "authorSlug": "",
+  "authorAvatar": "",
+  "relatedChapter": "greensofa",
+  "relatedGuild": "",
+  "relatedProjectSlugs": [],
+  "relatedStorySlugs": [],
+  "continueReadingStorySlugs": [
+    "greenpill-brasil-gg20-climate-milestones",
+    "greenpill-nigeria-water-cup"
+  ],
+  "themeSlugs": [
+    "public",
+    "desci",
+    "opensrc",
+    "impact",
+    "funding"
+  ],
+  "translations": [],
+  "proofSignals": [
+    {
+      "label": "Public Goods Tooling Retro Funding",
+      "value": "2,794 USDC",
+      "source": "S025",
+      "href": "https://hackmd.io/@greensofa/home"
+    },
+    {
+      "label": "Taiwan Hypercerts Dashboard",
+      "value": "Public dashboard",
+      "source": "S058",
+      "href": "https://fabdaotw.github.io/"
+    }
+  ],
+  "featuredWeight": 90,
+  "readTime": "3 min read",
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "GreenSofa Taiwan Public-Goods Tooling Receipts · Greenpill Stories",
+    "description": "Source-backed story for GreenSofa / Greenpill Taiwan public-goods tooling receipts and Hypercerts dashboard work.",
+    "ogImage": "",
+    "canonicalPath": "/stories/greensofa-taiwan-public-goods-tooling",
+    "noindex": false
+  }
+}

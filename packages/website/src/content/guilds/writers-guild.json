@@ -2,9 +2,122 @@
   "name": "Writers Guild",
   "type": "guild",
   "status": "active",
-  "summary": "Publishing, storytelling, and knowledge work across the Greenpill network.",
-  "description": "The Writers Guild produces essays, field reports, and editorial work. It coordinates with the Paragraph publication and supports authors across chapters and guilds.",
+  "summary": "Publishing, storytelling, research, and public sensemaking across the Greenpill network.",
+  "description": "The Writers Guild supports essays, field reports, translations, publishing workflows, and editorial work across chapters and guilds. Public sources show Greenpill's Paragraph publication, the long-running podcast, Garden writing needs, and a network-wide push toward clearer public knowledge infrastructure.",
+  "foundedYear": 2024,
+  "oneliner": "Stories, translations, field reports, and public knowledge work for the network.",
+  "outputs": [
+    {
+      "label": "Field reports",
+      "summary": "Chapter and guild updates that turn local work into public learning.",
+      "href": "/stories"
+    },
+    {
+      "label": "Translations",
+      "summary": "Translation work around Greenpill books and chapter resources, including Brasil's Portuguese work.",
+      "href": "https://hub.regencoordination.xyz/t/greenpill-brasil/44"
+    },
+    {
+      "label": "Publication surfaces",
+      "summary": "Greenpill Paragraph, podcast notes, newsletter copy, and public Hub threads.",
+      "href": "https://paragraph.com/@greenpill"
+    }
+  ],
+  "mandateParagraphs": [
+    "The Writers Guild makes the network legible. It turns local experiments, chapter practice, books, podcasts, and builder work into public stories people can reuse.",
+    "The launch website should show stories as proof of activity and learning, not as a generic blog feed.",
+    "Draft newsletters and internal Drive notes should stay internal until a steward approves them for public publication."
+  ],
+  "cadence": {
+    "summary": "Public sources confirm Writers Guild activity and publication surfaces, but exact cadence needs steward confirmation before launch.",
+    "callTime": "",
+    "format": "Editorial working group",
+    "recordingsHref": ""
+  },
+  "principles": [
+    {
+      "order": 1,
+      "title": "Source-backed storytelling",
+      "body": "Every story should link to public proof or a steward-approved publication source."
+    },
+    {
+      "order": 2,
+      "title": "Field-first writing",
+      "body": "Lead with real chapter, guild, and program updates instead of abstract claims."
+    },
+    {
+      "order": 3,
+      "title": "No private drafts in public content",
+      "body": "Newsletter drafts, Drive docs, raw notes, and submission data stay out of public Keystatic until approved."
+    }
+  ],
   "image": "",
   "stewards": [],
-  "links": []
+  "stewardSlugs": [],
+  "memberSlugs": [],
+  "publicMembers": [],
+  "themeSlugs": [
+    "stories",
+    "education",
+    "knowledge-commons",
+    "public"
+  ],
+  "links": [
+    {
+      "label": "Greenpill Paragraph",
+      "url": "https://paragraph.com/@greenpill",
+      "subtext": "Public Greenpill writing",
+      "handle": "@greenpill",
+      "action": "Read",
+      "icon": "article",
+      "kind": "external"
+    },
+    {
+      "label": "Greenpill Podcast",
+      "url": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639",
+      "subtext": "Podcast archive",
+      "handle": "Apple Podcasts",
+      "action": "Listen",
+      "icon": "podcast",
+      "kind": "external"
+    }
+  ],
+  "connectLinks": [
+    {
+      "label": "Greenpill Paragraph",
+      "url": "https://paragraph.com/@greenpill",
+      "subtext": "Public writing",
+      "handle": "@greenpill",
+      "action": "Read",
+      "icon": "article",
+      "kind": "external"
+    }
+  ],
+  "featuredWeight": 70,
+  "proofSignals": [
+    {
+      "label": "Greenpill Paragraph",
+      "value": "Public publication",
+      "source": "S004",
+      "href": "https://paragraph.com/@greenpill"
+    },
+    {
+      "label": "Podcast archive",
+      "value": "293 episodes",
+      "source": "S006",
+      "href": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Writers Guild · Greenpill Network",
+    "description": "The Greenpill Writers Guild supports field reports, publishing, translations, and public knowledge work across the network.",
+    "ogImage": "",
+    "canonicalPath": "/guilds/writers-guild",
+    "noindex": false
+  }
 }

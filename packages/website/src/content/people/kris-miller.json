@@ -1,0 +1,33 @@
+{
+  "displayName": "Kris Miller",
+  "role": "VDAO x Greenpill public host reference",
+  "avatar": "",
+  "bio": "Public host reference for VDAO x Greenpill podcast entries in the research artifact.",
+  "themeSlugs": [
+    "stories",
+    "education"
+  ],
+  "links": [
+    {
+      "label": "Greenpill Podcast",
+      "url": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639",
+      "subtext": "Public podcast archive",
+      "handle": "Apple Podcasts",
+      "action": "Listen",
+      "icon": "podcast",
+      "kind": "external"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Kris Miller · Greenpill Network",
+    "description": "Kris Miller is a public host reference for VDAO x Greenpill podcast entries.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

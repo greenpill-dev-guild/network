@@ -1,0 +1,34 @@
+{
+  "displayName": "Matt (mattycompost)",
+  "role": "Dev Guild and Garden contributor",
+  "avatar": "",
+  "bio": "Publicly referenced in Dev Guild / Garden research as part of Greenpill builder and stewardship work.",
+  "themeSlugs": [
+    "opensrc",
+    "gov",
+    "public"
+  ],
+  "links": [
+    {
+      "label": "Greenpill Garden Season One",
+      "url": "https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363",
+      "subtext": "Public Garden thread",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "hub",
+      "kind": "external"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Matt · Greenpill Network",
+    "description": "Matt is publicly referenced in Greenpill Dev Guild and Garden research.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "name": "Greenpill Impact Framework",
+  "status": "active",
+  "guild": "dev-guild",
+  "summary": "Public impact verification and capital-formation framework connected to Green Goods.",
+  "description": "The public companion thread frames the Greenpill Impact Framework as a way to connect Green Goods v1, impact, strategy, measurement, coordination, and capital formation. Internal framework details shaped the research artifact, but launch copy should point to the public Hub thread unless stewards approve more.",
+  "image": "",
+  "techStack": [
+    "Impact tracking",
+    "Hypercerts",
+    "Green Goods",
+    "KarmaGAP"
+  ],
+  "repoUrl": "",
+  "liveUrl": "https://hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411",
+  "stewardSlugs": [
+    "afo-aiyeloja"
+  ],
+  "themeSlugs": [
+    "impact",
+    "gov",
+    "public",
+    "desci",
+    "ai"
+  ],
+  "featuredWeight": 65,
+  "proofSignals": [
+    {
+      "label": "Public framework thread",
+      "value": "Growing the Greenpill Impact Framework",
+      "source": "S043",
+      "href": "https://hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill Impact Framework · Greenpill Network",
+    "description": "The Greenpill Impact Framework connects public impact verification, Green Goods, and regenerative capital coordination.",
+    "ogImage": "",
+    "canonicalPath": "/projects/greenpill-impact-framework",
+    "noindex": false
+  }
+}

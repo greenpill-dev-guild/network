@@ -1,6 +1,63 @@
 {
-  "name": "Uganda",
+  "name": "Greenpill Uganda",
+  "city": "Distributed",
+  "country": "Uganda",
+  "region": "africa",
+  "status": "active",
+  "summary": "Adjacent public source-backed chapter record from the Regen Coordination Hub. It is not one of the priority 14 research rows, so launch feature placement needs steward review.",
+  "introQuote": "",
+  "introQuoteAttribution": "",
+  "image": "",
+  "founded": "",
   "lat": 1.37,
   "long": 32.29,
-  "link": "https://twitter.com/GreenPillUganda"
+  "link": "https://hub.regencoordination.xyz/t/greenpill-uganda/29",
+  "stewards": [],
+  "stewardSlugs": [],
+  "themeSlugs": [
+    "food",
+    "water",
+    "education",
+    "public"
+  ],
+  "links": [
+    {
+      "label": "Greenpill Uganda",
+      "url": "https://hub.regencoordination.xyz/t/greenpill-uganda/29",
+      "subtext": "Public Hub thread",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "hub",
+      "kind": "external"
+    }
+  ],
+  "connectLinks": [],
+  "relatedChapterSlugs": [
+    "kenya",
+    "nigeria",
+    "c-te-d-ivoire"
+  ],
+  "featuredStorySlugs": [],
+  "authoredResourceSlugs": [],
+  "featuredWeight": 15,
+  "proofSignals": [
+    {
+      "label": "Public Hub thread",
+      "value": "Greenpill Uganda",
+      "source": "S041",
+      "href": "https://hub.regencoordination.xyz/t/greenpill-uganda/29"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill Uganda · Greenpill Network",
+    "description": "Greenpill Uganda has an adjacent public Hub source and needs steward confirmation for launch feature placement.",
+    "ogImage": "",
+    "canonicalPath": "/chapters/uganda",
+    "noindex": false
+  }
 }

@@ -1,0 +1,61 @@
+{
+  "title": "RegenMeetUp — Greenpill Brasil at Fabulosa Lab",
+  "status": "draft",
+  "category": "chapter",
+  "publishDate": "2024",
+  "updatedDate": "",
+  "dek": "A public Luma source backs a Greenpill Brasil RegenMeetUp in Rio de Janeiro with open-space and coordination themes.",
+  "excerpt": "Greenpill Brasil's RegenMeetUp gives the chapter a public local-events seed story.",
+  "region": "americas",
+  "tag": "Local Events",
+  "tags": [
+    "brasil",
+    "rio",
+    "regenmeetup"
+  ],
+  "body": "This event source can support local-events cards and chapter activity strips.\n\nThe story should avoid invented attendance, impact, or follow-on metrics until steward-reviewed sources are added.\n\n## Sources\n\n- S021: https://luma.com/qm4tiq1e",
+  "image": "",
+  "author": "Greenpill Network research",
+  "authorRole": "Source-backed seed copy",
+  "authorBio": "",
+  "authorSlug": "",
+  "authorAvatar": "",
+  "relatedChapter": "brasil",
+  "relatedGuild": "",
+  "relatedProjectSlugs": [],
+  "relatedStorySlugs": [
+    "greenpill-brasil-gg20-climate-milestones"
+  ],
+  "continueReadingStorySlugs": [
+    "greenpill-brasil-gg20-climate-milestones",
+    "vibe-coding-good-london-ontario"
+  ],
+  "themeSlugs": [
+    "events",
+    "gov",
+    "education"
+  ],
+  "translations": [],
+  "proofSignals": [
+    {
+      "label": "Public event",
+      "value": "RegenMeetUp Rio",
+      "source": "S021",
+      "href": "https://luma.com/qm4tiq1e"
+    }
+  ],
+  "featuredWeight": 50,
+  "readTime": "2 min read",
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "RegenMeetUp Rio · Greenpill Stories",
+    "description": "Source-backed Greenpill Brasil event story for the RegenMeetUp at Fabulosa Lab in Rio de Janeiro.",
+    "ogImage": "",
+    "canonicalPath": "/stories/regenmeetup-rio",
+    "noindex": false
+  }
+}

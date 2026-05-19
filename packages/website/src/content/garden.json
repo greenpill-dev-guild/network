@@ -1,20 +1,186 @@
 {
-  "title": "",
-  "summary": "",
+  "title": "Enter the garden.",
+  "summary": "Four public, low-pressure ways to meet Greenpill: subscribe to field notes, join the public conversation, self-assess your fit, then book a steward call when a human conversation is the right next step.",
   "framing": "bridge",
-  "steps": [],
-  "afterCards": [],
-  "proofSignals": [],
-  "media": {
+  "steps": [
+    {
+      "level": 1,
+      "stage": "seed",
+      "levelLabel": "Lowest friction",
+      "surfaceType": "email",
+      "kicker": "Step 1 · Stay in the loop",
+      "title": "Subscribe to field notes",
+      "body": "A monthly public digest with chapter updates, new resources, podcast highlights, and upcoming calls.",
+      "meta": "Monthly · public updates · no account",
+      "friction": "Lowest friction",
+      "cta": {
+        "label": "Subscribe",
+        "href": "https://paragraph.com/@greenpill",
+        "kind": "external"
+      }
+    },
+    {
+      "level": 2,
+      "stage": "sapling",
+      "levelLabel": "Light friction",
+      "surfaceType": "telegram",
+      "kicker": "Step 2 · Lurk or chat",
+      "title": "Join the public conversation",
+      "body": "Drop into the shared Greenpill chat and listen before you contribute. The public site should route newcomers without forcing an immediate commitment.",
+      "meta": "Public conversation · listen first",
+      "friction": "Light friction",
+      "cta": {
+        "label": "Open Telegram",
+        "href": "https://t.me/+g9TM8i7GpxAzMGUx",
+        "kind": "external"
+      }
+    },
+    {
+      "level": 3,
+      "stage": "budding",
+      "levelLabel": "Medium friction",
+      "surfaceType": "assessment",
+      "kicker": "Step 3 · Match yourself",
+      "title": "Take the Regen Assessment",
+      "body": "Answer a short set of questions about what you bring, what you want to learn, and whether a chapter, guild, or story path is the best fit.",
+      "meta": "Planned public flow · no private answers in Keystatic",
+      "friction": "Medium friction",
+      "cta": {
+        "label": "Start assessment",
+        "href": "/garden#assessment",
+        "kind": "form"
+      }
+    },
+    {
+      "level": 4,
+      "stage": "flowering",
+      "levelLabel": "Highest friction",
+      "surfaceType": "steward-call",
+      "kicker": "Step 4 · Human-to-human",
+      "title": "Book a steward call",
+      "body": "For people thinking about starting a chapter, joining a guild, partnering on a project, or finding the right steward to talk with.",
+      "meta": "Operational booking data stays private",
+      "friction": "Highest friction",
+      "cta": {
+        "label": "Book a call",
+        "href": "/garden#steward-call",
+        "kind": "booking"
+      }
+    }
+  ],
+  "afterCards": [
+    {
+      "kicker": "If you want local connection",
+      "title": "Find an existing chapter",
+      "body": "Browse public chapter records, start with the strongest source-backed locations, and use steward review flags for chapters that need more proof before launch.",
+      "cta": {
+        "label": "Browse chapters",
+        "href": "/chapters",
+        "kind": "internal"
+      }
+    },
+    {
+      "kicker": "If you want to build",
+      "title": "Join a guild or project",
+      "body": "Start with the Dev Guild, Writers Guild, Green Goods, GreenWill, Cookie Jar, Grant Ships, or Impact Reef.",
+      "cta": {
+        "label": "Visit guilds",
+        "href": "/guilds",
+        "kind": "internal"
+      }
+    },
+    {
+      "kicker": "If you want to learn",
+      "title": "Read the public commons",
+      "body": "Use the Library to browse books, podcast episodes, Hub threads, Garden material, and Dev Guild writing.",
+      "cta": {
+        "label": "Open Library",
+        "href": "/library",
+        "kind": "internal"
+      }
+    }
+  ],
+  "proofSignals": [
+    {
+      "label": "Garden public thread",
+      "value": "Season One",
+      "source": "S042 Regen Coordination Hub",
+      "href": "https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363"
+    },
+    {
+      "label": "Onboarding revamp",
+      "value": "Public Hub thread",
+      "source": "S045 Regen Coordination Hub",
+      "href": "https://hub.regencoordination.xyz/t/network-onboarding-revamp/87"
+    }
+  ],
+  "stickyCta": {
+    "label": "Start with Step 1",
+    "href": "https://paragraph.com/@greenpill",
+    "kind": "external"
+  },
+  "emailPreview": {
+    "kicker": "Field notes",
+    "title": "Chapter updates, builder notes, and new resources",
+    "body": "The preview should use illustrative copy only until the newsletter source is wired.",
+    "meta": "Public digest",
     "image": "",
     "imageAlt": "",
+    "cta": {
+      "label": "Subscribe",
+      "href": "https://paragraph.com/@greenpill",
+      "kind": "external"
+    }
+  },
+  "telegramPreview": {
+    "kicker": "Public conversation",
+    "title": "Listen first, contribute when ready",
+    "body": "Do not render private Telegram or Discord messages. Use approved public copy for the preview.",
+    "meta": "Public entry point",
+    "image": "",
+    "imageAlt": "",
+    "cta": {
+      "label": "Open Telegram",
+      "href": "https://t.me/+g9TM8i7GpxAzMGUx",
+      "kind": "external"
+    }
+  },
+  "assessmentPreview": {
+    "kicker": "Self-assessment",
+    "title": "Map your next contribution",
+    "body": "The public page can preview assessment topics; real answers belong in the future private/workspace flow.",
+    "meta": "No private answers in public content",
+    "image": "",
+    "imageAlt": "",
+    "cta": {
+      "label": "Start assessment",
+      "href": "/garden#assessment",
+      "kind": "form"
+    }
+  },
+  "stewardCallPreview": {
+    "kicker": "Steward call",
+    "title": "Talk to a real person",
+    "body": "Use this for high-intent visitors. Availability, RSVPs, and contact details stay outside public Keystatic content.",
+    "meta": "Private scheduling boundary",
+    "image": "",
+    "imageAlt": "",
+    "cta": {
+      "label": "Book a call",
+      "href": "/garden#steward-call",
+      "kind": "booking"
+    }
+  },
+  "media": {
+    "image": "/images/hifi/garden-overlay.jpg",
+    "imageAlt": "Garden texture from the high-fidelity design package",
     "ogImage": ""
   },
   "seo": {
-    "title": "",
-    "description": "",
+    "title": "Enter the Garden · Greenpill Network",
+    "description": "The Greenpill Garden is a public onboarding ramp for newcomers, chapter stewards, builders, writers, and partners.",
     "ogImage": "",
-    "canonicalPath": "",
+    "canonicalPath": "/garden",
     "noindex": false
   }
 }

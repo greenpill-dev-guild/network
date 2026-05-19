@@ -1,0 +1,60 @@
+{
+  "title": "Greenpill Podcast",
+  "kind": "podcast",
+  "status": "published",
+  "summary": "Long-running Greenpill public podcast archive covering regenerative crypto, public goods, coordination, and network-state adjacent themes.",
+  "description": "The research artifact cites the Apple Podcasts feed as a high-reliability source for a 293-episode archive active from 2022 through 2026, including VDAO x Greenpill and Network Nations sub-series.",
+  "author": "Kevin Owocki and guests",
+  "publishDate": "2022",
+  "updatedDate": "2026",
+  "primaryUrl": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639",
+  "resourcePath": "",
+  "image": "",
+  "imageAlt": "",
+  "duration": "",
+  "readTime": "",
+  "episodeNumber": "",
+  "guest": "",
+  "host": "Kevin Owocki",
+  "tags": [
+    "podcast",
+    "public-goods",
+    "regenerative-crypto"
+  ],
+  "themeSlugs": [
+    "stories",
+    "education",
+    "public",
+    "gov"
+  ],
+  "relatedChapterSlugs": [],
+  "relatedGuildSlugs": [
+    "writers-guild"
+  ],
+  "relatedProjectSlugs": [
+    "greenpill-podcast"
+  ],
+  "featuredWeight": 100,
+  "card": {
+    "eyebrow": "Podcast",
+    "title": "Greenpill Podcast",
+    "summary": "A 293-episode public archive of regenerative crypto and public-goods conversations.",
+    "badge": "293 episodes",
+    "surfaceType": "podcast",
+    "image": "",
+    "imageAlt": "",
+    "href": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639"
+  },
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill Podcast · Greenpill Library",
+    "description": "Listen to the long-running Greenpill Podcast archive covering regenerative crypto, public goods, and coordination.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

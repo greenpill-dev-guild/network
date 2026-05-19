@@ -1,0 +1,85 @@
+{
+  "hero": {
+    "overline": "Chapters",
+    "title": "The local nodes of the Greenpill network.",
+    "dek": "Browse public chapter records, regional anchors, and source-backed activity before the HiFi chapter pages are implemented.",
+    "body": "The index should lead with chapters that have public proof, and keep thin or internally sourced chapter records visibly out of the featured tier until steward review closes.",
+    "primaryCta": {
+      "label": "Find a chapter",
+      "href": "/chapters",
+      "kind": "internal"
+    },
+    "secondaryCta": {
+      "label": "Enter the Garden",
+      "href": "/garden",
+      "kind": "internal"
+    },
+    "media": {
+      "image": "/images/hifi/topo-bg.png",
+      "imageAlt": "Topographic map texture",
+      "ogImage": ""
+    }
+  },
+  "sections": [
+    {
+      "key": "featured-chapters",
+      "overline": "Featured",
+      "title": "Start with the strongest public proof.",
+      "dek": "Nigeria, Brasil, GreenSofa, NYC, Koh Phangan, Cote d'Ivoire, Germany, and Uncommons have the clearest public footprints in the research artifact.",
+      "body": "Cape Town and California need steward backfill before they should carry strong launch claims.",
+      "cta": {
+        "label": "Review source inventory",
+        "href": "/chapters",
+        "kind": "internal"
+      },
+      "featuredRefs": [
+        {
+          "collection": "chapters",
+          "slug": "nigeria",
+          "label": "Greenpill Nigeria"
+        },
+        {
+          "collection": "chapters",
+          "slug": "brasil",
+          "label": "Greenpill Brasil"
+        },
+        {
+          "collection": "chapters",
+          "slug": "greensofa",
+          "label": "GreenSofa"
+        }
+      ]
+    }
+  ],
+  "featuredChapterSlugs": [
+    "nigeria",
+    "brasil",
+    "greensofa",
+    "koh-pha-ngan",
+    "new-york-city",
+    "c-te-d-ivoire",
+    "germany",
+    "uncommons"
+  ],
+  "filterCopy": {
+    "regionLabel": "Region",
+    "statusLabel": "Status",
+    "searchPlaceholder": "Search chapters",
+    "emptyState": "No source-backed chapter records match this filter yet."
+  },
+  "proofSignals": [
+    {
+      "label": "Primary chapter directory",
+      "value": "Regen Coordination Hub",
+      "source": "S003",
+      "href": "https://hub.regencoordination.xyz/c/updates/chapter-updates/14"
+    }
+  ],
+  "seo": {
+    "title": "Chapters · Greenpill Network",
+    "description": "Browse source-backed Greenpill chapter records, local activity, public proof links, and steward review gaps.",
+    "ogImage": "",
+    "canonicalPath": "/chapters",
+    "noindex": false
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "displayName": "Afo (Afolabi Aiyeloja)",
+  "role": "Dev Guild contributor",
+  "avatar": "",
+  "bio": "Publicly referenced in Dev Guild / Octant research as part of the Greenpill builder layer.",
+  "themeSlugs": [
+    "opensrc",
+    "impact",
+    "public"
+  ],
+  "links": [
+    {
+      "label": "Greenpill Dev Guild GitHub",
+      "url": "https://github.com/greenpill-dev-guild",
+      "subtext": "Public builder org",
+      "handle": "greenpill-dev-guild",
+      "action": "Visit",
+      "icon": "github",
+      "kind": "external"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Afo Aiyeloja · Greenpill Network",
+    "description": "Afo Aiyeloja is publicly referenced in Greenpill Dev Guild research as part of the builder layer.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

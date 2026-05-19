@@ -1,6 +1,54 @@
 {
-  "name": "California",
-  "lat": 34.05,
-  "long": -118.25,
-  "link": "https://x.com/greenpillcali"
+  "name": "Greenpill California",
+  "city": "California",
+  "country": "United States",
+  "region": "americas",
+  "status": "inactive",
+  "summary": "Held as a steward-review chapter record. The research artifact found no current public California / SF / Bay Area footprint beyond a dormant account, so this should not be featured or used for strong launch claims until backfilled.",
+  "introQuote": "",
+  "introQuoteAttribution": "",
+  "image": "",
+  "founded": "",
+  "lat": 36.7783,
+  "long": -119.4179,
+  "link": "https://twitter.com/greenpill_LA",
+  "stewards": [],
+  "stewardSlugs": [],
+  "themeSlugs": [],
+  "links": [
+    {
+      "label": "Dormant public account",
+      "url": "https://twitter.com/greenpill_LA",
+      "subtext": "Needs steward backfill",
+      "handle": "@greenpill_LA",
+      "action": "Review",
+      "icon": "x",
+      "kind": "social"
+    }
+  ],
+  "connectLinks": [],
+  "relatedChapterSlugs": [],
+  "featuredStorySlugs": [],
+  "authoredResourceSlugs": [],
+  "featuredWeight": 0,
+  "proofSignals": [
+    {
+      "label": "Public-footprint gap",
+      "value": "Needs steward review",
+      "source": "S054 research gap",
+      "href": "https://twitter.com/greenpill_LA"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill California · Greenpill Network",
+    "description": "Greenpill California is held for steward review until a current public chapter source is provided.",
+    "ogImage": "",
+    "canonicalPath": "/chapters/california",
+    "noindex": true
+  }
 }

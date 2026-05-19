@@ -1,6 +1,83 @@
 {
   "name": "Uncommons",
-  "lat": 39.9,
-  "long": 116.3,
-  "link": "https://app.charmverse.io/greenpill-network/uncommons-previous-greenpill-cn-7914153818387037"
+  "city": "Distributed",
+  "country": "Chinese-speaking diaspora",
+  "region": "asia",
+  "status": "active",
+  "summary": "Uncommons, formerly GreenPill CN, is a public crypto-humanities and public-goods builder community with public Hub, X, and website sources. Some funding metrics need cross-check before launch.",
+  "introQuote": "",
+  "introQuoteAttribution": "",
+  "image": "",
+  "founded": "",
+  "lat": 31.2304,
+  "long": 121.4737,
+  "link": "https://hub.regencoordination.xyz/t/uncommons-previous-greenpill-cn/63",
+  "stewards": [],
+  "stewardSlugs": [],
+  "themeSlugs": [
+    "public",
+    "education",
+    "stories",
+    "gov",
+    "desci",
+    "opensrc"
+  ],
+  "links": [
+    {
+      "label": "Regen Hub intro",
+      "url": "https://hub.regencoordination.xyz/t/uncommons-previous-greenpill-cn/63",
+      "subtext": "Formerly GreenPill CN",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "hub",
+      "kind": "external"
+    },
+    {
+      "label": "Website",
+      "url": "https://uncommons.cc",
+      "subtext": "Public website",
+      "handle": "uncommons.cc",
+      "action": "Open",
+      "icon": "external",
+      "kind": "external"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/Un__commons",
+      "subtext": "Public account",
+      "handle": "@Un__commons",
+      "action": "Follow",
+      "icon": "x",
+      "kind": "social"
+    }
+  ],
+  "connectLinks": [],
+  "relatedChapterSlugs": [
+    "greensofa",
+    "germany",
+    "koh-pha-ngan"
+  ],
+  "featuredStorySlugs": [],
+  "authoredResourceSlugs": [],
+  "featuredWeight": 72,
+  "proofSignals": [
+    {
+      "label": "Public identity",
+      "value": "Formerly GreenPill CN",
+      "source": "S023",
+      "href": "https://hub.regencoordination.xyz/t/uncommons-previous-greenpill-cn/63"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Uncommons · Greenpill Network",
+    "description": "Uncommons, formerly GreenPill CN, is a public crypto-humanities and public-goods builder community.",
+    "ogImage": "",
+    "canonicalPath": "/chapters/uncommons",
+    "noindex": false
+  }
 }

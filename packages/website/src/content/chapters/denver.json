@@ -1,6 +1,57 @@
 {
-  "name": "Denver",
+  "name": "Greenpill Denver",
+  "city": "Denver",
+  "country": "United States",
+  "region": "americas",
+  "status": "forming",
+  "summary": "Held as a legacy chapter record from the existing site. This pass did not find Denver in the provided priority research artifact, so detailed public copy needs steward backfill before launch.",
+  "introQuote": "",
+  "introQuoteAttribution": "",
+  "image": "",
+  "founded": "",
   "lat": 39.74,
   "long": -104.99,
-  "link": "https://twitter.com/GreenpillDenver"
+  "link": "https://twitter.com/GreenpillDenver",
+  "stewards": [],
+  "stewardSlugs": [],
+  "themeSlugs": [
+    "events",
+    "public"
+  ],
+  "links": [
+    {
+      "label": "Legacy X account",
+      "url": "https://twitter.com/GreenpillDenver",
+      "subtext": "Needs steward backfill",
+      "handle": "@GreenpillDenver",
+      "action": "Review",
+      "icon": "x",
+      "kind": "social"
+    }
+  ],
+  "connectLinks": [],
+  "relatedChapterSlugs": [],
+  "featuredStorySlugs": [],
+  "authoredResourceSlugs": [],
+  "featuredWeight": 0,
+  "proofSignals": [
+    {
+      "label": "Legacy record",
+      "value": "Needs source review",
+      "source": "Existing repo content",
+      "href": "https://twitter.com/GreenpillDenver"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill Denver · Greenpill Network",
+    "description": "Greenpill Denver is a legacy chapter record that needs steward review before launch feature placement.",
+    "ogImage": "",
+    "canonicalPath": "/chapters/denver",
+    "noindex": true
+  }
 }

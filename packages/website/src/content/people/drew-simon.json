@@ -1,0 +1,33 @@
+{
+  "displayName": "Drew Simon",
+  "role": "Crypto Altruists host",
+  "avatar": "",
+  "bio": "Public host reference for Crypto Altruists episodes used as Greenpill content sources.",
+  "themeSlugs": [
+    "stories",
+    "public"
+  ],
+  "links": [
+    {
+      "label": "Crypto Altruism",
+      "url": "https://www.cryptoaltruists.com/",
+      "subtext": "Public media source",
+      "handle": "Crypto Altruists",
+      "action": "Open",
+      "icon": "podcast",
+      "kind": "external"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Drew Simon · Greenpill Network",
+    "description": "Drew Simon is a public host reference for Crypto Altruists episodes used as Greenpill sources.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

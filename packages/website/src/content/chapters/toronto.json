@@ -1,6 +1,72 @@
 {
-  "name": "Toronto",
-  "lat": 43.65,
-  "long": -79.38,
-  "link": "https://app.charmverse.io/greenpill-network/greenpill-toronto-6638482403625396"
+  "name": "Greenpill Toronto",
+  "city": "Toronto",
+  "country": "Canada",
+  "region": "americas",
+  "status": "active",
+  "summary": "Public sources identify Greenpill Toronto as a Toronto public-goods and regenerative cryptoeconomics chapter, including Consensus 2025 sponsor context and greenpill.to / greenpill.ca links.",
+  "introQuote": "",
+  "introQuoteAttribution": "",
+  "image": "",
+  "founded": "",
+  "lat": 43.6532,
+  "long": -79.3832,
+  "link": "https://greenpill.to",
+  "stewards": [],
+  "stewardSlugs": [],
+  "themeSlugs": [
+    "public",
+    "opensrc",
+    "events",
+    "education"
+  ],
+  "links": [
+    {
+      "label": "Greenpill Toronto",
+      "url": "https://greenpill.to",
+      "subtext": "Chapter website",
+      "handle": "greenpill.to",
+      "action": "Open",
+      "icon": "external",
+      "kind": "external"
+    },
+    {
+      "label": "Consensus 2025 sponsor page",
+      "url": "https://consensus2025.coindesk.com/agenda/sponsor/-greenpill-toronto",
+      "subtext": "Public sponsor proof",
+      "handle": "CoinDesk",
+      "action": "Open",
+      "icon": "external",
+      "kind": "external"
+    }
+  ],
+  "connectLinks": [],
+  "relatedChapterSlugs": [
+    "ottawa",
+    "london-ontario",
+    "new-york-city"
+  ],
+  "featuredStorySlugs": [],
+  "authoredResourceSlugs": [],
+  "featuredWeight": 50,
+  "proofSignals": [
+    {
+      "label": "Consensus 2025",
+      "value": "Sponsor page",
+      "source": "S032",
+      "href": "https://consensus2025.coindesk.com/agenda/sponsor/-greenpill-toronto"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill Toronto · Greenpill Network",
+    "description": "Greenpill Toronto is a source-backed chapter with public website and Consensus 2025 sponsor context.",
+    "ogImage": "",
+    "canonicalPath": "/chapters/toronto",
+    "noindex": false
+  }
 }

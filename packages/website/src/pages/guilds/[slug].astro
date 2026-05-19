@@ -1,22 +1,28 @@
 ---
-import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Nav from '../../components/Nav.astro';
 import Footer from '../../components/Footer.astro';
+import { getOperationalGuilds, getOperationalProjects } from '../../lib/operational-content';
 import '../../styles/global.css';
 
 export async function getStaticPaths() {
-  const items = await getCollection('guilds');
+  const items = await getOperationalGuilds();
   return items.map(item => ({ params: { slug: item.id }, props: { item } }));
 }
 
 const { item } = Astro.props;
 const { name, type, status, summary, description, stewards, links } = item.data;
 
-const projects = (await getCollection('projects')).filter(p => p.data.guild === item.id);
+const projects = (await getOperationalProjects()).filter(p => p.data.guild === item.id);
 ---
 
-<BaseLayout title={`${name} · Greenpill ${type === 'guild' ? 'Guild' : 'Pod'}`} description={summary || ''}>
+<BaseLayout
+  title={item.data.seo?.title || `${name} · Greenpill ${type === 'guild' ? 'Guild' : 'Pod'}`}
+  description={item.data.seo?.description || summary || ''}
+  ogImage={item.data.seo?.ogImage || item.data.media?.ogImage || undefined}
+  canonicalPath={item.data.seo?.canonicalPath || `/guilds/${item.id}`}
+  noindex={item.data.seo?.noindex}
+>
   <Nav />
   <main class="pt-32 pb-24 px-4 max-w-3xl mx-auto">
     <a href="/guilds" class="text-green text-sm hover:text-[var(--mid-green)] inline-block mb-6">← Back to Guilds & Pods</a>

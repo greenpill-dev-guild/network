@@ -1,0 +1,34 @@
+{
+  "displayName": "Coi",
+  "role": "Dev Guild contributor",
+  "avatar": "",
+  "bio": "Publicly referenced in the Crypto Altruists Trailblazers of Octant episode about the Greenpill Dev Guild.",
+  "themeSlugs": [
+    "opensrc",
+    "public",
+    "funding"
+  ],
+  "links": [
+    {
+      "label": "Trailblazers of Octant Episode 4",
+      "url": "https://www.cryptoaltruists.com/blog/trailblazers-of-octant-episode-4-greenpill-dev-guild-scaling-the-regen-movement-with-web3-coordination-tools",
+      "subtext": "Public episode",
+      "handle": "Crypto Altruists",
+      "action": "Listen",
+      "icon": "podcast",
+      "kind": "external"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Coi · Greenpill Network",
+    "description": "Coi is publicly referenced in the Crypto Altruists Trailblazers of Octant episode about the Greenpill Dev Guild.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

@@ -248,6 +248,12 @@ const storyCategoryOptions = [
   { label: 'Field Report', value: 'field-report' },
 ];
 
+const publicationStatusOptions = [
+  { label: 'Draft', value: 'draft' },
+  { label: 'Published', value: 'published' },
+  { label: 'Archived', value: 'archived' },
+];
+
 const resourceKindOptions = [
   { label: 'Book', value: 'book' },
   { label: 'Podcast', value: 'podcast' },
@@ -259,11 +265,7 @@ const resourceKindOptions = [
   { label: 'External', value: 'external' },
 ];
 
-const resourceStatusOptions = [
-  { label: 'Draft', value: 'draft' },
-  { label: 'Published', value: 'published' },
-  { label: 'Archived', value: 'archived' },
-];
+const resourceStatusOptions = publicationStatusOptions;
 
 export default config({
   storage: { kind: 'local' },
@@ -436,6 +438,7 @@ export default config({
       format: { data: 'json' },
       schema: {
         title: fields.slug({ name: { label: 'Title' } }),
+        status: fields.select({ label: 'Publication Status', options: publicationStatusOptions, defaultValue: 'draft' }),
         category: fields.select({
           label: 'Category',
           options: storyCategoryOptions,

@@ -1,0 +1,62 @@
+{
+  "title": "Celebrating Ethereum at 10 — Greenpill Nigeria Awka",
+  "status": "draft",
+  "category": "chapter",
+  "publishDate": "2025-08",
+  "updatedDate": "",
+  "dek": "A public Luma event page supports an Awka event tying ReFi education, POAPs, partner projects, and Water Cup visibility together.",
+  "excerpt": "Greenpill Nigeria's Awka Ethereum-at-10 event gives the chapter a source-backed local events story.",
+  "region": "africa",
+  "tag": "Local Events",
+  "tags": [
+    "ethereum-at-10",
+    "awka",
+    "nigeria"
+  ],
+  "body": "The Luma source gives the site a clean public event proof point for Greenpill Nigeria.\n\nUse this as an event recap / local activation seed. Do not treat RSVP or attendance numbers as available unless a source-backed count is added later.\n\n## Sources\n\n- S017: https://luma.com/hlkglzcg",
+  "image": "",
+  "author": "Greenpill Network research",
+  "authorRole": "Source-backed seed copy",
+  "authorBio": "",
+  "authorSlug": "",
+  "authorAvatar": "",
+  "relatedChapter": "nigeria",
+  "relatedGuild": "",
+  "relatedProjectSlugs": [],
+  "relatedStorySlugs": [
+    "greenpill-nigeria-water-cup"
+  ],
+  "continueReadingStorySlugs": [
+    "greenpill-nigeria-water-cup",
+    "take-the-greenpill-nigeria-refi-education"
+  ],
+  "themeSlugs": [
+    "events",
+    "education",
+    "public",
+    "water"
+  ],
+  "translations": [],
+  "proofSignals": [
+    {
+      "label": "Public event",
+      "value": "Awka",
+      "source": "S017",
+      "href": "https://luma.com/hlkglzcg"
+    }
+  ],
+  "featuredWeight": 55,
+  "readTime": "2 min read",
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Ethereum at 10 Awka · Greenpill Stories",
+    "description": "Source-backed event story for Greenpill Nigeria's Awka Ethereum-at-10 event.",
+    "ogImage": "",
+    "canonicalPath": "/stories/ethereum-at-10-awka",
+    "noindex": false
+  }
+}

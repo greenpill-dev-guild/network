@@ -9,6 +9,16 @@
   "ebookLink": "/pdf/onchain-impact-networks.pdf",
   "formats": [],
   "translations": [],
+  "themeSlugs": ["impact", "public", "opensrc", "funding"],
+  "relatedProjectSlugs": ["green-goods", "greenpill-impact-framework"],
+  "card": {
+    "eyebrow": "Impact library",
+    "title": "Onchain Impact Networks",
+    "summary": "A practical reference for public web3 projects and the impact networks that support them.",
+    "ctaLabel": "Read the book",
+    "ctaHref": "/pdf/onchain-impact-networks.pdf",
+    "surfaceType": "book"
+  },
   "group": "main",
   "sortOrder": 7
 }

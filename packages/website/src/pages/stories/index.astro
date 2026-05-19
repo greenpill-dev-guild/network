@@ -3,14 +3,21 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Nav from '../../components/Nav.astro';
 import Footer from '../../components/Footer.astro';
+import storiesIndex from '../../content/stories-index.json';
 import '../../styles/global.css';
 
-const items = (await getCollection('stories')).sort((a, b) =>
-  (b.data.publishDate || '').localeCompare(a.data.publishDate || '')
-);
+const items = (await getCollection('stories'))
+  .filter(item => item.data.status === 'published' && !item.data.seo?.noindex)
+  .sort((a, b) => (b.data.publishDate || '').localeCompare(a.data.publishDate || ''));
 ---
 
-<BaseLayout title="Stories · Greenpill Network" description="Field reports, essays, and updates from across the Greenpill network.">
+<BaseLayout
+  title={storiesIndex.seo.title || 'Stories · Greenpill Network'}
+  description={storiesIndex.seo.description || 'Field reports, essays, and updates from across the Greenpill network.'}
+  ogImage={storiesIndex.seo.ogImage || undefined}
+  canonicalPath={storiesIndex.seo.canonicalPath || '/stories'}
+  noindex={storiesIndex.seo.noindex}
+>
   <Nav />
   <main class="pt-32 pb-24 px-4 max-w-5xl mx-auto">
     <header class="mb-12">

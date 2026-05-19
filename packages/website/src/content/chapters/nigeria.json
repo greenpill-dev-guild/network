@@ -1,11 +1,125 @@
 {
-  "name": "Nigeria",
-  "lat": 10.62,
-  "long": 7.47,
-  "link": "https://app.charmverse.io/greenpill-network/greenpill-nigeria-6194911177203088",
+  "name": "Greenpill Nigeria",
+  "city": "Lagos / Awka",
+  "country": "Nigeria",
+  "region": "africa",
+  "status": "active",
+  "summary": "Public goods and ReFi education chapter with source-backed Water Cup updates, a 10-week Take the Greenpill education program, an Ethereum-at-10 Awka event, and a public Water Cup Mapping Hypercert.",
+  "introQuote": "",
+  "introQuoteAttribution": "",
+  "image": "",
+  "founded": "",
+  "lat": 6.5244,
+  "long": 3.3792,
+  "link": "https://hub.regencoordination.xyz/t/greenpill-nigeria-project-water-cup-updates/307",
+  "stewards": [],
+  "stewardSlugs": [],
+  "themeSlugs": [
+    "water",
+    "education",
+    "public",
+    "events",
+    "impact"
+  ],
+  "links": [
+    {
+      "label": "Water Cup updates",
+      "url": "https://hub.regencoordination.xyz/t/greenpill-nigeria-project-water-cup-updates/307",
+      "subtext": "Public program thread",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "hub",
+      "kind": "external"
+    },
+    {
+      "label": "Take the Greenpill education series",
+      "url": "https://hub.regencoordination.xyz/t/take-the-greenpill-with-greenpill-nigeria-10-weeks-of-refi-education/324",
+      "subtext": "10-week public education program",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "education",
+      "kind": "external"
+    },
+    {
+      "label": "Water Cup Mapping Hypercert",
+      "url": "https://app.hypercerts.org/hypercerts/42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-86091438830997431256233775680237357498368",
+      "subtext": "Public proof artifact",
+      "handle": "Hypercerts",
+      "action": "Open",
+      "icon": "impact",
+      "kind": "external"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/greenpillnaija",
+      "subtext": "Public chapter account",
+      "handle": "@greenpillnaija",
+      "action": "Follow",
+      "icon": "x",
+      "kind": "social"
+    }
+  ],
+  "connectLinks": [
+    {
+      "label": "Regen Hub",
+      "url": "https://hub.regencoordination.xyz/t/greenpill-nigeria-project-water-cup-updates/307",
+      "subtext": "Water Cup updates",
+      "handle": "Greenpill Nigeria",
+      "action": "Read",
+      "icon": "hub",
+      "kind": "external"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/greenpillnaija",
+      "subtext": "Public chapter account",
+      "handle": "@greenpillnaija",
+      "action": "Follow",
+      "icon": "x",
+      "kind": "social"
+    }
+  ],
+  "relatedChapterSlugs": [
+    "c-te-d-ivoire",
+    "kenya",
+    "uganda"
+  ],
+  "featuredStory": {},
+  "featuredStorySlugs": [],
+  "authoredResourceSlugs": [],
   "impactSources": {
     "impactEnabled": true,
     "greenGoodsGardenAddress": "0x35722eEdf3F7566A23FA871f0a04267AEe78E0dB",
-    "greenGoodsChainId": 42161
+    "greenGoodsChainId": 42161,
+    "karmaProjectUID": "",
+    "karmaProjectSlug": "",
+    "karmaCommunitySlug": ""
+  },
+  "featuredWeight": 95,
+  "proofSignals": [
+    {
+      "label": "Education program",
+      "value": "10 weeks",
+      "source": "S016",
+      "href": "https://hub.regencoordination.xyz/t/take-the-greenpill-with-greenpill-nigeria-10-weeks-of-refi-education/324"
+    },
+    {
+      "label": "Water Cup Mapping",
+      "value": "Hypercert",
+      "source": "S046",
+      "href": "https://app.hypercerts.org/hypercerts/42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-86091438830997431256233775680237357498368"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill Nigeria · Greenpill Network",
+    "description": "Greenpill Nigeria runs source-backed Water Cup, ReFi education, Ethereum-at-10, and public impact proof work.",
+    "ogImage": "",
+    "canonicalPath": "/chapters/nigeria",
+    "noindex": false
   }
 }

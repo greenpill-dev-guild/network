@@ -1,11 +1,73 @@
 {
-  "name": "Kenya",
-  "lat": -1.29,
-  "long": 36.82,
-  "link": "https://twitter.com/GreenpillKenya",
+  "name": "Greenpill Kenya",
+  "city": "Distributed",
+  "country": "Kenya",
+  "region": "africa",
+  "status": "active",
+  "summary": "Public Gitcoin source describes a Kenya program focused on biological carbon sequestration, sustainable farming, Web3 workshops, soil enhancement, river cleanups, waste collection, wallet-safety education, and a Regen Hub. Exact event year needs steward review.",
+  "introQuote": "",
+  "introQuoteAttribution": "",
+  "image": "",
+  "founded": "",
+  "lat": -0.0236,
+  "long": 37.9062,
+  "link": "https://checker.gitcoin.co/public/project/show/greenpill-kenya-octant-community-round-1",
+  "stewards": [],
+  "stewardSlugs": [],
+  "themeSlugs": [
+    "food",
+    "trees",
+    "water",
+    "education",
+    "public",
+    "events"
+  ],
+  "links": [
+    {
+      "label": "Gitcoin project",
+      "url": "https://checker.gitcoin.co/public/project/show/greenpill-kenya-octant-community-round-1",
+      "subtext": "Public Octant community round project",
+      "handle": "greenpill-kenya",
+      "action": "Open",
+      "icon": "gitcoin",
+      "kind": "external"
+    }
+  ],
+  "connectLinks": [],
+  "relatedChapterSlugs": [
+    "nigeria",
+    "c-te-d-ivoire",
+    "uganda"
+  ],
+  "featuredStorySlugs": [],
+  "authoredResourceSlugs": [],
   "impactSources": {
     "impactEnabled": true,
     "greenGoodsGardenAddress": "0x3f0f1551C7E08a2cf6800BD7D72aBfE23E3E32a0",
-    "greenGoodsChainId": 42161
+    "greenGoodsChainId": 42161,
+    "karmaProjectUID": "",
+    "karmaProjectSlug": "",
+    "karmaCommunitySlug": ""
+  },
+  "featuredWeight": 55,
+  "proofSignals": [
+    {
+      "label": "Octant community round",
+      "value": "Public Gitcoin project",
+      "source": "S039",
+      "href": "https://checker.gitcoin.co/public/project/show/greenpill-kenya-octant-community-round-1"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill Kenya · Greenpill Network",
+    "description": "Greenpill Kenya public sources describe soil, farming, river cleanup, Web3 workshop, and Regen Hub work.",
+    "ogImage": "",
+    "canonicalPath": "/chapters/kenya",
+    "noindex": false
   }
 }

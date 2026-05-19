@@ -1,0 +1,60 @@
+{
+  "title": "Regen Coordination Hub",
+  "kind": "tool",
+  "status": "published",
+  "summary": "Public forum and coordination hub for Greenpill chapter updates, program threads, proposals, Garden work, and website revamp discussion.",
+  "description": "The Hub is the safest publication-ready source for many chapter and program claims because it hosts public Greenpill threads and chapter updates.",
+  "author": "Greenpill Network",
+  "publishDate": "",
+  "updatedDate": "2026",
+  "primaryUrl": "https://hub.regencoordination.xyz/",
+  "resourcePath": "",
+  "image": "",
+  "imageAlt": "",
+  "duration": "",
+  "readTime": "",
+  "episodeNumber": "",
+  "guest": "",
+  "host": "",
+  "tags": [
+    "hub",
+    "chapters",
+    "governance"
+  ],
+  "themeSlugs": [
+    "gov",
+    "stories",
+    "public",
+    "events"
+  ],
+  "relatedChapterSlugs": [],
+  "relatedGuildSlugs": [
+    "writers-guild"
+  ],
+  "relatedProjectSlugs": [
+    "regen-coordination-hub"
+  ],
+  "featuredWeight": 90,
+  "card": {
+    "eyebrow": "Public forum",
+    "title": "Regen Coordination Hub",
+    "summary": "Chapter updates, program threads, proposals, and public Greenpill coordination.",
+    "badge": "Source S003",
+    "surfaceType": "tool",
+    "image": "",
+    "imageAlt": "",
+    "href": "https://hub.regencoordination.xyz/"
+  },
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Regen Coordination Hub · Greenpill Library",
+    "description": "Open the public Regen Coordination Hub for Greenpill chapter updates, proposals, Garden work, and program threads.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

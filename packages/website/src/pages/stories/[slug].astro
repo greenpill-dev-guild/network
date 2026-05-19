@@ -7,14 +7,22 @@ import '../../styles/global.css';
 
 export async function getStaticPaths() {
   const items = await getCollection('stories');
-  return items.map(item => ({ params: { slug: item.id }, props: { item } }));
+  return items
+    .filter(item => item.data.status === 'published' && !item.data.seo?.noindex)
+    .map(item => ({ params: { slug: item.id }, props: { item } }));
 }
 
 const { item } = Astro.props;
 const { title, category, publishDate, excerpt, body, author, relatedChapter, relatedGuild } = item.data;
 ---
 
-<BaseLayout title={`${title} · Greenpill Stories`} description={excerpt || ''}>
+<BaseLayout
+  title={item.data.seo?.title || `${title} · Greenpill Stories`}
+  description={item.data.seo?.description || excerpt || ''}
+  ogImage={item.data.seo?.ogImage || item.data.media?.ogImage || undefined}
+  canonicalPath={item.data.seo?.canonicalPath || `/stories/${item.id}`}
+  noindex={item.data.seo?.noindex}
+>
   <Nav />
   <main class="pt-32 pb-24 px-4 max-w-2xl mx-auto">
     <a href="/stories" class="text-green text-sm hover:text-[var(--mid-green)] inline-block mb-6">← Back to Stories</a>

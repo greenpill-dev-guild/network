@@ -3,9 +3,18 @@ interface Props {
   title: string;
   description: string;
   ogImage?: string;
+  canonicalPath?: string;
+  noindex?: boolean;
 }
 
-const { title, description, ogImage = 'https://greenpill.network/images/greenpill-twitter-card.png' } = Astro.props;
+const {
+  title,
+  description,
+  ogImage = 'https://greenpill.network/images/greenpill-twitter-card.png',
+  canonicalPath = '',
+  noindex = false,
+} = Astro.props;
+const canonicalUrl = canonicalPath ? `https://greenpill.network${canonicalPath}` : 'https://greenpill.network';
 ---
 
 <!DOCTYPE html>
@@ -18,6 +27,8 @@ const { title, description, ogImage = 'https://greenpill.network/images/greenpil
 
   <title>{title}</title>
   <meta name="description" content={description}>
+  {noindex && <meta name="robots" content="noindex,nofollow" />}
+  {canonicalPath && <link rel="canonical" href={canonicalUrl} />}
 
   <link rel="preload" as="image" href="/images/footer-img-sequence/01.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -37,7 +48,7 @@ const { title, description, ogImage = 'https://greenpill.network/images/greenpil
 
   <meta property="og:title" content={title} />
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://greenpill.network" />
+  <meta property="og:url" content={canonicalUrl} />
   <meta property="og:image" content={ogImage} />
   <meta property="og:description" content={description} />
 

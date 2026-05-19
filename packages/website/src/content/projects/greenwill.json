@@ -2,10 +2,41 @@
   "name": "GreenWill",
   "status": "active",
   "guild": "dev-guild",
-  "summary": "Community governance toolkit for chapters and guilds.",
-  "description": "GreenWill is a governance toolkit covering proposals, voting, treasury, and member roles for distributed regenerative communities.",
+  "summary": "Public-good reputation and pay-it-forward activity tooling.",
+  "description": "GreenWill is described in the research source inventory as an open Farcaster mini-app for accumulating Greenpill and ReFi reputation from pay-it-forward activity such as Octant, Gitcoin, and sponsored rounds.",
   "image": "",
-  "techStack": ["React", "Node"],
-  "repoUrl": "",
-  "liveUrl": ""
+  "techStack": [
+    "Farcaster",
+    "Reputation",
+    "Public goods"
+  ],
+  "repoUrl": "https://github.com/greenpill-dev-guild/greenwill",
+  "liveUrl": "",
+  "stewardSlugs": [],
+  "themeSlugs": [
+    "public",
+    "impact",
+    "opensrc"
+  ],
+  "featuredWeight": 80,
+  "proofSignals": [
+    {
+      "label": "Public repo",
+      "value": "greenwill",
+      "source": "S008 GitHub org",
+      "href": "https://github.com/greenpill-dev-guild/greenwill"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "GreenWill · Greenpill Network",
+    "description": "GreenWill is a Greenpill Dev Guild reputation and pay-it-forward tooling project.",
+    "ogImage": "",
+    "canonicalPath": "/projects/greenwill",
+    "noindex": false
+  }
 }

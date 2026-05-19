@@ -1,0 +1,34 @@
+{
+  "displayName": "Kevin Owocki",
+  "role": "Greenpill Podcast host and Greenpill author",
+  "avatar": "",
+  "bio": "Publicly associated with the Greenpill book and long-running Greenpill Podcast archive.",
+  "themeSlugs": [
+    "stories",
+    "education",
+    "public"
+  ],
+  "links": [
+    {
+      "label": "Greenpill Podcast",
+      "url": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639",
+      "subtext": "Public podcast archive",
+      "handle": "Apple Podcasts",
+      "action": "Listen",
+      "icon": "podcast",
+      "kind": "external"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Kevin Owocki · Greenpill Network",
+    "description": "Kevin Owocki is publicly associated with the Greenpill book and Greenpill Podcast archive.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

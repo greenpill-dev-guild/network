@@ -1,0 +1,43 @@
+{
+  "name": "Regen Coordination Hub",
+  "status": "active",
+  "guild": "",
+  "summary": "Public forum, chapter directory, and coordination surface for Greenpill and allied regen work.",
+  "description": "The Regen Coordination Hub is a public Discourse surface used for chapter updates, proposals, Greenpill Garden coordination, website revamp discussion, and network-level knowledge work. It appears at hub.regencoordination.xyz and hub.greenpill.network.",
+  "image": "",
+  "techStack": [
+    "Discourse",
+    "Public forum",
+    "Chapter updates"
+  ],
+  "repoUrl": "",
+  "liveUrl": "https://hub.regencoordination.xyz/",
+  "stewardSlugs": [],
+  "themeSlugs": [
+    "gov",
+    "stories",
+    "public",
+    "events"
+  ],
+  "featuredWeight": 60,
+  "proofSignals": [
+    {
+      "label": "Public Hub",
+      "value": "hub.regencoordination.xyz",
+      "source": "S003",
+      "href": "https://hub.regencoordination.xyz/"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Regen Coordination Hub · Greenpill Network",
+    "description": "The Regen Coordination Hub is Greenpill's public forum for chapter updates, proposals, and program coordination.",
+    "ogImage": "",
+    "canonicalPath": "/projects/regen-coordination-hub",
+    "noindex": false
+  }
+}

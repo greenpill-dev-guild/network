@@ -10,6 +10,7 @@ import ParticipateSection from '../components/ParticipateSection.astro';
 import ExploreSection from '../components/ExploreSection.astro';
 import Footer from '../components/Footer.astro';
 import TranslationModal from '../components/TranslationModal.astro';
+import homePage from '../content/home-page.json';
 import '../styles/global.css';
 
 // Read translations from book collection
@@ -17,7 +18,13 @@ const allBooks = await getCollection('books');
 const booksWithTranslations = allBooks.filter(b => b.data.translations && b.data.translations.length > 0);
 ---
 
-<BaseLayout title="greenpill.network" description="Turning Degens to Regens (one green pill at a time)">
+<BaseLayout
+  title={homePage.seo.title || 'greenpill.network'}
+  description={homePage.seo.description || 'Turning Degens to Regens (one green pill at a time)'}
+  ogImage={homePage.seo.ogImage || undefined}
+  canonicalPath={homePage.seo.canonicalPath || '/'}
+  noindex={homePage.seo.noindex}
+>
   <Nav />
 
   <div class="transition-opacity duration-500 sm:min-h-[100vh] flex items-center justify-center">

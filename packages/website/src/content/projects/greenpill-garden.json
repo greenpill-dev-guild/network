@@ -1,0 +1,44 @@
+{
+  "name": "Greenpill Garden",
+  "status": "active",
+  "guild": "",
+  "summary": "Season-based public onboarding and stewardship program.",
+  "description": "Greenpill Garden Season One is a public program thread connecting stewardship, chapters, impact reporting, tools, and the website revamp. The public website should use it as the source-backed onboarding bridge while keeping private pledge and assessment state out of Keystatic.",
+  "image": "",
+  "techStack": [
+    "Onboarding",
+    "Stewardship",
+    "Chapters",
+    "Impact reporting"
+  ],
+  "repoUrl": "",
+  "liveUrl": "https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363",
+  "stewardSlugs": [],
+  "themeSlugs": [
+    "gov",
+    "currency",
+    "mutual",
+    "public"
+  ],
+  "featuredWeight": 70,
+  "proofSignals": [
+    {
+      "label": "Public Garden thread",
+      "value": "Season One",
+      "source": "S042",
+      "href": "https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363"
+    }
+  ],
+  "media": {
+    "image": "/images/hifi/garden-overlay.jpg",
+    "imageAlt": "Garden texture from the high-fidelity design package",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill Garden · Greenpill Network",
+    "description": "Greenpill Garden is a public onboarding and stewardship program connecting chapters, tools, and impact reporting.",
+    "ogImage": "",
+    "canonicalPath": "/projects/greenpill-garden",
+    "noindex": false
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "displayName": "Trinity Morphy",
+  "role": "Dev Guild public writer / contributor",
+  "avatar": "",
+  "bio": "Named in the research source inventory as an author on the Greenpill Dev Guild Paragraph publication.",
+  "themeSlugs": [
+    "stories",
+    "opensrc",
+    "public"
+  ],
+  "links": [
+    {
+      "label": "Dev Guild Paragraph",
+      "url": "https://paragraph.com/@greenpilldevguild",
+      "subtext": "Public Dev Guild writing",
+      "handle": "@greenpilldevguild",
+      "action": "Read",
+      "icon": "article",
+      "kind": "external"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Trinity Morphy · Greenpill Network",
+    "description": "Trinity Morphy is named in public Dev Guild publication research.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

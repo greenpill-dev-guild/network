@@ -1,0 +1,61 @@
+{
+  "title": "Greenpill Cote d'Ivoire — La Ligne Verte",
+  "status": "draft",
+  "category": "chapter",
+  "publishDate": "2025",
+  "updatedDate": "",
+  "dek": "The public Green Mission / La Ligne Verte source supports a planned environmental action platform, with targets that must stay labeled as goals.",
+  "excerpt": "A source-backed Cote d'Ivoire story for environmental action and steward review.",
+  "region": "africa",
+  "tag": "Water & Waste",
+  "tags": [
+    "cote-divoire",
+    "green-mission",
+    "waste",
+    "environment"
+  ],
+  "body": "Greenpill Cote d'Ivoire has a public Regen Hub source for La Ligne Verte / Green Mission.\n\nThe research artifact flags the 2025-2026 targets as targets, not delivered metrics. The website should present them as planned goals unless a follow-up public source confirms completion.\n\n## Sources\n\n- S022: https://hub.regencoordination.xyz/t/greenpill-civ-chapter-update-the-beginning-of-la-ligne-verte/333",
+  "image": "",
+  "author": "Greenpill Network research",
+  "authorRole": "Source-backed seed copy",
+  "authorBio": "",
+  "authorSlug": "",
+  "authorAvatar": "",
+  "relatedChapter": "c-te-d-ivoire",
+  "relatedGuild": "",
+  "relatedProjectSlugs": [],
+  "relatedStorySlugs": [],
+  "continueReadingStorySlugs": [
+    "greenpill-nigeria-water-cup",
+    "greenpill-brasil-gg20-climate-milestones"
+  ],
+  "themeSlugs": [
+    "water",
+    "events",
+    "education",
+    "currency"
+  ],
+  "translations": [],
+  "proofSignals": [
+    {
+      "label": "Green Mission goals",
+      "value": "2025-2026 targets",
+      "source": "S022",
+      "href": "https://hub.regencoordination.xyz/t/greenpill-civ-chapter-update-the-beginning-of-la-ligne-verte/333"
+    }
+  ],
+  "featuredWeight": 65,
+  "readTime": "3 min read",
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill Cote d'Ivoire La Ligne Verte · Greenpill Stories",
+    "description": "Source-backed Cote d'Ivoire story for La Ligne Verte and Green Mission goals.",
+    "ogImage": "",
+    "canonicalPath": "/stories/greenpill-cote-divoire-la-ligne-verte",
+    "noindex": false
+  }
+}

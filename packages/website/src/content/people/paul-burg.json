@@ -1,0 +1,35 @@
+{
+  "displayName": "Paul Burg",
+  "role": "Greenpill Koh Phangan public steward reference",
+  "avatar": "",
+  "bio": "Publicly named on the GreenPill Phangan Giveth source and in ReFi Phangan context.",
+  "themeSlugs": [
+    "events",
+    "currency",
+    "water",
+    "public"
+  ],
+  "links": [
+    {
+      "label": "GreenPill Phangan on Giveth",
+      "url": "https://giveth.io/project/greenpill-phangan",
+      "subtext": "Public project profile",
+      "handle": "Giveth",
+      "action": "Open",
+      "icon": "external",
+      "kind": "external"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Paul Burg · Greenpill Network",
+    "description": "Paul Burg is publicly named in Greenpill Koh Phangan source material.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

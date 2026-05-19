@@ -14,6 +14,16 @@
     }
   ],
   "translations": [],
+  "themeSlugs": ["currency", "local-regeneration", "funding", "public"],
+  "relatedChapterSlugs": ["kenya"],
+  "card": {
+    "eyebrow": "Local economics",
+    "title": "Grassroots Economics",
+    "summary": "A Kenya-grounded reference on community currencies and capital allocation practice.",
+    "ctaLabel": "Read the book",
+    "ctaHref": "/pdf/grassroots-economics.pdf",
+    "surfaceType": "book"
+  },
   "group": "main",
   "sortOrder": 3
 }

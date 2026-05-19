@@ -1,11 +1,11 @@
 ---
-import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Nav from '../../components/Nav.astro';
 import Footer from '../../components/Footer.astro';
+import { getOperationalGuilds } from '../../lib/operational-content';
 import '../../styles/global.css';
 
-const items = (await getCollection('guilds')).sort((a, b) =>
+const items = (await getOperationalGuilds()).sort((a, b) =>
   a.data.name.localeCompare(b.data.name)
 );
 const guilds = items.filter(i => i.data.type === 'guild');

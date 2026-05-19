@@ -1,0 +1,144 @@
+{
+  "hero": {
+    "overline": "Library",
+    "title": "Everything we have made public.",
+    "dek": "Books, podcast conversations, Hub threads, project docs, and Garden resources from across the Greenpill network.",
+    "body": "Use the Library as the public knowledge commons. Keep private Drive docs as research references until they have a public mirror or steward approval.",
+    "primaryCta": {
+      "label": "Browse books",
+      "href": "/library#books",
+      "kind": "internal"
+    },
+    "secondaryCta": {
+      "label": "Listen to the podcast",
+      "href": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639",
+      "kind": "external"
+    },
+    "media": {
+      "image": "/images/o-impact-networks.jpg",
+      "imageAlt": "Onchain Impact Networks book cover",
+      "ogImage": ""
+    }
+  },
+  "sections": [
+    {
+      "key": "books",
+      "overline": "Books",
+      "title": "The foundation shelf.",
+      "dek": "Greenpilled, Impact DAOs, Onchain Impact Networks, Pathways to Regeneration, Grassroots Economics, Ethereum Localism, and adjacent Greenpill books remain core public material.",
+      "body": "Book counts should be derived from the content collection, not hardcoded from the HiFi constants.",
+      "cta": {
+        "label": "Browse books",
+        "href": "/library#books",
+        "kind": "internal"
+      },
+      "featuredRefs": [
+        {
+          "collection": "books",
+          "slug": "onchain-impact-networks",
+          "label": "Onchain Impact Networks"
+        },
+        {
+          "collection": "books",
+          "slug": "pathways-to-regeneration",
+          "label": "Pathways to Regeneration"
+        },
+        {
+          "collection": "books",
+          "slug": "greenpill-v0",
+          "label": "Greenpill v0"
+        }
+      ]
+    },
+    {
+      "key": "podcast",
+      "overline": "Podcast",
+      "title": "A long-running public conversation.",
+      "dek": "The podcast archive has 293 public episodes according to the research artifact's Apple Podcasts source.",
+      "body": "Render episode resources only when they have source-backed title, guest, date, and link metadata.",
+      "cta": {
+        "label": "Listen on Apple Podcasts",
+        "href": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639",
+        "kind": "external"
+      },
+      "featuredRefs": [
+        {
+          "collection": "resources",
+          "slug": "greenpill-podcast",
+          "label": "Greenpill Podcast"
+        },
+        {
+          "collection": "resources",
+          "slug": "trailblazers-octant-ep4-gpdg",
+          "label": "Trailblazers of Octant Episode 4"
+        }
+      ]
+    },
+    {
+      "key": "tools-guides",
+      "overline": "Tools and guides",
+      "title": "Public docs for work that is already visible.",
+      "dek": "Green Goods docs, Regen Coordination Hub threads, and Dev Guild writing can render now; internal Drive drafts stay review-only.",
+      "body": "Use resource cards to connect readers to public docs without making Directus or private admin the content source.",
+      "cta": {
+        "label": "Open Green Goods docs",
+        "href": "https://docs.greengoods.app/community/why-we-build",
+        "kind": "external"
+      },
+      "featuredRefs": [
+        {
+          "collection": "resources",
+          "slug": "green-goods-docs",
+          "label": "Green Goods docs"
+        },
+        {
+          "collection": "resources",
+          "slug": "regen-coordination-hub",
+          "label": "Regen Coordination Hub"
+        }
+      ]
+    }
+  ],
+  "featuredBookSlugs": [
+    "onchain-impact-networks",
+    "pathways-to-regeneration",
+    "greenpill-v0",
+    "impact-daos"
+  ],
+  "featuredResourceSlugs": [
+    "greenpill-podcast",
+    "trailblazers-octant-ep4-gpdg",
+    "green-goods-docs",
+    "regen-coordination-hub",
+    "greenpill-garden-season-one"
+  ],
+  "featuredGuildSlugs": [
+    "dev-guild",
+    "writers-guild"
+  ],
+  "gardenCard": {
+    "eyebrow": "Garden",
+    "title": "Enter the Garden",
+    "summary": "A public onboarding ramp from a light newsletter subscription to a high-intent steward call.",
+    "badge": "Public onboarding",
+    "surfaceType": "garden",
+    "image": "/images/hifi/garden-overlay.jpg",
+    "imageAlt": "Garden texture from the high-fidelity design package",
+    "href": "/garden"
+  },
+  "proofSignals": [
+    {
+      "label": "Podcast archive",
+      "value": "293 episodes",
+      "source": "S006 Apple Podcasts",
+      "href": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639"
+    }
+  ],
+  "seo": {
+    "title": "Library · Greenpill Network",
+    "description": "Browse Greenpill books, podcast episodes, Hub threads, public docs, project resources, and Garden onboarding material.",
+    "ogImage": "",
+    "canonicalPath": "/library",
+    "noindex": false
+  }
+}

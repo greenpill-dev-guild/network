@@ -1,6 +1,62 @@
 {
-  "name": "Ottawa",
-  "lat": 45.42,
-  "long": -75.69,
-  "link": "https://app.charmverse.io/greenpill-network/greenpill-ottawa-8253533249212863"
+  "name": "Greenpill Ottawa",
+  "city": "Ottawa",
+  "country": "Canada",
+  "region": "americas",
+  "status": "active",
+  "summary": "Public research confirms an active Greenpill Ottawa X account. Deeper chapter activity needs steward backfill before launch copy makes specific program claims.",
+  "introQuote": "",
+  "introQuoteAttribution": "",
+  "image": "",
+  "founded": "",
+  "lat": 45.4215,
+  "long": -75.6972,
+  "link": "https://x.com/greenpillottawa",
+  "stewards": [],
+  "stewardSlugs": [],
+  "themeSlugs": [
+    "public",
+    "events",
+    "education"
+  ],
+  "links": [
+    {
+      "label": "X",
+      "url": "https://x.com/greenpillottawa",
+      "subtext": "Public chapter account",
+      "handle": "@greenpillottawa",
+      "action": "Follow",
+      "icon": "x",
+      "kind": "social"
+    }
+  ],
+  "connectLinks": [],
+  "relatedChapterSlugs": [
+    "toronto",
+    "london-ontario",
+    "new-york-city"
+  ],
+  "featuredStorySlugs": [],
+  "authoredResourceSlugs": [],
+  "featuredWeight": 30,
+  "proofSignals": [
+    {
+      "label": "Public account",
+      "value": "X",
+      "source": "S031",
+      "href": "https://x.com/greenpillottawa"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill Ottawa · Greenpill Network",
+    "description": "Greenpill Ottawa has a public account, with deeper chapter activity needing steward backfill.",
+    "ogImage": "",
+    "canonicalPath": "/chapters/ottawa",
+    "noindex": false
+  }
 }

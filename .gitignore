@@ -13,7 +13,7 @@ output/
 tmp/
 
 # Root-level scratch data belongs in packages/ or .plans artifacts.
-data/
+/data/
 
 # Environment
 .env
