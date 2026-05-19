@@ -4,17 +4,19 @@ This contract keeps `greenpill.network` anonymous and public by default while al
 
 ## Boundary
 
-- `Astro + Keystatic` remains canonical for curated public content: books, translations, chapters, guilds, projects, stories, people/stewards, and themes.
+- `Astro + Keystatic` remains canonical for editorial/site-composition content: books, translations, stories, resources, page singletons, and long-form public copy.
+- `Directus + Postgres` owns authenticated operational edits for themes, chapters, guilds, projects, public people/stewards, locations, and impact source bindings.
 - `Fly Managed Postgres` stores user-submitted map/member nodes, private emails, moderation state, spam metadata, and steward review history.
-- The public site reads only approved public projections. It never reads the private intake tables directly.
-- The first implementation should keep this CMS-agnostic. The admin layer can be Directus, Payload, NocoDB, Baserow, Strapi, or a later custom workspace surface.
+- The public site reads only approved public projections and snapshots. It never reads Directus APIs, private intake tables, or database credentials directly.
 
 ## Public Content Contracts
 
 - `themes` is the shared public taxonomy for books, chapters, projects, stories, people/stewards, and approved submitted nodes.
 - `people` stores reusable public steward profiles only: display name, role, avatar, bio, public links, and themes.
 - `books` can now carry optional `sections`, `themeSlugs`, `relatedStorySlugs`, and `relatedProjectSlugs` while preserving existing PDFs and translations.
-- Chapter map data is generated from the `chapters` collection through `/locations.json`; a checked-in public `locations.json` file is no longer a hand-maintained source of truth.
+- Chapter map data is generated from the approved operational content snapshot through `/locations.json`; a checked-in public `locations.json` file is no longer a hand-maintained source of truth.
+- `GET /content/public-snapshot` is the agent-owned public snapshot route for published operational content. Static website builds can fetch that route or use the checked-in fallback snapshot.
+- Public snapshot rows are assembled from explicit SQL allowlists and then checked by `@greenpill-network/shared/public-content`; raw editor JSON and workflow metadata are not part of the public projection.
 
 ## Private Intake Data
 
@@ -44,6 +46,14 @@ Admin review endpoints
 - Stay behind the chosen CMS/admin layer.
 - Must be able to approve, reject, archive, and annotate submissions without exposing private fields to public consumers.
 
+Operational content publishing
+
+- Standard stewards draft or update scoped `content` records through Directus.
+- Trusted publishers/operators approve records by setting `publication_status='published'`.
+- Only published rows enter `content.public_*` views and `/content/public-snapshot`.
+- `bun run directus:content:setup` applies the Directus roles, policies, and field permissions that keep Steward Editor users away from publish/review fields.
+- Directus Flows may notify or trigger rebuilds, but public projection logic stays in SQL, `@greenpill-network/shared/public-content`, and the agent route.
+
 ## Local Optimistic UX
 
 - After a successful submission, the browser stores only a public-safe pending node in `localStorage` under `greenpill.pendingMapNodes.v1`.
@@ -52,16 +62,10 @@ Admin review endpoints
 - Other visitors do not see it until a steward approves it and it enters the public projection.
 - Local pending storage must not contain email, raw note, IP, spam metadata, or review notes.
 
-## CMS/Admin Options
+## CMS/Admin Decision
 
-| Option | Strengths | Tradeoffs | Fit |
-| --- | --- | --- | --- |
-| Directus | SQL/Postgres-first, strong data studio, field/item permissions, flows, good steward review fit | Adds a separate service and Directus-specific config to operate | Leading candidate for first evaluation |
-| Payload | Code-first, Postgres adapter, strong custom access control, good app integration | More engineering-heavy for non-engineer admin setup | Best if private intake becomes part of a custom app quickly |
-| NocoDB | Familiar spreadsheet-style UI, self-hostable, can connect to SQL data, accessible for teams | Permission depth and workflow shape are less CMS-native | Good lightweight Airtable-style review surface |
-| Baserow | Friendly no-code database UI, self-hostable, PostgreSQL-backed state | More separate from app-owned schema/agent route contracts | Good for simple internal tables, weaker as the canonical agent surface |
-| Strapi | Mature CMS, Postgres support, admin roles, content APIs | Less aligned because Keystatic remains public CMS; not ideal for an existing external schema | Possible, but not the default direction |
-
-## Decision Default
-
-Evaluate Directus first for the private steward moderation layer, but do not couple the intake schema to Directus. Keep Postgres and the approved-only projection as the durable source of truth.
+Directus is the authenticated operational content and moderation surface. Do not
+couple the Greenpill schema to Directus internals: keep Postgres migrations,
+published views, and approved-only projections as the durable source of truth.
+Payload, NocoDB, Baserow, and Strapi are no longer first-pass candidates for
+this repo lane unless Directus fails a concrete operational requirement.

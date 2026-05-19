@@ -19,7 +19,7 @@ Greenpill Network is a packages-first monorepo for the public Astro website, Fly
 
 Canonical package boundaries:
 
-- `packages/website`: static Astro + Keystatic public website for `greenpill.network`.
+- `packages/website`: static Astro public website for `greenpill.network`, with Keystatic retained for editorial/site-composition content and approved operational content consumed from public snapshots.
 - `packages/agent`: Hono service for `agent.greenpill.network`, local Postgres readiness, and future cache/intake jobs.
 - `packages/admin`: self-hosted Directus admin service for `network-admin` / future `admin.greenpill.network`.
 - `packages/shared`: reusable payload normalization and privacy-boundary contracts.
@@ -37,28 +37,41 @@ Run installs and validation from the repo root.
 - `bun run dev:admin` - run the local Directus admin service against local Postgres.
 - `bun run db:local:up` / `bun run db:local:down` - start or stop local Postgres.
 - `bun run db:migrate` - apply the local agent database baseline.
-- `bun run test:agent`, `bun run test:chapter-impact`, `bun run test:map-nodes`, `bun run plans:validate` - focused contract checks.
+- `bun run content:snapshot` - validate current operational content and refresh the static fallback snapshot.
+- `bun run content:migrate` - one-time seed current operational content into the Postgres `content` schema; it refuses to run after rows exist unless `--allow-existing` is passed for controlled missing-row recovery.
+- `bun run directus:content:setup` - apply Directus roles, policies, and permissions for operational content and intake moderation after Directus boots.
+- `bun run test:agent`, `bun run test:chapter-impact`, `bun run test:content`, `bun run test:map-nodes`, `bun run plans:validate` - focused contract checks.
 
 ## Architecture Notes
 
-The public website remains static. Keystatic is enabled only during local website dev for file-backed content authoring; there is no deployed CMS server or website database connection.
+The public website remains static. Keystatic is enabled only during local website dev for editorial and site-composition content; there is no deployed Keystatic server or public website database connection.
+
+Operational content for chapters, public steward profiles, guilds, projects,
+locations, and impact source bindings is Directus/Postgres-owned after the
+one-time migration. The website consumes the approved public snapshot from
+`packages/website/src/data/operational-content-snapshot.json` by default, or
+from `OPERATIONAL_CONTENT_SNAPSHOT_URL` during production builds.
 
 Website source and config live under `packages/website`:
 
 - `packages/website/src/pages/index.astro` - homepage.
-- `packages/website/src/content/` - file-backed content collections and singletons.
+- `packages/website/src/content/` - file-backed editorial content collections and singletons.
+- `packages/website/src/data/operational-content-snapshot.json` - static fallback for approved operational content.
 - `packages/website/src/content/config.ts` - Astro content schema validation.
 - `packages/website/keystatic.config.ts` - local Keystatic config.
 - `packages/website/src/scripts/` - browser interaction scripts.
 - `packages/website/src/styles/global.css` - global site styles.
 
-Generated public JSON routes include `/locations.json` and `/impact-sources.json`. Keep those outputs public-safe.
+Generated public JSON routes include `/locations.json` and `/impact-sources.json`, derived from the approved operational content snapshot. Keep those outputs public-safe.
 
-The agent package owns private runtime concerns. `/health` is process health, `/ready` checks `DATABASE_URL`, and the impact/map-node routes are scaffolded route contracts until implementation lands.
+The agent package owns private runtime concerns. `/health` is process health, `/ready` checks `DATABASE_URL`, `/content/public-snapshot` exposes the approved operational snapshot, and the impact/map-node routes preserve public/private projection contracts.
 
 The admin package owns the self-hosted Directus deployment surface. Directus may
 manage `directus_*` system tables, roles, permissions, and Data Studio views, but
 Greenpill-owned schema migrations remain in `packages/agent/migrations`.
+Directus can edit the Greenpill-owned `content`, `intake`, and `impact` schemas
+only through role-scoped admin access configured by
+`bun run directus:content:setup`; it must not become the public API.
 
 ## Deployment Notes
 

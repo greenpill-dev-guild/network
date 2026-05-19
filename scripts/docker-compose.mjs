@@ -1,22 +1,60 @@
 import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname } from 'node:path';
+import { homedir } from 'node:os';
 
 const fallbackDockerPath = '/Applications/Docker.app/Contents/Resources/bin/docker';
+const fallbackOrbStackDockerPath = `${homedir()}/.orbstack/bin/docker`;
+const fallbackOrbStackComposePath = `${homedir()}/.orbstack/bin/docker-compose`;
+const fallbackOrbStackSocketPath = `${homedir()}/.orbstack/run/docker.sock`;
 
-function resolveDockerCommand() {
-  const fromPath = spawnSync('sh', ['-c', 'command -v docker'], { encoding: 'utf8' });
-  const candidate = fromPath.stdout.trim();
+function findCommand(command) {
+  const fromPath = spawnSync('sh', ['-c', `command -v ${command}`], { encoding: 'utf8' });
+  return fromPath.status === 0 ? fromPath.stdout.trim() : '';
+}
 
-  if (fromPath.status === 0 && candidate) {
-    return candidate;
+function supportsDockerCompose(docker) {
+  const result = spawnSync(docker, ['compose', 'version'], { encoding: 'utf8' });
+  return result.status === 0;
+}
+
+function resolveComposeCommand() {
+  const dockerCandidates = [
+    findCommand('docker'),
+    existsSync(fallbackDockerPath) ? fallbackDockerPath : '',
+    existsSync(fallbackOrbStackDockerPath) ? fallbackOrbStackDockerPath : '',
+  ].filter(Boolean);
+
+  for (const docker of dockerCandidates) {
+    if (supportsDockerCompose(docker)) {
+      return {
+        command: docker,
+        argsPrefix: ['compose'],
+        env: docker === fallbackOrbStackDockerPath && existsSync(fallbackOrbStackSocketPath)
+          ? { DOCKER_HOST: `unix://${fallbackOrbStackSocketPath}` }
+          : {},
+      };
+    }
   }
 
-  if (existsSync(fallbackDockerPath)) {
-    return fallbackDockerPath;
+  const compose = findCommand('docker-compose')
+    || (existsSync(fallbackOrbStackComposePath) ? fallbackOrbStackComposePath : '');
+
+  if (compose) {
+    return {
+      command: compose,
+      argsPrefix: [],
+      env: compose === fallbackOrbStackComposePath && existsSync(fallbackOrbStackSocketPath)
+        ? { DOCKER_HOST: `unix://${fallbackOrbStackSocketPath}` }
+        : {},
+    };
   }
 
-  return 'docker';
+  return {
+    command: 'docker',
+    argsPrefix: ['compose'],
+    env: {},
+  };
 }
 
 const args = [];
@@ -38,11 +76,12 @@ for (let index = 0; index < inputArgs.length; index += 1) {
   }
 }
 
-const docker = resolveDockerCommand();
-const result = spawnSync(docker, ['compose', ...args], {
+const compose = resolveComposeCommand();
+const result = spawnSync(compose.command, [...compose.argsPrefix, ...args], {
   env: {
     ...process.env,
-    PATH: `${dirname(docker)}:${process.env.PATH ?? ''}`,
+    ...compose.env,
+    PATH: `${dirname(compose.command)}:${process.env.PATH ?? ''}`,
   },
   stdio: 'inherit',
 });

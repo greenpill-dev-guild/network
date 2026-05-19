@@ -9,7 +9,7 @@ Current responsibilities:
 - use `hono` as the HTTP framework for deterministic agent routes
 - run locally with `bun run dev:agent` from the repo root
 - expose `/health` for process health and `/ready` for database readiness
-- define public route constants for chapter impact and map-node intake
+- define public route constants for chapter impact, map-node intake, map state, and operational content snapshots
 - depend on `@greenpill-network/shared` for privacy and payload contracts
 - depend on `postgres` for Fly Managed Postgres/local Postgres connectivity
 - keep agent code under `packages/*` instead of embedding service logic in the root Astro app
@@ -41,6 +41,11 @@ Useful checks:
 curl http://127.0.0.1:8787/health
 curl http://127.0.0.1:8787/ready
 curl http://127.0.0.1:8787/impact/chapters/nigeria
+curl http://127.0.0.1:8787/content/public-snapshot
 ```
 
-`/impact/chapters/:slug`, `POST /map-nodes`, and `GET /map-nodes/public` are still scaffolded `501` route contracts until the cache and intake implementations land.
+`/content/public-snapshot` reads only published operational content from the
+Greenpill-owned `content` schema and applies the shared public-content privacy
+guard before returning data. `/impact/chapters/:slug`, `POST /map-nodes`, and
+`GET /map-nodes/public` preserve the same public/private boundary for impact and
+map-node data.

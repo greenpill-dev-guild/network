@@ -37,6 +37,7 @@ it exists and otherwise uses the Docker Compose defaults. See
 DIRECTUS_ADMIN_EMAIL=you@example.com
 DIRECTUS_ADMIN_PASSWORD=replace-with-a-local-password
 DIRECTUS_SECRET=replace-with-a-local-random-value
+DIRECTUS_DB_SEARCH_PATH=array:public,content,intake,impact,workspace,audit
 DIRECTUS_DB_HEALTHCHECK_THRESHOLD=2000
 DIRECTUS_FILES_MAX_UPLOAD_SIZE=25mb
 DIRECTUS_MAX_PAYLOAD_SIZE=25mb
@@ -45,7 +46,18 @@ DIRECTUS_MAX_PAYLOAD_SIZE=25mb
 The local Directus container connects to the existing local agent database at
 `postgres://greenpill:greenpill@host.docker.internal:54329/greenpill_network`.
 This keeps the admin pilot pointed at the same `intake`, `impact`, `workspace`,
-and `audit` schema boundaries as the agent.
+`content`, and `audit` schema boundaries as the agent.
+
+After Directus has booted, apply the Greenpill operational content access model:
+
+```sh
+bun run directus:content:setup
+```
+
+This script logs in as the configured Directus admin, verifies the `content`
+collections are visible through the configured Postgres search path, and
+creates/updates the Steward Editor, Steward Moderator, Trusted Publisher, and
+Operator roles/policies/permissions.
 
 ## Fly Deployment
 
@@ -150,16 +162,55 @@ Directus may create and manage its `directus_*` system tables in the connected
 database. Greenpill-owned product schema still belongs in
 `packages/agent/migrations`.
 
+Keep `DB_SEARCH_PATH=array:public,content,intake,impact,workspace,audit` on the
+Directus service. `public` stays first so Directus system tables remain in the
+normal schema, while `content` and the private schemas are visible to Data
+Studio for authenticated operational work.
+
 Do not expose Directus generated APIs as public intake APIs. Public submissions
 should continue through `POST /map-nodes` on the agent so privacy filtering,
 rate-limiting, and public projection contracts remain centralized.
 
-After login, configure Directus roles before inviting stewards:
+### Operational Content
 
-- Public role: no access to `intake`, `impact`, `workspace`, or `audit`.
+Directus is the authenticated editing surface for operational public content:
+chapters, public steward profiles, guilds, projects, chapter locations, and
+chapter impact source bindings. These tables live in the Greenpill-owned
+`content` schema and are migrated from `packages/agent/migrations`, not from
+Directus schema drift.
+
+Only `publication_status='published'` rows enter the agent's
+`/content/public-snapshot` route. Standard stewards should draft or request
+review; trusted publishers/operators approve and publish. The static website
+then consumes the approved snapshot at build time.
+
+Directus Flows may send notifications or trigger rebuilds, but privacy
+projection logic stays in SQL, `@greenpill-network/shared/public-content`, and
+the agent route.
+
+### Live Onboarding Mode
+
+Live Onboarding Mode is controlled by the singleton
+`intake.map_node_intake_settings` row. Only trusted operator/admin roles should
+be able to update `live_onboarding_enabled`, `updated_by`, or `updated_at`.
+
+Default is `live_onboarding_enabled=false`. For a workshop or onboarding demo,
+an operator can set it to `true`; while enabled, `POST /map-nodes` auto-approves
+new submissions, writes a private `system:live-onboarding` review row, and makes
+the approved public projection available through `/map/state`. Turn it off
+manually after the session. Do not expose this toggle through public URLs,
+query parameters, browser storage, or generated website content.
+
+Before inviting stewards, run `bun run directus:content:setup` and confirm the
+generated roles:
+
+- Public role: no access to `content`, `intake`, `impact`, `workspace`, or `audit`.
+- Steward editor: draft/update scoped `content` records, but no publish access.
 - Steward moderator: read review-safe submission fields, update moderation
-  status fields, and append review rows.
-- Trusted steward/admin: steward access plus private contact visibility.
+  status fields, and append review rows without private contacts or request
+  metadata.
+- Trusted publisher/admin: publish `content` records, moderate submissions, and
+  view private contact details.
 - Operator/admin: Directus configuration, emergency correction, and migrations.
 
 Standard stewards must not receive field access to `ip_address`, `user_agent`,

@@ -4,7 +4,7 @@ Packages-first monorepo for the Greenpill Network public website, Fly-hosted age
 
 ## Package Layout
 
-- `packages/website`: static Astro + Keystatic public website for `greenpill.network`.
+- `packages/website`: static Astro public website for `greenpill.network`, with Keystatic retained for editorial/site-composition content and approved operational content consumed from public snapshots.
 - `packages/agent`: Hono service scaffold for `agent.greenpill.network`, local Postgres readiness, and future cache/intake jobs.
 - `packages/admin`: self-hosted Directus admin service for `network-admin` / future `admin.greenpill.network`.
 - `packages/shared`: reusable payload normalization and privacy-boundary contracts.
@@ -21,7 +21,7 @@ Packages-first monorepo for the Greenpill Network public website, Fly-hosted age
 
 - Bun `1.3.10` from the checked-in `packageManager` field.
 - Node `>=22.12.0` for Astro and local agent commands.
-- Docker Desktop for local Postgres.
+- Docker Desktop or OrbStack for local Postgres and Directus containers.
 - Fly CLI for validating and deploying the agent service.
 
 ## Install
@@ -44,10 +44,34 @@ bun run preview:website
 
 Keystatic is enabled only during local website development for file-backed content authoring. There is no deployed Keystatic server, CMS API route, or public database connection in the website package.
 
+Operational content for chapters, public steward profiles, guilds, projects,
+locations, and impact source bindings is Directus/Postgres-owned after the
+one-time migration. The static website consumes an approved public snapshot at
+build time. By default local builds use
+`packages/website/src/data/operational-content-snapshot.json`; production builds
+can set `OPERATIONAL_CONTENT_SNAPSHOT_URL` to the agent route.
+
 Public assets live in `packages/website/public/`. Generated public JSON routes include:
 
-- `/locations.json` from `packages/website/src/content/chapters/*`.
-- `/impact-sources.json` from opt-in public chapter impact source bindings.
+- `/locations.json` from the approved operational content snapshot.
+- `/impact-sources.json` from approved snapshot chapter impact source bindings.
+
+Useful operational content commands:
+
+```sh
+bun run content:snapshot
+bun run content:migrate
+bun run directus:content:setup
+```
+
+`content:snapshot` validates current operational content and refreshes the
+static fallback snapshot. `content:migrate` is a one-time seed into the
+`content` schema when `DATABASE_URL` or `DIRECT_DATABASE_URL` is set; it refuses
+to run once operational rows exist unless `--allow-existing` is passed, and even
+then it only inserts missing rows without overwriting Directus-owned conflicts.
+`directus:content:setup` runs after Directus boots and applies the steward
+editor, steward moderator, trusted publisher, and operator access model through
+the Directus API.
 
 The current public site deployment can remain on the existing GitHub Pages path while this package restructure lands. If we later migrate the public site to Vercel, use the repo root as the project root, `bun install --frozen-lockfile` as install command, `bun run build:website` as build command, and `packages/website/dist` as output directory.
 
@@ -68,9 +92,10 @@ Useful checks:
 curl http://127.0.0.1:8787/health
 curl http://127.0.0.1:8787/ready
 curl http://127.0.0.1:8787/impact/chapters/nigeria
+curl http://127.0.0.1:8787/content/public-snapshot
 ```
 
-`/health` is process-level health. `/ready` checks `DATABASE_URL` connectivity. `/impact/chapters/:slug`, `POST /map-nodes`, and `GET /map-nodes/public` are still scaffolded route contracts until the cache and intake implementations land.
+`/health` is process-level health. `/ready` checks `DATABASE_URL` connectivity. `/content/public-snapshot` exposes only published public-safe operational content. `/impact/chapters/:slug`, `POST /map-nodes`, and `GET /map-nodes/public` remain behind the agent privacy boundary.
 
 ## Directus Admin
 
@@ -81,15 +106,18 @@ Astro website.
 bun run db:local:up
 bun run db:migrate
 bun run dev:admin
+bun run directus:content:setup
 ```
 
 The local Directus service runs at `http://localhost:8055` and connects to the
-same local Postgres database as the agent. Use it for steward moderation and
-internal data review only; keep public intake and public API traffic behind the
-agent routes.
+same local Postgres database as the agent. Use it for steward moderation,
+authenticated operational content edits, and internal data review only; keep
+public intake and public API traffic behind the agent routes.
 
 If Docker Desktop is installed but `docker` is not on your shell PATH, the local
-Docker scripts fall back to Docker Desktop's bundled CLI path on macOS.
+Docker scripts fall back to Docker Desktop's bundled CLI path on macOS. If
+OrbStack is installed, the same wrapper uses OrbStack's Docker/Compose binaries
+and socket.
 
 ## Fly Deployment
 
@@ -119,16 +147,23 @@ Do not expose `DATABASE_URL` or direct database credentials to the public websit
 ```sh
 bun run test:agent
 bun run test:chapter-impact
+bun run test:content
 bun run test:map-nodes
 bun run test:plans
 bun run plans:validate
 bun run build
 ```
 
-The contract tests verify that agent routes, chapter impact payloads, public map payloads, SQL projections, and plan hubs preserve the public/private boundary.
+The contract tests verify that agent routes, chapter impact payloads, public
+operational snapshots, public map payloads, SQL projections, and plan hubs
+preserve the public/private boundary.
 
 ## Privacy Boundary
 
 Private map/member node intake must not expose emails, raw notes, IP addresses, user agents, spam metadata, steward review notes, pending submissions, or raw upstream EAS/Green Goods work and media feedback.
 
-Public website data should stay static and public-safe. Private intake, impact cache state, migrations, and future authenticated operations belong behind the Fly agent/workspace boundary.
+Public website data should stay static and public-safe. Directus-authenticated
+operational edits must pass through the `content` schema, published views, and
+shared snapshot guard before reaching the public website. Private intake, impact
+cache state, migrations, and future authenticated operations belong behind the
+Fly agent/workspace boundary.
