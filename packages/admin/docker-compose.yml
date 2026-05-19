@@ -27,7 +27,7 @@ services:
       ADMIN_EMAIL: "${DIRECTUS_ADMIN_EMAIL:-admin@greenpill.network}"
       ADMIN_PASSWORD: "${DIRECTUS_ADMIN_PASSWORD:-directus-local-password}"
       EMAIL_VERIFY_SETUP: "${DIRECTUS_EMAIL_VERIFY_SETUP:-false}"
-      EMAIL_FROM: "${DIRECTUS_EMAIL_FROM:-Greenpill Network <no-reply@greenpill.network>}"
+      EMAIL_FROM: "${DIRECTUS_EMAIL_FROM:-Greenpill Network <no-reply@mail.greenpill.network>}"
       EMAIL_TRANSPORT: "${DIRECTUS_EMAIL_TRANSPORT:-sendmail}"
       EMAIL_SMTP_HOST: "${DIRECTUS_EMAIL_SMTP_HOST:-}"
       EMAIL_SMTP_PORT: "${DIRECTUS_EMAIL_SMTP_PORT:-587}"
