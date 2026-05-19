@@ -141,7 +141,7 @@ fly secrets set --app network-admin \
   EMAIL_SMTP_PASSWORD="<resend-api-key>"
 ```
 
-The sender defaults to `Greenpill Network <no-reply@greenpill.network>`.
+The sender defaults to `Greenpill Network <no-reply@mail.greenpill.network>`.
 Change `EMAIL_FROM` in `packages/admin/fly.toml` if the verified sender differs.
 
 ## Production Boundary
