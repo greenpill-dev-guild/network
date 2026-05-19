@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for network-admin on 2026-05-18T06:32:39Z
+# fly.toml app configuration file generated for network-agent on 2026-05-18T06:32:39Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'network-admin'
+app = 'network-agent'
 primary_region = 'iad'
 
 [build]
