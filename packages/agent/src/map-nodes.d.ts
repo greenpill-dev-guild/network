@@ -3,6 +3,7 @@ import type {
   OptimisticPendingMapNode,
   PublicMapNode,
 } from '@greenpill-network/shared/map-nodes';
+import type { PublicMapIntakeMode } from '@greenpill-network/shared/map-state';
 
 export interface RequestMeta {
   ipAddress?: string;
@@ -41,6 +42,8 @@ export type SubmittedPendingMapNode = Omit<OptimisticPendingMapNode, 'source'> &
   source: 'submitted-pending';
 };
 
+export type SubmittedMapNode = SubmittedPendingMapNode | PublicMapNode;
+
 export class PublicInputError extends Error {
   code: string;
   status: number;
@@ -71,11 +74,13 @@ export function createMapNodeSubmission(
   sql: postgres.Sql,
   input: PublicMapNodeSubmissionInput,
   requestMeta?: RequestMeta,
-): Promise<SubmittedPendingMapNode>;
+): Promise<SubmittedMapNode>;
+export function getMapNodeIntakeMode(sql: postgres.Sql): Promise<PublicMapIntakeMode>;
 export function listPublicMapNodes(sql: postgres.Sql): Promise<PublicMapNode[]>;
 export function createMapNodeRepository(options?: {
   createSql?: (options?: { max?: number }) => postgres.Sql | null;
 }): {
-  createSubmission(input: PublicMapNodeSubmissionInput, requestMeta?: RequestMeta): Promise<SubmittedPendingMapNode>;
+  createSubmission(input: PublicMapNodeSubmissionInput, requestMeta?: RequestMeta): Promise<SubmittedMapNode>;
   listPublic(): Promise<PublicMapNode[]>;
+  getIntakeMode(): Promise<PublicMapIntakeMode>;
 };

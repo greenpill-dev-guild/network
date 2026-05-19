@@ -103,6 +103,19 @@ function toPublicPendingMapNode(submission) {
   };
 }
 
+export async function getMapNodeIntakeMode(sql) {
+  const rows = await sql`
+    select live_onboarding_enabled as "liveOnboardingEnabled"
+    from intake.map_node_intake_settings
+    where id = 1
+    limit 1
+  `;
+
+  const enabled = rows[0]?.liveOnboardingEnabled === true
+    || rows[0]?.liveOnboardingEnabled === 'true';
+  return enabled ? 'live' : 'moderated';
+}
+
 function normalizeSubmissionInput(input = {}) {
   const displayName = cleanString(input.displayName ?? input.name);
   const placeName = cleanString(input.placeName ?? input.place);
@@ -161,8 +174,13 @@ export async function createMapNodeSubmission(sql, input, requestMeta = {}) {
   };
 
   return sql.begin(async (tx) => {
+    const intakeMode = await getMapNodeIntakeMode(tx);
+    const liveOnboarding = intakeMode === 'live';
+    const submissionStatus = liveOnboarding ? 'approved' : 'pending';
+    const approvedAt = liveOnboarding ? new Date() : null;
     const [submission] = await tx`
       insert into intake.map_node_submissions (
+        status,
         display_name,
         place_name,
         city,
@@ -176,9 +194,11 @@ export async function createMapNodeSubmission(sql, input, requestMeta = {}) {
         raw_note,
         rate_limit_key,
         ip_address,
-        user_agent
+        user_agent,
+        approved_at
       )
       values (
+        ${submissionStatus}::intake.map_node_status,
         ${normalized.displayName},
         ${normalized.placeName},
         ${normalized.city || null},
@@ -192,7 +212,8 @@ export async function createMapNodeSubmission(sql, input, requestMeta = {}) {
         ${normalized.rawNote || null},
         ${meta.rateLimitKey || null},
         ${meta.ipAddress || null},
-        ${meta.userAgent || null}
+        ${meta.userAgent || null},
+        ${approvedAt}
       )
       returning
         id::text,
@@ -207,7 +228,8 @@ export async function createMapNodeSubmission(sql, input, requestMeta = {}) {
         role,
         themes,
         public_note as "publicNote",
-        created_at as "createdAt"
+        created_at as "createdAt",
+        approved_at as "approvedAt"
     `;
 
     if (normalized.email) {
@@ -225,11 +247,37 @@ export async function createMapNodeSubmission(sql, input, requestMeta = {}) {
       `;
     }
 
-    const publicNode = toPublicPendingMapNode(submission);
+    if (liveOnboarding) {
+      await tx`
+        insert into intake.map_node_reviews (
+          submission_id,
+          reviewer_id,
+          review_status,
+          review_notes
+        )
+        values (
+          ${submission.id},
+          'system:live-onboarding',
+          'approved'::intake.map_node_status,
+          'Auto-approved while live onboarding mode was enabled.'
+        )
+      `;
+    }
+
+    const publicNode = liveOnboarding
+      ? toPublicMapNode(submission)
+      : toPublicPendingMapNode(submission);
+    if (!publicNode) {
+      throw new AgentDataError(
+        'map_node_projection_error',
+        'Map-node response could not be projected publicly.',
+        500
+      );
+    }
     if (containsPrivateMapNodeField(publicNode)) {
       throw new AgentDataError(
         'private_field_projection_error',
-        'Pending map-node response contains private fields.',
+        'Map-node response contains private fields.',
         500
       );
     }
@@ -280,6 +328,9 @@ export function createMapNodeRepository({ createSql = createDatabaseClient } = {
     },
     listPublic() {
       return withSql(createSql, listPublicMapNodes);
+    },
+    getIntakeMode() {
+      return withSql(createSql, getMapNodeIntakeMode);
     },
   };
 }

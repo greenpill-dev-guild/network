@@ -1,5 +1,6 @@
 export type PublicMapNodeType = 'chapter' | 'steward' | 'member' | 'project' | 'place';
 export type PublicMapNodeSize = 'S' | 'M' | 'L';
+export type PublicMapIntakeMode = 'moderated' | 'live';
 export type PublicMapSourceStatusValue = 'ok' | 'empty' | 'not_configured' | 'unavailable';
 export type PublicCountId = 'chapters' | 'guilds' | 'members' | 'stories' | 'topics' | 'libraryResources';
 export type PublicCountStatus = 'ok' | 'not_configured' | 'unavailable';
@@ -54,6 +55,7 @@ export interface PublicMapStatePayload {
   version: 1;
   generatedAt: string;
   themes: PublicMapTheme[];
+  intakeMode: PublicMapIntakeMode;
   nodes: PublicMapStateNode[];
   edges: PublicMapStateEdge[];
   counts: {
@@ -85,6 +87,7 @@ export interface PublicAggregateCountsPayload {
 
 export const PUBLIC_MAP_STATE_VERSION: 1;
 export const PUBLIC_AGGREGATE_COUNTS_VERSION: 1;
+export const PUBLIC_MAP_INTAKE_MODES: readonly PublicMapIntakeMode[];
 export const PUBLIC_MAP_NODE_TYPES: readonly PublicMapNodeType[];
 export const PUBLIC_MAP_NODE_SIZES: readonly PublicMapNodeSize[];
 export const PUBLIC_MAP_SOURCE_STATUSES: readonly PublicMapSourceStatusValue[];
@@ -96,6 +99,7 @@ export function toPublicMapTheme(theme: Partial<PublicMapTheme>): PublicMapTheme
 export function toPublicMapStateChapterNode(location: Record<string, unknown>): PublicMapStateNode | null;
 export function toPublicMapStateSubmittedNode(input: Record<string, unknown>): PublicMapStateNode | null;
 export function normalizePublicMapSourceStatus(input: Partial<PublicMapSourceStatus>, fallbackSource?: string): PublicMapSourceStatus;
+export function normalizePublicMapIntakeMode(mode?: string): PublicMapIntakeMode;
 export function generatePublicMapEdges(nodes: PublicMapStateNode[], options?: { limit?: number }): PublicMapStateEdge[];
 export function toPublicMapStatePayload(input?: {
   chapterLocations?: Record<string, unknown>[];
@@ -103,6 +107,7 @@ export function toPublicMapStatePayload(input?: {
   themes?: Partial<PublicMapTheme>[];
   edges?: Partial<PublicMapStateEdge>[];
   sourceStatus?: Partial<PublicMapSourceStatus>[];
+  intakeMode?: PublicMapIntakeMode | string;
   generatedAt?: Date | string;
 }): PublicMapStatePayload;
 export function containsPrivateMapStateField(value: unknown, seen?: Set<object>): boolean;

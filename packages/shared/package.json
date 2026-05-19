@@ -19,6 +19,10 @@
     "./map-nodes": {
       "types": "./src/map-nodes.d.ts",
       "default": "./src/map-nodes.js"
+    },
+    "./public-content": {
+      "types": "./src/public-content.d.ts",
+      "default": "./src/public-content.js"
     }
   },
   "files": [

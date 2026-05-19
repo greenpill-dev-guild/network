@@ -18,9 +18,16 @@ import {
   createMapStateRepository,
 } from './map-state.js';
 import {
+  PUBLIC_OPERATIONAL_CONTENT_ROUTE,
+  createPublicContentRepository,
+} from './public-content.js';
+import {
   assertPublicAggregateCountsPayload,
   assertPublicMapStatePayload,
 } from '@greenpill-network/shared/map-state';
+import {
+  assertPublicOperationalContentSnapshot,
+} from '@greenpill-network/shared/public-content';
 
 export const PUBLIC_CORS_ORIGINS = Object.freeze([
   'https://greenpill.network',
@@ -42,6 +49,7 @@ export function createAgentApp({
   impactRepository = createImpactRepository(),
   mapNodeRepository = createMapNodeRepository(),
   mapStateRepository = createMapStateRepository({ mapNodeRepository }),
+  publicContentRepository = createPublicContentRepository(),
 } = {}) {
   const app = new Hono();
 
@@ -103,6 +111,16 @@ export function createAgentApp({
     try {
       const payload = await mapStateRepository.getPublicCounts();
       return context.json(assertPublicAggregateCountsPayload(payload));
+    } catch (error) {
+      const response = publicErrorResponse(error);
+      return context.json(response.body, response.status);
+    }
+  });
+
+  app.get(PUBLIC_OPERATIONAL_CONTENT_ROUTE, async (context) => {
+    try {
+      const payload = await publicContentRepository.getSnapshot();
+      return context.json(assertPublicOperationalContentSnapshot(payload));
     } catch (error) {
       const response = publicErrorResponse(error);
       return context.json(response.body, response.status);

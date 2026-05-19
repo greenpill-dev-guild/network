@@ -3,6 +3,7 @@ import type {
   PublicMapStatePayload,
 } from '@greenpill-network/shared/map-state';
 import type { PublicMapNode } from '@greenpill-network/shared/map-nodes';
+import type { PublicMapIntakeMode } from '@greenpill-network/shared/map-state';
 
 export const DEFAULT_PUBLIC_LOCATIONS_URL: 'https://greenpill.network/locations.json';
 export const DEFAULT_PUBLIC_SOURCE_TIMEOUT_MS: 3000;
@@ -25,6 +26,7 @@ export function getPublicMapState(options?: {
   locationsUrl?: string;
   mapNodeRepository?: {
     listPublic(): Promise<PublicMapNode[]>;
+    getIntakeMode?(): Promise<PublicMapIntakeMode>;
   };
   sourceTimeoutMs?: number;
   now?: Date | string;
@@ -35,6 +37,7 @@ export function createMapStateRepository(options?: {
   locationsUrl?: string;
   mapNodeRepository?: {
     listPublic(): Promise<PublicMapNode[]>;
+    getIntakeMode?(): Promise<PublicMapIntakeMode>;
   };
   sourceTimeoutMs?: number;
 }): MapStateRepository;

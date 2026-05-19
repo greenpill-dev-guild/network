@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "generatedAt": "2026-05-19T00:00:00.000Z",
+  "notes": [
+    "Public-safe seed data derived from the Step 3.5 Greenpill content research inventory.",
+    "No private contact, review, pending submission, raw upstream, IP, user-agent, or spam metadata is included."
+  ],
+  "publicMapNodes": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "displayName": "Greenpill Nigeria Water Cup",
+      "placeName": "Nigeria",
+      "city": "Awka",
+      "region": "Anambra",
+      "country": "Nigeria",
+      "lat": 6.212,
+      "long": 7.073,
+      "role": "place",
+      "themes": ["water", "events", "education", "public"],
+      "publicNote": "Source-backed public event and chapter activity anchor for Greenpill Nigeria.",
+      "approvedAt": "2026-05-19T00:00:00.000Z",
+      "sources": ["S015", "S016", "S017", "S046"]
+    },
+    {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "displayName": "Greenpill Brasil RegenMeetUp",
+      "placeName": "Rio de Janeiro",
+      "city": "Rio de Janeiro",
+      "region": "RJ",
+      "country": "Brazil",
+      "lat": -22.9068,
+      "long": -43.1729,
+      "role": "place",
+      "themes": ["events", "impact", "funding", "public"],
+      "publicNote": "Source-backed Greenpill Brasil public-goods coordination and GG20 climate milestone anchor.",
+      "approvedAt": "2026-05-19T00:00:00.000Z",
+      "sources": ["S018", "S019", "S020", "S021"]
+    },
+    {
+      "id": "33333333-3333-4333-8333-333333333333",
+      "displayName": "Vibe Coding for Good",
+      "placeName": "London, Ontario",
+      "city": "London",
+      "region": "Ontario",
+      "country": "Canada",
+      "lat": 42.9849,
+      "long": -81.2453,
+      "role": "place",
+      "themes": ["opensrc", "events", "education", "ai"],
+      "publicNote": "Public TechAlliance event anchor for Greenpill London Ontario.",
+      "approvedAt": "2026-05-19T00:00:00.000Z",
+      "sources": ["S033"]
+    },
+    {
+      "id": "44444444-4444-4444-8444-444444444444",
+      "displayName": "Greenpill Koh Phangan ReFi Community",
+      "placeName": "Koh Phangan",
+      "city": "Koh Phangan",
+      "region": "Surat Thani",
+      "country": "Thailand",
+      "lat": 9.7319,
+      "long": 100.0136,
+      "role": "place",
+      "themes": ["food", "funding", "events", "public"],
+      "publicNote": "Source-backed ReFi Phangan community anchor with public fundraising and event references.",
+      "approvedAt": "2026-05-19T00:00:00.000Z",
+      "sources": ["S036", "S037", "S038", "S053"]
+    }
+  ],
+  "chapterImpactSnapshots": [
+    {
+      "chapterSlug": "brasil",
+      "staleAfter": "2026-06-19T00:00:00.000Z",
+      "payload": {
+        "chapterSlug": "brasil",
+        "chapterName": "Greenpill Brasil",
+        "generatedAt": "2026-05-19T00:00:00.000Z",
+        "sources": {
+          "impactEnabled": true,
+          "karmaProjectSlug": "greenpill-brasil"
+        },
+        "karma": {
+          "project": {
+            "slug": "greenpill-brasil",
+            "title": "Greenpill Brasil",
+            "url": "https://www.karmahq.xyz/project/greenpill-brasil"
+          },
+          "milestones": [
+            {
+              "id": "brasil-gg20-climate-milestone-1",
+              "title": "GG20 Climate Solutions milestone",
+              "type": "milestone",
+              "status": "",
+              "publishedAt": "",
+              "url": "https://www.karmahq.xyz/project/greenpill-brasil"
+            },
+            {
+              "id": "brasil-gg20-climate-milestone-2",
+              "title": "Greenpill Brasil public-goods milestone",
+              "type": "milestone",
+              "status": "",
+              "publishedAt": "",
+              "url": "https://www.karmahq.xyz/project/greenpill-brasil"
+            }
+          ],
+          "updates": [],
+          "grants": [],
+          "communityImpact": null
+        },
+        "greenGoods": null
+      },
+      "sources": ["S018"]
+    }
+  ]
+}

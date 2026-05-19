@@ -35,3 +35,4 @@ export function toPublicMapNode(submission: Record<string, unknown>): PublicMapN
 export function createOptimisticPendingNode(input: Record<string, unknown>, now?: Date | string): OptimisticPendingMapNode;
 export function loadLocalPendingNodes(storage?: Storage | null): OptimisticPendingMapNode[];
 export function saveLocalPendingNode(storage: Storage | null | undefined, input: Record<string, unknown>, now?: Date | string): OptimisticPendingMapNode | null;
+export function removeLocalPendingNode(storage: Storage | null | undefined, id: string): OptimisticPendingMapNode[];

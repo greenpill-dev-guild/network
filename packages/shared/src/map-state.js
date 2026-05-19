@@ -9,6 +9,11 @@ import {
 export const PUBLIC_MAP_STATE_VERSION = 1;
 export const PUBLIC_AGGREGATE_COUNTS_VERSION = 1;
 
+export const PUBLIC_MAP_INTAKE_MODES = Object.freeze([
+  'moderated',
+  'live',
+]);
+
 export const PUBLIC_MAP_NODE_TYPES = Object.freeze([
   'chapter',
   'steward',
@@ -148,6 +153,11 @@ const normalizeSourceStatus = (status) => {
 const normalizeCountStatus = (status) => {
   const cleaned = cleanString(status);
   return PUBLIC_COUNT_STATUSES.includes(cleaned) ? cleaned : 'not_configured';
+};
+
+export const normalizePublicMapIntakeMode = (mode) => {
+  const cleaned = cleanString(mode);
+  return PUBLIC_MAP_INTAKE_MODES.includes(cleaned) ? cleaned : 'moderated';
 };
 
 export function toPublicMapTheme(theme) {
@@ -379,6 +389,7 @@ export function toPublicMapStatePayload({
   themes = PUBLIC_MAP_THEMES,
   edges,
   sourceStatus,
+  intakeMode = 'moderated',
   generatedAt = new Date(),
 } = {}) {
   const publicThemes = themes
@@ -397,6 +408,7 @@ export function toPublicMapStatePayload({
     version: PUBLIC_MAP_STATE_VERSION,
     generatedAt: toIso(generatedAt),
     themes: publicThemes,
+    intakeMode: normalizePublicMapIntakeMode(intakeMode),
     nodes: uniqueNodes,
     edges: publicEdges,
     counts: buildMapStateCounts(uniqueNodes, publicEdges, publicSourceStatus),

@@ -8,6 +8,8 @@ import type {
   OptimisticPendingMapNode,
   PublicMapNode,
 } from '@greenpill-network/shared/map-nodes';
+import type { PublicMapIntakeMode } from '@greenpill-network/shared/map-state';
+import type { PublicOperationalContentSnapshot } from '@greenpill-network/shared/public-content';
 
 export interface AgentAppOptions {
   checkDatabase?: () => Promise<{
@@ -26,14 +28,18 @@ export interface AgentAppOptions {
     }) | null>;
   };
   mapNodeRepository?: {
-    createSubmission(input: Record<string, unknown>, requestMeta?: Record<string, unknown>): Promise<Omit<OptimisticPendingMapNode, 'source'> & {
+    createSubmission(input: Record<string, unknown>, requestMeta?: Record<string, unknown>): Promise<PublicMapNode | Omit<OptimisticPendingMapNode, 'source'> & {
       source: 'submitted-pending';
     }>;
     listPublic(): Promise<PublicMapNode[]>;
+    getIntakeMode?(): Promise<PublicMapIntakeMode>;
   };
   mapStateRepository?: {
     getMapState(): Promise<PublicMapStatePayload>;
     getPublicCounts(): Promise<PublicAggregateCountsPayload>;
+  };
+  publicContentRepository?: {
+    getSnapshot(): Promise<PublicOperationalContentSnapshot>;
   };
 }
 

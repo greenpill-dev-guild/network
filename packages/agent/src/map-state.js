@@ -117,6 +117,18 @@ async function loadApprovedMapNodes(mapNodeRepository) {
   }
 }
 
+async function loadIntakeMode(mapNodeRepository) {
+  if (typeof mapNodeRepository.getIntakeMode !== 'function') {
+    return 'moderated';
+  }
+
+  try {
+    return await mapNodeRepository.getIntakeMode();
+  } catch {
+    return 'moderated';
+  }
+}
+
 export async function getPublicMapState({
   fetchImpl = globalThis.fetch,
   locationsUrl = DEFAULT_PUBLIC_LOCATIONS_URL,
@@ -124,15 +136,17 @@ export async function getPublicMapState({
   sourceTimeoutMs = DEFAULT_PUBLIC_SOURCE_TIMEOUT_MS,
   now = new Date(),
 } = {}) {
-  const [chapterLocations, publicMapNodes] = await Promise.all([
+  const [chapterLocations, publicMapNodes, intakeMode] = await Promise.all([
     loadChapterLocations({ fetchImpl, locationsUrl, sourceTimeoutMs }),
     loadApprovedMapNodes(mapNodeRepository),
+    loadIntakeMode(mapNodeRepository),
   ]);
 
   return assertPublicMapStatePayload(toPublicMapStatePayload({
     chapterLocations: chapterLocations.items,
     publicMapNodes: publicMapNodes.items,
     sourceStatus: [chapterLocations.status, publicMapNodes.status],
+    intakeMode,
     generatedAt: now,
   }));
 }

@@ -14,6 +14,7 @@ services:
       SECRET: "${DIRECTUS_SECRET:-dev-only-directus-secret-change-before-production}"
       DB_CLIENT: "pg"
       DB_CONNECTION_STRING: "${DIRECTUS_DB_CONNECTION_STRING:-postgres://greenpill:greenpill@host.docker.internal:54329/greenpill_network}"
+      DB_SEARCH_PATH: "${DIRECTUS_DB_SEARCH_PATH:-array:public,content,intake,impact,workspace,audit}"
       DB_HEALTHCHECK_THRESHOLD: "${DIRECTUS_DB_HEALTHCHECK_THRESHOLD:-2000}"
       STORAGE_LOCATIONS: "local"
       STORAGE_LOCAL_DRIVER: "local"

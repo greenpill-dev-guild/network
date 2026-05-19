@@ -26,6 +26,11 @@ class MemoryStorage {
   }
 }
 
+async function readPublicContentSeedFixture() {
+  const raw = await readFile(new URL('../packages/agent/fixtures/public-content-seed.json', import.meta.url), 'utf8');
+  return JSON.parse(raw);
+}
+
 test('approved public projection removes private submission fields', () => {
   const publicNode = toPublicMapNode({
     id: 'node-1',
@@ -97,6 +102,7 @@ test('privacy guard catches snake_case private map-node fields', () => {
 test('public map-state combines chapter anchors and approved submitted nodes safely', () => {
   const payload = toPublicMapStatePayload({
     generatedAt: '2026-05-17T12:00:00.000Z',
+    intakeMode: 'live',
     chapterLocations: [{
       id: 'nigeria',
       name: 'Nigeria',
@@ -127,6 +133,7 @@ test('public map-state combines chapter anchors and approved submitted nodes saf
   });
 
   assert.equal(payload.version, 1);
+  assert.equal(payload.intakeMode, 'live');
   assert.equal(payload.nodes.length, 2);
   assert.equal(payload.nodes[0].type, 'chapter');
   assert.equal(payload.nodes[1].type, 'steward');
@@ -138,6 +145,34 @@ test('public map-state combines chapter anchors and approved submitted nodes saf
   assert.equal(containsPrivateMapStateField(payload), false);
   assert.equal(JSON.stringify(payload).includes('private@example.com'), false);
   assert.equal(JSON.stringify(payload).includes('private submission context'), false);
+});
+
+test('public content seed map nodes are approved-only projection fixtures', async () => {
+  const fixture = await readPublicContentSeedFixture();
+  const publicMapNodes = fixture.publicMapNodes.map((node) => ({
+    ...node,
+    status: 'approved',
+  }));
+
+  assert.equal(containsPrivateMapNodeField(publicMapNodes), false);
+
+  const projectedNodes = publicMapNodes
+    .map((node) => toPublicMapNode(node))
+    .filter(Boolean);
+  assert.equal(projectedNodes.length, publicMapNodes.length);
+
+  const payload = toPublicMapStatePayload({
+    generatedAt: fixture.generatedAt,
+    publicMapNodes,
+    sourceStatus: [
+      { source: 'approved-map-nodes', status: 'ok', count: publicMapNodes.length },
+    ],
+  });
+
+  assert.equal(payload.counts.approvedSubmittedNodes, publicMapNodes.length);
+  assert.equal(payload.counts.byStatus.approved, publicMapNodes.length);
+  assert.equal(containsPrivateMapStateField(payload), false);
+  assertPublicMapStatePayload(payload);
 });
 
 test('public map-state guard rejects pending and private route payloads', () => {
@@ -153,6 +188,15 @@ test('public map-state guard rejects pending and private route payloads', () => 
     }),
     /private fields/
   );
+});
+
+test('public map-state normalizes unsafe intake mode values', () => {
+  const payload = toPublicMapStatePayload({
+    intakeMode: 'review-bypass',
+  });
+
+  assert.equal(payload.intakeMode, 'moderated');
+  assert.equal(containsPrivateMapStateField(payload), false);
 });
 
 test('public map-state source counts reflect normalized public nodes', () => {
@@ -200,6 +244,7 @@ test('public aggregate counts prefer not configured over fake counts', () => {
 
 test('public SQL view is approved-only and excludes private fields', async () => {
   const sql = await readFile(new URL('../packages/agent/migrations/001_private_map_node_schema.sql', import.meta.url), 'utf8');
+
   const viewStart = sql.indexOf('create or replace view intake.public_map_nodes as');
   assert.notEqual(viewStart, -1);
 
@@ -211,4 +256,19 @@ test('public SQL view is approved-only and excludes private fields', async () =>
   for (const field of ['email', 'raw_note', 'review_notes', 'ip_address', 'rate_limit_key', 'spam_signals', 'user_agent']) {
     assert.equal(viewSql.includes(field), false, `${field} must not be exposed by public_map_nodes`);
   }
+});
+
+test('map-node intake settings use a replay-safe dedicated migration', async () => {
+  const baselineSql = await readFile(new URL('../packages/agent/migrations/001_private_map_node_schema.sql', import.meta.url), 'utf8');
+  const settingsSql = await readFile(new URL('../packages/agent/migrations/003_map_node_intake_settings.sql', import.meta.url), 'utf8');
+
+  assert.equal(
+    baselineSql.includes('map_node_intake_settings'),
+    false,
+    'new schema added after 001 must not be hidden inside the already-applied baseline migration'
+  );
+  assert.match(settingsSql, /create table if not exists intake\.map_node_intake_settings/);
+  assert.match(settingsSql, /live_onboarding_enabled boolean not null default false/);
+  assert.match(settingsSql, /map_node_intake_settings_singleton check \(id = 1\)/);
+  assert.match(settingsSql, /on conflict \(id\) do nothing/);
 });

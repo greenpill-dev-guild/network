@@ -155,3 +155,14 @@ export function saveLocalPendingNode(storage, input, now = new Date()) {
   storage.setItem(PENDING_NODE_STORAGE_KEY, JSON.stringify(next));
   return node;
 }
+
+export function removeLocalPendingNode(storage, id) {
+  if (!storage) return [];
+
+  const nodeId = cleanString(id);
+  if (!nodeId) return loadLocalPendingNodes(storage);
+
+  const next = loadLocalPendingNodes(storage).filter((item) => item.id !== nodeId);
+  storage.setItem(PENDING_NODE_STORAGE_KEY, JSON.stringify(next));
+  return next;
+}

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import {
   buildChapterImpactEndpoint,
@@ -10,11 +11,19 @@ import {
   toPublicImpactSourceBinding,
 } from '@greenpill-network/shared/chapter-impact';
 import {
+  assertPublicImpactPayload,
+} from '@greenpill-network/agent/impact';
+import {
   decorateCachedImpactPayload,
 } from '@greenpill-network/agent/impact-cache';
 import {
   syncChapterImpactSnapshots,
 } from '@greenpill-network/agent/green-goods-impact';
+
+async function readPublicContentSeedFixture() {
+  const raw = await readFile(new URL('../packages/agent/fixtures/public-content-seed.json', import.meta.url), 'utf8');
+  return JSON.parse(raw);
+}
 
 test('chapter impact source bindings are public and opt-in', () => {
   const binding = toPublicImpactSourceBinding({
@@ -47,6 +56,18 @@ test('chapter impact source bindings are public and opt-in', () => {
     },
   });
   assert.equal(disabled, null);
+
+  const stringDisabled = toPublicImpactSourceBinding({
+    id: 'hidden-string',
+    data: {
+      name: 'Hidden String',
+      impactSources: {
+        impactEnabled: 'false',
+        greenGoodsGardenAddress: '0x0000000000000000000000000000000000000001',
+      },
+    },
+  });
+  assert.equal(stringDisabled, null);
 });
 
 test('chapter impact endpoint targets the public agent contract', () => {
@@ -65,6 +86,7 @@ test('chapter impact UI remains scaffold-gated until the agent is live', () => {
   assert.equal(shouldRenderChapterImpactUi(sources), false);
   assert.equal(shouldRenderChapterImpactUi(sources, true), true);
   assert.equal(shouldRenderChapterImpactUi({ ...sources, impactEnabled: false }, true), false);
+  assert.equal(shouldRenderChapterImpactUi({ ...sources, impactEnabled: 'false' }, true), false);
 });
 
 test('privacy guard catches snake_case and raw upstream field names', () => {
@@ -160,6 +182,18 @@ test('public chapter impact payload excludes private fields and reports source o
     { source: 'green-goods', configured: true, status: 'unavailable' },
   ]);
   assert.equal(containsPrivateChapterImpactField(payload), false);
+});
+
+test('public content seed chapter impact snapshots normalize to public payloads', async () => {
+  const fixture = await readPublicContentSeedFixture();
+
+  for (const snapshot of fixture.chapterImpactSnapshots) {
+    const payload = assertPublicImpactPayload(toPublicChapterImpactPayload(snapshot.payload));
+    assert.equal(payload.chapterSlug, snapshot.chapterSlug);
+    assert.equal(containsPrivateChapterImpactField(payload), false);
+    assert.equal(Array.isArray(payload.sourceStatus), true);
+    assert.equal(payload.summary.proofLinkCount >= 1, true);
+  }
 });
 
 test('cached impact payload reports stale source status without raw upstream data', () => {

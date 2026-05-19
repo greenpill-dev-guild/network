@@ -23,19 +23,28 @@ import {
   PUBLIC_MAP_STATE_ROUTE,
 } from '@greenpill-network/agent/map-state';
 import {
+  PUBLIC_OPERATIONAL_CONTENT_ROUTE,
+} from '@greenpill-network/agent/public-content';
+import {
   AgentDataError,
+  createMapNodeSubmission,
 } from '@greenpill-network/agent/map-nodes';
 import {
   containsPrivateMapStateField,
   toPublicAggregateCountsPayload,
   toPublicMapStatePayload,
 } from '@greenpill-network/shared/map-state';
+import {
+  containsPrivateOperationalContentField,
+  toPublicOperationalContentSnapshot,
+} from '@greenpill-network/shared/public-content';
 
 test('agent package exposes stable public route contracts', () => {
   assert.equal(MAP_NODE_SUBMISSIONS_ROUTE, '/map-nodes');
   assert.equal(PUBLIC_MAP_NODES_ROUTE, '/map-nodes/public');
   assert.equal(PUBLIC_MAP_STATE_ROUTE, '/map/state');
   assert.equal(PUBLIC_COUNTS_ROUTE, '/public-counts');
+  assert.equal(PUBLIC_OPERATIONAL_CONTENT_ROUTE, '/content/public-snapshot');
   assert.equal(CHAPTER_IMPACT_ROUTE, '/impact/chapters/:slug');
   assert.equal(buildChapterImpactPath('greenpill nigeria'), '/impact/chapters/greenpill%20nigeria');
   assert.equal(
@@ -179,6 +188,52 @@ test('agent package exposes a Hono app with data-backed public routes', async ()
         });
       },
     },
+    publicContentRepository: {
+      async getSnapshot() {
+        return toPublicOperationalContentSnapshot({
+          generatedAt: '2026-05-19T18:00:00.000Z',
+          themes: [{
+            slug: 'public',
+            name: 'Public Goods',
+            summary: 'Public goods coordination.',
+            sortOrder: 1,
+          }],
+          people: [{
+            slug: 'afo',
+            displayName: 'Afo',
+            role: 'Steward',
+          }],
+          chapters: [{
+            slug: 'nigeria',
+            name: 'Nigeria',
+            city: 'Awka',
+            country: 'Nigeria',
+            region: 'africa',
+            status: 'active',
+            summary: 'Greenpill Nigeria chapter.',
+            lat: 9.082,
+            long: 8.6753,
+            themeSlugs: ['public'],
+            impactSources: {
+              impactEnabled: true,
+              karmaProjectSlug: 'greenpill-nigeria',
+            },
+          }],
+          guilds: [{
+            slug: 'dev-guild',
+            name: 'Dev Guild',
+            type: 'guild',
+            status: 'active',
+          }],
+          projects: [{
+            slug: 'greenpill-v2-website',
+            name: 'Greenpill V2 Website',
+            status: 'active',
+            guild: 'dev-guild',
+          }],
+        });
+      },
+    },
   });
 
   const health = await app.request('/health');
@@ -231,6 +286,7 @@ test('agent package exposes a Hono app with data-backed public routes', async ()
   const mapState = await app.request('/map/state');
   assert.equal(mapState.status, 200);
   const mapStatePayload = await mapState.json();
+  assert.equal(mapStatePayload.intakeMode, 'moderated');
   assert.equal(mapStatePayload.counts.chapterNodes, 1);
   assert.equal(mapStatePayload.counts.approvedSubmittedNodes, 1);
   assert.equal(mapStatePayload.edges.length, 1);
@@ -243,6 +299,14 @@ test('agent package exposes a Hono app with data-backed public routes', async ()
   assert.equal(countsById.chapters.value, 1);
   assert.equal(countsById.members.status, 'not_configured');
   assert.equal(containsPrivateMapStateField(countsPayload), false);
+
+  const publicContent = await app.request('/content/public-snapshot');
+  assert.equal(publicContent.status, 200);
+  const publicContentPayload = await publicContent.json();
+  assert.equal(publicContentPayload.chapters.length, 1);
+  assert.equal(publicContentPayload.locations[0].id, 'nigeria');
+  assert.equal(publicContentPayload.impactSourceBindings.chapters[0].chapterSlug, 'nigeria');
+  assert.equal(containsPrivateOperationalContentField(publicContentPayload), false);
 
   const corsMapState = await app.request('/map/state', {
     headers: {
@@ -270,6 +334,86 @@ test('agent package exposes a Hono app with data-backed public routes', async ()
   assert.match(preflight.headers.get('access-control-allow-methods') ?? '', /POST/);
 });
 
+function createFakeSubmissionSql({ liveOnboardingEnabled }) {
+  const statements = [];
+  const tx = async (strings, ...values) => {
+    const text = strings.join('?').replace(/\s+/g, ' ').trim();
+    statements.push({ text, values });
+
+    if (text.includes('from intake.map_node_intake_settings')) {
+      return [{ liveOnboardingEnabled }];
+    }
+
+    if (text.includes('insert into intake.map_node_submissions')) {
+      return [{
+        id: liveOnboardingEnabled ? 'node-live' : 'node-pending',
+        status: liveOnboardingEnabled ? 'approved' : 'pending',
+        displayName: 'Session Member',
+        placeName: 'Oakland',
+        city: 'Oakland',
+        region: 'California',
+        country: 'United States',
+        lat: 37.8044,
+        long: -122.2712,
+        role: 'member',
+        themes: ['public', 'events'],
+        publicNote: 'Joining during onboarding.',
+        createdAt: '2026-05-19T18:00:00.000Z',
+        approvedAt: liveOnboardingEnabled ? '2026-05-19T18:00:00.000Z' : null,
+      }];
+    }
+
+    return [];
+  };
+
+  tx.begin = async (callback) => callback(tx);
+  return { sql: tx, statements };
+}
+
+test('map-node submissions stay pending unless live onboarding is enabled', async () => {
+  const { sql, statements } = createFakeSubmissionSql({ liveOnboardingEnabled: false });
+  const node = await createMapNodeSubmission(sql, {
+    name: 'Session Member',
+    place: 'Oakland',
+    lat: 37.8044,
+    long: -122.2712,
+    themes: ['public', 'events'],
+    email: 'private@example.com',
+  });
+
+  assert.equal(node.status, 'pending');
+  assert.equal(node.source, 'submitted-pending');
+  assert.equal(containsPrivateMapNodeField(node), false);
+  assert.equal(
+    statements.some((statement) => statement.text.includes('insert into intake.map_node_reviews')),
+    false
+  );
+});
+
+test('live onboarding auto-approves submissions and appends private audit row', async () => {
+  const { sql, statements } = createFakeSubmissionSql({ liveOnboardingEnabled: true });
+  const node = await createMapNodeSubmission(sql, {
+    name: 'Session Member',
+    place: 'Oakland',
+    lat: 37.8044,
+    long: -122.2712,
+    role: 'member',
+    themes: ['public', 'events'],
+    publicNote: 'Joining during onboarding.',
+  });
+
+  assert.equal(node.status, 'approved');
+  assert.equal(node.source, 'approved-submission');
+  assert.equal(containsPrivateMapNodeField(node), false);
+  assert.equal(
+    statements.some((statement) => (
+      statement.text.includes('insert into intake.map_node_reviews') &&
+      statement.text.includes('system:live-onboarding')
+    )),
+    true
+  );
+});
+
 test('default map-state repository reports partial public source availability', async () => {
   const payload = await getPublicMapState({
     fetchImpl: async () => Response.json([{
@@ -290,6 +434,7 @@ test('default map-state repository reports partial public source availability', 
   });
 
   assert.equal(payload.counts.chapterNodes, 1);
+  assert.equal(payload.intakeMode, 'moderated');
   assert.equal(payload.counts.approvedSubmittedNodes, 0);
   assert.deepEqual(payload.counts.sources, [
     { source: 'chapter-locations', status: 'ok', count: 1, message: '' },

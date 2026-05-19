@@ -75,6 +75,15 @@ const normalizeInteger = (value) => {
 
 const asArray = (value) => (Array.isArray(value) ? value : []);
 
+const normalizeBoolean = (value) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  const cleaned = cleanString(value).toLowerCase();
+  if (['true', 't', '1', 'yes', 'y', 'on'].includes(cleaned)) return true;
+  if (['false', 'f', '0', 'no', 'n', 'off'].includes(cleaned)) return false;
+  return false;
+};
+
 const countValue = (value) => {
   if (Array.isArray(value)) return value.length;
   if (typeof value === 'number' || typeof value === 'string') return normalizeInteger(value);
@@ -123,7 +132,7 @@ export function hasConfiguredImpactSource(sources) {
 }
 
 export function shouldRenderChapterImpactUi(sources, uiEnabled = CHAPTER_IMPACT_UI_ENABLED) {
-  return Boolean(uiEnabled) && Boolean(sources?.impactEnabled) && sourceHasValue(sources);
+  return Boolean(uiEnabled) && normalizeBoolean(sources?.impactEnabled) && sourceHasValue(sources);
 }
 
 export function buildChapterImpactEndpoint(chapterSlug, baseUrl = CHAPTER_IMPACT_AGENT_BASE) {
@@ -154,7 +163,7 @@ export function normalizeImpactSources(sources = {}) {
   const greenGoodsChainId = normalizeInteger(sources.greenGoodsChainId) || 42161;
 
   return {
-    impactEnabled: Boolean(sources.impactEnabled),
+    impactEnabled: normalizeBoolean(sources.impactEnabled),
     greenGoodsGardenAddress,
     greenGoodsChainId,
     karmaProjectUID,

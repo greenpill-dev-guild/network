@@ -41,6 +41,10 @@
     "./green-goods-impact": {
       "types": "./src/green-goods-impact.d.ts",
       "default": "./src/green-goods-impact.js"
+    },
+    "./public-content": {
+      "types": "./src/public-content.d.ts",
+      "default": "./src/public-content.js"
     }
   },
   "files": [
