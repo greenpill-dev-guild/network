@@ -16,11 +16,13 @@
 - [x] Implement the public shell and reusable primitives
 - [x] Complete Step 3.5 content grounding and seed pass before Home implementation
 - [x] Implement the named map polish and Live Onboarding Mode pass for the Home map surface
-- [ ] Implement the Email Magic Link Node Updates pass for self-service submitted-node edits
-- [ ] Implement the home page against the high-fidelity reference
-- [ ] Implement chapter, library, story, guild, and garden surfaces in focused passes
-- [ ] Run visual checks at desktop, tablet, and mobile breakpoints for each implemented surface
-- [x] Run `node scripts/plan-hub.mjs validate`
+- [x] Implement the Email Magic Link Node Updates platform/API foundation for self-service submitted-node edits
+- [x] Convert shared, agent, and repo contract/runtime scripts to TypeScript with a root typecheck path
+- [ ] Implement the Email Magic Link Node Updates website UX for `/map/edit`, selected-node update entry points, and mobile visual QA
+- [x] Implement the home page against the high-fidelity reference
+- [x] Implement chapter, library, story, guild, and garden surfaces in focused passes
+- [x] Run visual checks at desktop, tablet, and mobile breakpoints for each implemented surface
+- [x] Run `bun scripts/plan-hub.ts validate`
 
 ## Foundation Pass Notes
 
@@ -38,7 +40,7 @@
 - Source inventory report: `reports/content-seed-inventory.md`.
 - Keystatic now has source-backed seed content for the Home, Chapters index, Library, Stories index, Garden, chapter, guild, project, resource, story, people, theme, and core book surfaces.
 - Runtime seed fixture: `packages/agent/fixtures/public-content-seed.json`.
-- Optional idempotent seed script: `node --env-file-if-exists=.env.local scripts/agent-public-content-seed.mjs`.
+- Optional idempotent seed script: `bun --env-file-if-exists=.env.local scripts/agent-public-content-seed.ts`.
 - The runtime seed targets Postgres from `DIRECT_DATABASE_URL` or `DATABASE_URL`; it is local-only when `.env.local` points at local Postgres and production only when an operator deliberately supplies production credentials.
 - Public singleton and active chapter story refs are intentionally empty while seeded stories remain `draft`; `bun run test:content` enforces that public refs target generated chapters and published stories.
 - Launch review remains required for California, Cape Town, Kenya event details, Cote d'Ivoire target language, Brasil meeting-hour claims, Uncommons funding claims, public people roster/cadence, and any precise podcast episode count rendered as a live metric.
@@ -56,12 +58,14 @@
 
 ## Email Magic Link Node Updates Pass
 
+- 2026-05-19 TypeScript foundation result: `packages/shared` and `packages/agent` now compile from TypeScript sources, their public package exports resolve through generated `dist` declarations and JavaScript, and repo runtime/contract scripts moved to Bun TypeScript entrypoints. The root `typecheck` path builds the package graph with `tsc -b`.
+- 2026-05-19 Codex platform/API foundation result: new public map-node submissions now require a valid owner email, the API exposes neutral edit-link, edit-session, and update-request routes, and migration `007_map_node_edit_tokens_update_requests.sql` adds hashed one-use edit tokens plus pending update requests. This pass intentionally did not implement the public `/map/edit` page, selected-node "Update this node" UI, token URL cleanup in the browser, or mobile visual QA; those remain the website UX follow-up above.
 - V1 submitted-node ownership is email-only. Do not add wallet ownership, workspace auth, or local browser-secret authorization in this pass.
 - Make email required for new public map-node submissions. Treat `intake.map_node_private_contacts.email` as the private owner email for submitted map nodes going forward.
 - Existing seed/import rows without private contact email are not backfilled in this pass. Stewards/admins handle any owner-email correction in Directus/admin.
 - Add replay-safe migration coverage for hashed one-use edit tokens and pending update requests using the next available migration number after the current highest repo migration. Do not reuse or collide with operational content migrations already in flight:
   - `intake.map_node_edit_tokens` records every edit-link request, normalized email, requested node id, matched submission id when present, hashed token only for matches, 30-minute expiry, consumed timestamp, and request metadata.
-  - `intake.map_node_update_requests` records proposed revisions for `display_name`, `place_name`, `city`, `region`, `country`, `latitude`, `longitude`, `role`, `themes`, and `public_note`; default status is `pending`; private reviewer metadata and notes live on this table.
+  - `intake.map_node_update_requests` records proposed revisions for `display_name`, `place_name`, `city`, `region`, `country`, `latitude`, `longitude`, `themes`, and `public_note`; default status is `pending`; private reviewer metadata and notes live on this table. Role/type changes are rejected by the owner API in this foundation pass and remain steward/admin-only.
   - Approval trigger: when an update request becomes `approved`, copy proposed public fields onto the original `intake.map_node_submissions` row and update `updated_at`.
 - Owner-editable fields should cover public profile, location, theme, and note fields. Node role/type changes are steward/admin-only unless explicitly approved through the Directus review workflow.
 - Prevent stale approvals from overwriting newer node state: either allow only one pending update request per node or add optimistic locking/version checks to update requests and approval triggers.

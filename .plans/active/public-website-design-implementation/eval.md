@@ -30,11 +30,11 @@
 - Live Onboarding Mode does not auto-approve owner update requests.
 - Directus/admin permissions expose review-safe update request fields to standard stewards while keeping token rows, owner emails, IP/user-agent, and raw request metadata restricted to trusted/admin roles.
 - Directus/admin review exposes current-vs-proposed comparisons, approve/reject transitions, reviewer metadata, and private notes.
-- Validation passes with `node scripts/plan-hub.mjs validate`.
+- Validation passes with `bun scripts/plan-hub.ts validate`.
 
 ## Proof
 
-- `node scripts/plan-hub.mjs validate`
+- `bun scripts/plan-hub.ts validate`
 - `bun run test:map-nodes`
 - `bun run test:agent`
 - `bun run build:website`

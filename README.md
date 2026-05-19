@@ -95,7 +95,9 @@ curl http://127.0.0.1:8787/impact/chapters/nigeria
 curl http://127.0.0.1:8787/content/public-snapshot
 ```
 
-`/health` is process-level health. `/ready` checks `DATABASE_URL` connectivity. `/content/public-snapshot` exposes only published public-safe operational content. `/impact/chapters/:slug`, `POST /map-nodes`, and `GET /map-nodes/public` remain behind the agent privacy boundary.
+`/health` is process-level health. `/ready` checks `DATABASE_URL` connectivity. `/content/public-snapshot` exposes only published public-safe operational content. `/impact/chapters/:slug`, `POST /map-nodes`, `GET /map-nodes/public`, `/map/state`, and the map-node edit-link/update-request routes remain behind the agent privacy boundary.
+
+Public map-node submissions require an owner email. The agent stores that email only in `intake.map_node_private_contacts` so future owner updates can use one-use email magic links. Configure email sending on the agent with `RESEND_API_KEY`, `MAP_NODE_EMAIL_FROM`, and `MAP_NODE_EDIT_BASE_URL`; do not expose those values to the static website, Keystatic, generated JSON, or browser bundles. Missing or failing email provider configuration still returns the same neutral public edit-link response.
 
 ## Directus Admin
 
@@ -111,8 +113,11 @@ bun run directus:content:setup
 
 The local Directus service runs at `http://localhost:8055` and connects to the
 same local Postgres database as the agent. Use it for steward moderation,
-authenticated operational content edits, and internal data review only; keep
-public intake and public API traffic behind the agent routes.
+authenticated operational content edits, owner-update review, and internal data
+review only; keep public intake and public API traffic behind the agent routes.
+Standard steward moderators see review-safe map-node submission/update fields.
+Token rows, owner emails, IP/user-agent fields, rate-limit metadata, and raw
+request metadata are reserved for trusted publisher/operator access.
 
 If Docker Desktop is installed but `docker` is not on your shell PATH, the local
 Docker scripts fall back to Docker Desktop's bundled CLI path on macOS. If

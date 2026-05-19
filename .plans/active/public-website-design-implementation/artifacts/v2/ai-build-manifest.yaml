@@ -25,7 +25,7 @@ decision_artifacts:
 
 planning:
   system: .plans
-  validation_command: node scripts/plan-hub.mjs validate
+  validation_command: bun scripts/plan-hub.ts validate
   active_hubs:
     - .plans/active/v2-steward-decision-pack
     - .plans/active/content-private-node-scaffold

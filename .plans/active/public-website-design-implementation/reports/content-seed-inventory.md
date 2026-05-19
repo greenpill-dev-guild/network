@@ -182,18 +182,18 @@ Recommended sections:
 
 Runtime fixture: `packages/agent/fixtures/public-content-seed.json`
 
-Seed script: `scripts/agent-public-content-seed.mjs`
+Seed script: `scripts/agent-public-content-seed.ts`
 
 Dry-run command:
 
 ```sh
-node --env-file-if-exists=.env.local scripts/agent-public-content-seed.mjs --dry-run
+bun --env-file-if-exists=.env.local scripts/agent-public-content-seed.ts --dry-run
 ```
 
 Apply command:
 
 ```sh
-node --env-file-if-exists=.env.local scripts/agent-public-content-seed.mjs
+bun --env-file-if-exists=.env.local scripts/agent-public-content-seed.ts
 ```
 
 Target: any Postgres database identified by `DIRECT_DATABASE_URL` or `DATABASE_URL`, after `bun run db:migrate` has applied the `intake` and `impact` schemas plus the replay-safe Live Onboarding settings migration (`003_map_node_intake_settings.sql`). In normal local development this targets local Postgres if `.env.local` points there. It targets Fly/prod only if an operator deliberately points the environment at production credentials.

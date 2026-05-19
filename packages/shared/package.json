@@ -3,29 +3,33 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
   "exports": {
     ".": {
-      "types": "./src/index.d.ts",
-      "default": "./src/index.js"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
     "./chapter-impact": {
-      "types": "./src/chapter-impact.d.ts",
-      "default": "./src/chapter-impact.js"
+      "types": "./dist/chapter-impact.d.ts",
+      "default": "./dist/chapter-impact.js"
     },
     "./map-state": {
-      "types": "./src/map-state.d.ts",
-      "default": "./src/map-state.js"
+      "types": "./dist/map-state.d.ts",
+      "default": "./dist/map-state.js"
     },
     "./map-nodes": {
-      "types": "./src/map-nodes.d.ts",
-      "default": "./src/map-nodes.js"
+      "types": "./dist/map-nodes.d.ts",
+      "default": "./dist/map-nodes.js"
     },
     "./public-content": {
-      "types": "./src/public-content.d.ts",
-      "default": "./src/public-content.js"
+      "types": "./dist/public-content.d.ts",
+      "default": "./dist/public-content.js"
     }
   },
   "files": [
-    "src"
+    "dist"
   ]
 }

@@ -4,51 +4,53 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --env-file=../../.env.local --watch src/server.js",
-    "start": "node --env-file-if-exists=../../.env.local src/server.js",
+    "dev": "bun run --cwd ../.. build:packages && bun --env-file=../../.env.local --watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "bun run --cwd ../.. build:packages && node --env-file-if-exists=../../.env.local dist/server.js",
     "db:local:up": "docker compose up -d agent-postgres",
     "db:local:down": "docker compose down"
   },
   "exports": {
     ".": {
-      "types": "./src/index.d.ts",
-      "default": "./src/index.js"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
     "./impact": {
-      "types": "./src/impact.d.ts",
-      "default": "./src/impact.js"
+      "types": "./dist/impact.d.ts",
+      "default": "./dist/impact.js"
     },
     "./app": {
-      "types": "./src/app.d.ts",
-      "default": "./src/app.js"
+      "types": "./dist/app.d.ts",
+      "default": "./dist/app.js"
     },
     "./db": {
-      "types": "./src/db.d.ts",
-      "default": "./src/db.js"
+      "types": "./dist/db.d.ts",
+      "default": "./dist/db.js"
     },
     "./map-nodes": {
-      "types": "./src/map-nodes.d.ts",
-      "default": "./src/map-nodes.js"
+      "types": "./dist/map-nodes.d.ts",
+      "default": "./dist/map-nodes.js"
     },
     "./map-state": {
-      "types": "./src/map-state.d.ts",
-      "default": "./src/map-state.js"
+      "types": "./dist/map-state.d.ts",
+      "default": "./dist/map-state.js"
     },
     "./impact-cache": {
-      "types": "./src/impact-cache.d.ts",
-      "default": "./src/impact-cache.js"
+      "types": "./dist/impact-cache.d.ts",
+      "default": "./dist/impact-cache.js"
     },
     "./green-goods-impact": {
-      "types": "./src/green-goods-impact.d.ts",
-      "default": "./src/green-goods-impact.js"
+      "types": "./dist/green-goods-impact.d.ts",
+      "default": "./dist/green-goods-impact.js"
     },
     "./public-content": {
-      "types": "./src/public-content.d.ts",
-      "default": "./src/public-content.js"
+      "types": "./dist/public-content.d.ts",
+      "default": "./dist/public-content.js"
     }
   },
   "files": [
-    "src"
+    "dist"
   ],
   "dependencies": {
     "@greenpill-network/shared": "workspace:*",

@@ -10,7 +10,7 @@
     "overall_status": "active",
     "priority": "p0",
     "created_at": "2026-05-17T23:16:40.923Z",
-    "updated_at": "2026-05-19T05:05:41Z"
+    "updated_at": "2026-05-19T22:40:28Z"
   },
   "links": {
     "brief": "brief.md",
@@ -28,7 +28,8 @@
     "initiative": "public-experience",
     "tracks": [
       "ui",
-      "content"
+      "content",
+      "platform"
     ],
     "work_types": [
       "design-implementation",
@@ -37,6 +38,7 @@
       "live-onboarding",
       "node-ownership",
       "magic-link-updates",
+      "typed-foundation",
       "docs-cleanup",
       "visual-qa"
     ],
@@ -193,6 +195,41 @@
       "lane": "platform",
       "status": "planned",
       "note": "Added final implementation-readiness gaps to the map and email-update plan: migration ordering, role/type edit boundaries, stale approval protection, token/request retention, live map cache behavior, broader edit-link abuse limits, Directus review ergonomics, and accessible map decluttering."
+    },
+    {
+      "timestamp": "2026-05-19T07:25:00Z",
+      "actor": "claude",
+      "lane": "ui",
+      "status": "in_review",
+      "note": "Implemented the public website HiFi surfaces against real seeded content: new GpLayout-backed Home with an Astro-native mycelial map driven by real chapter lat/long and shared-theme threads, podcast + active-chapter proof stats only, library bento, ecosystem grid, and Garden ramp; rebuilt Chapters index + chapter detail with featured tier, region/status filter, proof links, impact cache, related chapters; rebuilt Library, Stories index (empty state for draft-only seeded stories), Story detail, Guilds index, Guild detail; polished Garden hero with hero pill imagery; retired /join with an Astro redirect to /garden and updated SiteFooter to point retired CTAs at Garden / real public URLs; added prerender directive to locations.json and impact-sources.json. bun run build, test:content, test:agent, test:map-nodes, and plans:validate all pass."
+    },
+    {
+      "timestamp": "2026-05-19T08:30:00Z",
+      "actor": "claude",
+      "lane": "ui",
+      "status": "in_review",
+      "note": "Production-quality + responsive deep review. Punch-listed and fixed: home library bento was using broken nth-of-type selectors against mixed sibling types (dev/writers guild tiles fell to auto-flow); now uses unique modifier classes. Breadcrumb double-padded inside Container — removed horizontal padding. Added ogType prop to GpLayout, set 'profile' on chapter/guild detail and 'article' on story detail. Chapter steward chips now render display names with role rather than lowercased slugs. LinkRow auto-derives smart glyphs from labels (KG, GH, GT, PG, RH, X) instead of taking the first two letters. Home book grid no longer opens internal fallback in new tab. Filter pills bump to 44px on touch devices via (hover: none, pointer: coarse). Home hero proof stats tightened on mobile. Stories empty state copy is now count-driven and ages gracefully. Footer wordmark alt updated to 'Greenpill Network'. Featured chapter grid is now count-tolerant via count-N modifier class. Sticky filter top now references new --gp-header-height token. HomeMap nodes/halos enlarged at ≤720px via CSS-overridden SVG r= attribute; legend trims to top 5 items at ≤480px. Verified 167+ @media queries across pages, 14 chapter pins + 68 mycelial threads rendered, 35-page build still clean, every test suite passes."
+    },
+    {
+      "timestamp": "2026-05-19T20:28:51Z",
+      "actor": "codex",
+      "lane": "platform",
+      "status": "ready",
+      "note": "Implemented the Email Magic Link Node Updates platform/API foundation: required valid owner email on new public map-node submissions, added replay-safe 007 edit-token/update-request migration with hashed one-use 30-minute tokens, one-pending-request stale-write protection, approval trigger, and cleanup path; added neutral edit-link, edit-session, and update-request route contracts with Resend fetch sending, cooldown/daily abuse buckets, generic invalid-link errors, token consumption after successful pending-request insert, Directus review-safe permissions, env docs, and contract coverage. Website /map/edit UX, selected-node update entry point, browser token URL cleanup, and mobile visual QA remain explicit follow-up work."
+    },
+    {
+      "timestamp": "2026-05-19T22:06:49Z",
+      "actor": "codex",
+      "lane": "platform",
+      "status": "ready",
+      "note": "Completed the typed-foundation pass for the non-website runtime: packages/shared and packages/agent now compile from TypeScript source into dist exports, repo runtime/contract scripts run as Bun TypeScript, root typecheck builds the package graph, package imports keep the existing @greenpill-network/* specifiers, and validation passes for typecheck, map-node, agent, content, chapter-impact, plan validation, and website build. Remaining JavaScript/MJS files are website/config/browser surfaces outside this runtime pass."
+    },
+    {
+      "timestamp": "2026-05-19T22:40:28Z",
+      "actor": "codex",
+      "lane": "platform",
+      "status": "ready",
+      "note": "Addressed typed-foundation review findings: the agent Docker build stage now installs TypeScript build tooling before compiling package dist, package-local website and agent commands build shared/agent dist before runtime execution, and Node type declarations are pinned to the Node 22 runtime major. Root validation, package contract tests, website build, Docker build-stage, and Docker production-deps stage pass; full final Docker image build was blocked only by repeated Docker Hub node:22-alpine TLS timeouts."
     }
   ]
 }

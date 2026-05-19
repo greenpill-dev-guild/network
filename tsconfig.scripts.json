@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "tsBuildInfoFile": "./node_modules/.cache/tsconfig.scripts.tsbuildinfo"
+  },
+  "include": ["scripts/**/*.ts"],
+  "references": [
+    { "path": "packages/shared" },
+    { "path": "packages/agent" }
+  ]
+}

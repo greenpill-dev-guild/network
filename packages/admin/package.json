@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node ../../scripts/docker-compose.mjs --env-file-if-exists ../../.env.local -f docker-compose.yml up admin-directus",
-    "down": "node ../../scripts/docker-compose.mjs -f docker-compose.yml down",
-    "compose:config": "node ../../scripts/docker-compose.mjs --env-file-if-exists ../../.env.local -f docker-compose.yml config"
+    "dev": "bun ../../scripts/docker-compose.ts --env-file-if-exists ../../.env.local -f docker-compose.yml up admin-directus",
+    "down": "bun ../../scripts/docker-compose.ts -f docker-compose.yml down",
+    "compose:config": "bun ../../scripts/docker-compose.ts --env-file-if-exists ../../.env.local -f docker-compose.yml config"
   }
 }
