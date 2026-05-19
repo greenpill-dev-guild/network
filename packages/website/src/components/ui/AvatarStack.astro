@@ -1,0 +1,61 @@
+---
+import Avatar from './Avatar.astro';
+
+interface Props {
+  names?: string[];
+  count?: number;
+  extra?: number;
+  size?: number;
+  class?: string;
+}
+
+const {
+  names = ['Camila R.', 'Femi A.', 'Sarah K.', 'Nasrin H.'],
+  count = names.length,
+  extra = 0,
+  size = 28,
+  class: className,
+} = Astro.props;
+const shownNames = names.slice(0, count);
+const classes = ['gp-avatar-stack', className].filter(Boolean).join(' ');
+---
+
+<div class={classes} style={`--avatar-size: ${size}px;`}>
+  <div class="gp-avatar-stack-list" aria-label={`${shownNames.length} people`}>
+    {shownNames.map((name) => <Avatar name={name} size={size} />)}
+  </div>
+  {extra > 0 && <span class="gp-avatar-extra">+{extra} more</span>}
+</div>
+
+<style>
+  .gp-avatar-stack {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .gp-avatar-stack-list {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .gp-avatar-stack-list :global(.gp-avatar) {
+    border-width: 2px;
+    border-color: var(--gp-green-900);
+  }
+
+  .gp-avatar-stack-list :global(.gp-avatar:not(:first-child)) {
+    margin-left: calc(var(--avatar-size) * -0.32);
+  }
+
+  .gp-avatar-extra {
+    flex: none;
+    margin-left: var(--gp-space-sm);
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+</style>

@@ -1,0 +1,41 @@
+---
+interface Props {
+  variant?: 'default' | 'elevated';
+  padded?: 'md' | 'lg';
+  class?: string;
+}
+
+const { variant = 'default', padded = 'md', class: className } = Astro.props;
+const classes = ['gp-card', `is-${variant}`, `pad-${padded}`, className].filter(Boolean).join(' ');
+---
+
+<div class={classes}>
+  <slot />
+</div>
+
+<style>
+  .gp-card {
+    min-width: 0;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-lg);
+    color: var(--gp-fg);
+    transition: background 200ms cubic-bezier(0.2, 0, 0, 1), border-color 200ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  .gp-card.is-default {
+    background: var(--gp-card);
+  }
+
+  .gp-card.is-elevated {
+    background: var(--gp-card-elev);
+    box-shadow: var(--gp-shadow-card);
+  }
+
+  .gp-card.pad-md {
+    padding: var(--gp-space-lg);
+  }
+
+  .gp-card.pad-lg {
+    padding: var(--gp-space-xl);
+  }
+</style>

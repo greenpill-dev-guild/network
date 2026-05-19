@@ -1,0 +1,590 @@
+---
+import GpLayout from '../layouts/GpLayout.astro';
+import Avatar from '../components/ui/Avatar.astro';
+import AvatarStack from '../components/ui/AvatarStack.astro';
+import ArrowLink from '../components/ui/ArrowLink.astro';
+import Breadcrumb from '../components/shell/Breadcrumb.astro';
+import Button from '../components/ui/Button.astro';
+import Card from '../components/ui/Card.astro';
+import Chip from '../components/ui/Chip.astro';
+import Container from '../components/ui/Container.astro';
+import CtaStrip from '../components/ui/CtaStrip.astro';
+import EmailInput from '../components/ui/EmailInput.astro';
+import ImagePlaceholder from '../components/ui/ImagePlaceholder.astro';
+import LinkRow from '../components/ui/LinkRow.astro';
+import Meta from '../components/ui/Meta.astro';
+import Overline from '../components/ui/Overline.astro';
+import RailArrows from '../components/ui/RailArrows.astro';
+import SectionHeader from '../components/ui/SectionHeader.astro';
+import StatusChip from '../components/ui/StatusChip.astro';
+import Text from '../components/ui/Text.astro';
+
+const swatchGroups = [
+  {
+    title: 'Brand roles',
+    swatches: [
+      ['--gp-bg', '#0F3D2E', 'Canvas', 'light'],
+      ['--gp-primary', '#B8E835', 'Greenpill Lime', 'dark'],
+      ['--gp-secondary', '#F0DCA0', 'Steward Gold', 'dark'],
+      ['--gp-fg', '#FAF7EE', 'Warm off-white', 'dark'],
+      ['--gp-error', '#E07856', 'Terracotta', 'light'],
+    ],
+  },
+  {
+    title: 'Green ramp',
+    swatches: [
+      ['--gp-green-950', '#0A2D21', 'Deepest', 'light'],
+      ['--gp-green-900', '#0F3D2E', 'Canvas', 'light'],
+      ['--gp-green-800', '#143F30', 'Surface', 'light'],
+      ['--gp-green-700', '#1A4D3A', 'Card', 'light'],
+      ['--gp-green-600', '#235C46', 'Elevated', 'light'],
+      ['--gp-green-500', '#2A6B52', 'Border', 'light'],
+      ['--gp-green-400', '#3F8A6C', 'Mid', 'light'],
+      ['--gp-green-300', '#5BA889', 'Info', 'dark'],
+      ['--gp-green-200', '#8DC9AE', 'Soft', 'dark'],
+      ['--gp-green-100', '#C8E6D6', 'Pale', 'dark'],
+    ],
+  },
+  {
+    title: 'Lime and gold',
+    swatches: [
+      ['--gp-lime-700', '#7FA61F', 'On light', 'light'],
+      ['--gp-lime-600', '#9BC326', 'Active', 'dark'],
+      ['--gp-lime-500', '#B8E835', 'Default', 'dark'],
+      ['--gp-lime-400', '#C4F02C', 'Hover', 'dark'],
+      ['--gp-lime-300', '#D4F564', 'Pale', 'dark'],
+      ['--gp-lime-200', '#E5FA9A', 'Faint', 'dark'],
+      ['--gp-lime-100', '#F2FCCC', 'Lightest', 'dark'],
+      ['--gp-gold-600', '#D4B97A', 'Dim', 'dark'],
+      ['--gp-gold-500', '#F0DCA0', 'Default', 'dark'],
+      ['--gp-gold-400', '#F5D896', 'Cream', 'dark'],
+      ['--gp-gold-300', '#FAE8C2', 'Pale', 'dark'],
+      ['--gp-gold-200', '#FCF1D8', 'Lightest', 'dark'],
+    ],
+  },
+];
+
+const typeRows = [
+  ['Display', 'Everything we have made public.', 'display', '--gp-display-size'],
+  ['H1', 'A CoordiNation across Nations.', 'h1', '--gp-h1-size'],
+  ['H2', 'Read the books.', 'h2', '--gp-h2-size'],
+  ['H3', 'The eight activities of a chapter.', 'h3', '--gp-h3-size'],
+  ['Title', 'Field-tested coordination patterns', 'title-lg', '--gp-title-lg'],
+  ['Body', 'Field-tested books, public stories, and the playbooks behind them, open and made by the network.', 'body', '--gp-body-md'],
+  ['Caption', 'greenpill.network', 'caption', '--gp-caption'],
+  ['Mono', 'CHAPTER AMERICAS ACTIVE', 'mono', '--gp-font-mono'],
+];
+
+const spacing = [
+  ['xs', 4],
+  ['sm', 8],
+  ['md', 16],
+  ['lg', 24],
+  ['xl', 32],
+  ['2xl', 48],
+  ['3xl', 64],
+  ['4xl', 96],
+  ['5xl', 128],
+];
+
+const radii = [
+  ['sm', 6],
+  ['md', 12],
+  ['lg', 20],
+  ['xl', 32],
+  ['pill', 9999],
+];
+---
+
+<GpLayout
+  title="Greenpill Network design system review"
+  description="Temporary token and component review surface for the public website design implementation."
+  noindex
+>
+  <main class="gp-kit">
+    <section class="gp-kit-hero gp-topo">
+      <Container size="2xl">
+        <div class="gp-kit-hero-copy">
+          <Overline segments={['Greenpill Network', 'Foundation review']} />
+          <Text variant="display">Tokens and primitives.</Text>
+          <Text variant="body-lg">
+            A temporary Astro surface for checking the ported HiFi tokens, public shell,
+            and reusable component primitives before page-by-page implementation starts.
+          </Text>
+        </div>
+      </Container>
+    </section>
+
+    <Container size="2xl" class="gp-kit-stack">
+      <section class="gp-kit-section" id="colors">
+        <SectionHeader title="Color tokens." segments={['Foundations', 'Colors']}>
+          <Meta slot="side" items={['gp-tokens.css', 'ported']} accentIndex={1} />
+        </SectionHeader>
+        <div class="gp-token-groups">
+          {swatchGroups.map((group) => (
+            <Card padded="lg">
+              <div class="gp-card-stack">
+                <Text variant="title-md">{group.title}</Text>
+                <div class="gp-swatch-grid">
+                  {group.swatches.map(([token, hex, label, tone]) => (
+                    <div class="gp-swatch" style={`--swatch: ${hex}; --swatch-copy: ${tone === 'dark' ? 'var(--gp-primary-fg)' : 'var(--gp-fg)'};`}>
+                      <div class="gp-swatch-tile">
+                        <span>{hex}</span>
+                      </div>
+                      <code>{token}</code>
+                      <small>{label}</small>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <section class="gp-kit-section" id="type">
+        <SectionHeader title="Type scale." segments={['Foundations', 'Typography']}>
+          <ArrowLink slot="side" href="#components">Jump to components</ArrowLink>
+        </SectionHeader>
+        <Card padded="lg">
+          <div class="gp-type-stack">
+            {typeRows.map(([label, sample, variant, token]) => (
+              <div class="gp-type-row">
+                <Text variant={variant as any}>{sample}</Text>
+                <div class="gp-type-meta">
+                  <strong>{label}</strong>
+                  <code>{token}</code>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </section>
+
+      <section class="gp-kit-section" id="spacing">
+        <SectionHeader title="Spacing, radii, and depth." segments={['Foundations', 'Shape']} />
+        <div class="gp-foundation-grid">
+          <Card padded="lg">
+            <div class="gp-card-stack">
+              <Text variant="title-md">Spacing</Text>
+              <div class="gp-space-stack">
+                {spacing.map(([name, value]) => (
+                  <div class="gp-space-row" style={`--space-width: ${value}px;`}>
+                    <code>--gp-space-{name}</code>
+                    <span class="gp-space-rule"></span>
+                    <small>{value}px</small>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          <Card padded="lg">
+            <div class="gp-card-stack">
+              <Text variant="title-md">Radii</Text>
+              <div class="gp-radius-grid">
+                {radii.map(([name, value]) => (
+                  <div class="gp-radius-cell">
+                    <span style={`border-radius: ${value}px;`}></span>
+                    <code>--gp-radius-{name}</code>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          <Card padded="lg">
+            <div class="gp-card-stack">
+              <Text variant="title-md">Shadows</Text>
+              <div class="gp-shadow-grid">
+                <span style="box-shadow: var(--gp-shadow-pill); background: var(--gp-primary); color: var(--gp-primary-fg);">pill</span>
+                <span style="box-shadow: var(--gp-shadow-card); background: var(--gp-card);">card</span>
+                <span style="box-shadow: var(--gp-shadow-card-lg); background: var(--gp-card);">card-lg</span>
+                <span style="box-shadow: var(--gp-shadow-focus); background: var(--gp-surface);">focus</span>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </section>
+
+      <section class="gp-kit-section" id="components">
+        <SectionHeader title="Reusable primitives." segments={['Components', 'Astro']}>
+          <RailArrows slot="side" />
+        </SectionHeader>
+        <div class="gp-component-grid">
+          <Card padded="lg">
+            <div class="gp-card-stack">
+              <Text variant="title-md">Buttons and links</Text>
+              <div class="gp-inline-wrap">
+                <Button href="/join">Start a chapter</Button>
+                <Button href="/library" variant="ghost">Read the playbook</Button>
+                <ArrowLink href="/stories">Browse stories</ArrowLink>
+              </div>
+            </div>
+          </Card>
+
+          <Card padded="lg">
+            <div class="gp-card-stack">
+              <Text variant="title-md">Chips and status</Text>
+              <div class="gp-inline-wrap">
+                <StatusChip>Active</StatusChip>
+                <StatusChip tone="secondary">Forming</StatusChip>
+                <Chip>Outline</Chip>
+                <Chip tone="soft-lime">Public goods</Chip>
+                <Chip tone="soft-gold">Portuguese</Chip>
+                <Chip active mono>IRL</Chip>
+              </div>
+            </div>
+          </Card>
+
+          <Card padded="lg">
+            <div class="gp-card-stack">
+              <Text variant="title-md">Cards and meta</Text>
+              <Card variant="elevated" padded="md">
+                <div class="gp-card-stack">
+                  <Meta items={['Chapter', 'Americas', 'Active']} accentIndex={2} />
+                  <Text variant="h3">Greenpill Brasil</Text>
+                  <Text variant="body-sm">
+                    A chapter card shell with token-backed typography, tonal layering, and compact metadata.
+                  </Text>
+                </div>
+              </Card>
+            </div>
+          </Card>
+
+          <Card padded="lg">
+            <div class="gp-card-stack">
+              <Text variant="title-md">Avatars</Text>
+              <div class="gp-inline-wrap">
+                <Avatar name="Camila R." size={32} />
+                <Avatar name="Femi A." size={48} />
+                <Avatar name="Sarah K." size={72} />
+              </div>
+              <AvatarStack names={['Camila R.', 'Femi A.', 'Sarah K.', 'Nasrin H.']} extra={12} size={32} />
+            </div>
+          </Card>
+
+          <Card padded="lg">
+            <div class="gp-card-stack">
+              <Text variant="title-md">Input pill</Text>
+              <form class="gp-form-preview">
+                <EmailInput label="Newsletter" />
+                <Button type="submit">Subscribe</Button>
+              </form>
+            </div>
+          </Card>
+
+          <Card padded="lg">
+            <div class="gp-card-stack">
+              <Text variant="title-md">Placeholder image</Text>
+              <ImagePlaceholder label="chapter photo pending" ratio="16/10" />
+            </div>
+          </Card>
+        </div>
+      </section>
+
+      <section class="gp-kit-section" id="shell">
+        <SectionHeader title="Shell blocks." segments={['Shell', 'Composition']} />
+        <div class="gp-shell-stack">
+          <Card padded="lg">
+            <Breadcrumb
+              back={{ label: 'All stories', href: '/stories' }}
+              crumbs={[{ label: 'Greenpill Brasil', href: '/chapters/brasil' }, { label: 'Environmental' }]}
+            />
+          </Card>
+
+          <Card padded="lg">
+            <LinkRow glyph="TW" label="Twitter / X" sub="Network updates and chapter notes" handle="@greenpill" />
+            <LinkRow glyph="DC" label="Discord" sub="The Hub for guilds and working sessions" handle="hub.greenpill" />
+            <LinkRow glyph="FC" label="Farcaster" sub="Frame conversations and cast threads" handle="@greenpill" shape="pill" last />
+          </Card>
+
+          <CtaStrip
+            overline="Start a chapter"
+            title="Do not see your city?"
+            body="The shell is ready for page sections to reuse without hard-coding design tokens."
+          >
+            <Button href="/join">Start a chapter</Button>
+            <Button href="/library" variant="ghost">Read the playbook</Button>
+          </CtaStrip>
+        </div>
+      </section>
+    </Container>
+  </main>
+</GpLayout>
+
+<style>
+  .gp-kit {
+    container-type: inline-size;
+    min-height: 100vh;
+    background: transparent;
+  }
+
+  .gp-kit-hero {
+    position: relative;
+    overflow: hidden;
+    padding: clamp(var(--gp-space-3xl), 8vw, var(--gp-space-5xl)) 0 var(--gp-space-3xl);
+  }
+
+  .gp-kit-hero-copy {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-lg);
+    max-width: 900px;
+  }
+
+  .gp-kit-hero-copy :global(.gp-text.is-body-lg) {
+    max-width: 740px;
+    color: var(--gp-fg-muted);
+  }
+
+  .gp-kit-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-4xl);
+    padding-block: var(--gp-space-3xl) var(--gp-space-4xl);
+  }
+
+  .gp-kit-section {
+    min-width: 0;
+  }
+
+  .gp-token-groups,
+  .gp-foundation-grid,
+  .gp-component-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--gp-space-lg);
+  }
+
+  .gp-token-groups :global(.gp-card:first-child) {
+    grid-column: 1 / -1;
+  }
+
+  .gp-card-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-lg);
+  }
+
+  .gp-swatch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+
+  .gp-swatch {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .gp-swatch-tile {
+    display: flex;
+    align-items: flex-end;
+    height: 88px;
+    padding: 12px;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-md);
+    background: var(--swatch);
+    color: var(--swatch-copy);
+  }
+
+  .gp-swatch-tile span,
+  .gp-swatch code,
+  .gp-swatch small,
+  .gp-space-row code,
+  .gp-space-row small,
+  .gp-radius-cell code {
+    font-family: var(--gp-font-mono);
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  .gp-swatch code {
+    color: var(--gp-fg);
+  }
+
+  .gp-swatch small {
+    color: var(--gp-fg-muted);
+  }
+
+  .gp-type-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-lg);
+  }
+
+  .gp-type-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 180px;
+    gap: var(--gp-space-xl);
+    align-items: baseline;
+    padding-bottom: var(--gp-space-lg);
+    border-bottom: 1px solid var(--gp-border-soft);
+  }
+
+  .gp-type-row:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .gp-type-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-end;
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    line-height: 1.3;
+    text-transform: uppercase;
+  }
+
+  .gp-type-meta strong {
+    color: var(--gp-primary);
+    font: inherit;
+  }
+
+  .gp-space-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .gp-space-row {
+    display: grid;
+    grid-template-columns: 132px 1fr 56px;
+    gap: var(--gp-space-md);
+    align-items: center;
+  }
+
+  .gp-space-row code {
+    color: var(--gp-fg);
+  }
+
+  .gp-space-row small {
+    color: var(--gp-fg-dim);
+    text-align: right;
+  }
+
+  .gp-space-rule {
+    display: block;
+    height: 8px;
+    width: min(var(--space-width), 100%);
+    max-width: 100%;
+    border-radius: var(--gp-radius-pill);
+    background: linear-gradient(90deg, var(--gp-primary), rgba(184, 232, 53, 0.4));
+  }
+
+  .gp-radius-grid,
+  .gp-shadow-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: var(--gp-space-lg);
+  }
+
+  .gp-radius-cell {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    gap: var(--gp-space-sm);
+    min-width: 0;
+  }
+
+  .gp-radius-cell span,
+  .gp-shadow-grid span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 84px;
+    height: 84px;
+    background: var(--gp-primary);
+    color: var(--gp-primary-fg);
+  }
+
+  .gp-radius-cell code {
+    color: var(--gp-fg-muted);
+    text-align: center;
+  }
+
+  .gp-shadow-grid span {
+    width: 100%;
+    border-radius: var(--gp-radius-md);
+    color: var(--gp-fg);
+    font-family: var(--gp-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .gp-inline-wrap,
+  .gp-form-preview {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .gp-form-preview {
+    align-items: flex-end;
+  }
+
+  .gp-shell-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-lg);
+  }
+
+  .gp-shell-stack > :global(.gp-card:first-child) {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  @media (max-width: 980px) {
+    .gp-token-groups,
+    .gp-foundation-grid,
+    .gp-component-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .gp-type-row {
+      grid-template-columns: 1fr;
+      gap: var(--gp-space-md);
+    }
+
+    .gp-type-row :global(.gp-text.is-display) {
+      font-size: 34px;
+    }
+
+    .gp-type-row :global(.gp-text.is-h1) {
+      font-size: 32px;
+    }
+
+    .gp-type-meta {
+      align-items: flex-start;
+    }
+
+    .gp-space-row {
+      grid-template-columns: 1fr 44px;
+      gap: var(--gp-space-sm);
+    }
+
+    .gp-space-row code {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .gp-space-rule {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+  }
+</style>

@@ -1,0 +1,44 @@
+---
+interface Props {
+  name?: string;
+  size?: 32 | 48 | 56 | 72 | 96 | number;
+  class?: string;
+}
+
+const { name = '', size = 56, class: className } = Astro.props;
+const initials = String(name)
+  .split(/\s+/)
+  .map((part) => part[0])
+  .filter(Boolean)
+  .slice(0, 2)
+  .join('')
+  .toUpperCase();
+const classes = ['gp-avatar', className].filter(Boolean).join(' ');
+---
+
+<span class={classes} style={`--avatar-size: ${size}px;`}>
+  {initials}
+</span>
+
+<style>
+  .gp-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: var(--avatar-size);
+    height: var(--avatar-size);
+    border: 1px solid var(--gp-border-soft);
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 30% 25%, rgba(240, 220, 160, 0.3), transparent 60%),
+      var(--gp-green-700);
+    color: var(--gp-secondary);
+    font-family: var(--gp-font-display);
+    font-size: calc(var(--avatar-size) * 0.36);
+    font-weight: 500;
+    font-variation-settings: var(--gp-display-vs);
+    letter-spacing: 0.005em;
+    line-height: 1;
+  }
+</style>

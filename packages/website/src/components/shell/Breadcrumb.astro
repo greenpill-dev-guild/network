@@ -1,0 +1,126 @@
+---
+interface Crumb {
+  label: string;
+  href?: string;
+}
+
+interface Props {
+  back?: Crumb;
+  crumbs?: Crumb[];
+}
+
+const { back, crumbs = [] } = Astro.props;
+---
+
+<nav class="gp-breadcrumb" aria-label="Breadcrumb">
+  {back && (
+    <>
+      {back.href ? (
+        <a class="gp-breadcrumb-back" href={back.href}>
+          <span aria-hidden="true">&larr;</span>
+          <span>{back.label}</span>
+        </a>
+      ) : (
+        <span class="gp-breadcrumb-back is-static">
+          <span aria-hidden="true">&larr;</span>
+          <span>{back.label}</span>
+        </span>
+      )}
+      {crumbs.length > 0 && <span class="gp-breadcrumb-sep">/</span>}
+    </>
+  )}
+  <ol>
+    {crumbs.map((crumb, index) => {
+      const last = index === crumbs.length - 1;
+      return (
+        <li>
+          {crumb.href && !last ? (
+            <a href={crumb.href}>{crumb.label}</a>
+          ) : (
+            <span aria-current={last ? 'page' : undefined}>{crumb.label}</span>
+          )}
+          {!last && <span class="gp-breadcrumb-sep">/</span>}
+        </li>
+      );
+    })}
+  </ol>
+</nav>
+
+<style>
+  .gp-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: var(--gp-space-sm);
+    min-width: 0;
+    padding: 14px clamp(var(--gp-space-lg), 6vw, var(--gp-space-4xl));
+    border-bottom: 1px solid var(--gp-border-soft);
+    color: var(--gp-fg-muted);
+    font-size: 13px;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .gp-breadcrumb a {
+    color: var(--gp-fg-muted);
+    text-decoration: none;
+  }
+
+  .gp-breadcrumb a:hover {
+    color: var(--gp-primary);
+  }
+
+  .gp-breadcrumb-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: none;
+  }
+
+  .gp-breadcrumb-back.is-static {
+    color: var(--gp-fg-dim);
+  }
+
+  .gp-breadcrumb ol {
+    display: flex;
+    align-items: center;
+    gap: var(--gp-space-sm);
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .gp-breadcrumb li {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gp-space-sm);
+    min-width: 0;
+  }
+
+  .gp-breadcrumb li:last-child span {
+    color: var(--gp-fg);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .gp-breadcrumb-sep {
+    color: var(--gp-fg-dim);
+    flex: none;
+  }
+
+  @media (max-width: 520px) {
+    .gp-breadcrumb {
+      padding-inline: var(--gp-space-lg);
+    }
+
+    .gp-breadcrumb li:not(:last-child):not(:first-child) {
+      display: none;
+    }
+
+    .gp-breadcrumb li:first-child:not(:last-child) a {
+      max-width: 96px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+</style>

@@ -1,0 +1,116 @@
+---
+interface Props {
+  tone?: 'outline' | 'soft-lime' | 'soft-gold' | 'fill-lime';
+  size?: 'sm' | 'md' | 'lg';
+  mono?: boolean;
+  active?: boolean;
+  href?: string;
+  as?: 'span' | 'button' | 'a';
+  class?: string;
+}
+
+const {
+  tone = 'outline',
+  size = 'md',
+  mono = false,
+  active = false,
+  href,
+  as,
+  class: className,
+  ...attrs
+} = Astro.props;
+const Tag = as ?? (href ? 'a' : 'span');
+const finalTone = active ? 'fill-lime' : tone;
+const classes = [
+  'gp-chip',
+  `is-${finalTone}`,
+  `is-${size}`,
+  mono ? 'is-mono' : '',
+  className,
+].filter(Boolean).join(' ');
+---
+
+<Tag href={href} type={Tag === 'button' ? 'button' : undefined} class={classes} {...attrs}>
+  <slot />
+</Tag>
+
+<style>
+  .gp-chip {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid var(--gp-border);
+    border-radius: var(--gp-radius-pill);
+    background: transparent;
+    color: var(--gp-fg-muted);
+    font-family: var(--gp-font-body);
+    font-weight: 600;
+    letter-spacing: 0.005em;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .gp-chip.is-sm {
+    min-height: 22px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+
+  .gp-chip.is-md {
+    min-height: 30px;
+    padding: 0 14px;
+    font-size: 13px;
+  }
+
+  .gp-chip.is-lg {
+    min-height: 36px;
+    padding: 0 16px;
+    font-size: 13px;
+  }
+
+  .gp-chip.is-mono {
+    font-family: var(--gp-font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .gp-chip.is-soft-lime {
+    border-color: rgba(184, 232, 53, 0.42);
+    background: rgba(184, 232, 53, 0.12);
+    color: var(--gp-primary);
+  }
+
+  .gp-chip.is-soft-gold {
+    border-color: rgba(240, 220, 160, 0.32);
+    background: rgba(240, 220, 160, 0.1);
+    color: var(--gp-secondary);
+  }
+
+  .gp-chip.is-fill-lime {
+    border-color: var(--gp-primary);
+    background: var(--gp-primary);
+    color: var(--gp-primary-fg);
+  }
+
+  button.gp-chip,
+  a.gp-chip {
+    cursor: pointer;
+    transition: background 180ms cubic-bezier(0.4, 0, 0.2, 1), color 180ms cubic-bezier(0.4, 0, 0.2, 1), border-color 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  button.gp-chip:hover,
+  a.gp-chip:hover {
+    border-color: rgba(184, 232, 53, 0.42);
+    color: var(--gp-primary);
+  }
+
+  @media (max-width: 520px) {
+    button.gp-chip,
+    a.gp-chip {
+      min-height: 44px;
+    }
+  }
+</style>

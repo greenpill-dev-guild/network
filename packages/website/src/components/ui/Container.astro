@@ -1,0 +1,45 @@
+---
+interface Props {
+  size?: 'md' | 'lg' | 'xl' | '2xl';
+  bleed?: boolean;
+  class?: string;
+}
+
+const { size = 'xl', bleed = false, class: className } = Astro.props;
+const classes = ['gp-container', `is-${size}`, bleed ? 'is-bleed' : '', className].filter(Boolean).join(' ');
+---
+
+<div class={classes}>
+  <slot />
+</div>
+
+<style>
+  .gp-container {
+    width: min(100%, var(--gp-container-xl));
+    margin-inline: auto;
+    padding-inline: clamp(var(--gp-space-lg), 5vw, var(--gp-space-4xl));
+  }
+
+  .gp-container.is-md {
+    width: min(100%, var(--gp-container-md));
+  }
+
+  .gp-container.is-lg {
+    width: min(100%, var(--gp-container-lg));
+  }
+
+  .gp-container.is-2xl {
+    width: min(100%, var(--gp-container-2xl));
+  }
+
+  .gp-container.is-bleed {
+    width: 100%;
+    max-width: none;
+  }
+
+  @media (max-width: 520px) {
+    .gp-container {
+      padding-inline: var(--gp-space-lg);
+    }
+  }
+</style>

@@ -1,0 +1,356 @@
+---
+import garden from '../../content/garden.json';
+import GpLayout from '../../layouts/GpLayout.astro';
+import Button from '../../components/ui/Button.astro';
+import Card from '../../components/ui/Card.astro';
+import Chip from '../../components/ui/Chip.astro';
+import Container from '../../components/ui/Container.astro';
+import CtaStrip from '../../components/ui/CtaStrip.astro';
+import ImagePlaceholder from '../../components/ui/ImagePlaceholder.astro';
+import Meta from '../../components/ui/Meta.astro';
+import Overline from '../../components/ui/Overline.astro';
+import SectionHeader from '../../components/ui/SectionHeader.astro';
+import StatusChip from '../../components/ui/StatusChip.astro';
+import Text from '../../components/ui/Text.astro';
+
+const fallbackSteps = [
+  {
+    level: 1,
+    kicker: 'Read',
+    title: 'Learn the field',
+    body: 'Start with the public books, guides, and stories that explain regenerative coordination in practice.',
+    meta: 'Self-guided',
+    cta: { label: 'Open the library', href: '/library' },
+  },
+  {
+    level: 2,
+    kicker: 'Meet',
+    title: 'Find your local node',
+    body: 'Browse chapters and guilds to see where the network is active and which working groups match your context.',
+    meta: 'Chapters and guilds',
+    cta: { label: 'Browse chapters', href: '/chapters' },
+  },
+  {
+    level: 3,
+    kicker: 'Signal',
+    title: 'Share how you can contribute',
+    body: 'Tell the network what you are building, learning, hosting, writing, funding, or stewarding.',
+    meta: 'Public entry point',
+    cta: { label: 'Join the network', href: '/join' },
+  },
+  {
+    level: 4,
+    kicker: 'Grow',
+    title: 'Coordinate with stewards',
+    body: 'Bring projects, proof, questions, and local needs into the stewardship flow when you are ready for deeper coordination.',
+    meta: 'Next-step support',
+    cta: { label: 'Start a conversation', href: '/join' },
+  },
+];
+
+const fallbackAfterCards = [
+  {
+    kicker: 'Chapters',
+    title: 'Work locally',
+    body: 'Connect with people coordinating regenerative activity in their city or region.',
+    cta: { label: 'See chapters', href: '/chapters' },
+  },
+  {
+    kicker: 'Library',
+    title: 'Build shared language',
+    body: 'Use the books and guides as a common starting point for events, onboarding, and study groups.',
+    cta: { label: 'Read the books', href: '/library' },
+  },
+  {
+    kicker: 'Stories',
+    title: 'Learn from the field',
+    body: 'Follow public updates from chapters, guilds, and programs as the network keeps shipping.',
+    cta: { label: 'Browse stories', href: '/stories' },
+  },
+];
+
+const title = garden.title || 'Greenpill Garden';
+const summary = garden.summary || 'A participation ramp for people moving from reading about regeneration to joining chapters, contributing skills, and coordinating real-world public goods.';
+const steps = garden.steps.length > 0 ? garden.steps : fallbackSteps;
+const afterCards = garden.afterCards.length > 0 ? garden.afterCards : fallbackAfterCards;
+const proofSignals = garden.proofSignals.length > 0
+  ? garden.proofSignals
+  : [
+      { label: 'Entry points', value: '4' },
+      { label: 'Chapters', value: '18+' },
+      { label: 'Access', value: 'public' },
+    ];
+const stickyCta = garden.stickyCta?.label ? garden.stickyCta : { label: 'Join the network', href: '/join' };
+const seoTitle = garden.seo.title || `${title} · Greenpill Network`;
+const seoDescription = garden.seo.description || summary;
+---
+
+<GpLayout
+  title={seoTitle}
+  description={seoDescription}
+  ogImage={garden.seo.ogImage || garden.media.ogImage || undefined}
+  canonicalPath={garden.seo.canonicalPath || '/garden'}
+  activeNav="Garden"
+  noindex={garden.seo.noindex}
+>
+  <main class="gp-garden-page">
+    <section class="gp-garden-hero gp-topo">
+      <Container size="2xl">
+        <div class="gp-garden-hero-grid">
+          <div class="gp-garden-hero-copy">
+            <Overline segments={['Greenpill Garden', garden.framing || 'bridge']} />
+            <Text variant="display">{title}</Text>
+            <Text variant="body-lg">{summary}</Text>
+            <div class="gp-garden-actions">
+              <Button href={stickyCta.href || '/join'}>{stickyCta.label || 'Join the network'}</Button>
+              <Button href="/library" variant="ghost">Read first</Button>
+            </div>
+          </div>
+          <div class="gp-garden-hero-media">
+            <ImagePlaceholder label="participation path" ratio="4/3" />
+          </div>
+        </div>
+      </Container>
+    </section>
+
+    <Container size="2xl" class="gp-garden-stack">
+      <section class="gp-garden-section">
+        <SectionHeader title="The participation ramp." segments={['Garden', 'Ramp']}>
+          <StatusChip slot="side" tone="secondary">Public</StatusChip>
+        </SectionHeader>
+        <div class="gp-garden-steps">
+          {steps.map((step, index) => (
+            <article class="gp-garden-step">
+              <div class="gp-garden-step-index">
+                <span>{String(step.level || index + 1).padStart(2, '0')}</span>
+                <small>/ {String(steps.length).padStart(2, '0')}</small>
+              </div>
+              <div class="gp-garden-step-copy">
+                <Meta items={[step.kicker || 'Garden', step.meta || step.stage || 'Open path']} accentIndex={0} />
+                <Text variant="h3">{step.title}</Text>
+                <Text variant="body-sm">{step.body}</Text>
+                {step.cta?.label && step.cta?.href && (
+                  <div class="gp-garden-step-action">
+                    <Button href={step.cta.href} variant="ghost">{step.cta.label}</Button>
+                  </div>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section class="gp-garden-section">
+        <SectionHeader title="What this opens." segments={['Network', 'Next paths']} />
+        <div class="gp-garden-after-grid">
+          {afterCards.map((card) => (
+            <Card padded="lg">
+              <div class="gp-garden-card-copy">
+                <Meta items={[card.kicker || 'Path']} accentIndex={0} />
+                <Text variant="title-lg">{card.title}</Text>
+                <Text variant="body-sm">{card.body}</Text>
+                {card.cta?.label && card.cta?.href && (
+                  <Button href={card.cta.href} variant="ghost">{card.cta.label}</Button>
+                )}
+              </div>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <section class="gp-garden-section">
+        <Card padded="lg">
+          <div class="gp-garden-proof-row">
+            <div class="gp-garden-proof-copy">
+              <Overline text="Public-safe signals" />
+              <Text variant="h2">Start from public paths.</Text>
+            </div>
+            <div class="gp-garden-proof-chips">
+              {proofSignals.map((signal) => (
+                <Chip tone="soft-gold">
+                  {signal.label}{signal.value && ` · ${signal.value}`}
+                </Chip>
+              ))}
+            </div>
+          </div>
+        </Card>
+      </section>
+
+      <CtaStrip
+        overline="Enter the garden"
+        title="Move at the speed of trust."
+        body="Use the Garden as a public orientation path, then follow the chapter, guild, or story route that fits your next step."
+      >
+        <Button href={stickyCta.href || '/join'}>{stickyCta.label || 'Join the network'}</Button>
+        <Button href="/chapters" variant="ghost">Find a chapter</Button>
+      </CtaStrip>
+    </Container>
+  </main>
+</GpLayout>
+
+<style>
+  .gp-garden-page {
+    min-height: 100vh;
+    background: transparent;
+  }
+
+  .gp-garden-hero {
+    position: relative;
+    overflow: hidden;
+    padding: clamp(var(--gp-space-3xl), 8vw, var(--gp-space-5xl)) 0 var(--gp-space-4xl);
+  }
+
+  .gp-garden-hero-grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+    gap: clamp(var(--gp-space-2xl), 6vw, var(--gp-space-4xl));
+    align-items: center;
+  }
+
+  .gp-garden-hero-copy,
+  .gp-garden-card-copy,
+  .gp-garden-step-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-lg);
+    min-width: 0;
+  }
+
+  .gp-garden-hero-copy {
+    max-width: 850px;
+  }
+
+  .gp-garden-hero-copy :global(.gp-text.is-body-lg) {
+    max-width: 720px;
+    color: var(--gp-fg-muted);
+  }
+
+  .gp-garden-actions,
+  .gp-garden-step-action {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .gp-garden-hero-media {
+    min-width: 0;
+  }
+
+  .gp-garden-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-4xl);
+    padding-block: var(--gp-space-3xl) var(--gp-space-4xl);
+  }
+
+  .gp-garden-section {
+    min-width: 0;
+  }
+
+  .gp-garden-steps {
+    display: grid;
+    gap: var(--gp-space-lg);
+  }
+
+  .gp-garden-step {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    gap: var(--gp-space-2xl);
+    padding: var(--gp-space-2xl);
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-xl);
+    background: var(--gp-card);
+  }
+
+  .gp-garden-step-index {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    color: var(--gp-secondary);
+    font-family: var(--gp-font-display);
+  }
+
+  .gp-garden-step-index span {
+    font-size: 56px;
+    font-weight: 500;
+    letter-spacing: 0;
+    line-height: 1;
+  }
+
+  .gp-garden-step-index small {
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+  }
+
+  .gp-garden-after-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--gp-space-lg);
+  }
+
+  .gp-garden-card-copy {
+    height: 100%;
+  }
+
+  .gp-garden-card-copy :global(.gp-button) {
+    margin-top: auto;
+  }
+
+  .gp-garden-proof-row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--gp-space-2xl);
+    align-items: center;
+  }
+
+  .gp-garden-proof-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-md);
+    min-width: 0;
+  }
+
+  .gp-garden-proof-chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  @media (max-width: 980px) {
+    .gp-garden-hero-grid,
+    .gp-garden-after-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .gp-garden-hero-media {
+      max-width: 520px;
+    }
+
+    .gp-garden-proof-row {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .gp-garden-proof-chips {
+      justify-content: flex-start;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .gp-garden-step {
+      grid-template-columns: 1fr;
+      gap: var(--gp-space-lg);
+      padding: var(--gp-space-xl);
+      border-radius: var(--gp-radius-lg);
+    }
+
+    .gp-garden-step-index span {
+      font-size: 42px;
+    }
+  }
+</style>

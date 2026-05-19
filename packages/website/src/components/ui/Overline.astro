@@ -1,0 +1,58 @@
+---
+interface Props {
+  text?: string;
+  segments?: string[];
+  tone?: 'primary' | 'muted' | 'dim';
+  class?: string;
+}
+
+const { text, segments, tone = 'primary', class: className } = Astro.props;
+const classes = ['gp-overline-atom', `is-${tone}`, className].filter(Boolean).join(' ');
+---
+
+<div class={classes}>
+  {segments ? (
+    segments.map((segment, index) => (
+      <>
+        <span>{segment}</span>
+        {index < segments.length - 1 && <span aria-hidden="true" class="gp-overline-sep">&middot;</span>}
+      </>
+    ))
+  ) : text ? (
+    <span>{text}</span>
+  ) : (
+    <slot />
+  )}
+</div>
+
+<style>
+  .gp-overline-atom {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45em;
+    color: var(--gp-primary);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-overline);
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .gp-overline-atom.is-muted {
+    color: var(--gp-fg-muted);
+  }
+
+  .gp-overline-atom.is-dim {
+    color: var(--gp-fg-dim);
+  }
+
+  .gp-overline-atom span {
+    white-space: nowrap;
+  }
+
+  .gp-overline-sep {
+    opacity: 0.65;
+  }
+</style>

@@ -1,0 +1,130 @@
+---
+import SiteHeader from '../components/shell/SiteHeader.astro';
+import SiteFooter from '../components/shell/SiteFooter.astro';
+import '../styles/gp-tokens.css';
+
+interface Props {
+  title: string;
+  description: string;
+  ogImage?: string;
+  canonicalPath?: string;
+  activeNav?: string | null;
+  noindex?: boolean;
+  showFooterWordmark?: boolean;
+  hideShell?: boolean;
+  background?: 'graphic' | 'plain';
+}
+
+const {
+  title,
+  description,
+  ogImage = 'https://greenpill.network/images/greenpill-twitter-card.png',
+  canonicalPath = '',
+  activeNav = null,
+  noindex = false,
+  showFooterWordmark = false,
+  hideShell = false,
+  background = 'graphic',
+} = Astro.props;
+const canonicalUrl = canonicalPath ? `https://greenpill.network${canonicalPath}` : 'https://greenpill.network';
+
+const bodyClasses = [
+  'gp-root',
+  background === 'graphic' ? 'has-graphic-background' : 'has-plain-background',
+];
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex,nofollow" />}
+    {canonicalPath && <link rel="canonical" href={canonicalUrl} />}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+    <meta property="og:title" content={title} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:description" content={description} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" href="/images/greenpill-logo-large.png" type="image/png" sizes="150x150" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+  </head>
+  <body class:list={bodyClasses}>
+    {!hideShell && <a class="gp-skip-link" href="#main-content">Skip to content</a>}
+    {!hideShell && <SiteHeader activeNav={activeNav} />}
+    <div id="main-content" class="gp-main-target" tabindex="-1">
+      <slot />
+    </div>
+    {!hideShell && <SiteFooter showWordmark={showFooterWordmark} />}
+  </body>
+</html>
+
+<style is:global>
+  html {
+    background: var(--gp-green-950);
+  }
+
+  body.gp-root {
+    margin: 0;
+    min-height: 100vh;
+    background-color: var(--gp-bg);
+  }
+
+  body.gp-root.has-graphic-background {
+    background-image: url('/images/greenpill-bg.png');
+    background-position: top center;
+    background-repeat: repeat-y;
+    background-size: contain;
+  }
+
+  body.gp-root.has-plain-background {
+    background-image: none;
+  }
+
+  body.gp-root a {
+    color: inherit;
+  }
+
+  body.gp-root .gp-skip-link {
+    position: fixed;
+    top: var(--gp-space-lg);
+    left: var(--gp-space-lg);
+    z-index: 100;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 var(--gp-space-lg);
+    border: 1px solid var(--gp-border);
+    border-radius: var(--gp-radius-pill);
+    background: var(--gp-primary);
+    color: var(--gp-primary-fg);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-label-md);
+    font-weight: 700;
+    line-height: 1;
+    text-decoration: none;
+    transform: translateY(calc(-100% - var(--gp-space-2xl)));
+    transition: transform 160ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  body.gp-root .gp-skip-link:focus {
+    transform: translateY(0);
+  }
+
+  .gp-main-target:focus {
+    outline: none;
+  }
+</style>

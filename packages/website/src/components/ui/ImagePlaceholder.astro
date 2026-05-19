@@ -1,0 +1,66 @@
+---
+interface Props {
+  label?: string;
+  ratio?: string;
+  height?: string;
+  class?: string;
+}
+
+const { label, ratio, height = '200px', class: className } = Astro.props;
+const style = ratio ? `aspect-ratio: ${ratio.replace('/', ' / ')};` : `min-height: ${height};`;
+const classes = ['gp-image-placeholder', className].filter(Boolean).join(' ');
+---
+
+<div class={classes} style={style}>
+  {label && <span>{label}</span>}
+  <slot />
+</div>
+
+<style>
+  .gp-image-placeholder {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    width: 100%;
+    overflow: hidden;
+    padding: var(--gp-space-md);
+    border-radius: var(--gp-radius-md);
+    background: var(--gp-green-800);
+    box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.04) inset;
+  }
+
+  .gp-image-placeholder::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('/images/hifi/topo-bg.png');
+    background-position: center;
+    background-size: cover;
+    opacity: 0.18;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+  }
+
+  .gp-image-placeholder::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 30% 25%, rgba(240, 220, 160, 0.08), transparent 55%);
+    pointer-events: none;
+  }
+
+  .gp-image-placeholder span {
+    position: relative;
+    z-index: 1;
+    max-width: 100%;
+    overflow: hidden;
+    color: rgba(250, 247, 238, 0.55);
+    font-family: var(--gp-font-mono);
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+</style>

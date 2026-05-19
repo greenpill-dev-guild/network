@@ -1,0 +1,132 @@
+---
+interface Props {
+  glyph: string;
+  label: string;
+  sub?: string;
+  handle?: string;
+  href?: string;
+  shape?: 'circle' | 'pill';
+  last?: boolean;
+  class?: string;
+}
+
+const {
+  glyph,
+  label,
+  sub,
+  handle,
+  href,
+  shape = 'circle',
+  last = false,
+  class: className,
+} = Astro.props;
+const classes = ['gp-link-row', `is-${shape}`, last ? 'is-last' : '', className].filter(Boolean).join(' ');
+---
+
+{href ? (
+  <a href={href} class={classes}>
+    <span class="gp-link-row-glyph">{glyph}</span>
+    <span class="gp-link-row-copy">
+      <span class="gp-link-row-label">{label}</span>
+      {sub && <span class="gp-link-row-sub">{sub}</span>}
+    </span>
+    {handle && <span class="gp-link-row-handle">{handle} <span aria-hidden="true">&rarr;</span></span>}
+  </a>
+) : (
+  <div class={`${classes} is-static`}>
+    <span class="gp-link-row-glyph">{glyph}</span>
+    <span class="gp-link-row-copy">
+      <span class="gp-link-row-label">{label}</span>
+      {sub && <span class="gp-link-row-sub">{sub}</span>}
+    </span>
+    {handle && <span class="gp-link-row-handle">{handle}</span>}
+  </div>
+)}
+
+<style>
+  .gp-link-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 18px var(--gp-space-xs);
+    border-bottom: 1px solid var(--gp-border-soft);
+    color: var(--gp-fg);
+    text-decoration: none;
+    transition: background 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .gp-link-row.is-last {
+    border-bottom: 0;
+  }
+
+  a.gp-link-row:hover {
+    background: rgba(184, 232, 53, 0.04);
+  }
+
+  .gp-link-row.is-static {
+    cursor: default;
+  }
+
+  .gp-link-row-glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    min-width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: var(--gp-radius-pill);
+    background: var(--gp-primary);
+    color: var(--gp-primary-fg);
+    font-family: var(--gp-font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+
+  .gp-link-row.is-pill .gp-link-row-glyph {
+    width: auto;
+    padding: 0 12px;
+  }
+
+  .gp-link-row-copy {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .gp-link-row-label {
+    color: var(--gp-secondary);
+    font-family: var(--gp-font-display);
+    font-size: 17px;
+    font-weight: 500;
+    font-variation-settings: var(--gp-display-vs);
+    line-height: 1.2;
+  }
+
+  .gp-link-row-sub {
+    color: var(--gp-fg-muted);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .gp-link-row-handle {
+    flex: none;
+    color: var(--gp-primary);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 520px) {
+    .gp-link-row {
+      align-items: flex-start;
+    }
+
+    .gp-link-row-handle {
+      display: none;
+    }
+  }
+</style>

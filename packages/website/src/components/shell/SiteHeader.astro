@@ -1,0 +1,219 @@
+---
+interface Props {
+  activeNav?: string | null;
+}
+
+const { activeNav = null } = Astro.props;
+
+const navItems = [
+  { label: 'Chapters', href: '/chapters' },
+  { label: 'Library', href: '/library' },
+  { label: 'Stories', href: '/stories' },
+  { label: 'Garden', href: '/garden' },
+];
+---
+
+<header class="gp-site-header">
+  <a class="gp-brand" href="/" aria-label="Greenpill Network home">
+    <img src="/images/greenpill-logo.svg" alt="" width="32" height="32" />
+    <span>Greenpill Network</span>
+  </a>
+
+  <nav class="gp-desktop-nav" aria-label="Primary">
+    {navItems.map((item) => (
+      <a
+        href={item.href}
+        class:list={[{ 'is-active': item.label === activeNav }]}
+        aria-current={item.label === activeNav ? 'page' : undefined}
+      >
+        {item.label}
+      </a>
+    ))}
+  </nav>
+
+  <details class="gp-mobile-menu">
+    <summary aria-label="Open menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </summary>
+    <nav aria-label="Mobile primary">
+      {navItems.map((item) => (
+        <a
+          href={item.href}
+          class:list={[{ 'is-active': item.label === activeNav }]}
+          aria-current={item.label === activeNav ? 'page' : undefined}
+        >
+          <span>{item.label}</span>
+          <span aria-hidden="true">&rarr;</span>
+        </a>
+      ))}
+    </nav>
+  </details>
+</header>
+
+<style>
+  .gp-site-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gp-space-lg);
+    min-height: 72px;
+    padding: var(--gp-space-lg) clamp(var(--gp-space-lg), 6vw, var(--gp-space-4xl));
+    background: color-mix(in srgb, var(--gp-bg) 92%, transparent);
+    border-bottom: 1px solid var(--gp-border-soft);
+    backdrop-filter: blur(12px);
+  }
+
+  .gp-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--gp-secondary);
+    font-family: var(--gp-font-display);
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: 0;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .gp-brand img {
+    width: 28px;
+    height: 28px;
+    filter: drop-shadow(0 0 14px rgba(184, 232, 53, 0.32));
+  }
+
+  .gp-desktop-nav {
+    display: flex;
+    align-items: center;
+    gap: clamp(var(--gp-space-lg), 3vw, var(--gp-space-2xl));
+  }
+
+  .gp-desktop-nav a {
+    color: var(--gp-fg-muted);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-label-md);
+    font-weight: 600;
+    letter-spacing: 0.005em;
+    line-height: 1.2;
+    padding-block: var(--gp-space-xs);
+    text-decoration: none;
+    transition: color 180ms cubic-bezier(0.4, 0, 0.2, 1), border-color 180ms cubic-bezier(0.4, 0, 0.2, 1);
+    border-bottom: 1.5px solid transparent;
+  }
+
+  .gp-desktop-nav a:hover,
+  .gp-desktop-nav a.is-active {
+    color: var(--gp-fg);
+    border-bottom-color: var(--gp-primary);
+  }
+
+  .gp-mobile-menu {
+    display: none;
+    position: relative;
+  }
+
+  .gp-mobile-menu summary {
+    display: inline-flex;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 5px;
+    border: 1px solid var(--gp-border);
+    border-radius: var(--gp-radius-pill);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .gp-mobile-menu summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .gp-mobile-menu summary span {
+    width: 18px;
+    height: 1.5px;
+    background: var(--gp-fg);
+    border-radius: var(--gp-radius-pill);
+    transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .gp-mobile-menu[open] summary span:nth-child(1) {
+    transform: translateY(6.5px) rotate(45deg);
+  }
+
+  .gp-mobile-menu[open] summary span:nth-child(2) {
+    opacity: 0;
+  }
+
+  .gp-mobile-menu[open] summary span:nth-child(3) {
+    transform: translateY(-6.5px) rotate(-45deg);
+  }
+
+  .gp-mobile-menu nav {
+    position: absolute;
+    top: calc(100% + var(--gp-space-sm));
+    right: 0;
+    width: min(320px, calc(100vw - 40px));
+    max-height: 320px;
+    overflow: hidden;
+    padding: var(--gp-space-sm) var(--gp-space-lg) var(--gp-space-lg);
+    background: var(--gp-green-900);
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-lg);
+    box-shadow: var(--gp-shadow-card-lg);
+  }
+
+  .gp-mobile-menu nav a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gp-space-lg);
+    padding: 14px 0;
+    border-bottom: 1px solid var(--gp-border-soft);
+    color: var(--gp-secondary);
+    font-family: var(--gp-font-display);
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-decoration: none;
+  }
+
+  .gp-mobile-menu nav a:last-child {
+    border-bottom: 0;
+  }
+
+  .gp-mobile-menu nav a.is-active {
+    color: var(--gp-primary);
+  }
+
+  .gp-mobile-menu nav a span:last-child {
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-body-sm);
+  }
+
+  @media (max-width: 719px) {
+    .gp-site-header {
+      padding: var(--gp-space-md) var(--gp-space-lg);
+    }
+
+    .gp-brand span {
+      font-size: 18px;
+    }
+
+    .gp-desktop-nav {
+      display: none;
+    }
+
+    .gp-mobile-menu {
+      display: block;
+    }
+  }
+</style>

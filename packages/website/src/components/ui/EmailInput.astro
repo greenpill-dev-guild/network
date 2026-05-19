@@ -1,0 +1,64 @@
+---
+interface Props {
+  placeholder?: string;
+  label?: string;
+  name?: string;
+  class?: string;
+}
+
+const {
+  placeholder = 'you@email.com',
+  label,
+  name = 'email',
+  class: className,
+  ...attrs
+} = Astro.props;
+const classes = ['gp-email-field', className].filter(Boolean).join(' ');
+---
+
+<label class={classes}>
+  {label && <span>{label}</span>}
+  <input type="email" name={name} placeholder={placeholder} {...attrs} />
+</label>
+
+<style>
+  .gp-email-field {
+    display: flex;
+    flex: 1 1 220px;
+    flex-direction: column;
+    gap: var(--gp-space-sm);
+    min-width: min(100%, 220px);
+  }
+
+  .gp-email-field span {
+    color: var(--gp-fg);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-label-md);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+  }
+
+  .gp-email-field input {
+    appearance: none;
+    width: 100%;
+    min-height: 48px;
+    padding: 0 18px;
+    border: 1px solid var(--gp-border);
+    border-radius: var(--gp-radius-pill);
+    background: var(--gp-green-900);
+    color: var(--gp-fg);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-body-md);
+    line-height: 1;
+    outline: none;
+  }
+
+  .gp-email-field input::placeholder {
+    color: var(--gp-fg-dim);
+  }
+
+  .gp-email-field input:focus {
+    border-color: var(--gp-primary);
+  }
+</style>

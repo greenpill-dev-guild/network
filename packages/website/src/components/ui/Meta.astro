@@ -1,0 +1,46 @@
+---
+interface Props {
+  items?: string[];
+  accentIndex?: number;
+  class?: string;
+}
+
+const { items = [], accentIndex, class: className } = Astro.props;
+const classes = ['gp-meta-line', className].filter(Boolean).join(' ');
+---
+
+<div class={classes}>
+  {items.map((item, index) => (
+    <>
+      <span class:list={[{ 'is-accent': index === accentIndex }]}>{item}</span>
+      {index < items.length - 1 && <span aria-hidden="true" class="gp-meta-sep">&middot;</span>}
+    </>
+  ))}
+</div>
+
+<style>
+  .gp-meta-line {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--gp-space-sm);
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .gp-meta-line span:not(.gp-meta-sep) {
+    white-space: nowrap;
+  }
+
+  .gp-meta-line .is-accent {
+    color: var(--gp-primary);
+  }
+
+  .gp-meta-sep {
+    opacity: 0.5;
+  }
+</style>

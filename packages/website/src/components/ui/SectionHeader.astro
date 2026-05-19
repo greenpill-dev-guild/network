@@ -1,0 +1,66 @@
+---
+import Overline from './Overline.astro';
+import Text from './Text.astro';
+
+interface Props {
+  overline?: string;
+  segments?: string[];
+  title: string;
+  class?: string;
+}
+
+const { overline, segments, title, class: className } = Astro.props;
+const classes = ['gp-section-header', className].filter(Boolean).join(' ');
+---
+
+<div class={classes}>
+  <div class="gp-section-header-copy">
+    {(overline || segments) && <Overline text={overline} segments={segments} />}
+    <Text variant="h2">{title}</Text>
+  </div>
+  <div class="gp-section-header-side">
+    <slot name="side" />
+  </div>
+</div>
+
+<style>
+  .gp-section-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--gp-space-xl);
+    margin-bottom: var(--gp-space-xl);
+  }
+
+  .gp-section-header-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: 720px;
+    min-width: 0;
+  }
+
+  .gp-section-header-side {
+    display: flex;
+    align-items: center;
+    gap: var(--gp-space-lg);
+    flex: none;
+  }
+
+  .gp-section-header-side:empty {
+    display: none;
+  }
+
+  @media (max-width: 720px) {
+    .gp-section-header {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: var(--gp-space-lg);
+    }
+
+    .gp-section-header-side {
+      width: 100%;
+      flex-wrap: wrap;
+    }
+  }
+</style>

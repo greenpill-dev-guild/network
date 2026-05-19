@@ -1,0 +1,41 @@
+<div class="gp-rail-arrows" aria-label="Rail controls">
+  <button type="button" aria-label="Previous">&lsaquo;</button>
+  <button type="button" aria-label="Next">&rsaquo;</button>
+</div>
+
+<style>
+  .gp-rail-arrows {
+    display: inline-flex;
+    gap: var(--gp-space-sm);
+  }
+
+  .gp-rail-arrows button {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--gp-border);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--gp-fg);
+    cursor: pointer;
+    font-family: var(--gp-font-body);
+    font-size: 18px;
+    line-height: 1;
+    transition: background 180ms cubic-bezier(0.4, 0, 0.2, 1), border-color 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .gp-rail-arrows button:hover {
+    border-color: rgba(184, 232, 53, 0.42);
+    background: var(--gp-green-800);
+  }
+
+  @media (max-width: 520px) {
+    .gp-rail-arrows button {
+      width: 44px;
+      height: 44px;
+    }
+  }
+</style>

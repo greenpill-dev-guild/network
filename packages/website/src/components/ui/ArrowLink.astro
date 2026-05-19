@@ -1,0 +1,59 @@
+---
+interface Props {
+  href?: string;
+  tone?: 'primary' | 'secondary' | 'muted';
+  size?: 'sm' | 'md';
+  class?: string;
+}
+
+const { href, tone = 'primary', size = 'md', class: className } = Astro.props;
+const classes = ['gp-arrow-link', `is-${tone}`, `is-${size}`, className].filter(Boolean).join(' ');
+---
+
+{href ? (
+  <a href={href} class={classes}>
+    <span><slot /></span>
+    <span aria-hidden="true">&rarr;</span>
+  </a>
+) : (
+  <span class={`${classes} is-static`}>
+    <span><slot /></span>
+  </span>
+)}
+
+<style>
+  .gp-arrow-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: fit-content;
+    color: var(--gp-primary);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-label-md);
+    font-weight: 600;
+    letter-spacing: 0.005em;
+    line-height: 1.2;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .gp-arrow-link.is-sm {
+    font-size: 13px;
+  }
+
+  .gp-arrow-link.is-secondary {
+    color: var(--gp-secondary);
+  }
+
+  .gp-arrow-link.is-muted {
+    color: var(--gp-fg-muted);
+  }
+
+  a.gp-arrow-link:hover {
+    color: var(--gp-primary-hover);
+  }
+
+  .gp-arrow-link.is-static {
+    color: var(--gp-fg-muted);
+  }
+</style>

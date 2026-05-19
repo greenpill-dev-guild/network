@@ -1,0 +1,108 @@
+---
+import Overline from './Overline.astro';
+import Text from './Text.astro';
+
+interface Props {
+  overline?: string;
+  title: string;
+  body?: string;
+  tone?: 'lift' | 'soft';
+  class?: string;
+}
+
+const {
+  overline,
+  title,
+  body,
+  tone = 'lift',
+  class: className,
+} = Astro.props;
+const classes = ['gp-cta-strip', `is-${tone}`, className].filter(Boolean).join(' ');
+---
+
+<div class={classes}>
+  <div class="gp-cta-copy">
+    {overline && <Overline text={overline} />}
+    <Text variant="h2">{title}</Text>
+    {body && <Text variant="body-sm">{body}</Text>}
+  </div>
+  <div class="gp-cta-actions">
+    <slot />
+  </div>
+</div>
+
+<style>
+  .gp-cta-strip {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gp-space-xl);
+    overflow: hidden;
+  }
+
+  .gp-cta-strip.is-lift {
+    padding: var(--gp-space-3xl) var(--gp-space-2xl);
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-xl);
+    background: var(--gp-green-800);
+  }
+
+  .gp-cta-strip.is-lift::before {
+    content: '';
+    position: absolute;
+    top: -120px;
+    right: -120px;
+    width: 320px;
+    height: 320px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(184, 232, 53, 0.16), transparent 65%);
+    pointer-events: none;
+  }
+
+  .gp-cta-strip.is-soft {
+    padding: var(--gp-space-2xl) 0;
+    border-top: 1px solid var(--gp-border-soft);
+    background: transparent;
+  }
+
+  .gp-cta-copy {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 620px;
+    min-width: 0;
+  }
+
+  .gp-cta-actions {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    flex: none;
+  }
+
+  @media (max-width: 760px) {
+    .gp-cta-strip,
+    .gp-cta-strip.is-lift {
+      align-items: flex-start;
+      flex-direction: column;
+      padding: var(--gp-space-2xl) var(--gp-space-lg);
+    }
+
+    .gp-cta-strip.is-soft {
+      padding-inline: 0;
+    }
+
+    .gp-cta-actions {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .gp-cta-strip :global(.gp-text.is-h2) {
+      font-size: 28px;
+    }
+  }
+</style>
