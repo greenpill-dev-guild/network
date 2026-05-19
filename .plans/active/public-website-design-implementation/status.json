@@ -10,7 +10,7 @@
     "overall_status": "active",
     "priority": "p0",
     "created_at": "2026-05-17T23:16:40.923Z",
-    "updated_at": "2026-05-19T22:40:28Z"
+    "updated_at": "2026-05-19T23:32:41Z"
   },
   "links": {
     "brief": "brief.md",
@@ -230,6 +230,20 @@
       "lane": "platform",
       "status": "ready",
       "note": "Addressed typed-foundation review findings: the agent Docker build stage now installs TypeScript build tooling before compiling package dist, package-local website and agent commands build shared/agent dist before runtime execution, and Node type declarations are pinned to the Node 22 runtime major. Root validation, package contract tests, website build, Docker build-stage, and Docker production-deps stage pass; full final Docker image build was blocked only by repeated Docker Hub node:22-alpine TLS timeouts."
+    },
+    {
+      "timestamp": "2026-05-19T23:06:00Z",
+      "actor": "codex",
+      "lane": "ui",
+      "status": "ready",
+      "note": "Corrected homepage and visible navigation truth: removed over-broad homepage proof stats for continent and steward counts, kept homepage-safe proof to podcast and chapter counts, completed visible /join retirement by routing legacy Nav, Garden fallbacks, and onboarding CTAs to Garden destinations while preserving the /join redirect."
+    },
+    {
+      "timestamp": "2026-05-19T23:32:41Z",
+      "actor": "codex",
+      "lane": "ui",
+      "status": "ready",
+      "note": "Fully retired /join after product signoff: removed the remaining Astro redirect, leaving Garden as the visible entry point and no active /join route in the website source."
     }
   ]
 }

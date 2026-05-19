@@ -36,7 +36,7 @@ const fallbackSteps = [
     title: 'Share how you can contribute',
     body: 'Tell the network what you are building, learning, hosting, writing, funding, or stewarding.',
     meta: 'Public entry point',
-    cta: { label: 'Join the network', href: '/join' },
+    cta: { label: 'Find your path', href: '/garden#assessment' },
   },
   {
     level: 4,
@@ -44,7 +44,7 @@ const fallbackSteps = [
     title: 'Coordinate with stewards',
     body: 'Bring projects, proof, questions, and local needs into the stewardship flow when you are ready for deeper coordination.',
     meta: 'Next-step support',
-    cta: { label: 'Start a conversation', href: '/join' },
+    cta: { label: 'Start a conversation', href: '/garden#steward-call' },
   },
 ];
 
@@ -80,7 +80,7 @@ const proofSignals = garden.proofSignals.length > 0
       { label: 'Chapters', value: '18+' },
       { label: 'Access', value: 'public' },
     ];
-const stickyCta = garden.stickyCta?.label ? garden.stickyCta : { label: 'Join the network', href: '/join' };
+const stickyCta = garden.stickyCta?.label ? garden.stickyCta : { label: 'Find your path', href: '/garden#assessment' };
 const seoTitle = garden.seo.title || `${title} · Greenpill Network`;
 const seoDescription = garden.seo.description || summary;
 ---
@@ -102,7 +102,7 @@ const seoDescription = garden.seo.description || summary;
             <Text variant="display">{title}</Text>
             <Text variant="body-lg">{summary}</Text>
             <div class="gp-garden-actions">
-              <Button href={stickyCta.href || '/join'}>{stickyCta.label || 'Join the network'}</Button>
+              <Button href={stickyCta.href || '/garden#assessment'}>{stickyCta.label || 'Find your path'}</Button>
               <Button href="/library" variant="ghost">Read first</Button>
             </div>
           </div>
@@ -181,7 +181,7 @@ const seoDescription = garden.seo.description || summary;
         title="Move at the speed of trust."
         body="Use the Garden as a public orientation path, then follow the chapter, guild, or story route that fits your next step."
       >
-        <Button href={stickyCta.href || '/join'}>{stickyCta.label || 'Join the network'}</Button>
+        <Button href={stickyCta.href || '/garden#assessment'}>{stickyCta.label || 'Find your path'}</Button>
         <Button href="/chapters" variant="ghost">Find a chapter</Button>
       </CtaStrip>
     </Container>

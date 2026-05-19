@@ -15,7 +15,8 @@
 - [x] Build a temporary token/component review surface for visual QA
 - [x] Implement the public shell and reusable primitives
 - [x] Complete Step 3.5 content grounding and seed pass before Home implementation
-- [x] Implement the named map polish and Live Onboarding Mode pass for the Home map surface
+- [x] Implement the named Home map polish pass without homepage member-tier or polling behavior
+- [x] Implement the Live Onboarding Mode platform/API pass for submitted map-node intake
 - [x] Implement the Email Magic Link Node Updates platform/API foundation for self-service submitted-node edits
 - [x] Convert shared, agent, and repo contract/runtime scripts to TypeScript with a root typecheck path
 - [ ] Implement the Email Magic Link Node Updates website UX for `/map/edit`, selected-node update entry points, and mobile visual QA
@@ -45,15 +46,19 @@
 - Public singleton and active chapter story refs are intentionally empty while seeded stories remain `draft`; `bun run test:content` enforces that public refs target generated chapters and published stories.
 - Launch review remains required for California, Cape Town, Kenya event details, Cote d'Ivoire target language, Brasil meeting-hour claims, Uncommons funding claims, public people roster/cadence, and any precise podcast episode count rendered as a live metric.
 
-## Map Polish + Live Onboarding Pass
+## Home Map Polish Pass
 
-- Steward-sync feedback is now an explicit implementation slice for the feature map: the world graphic needs to read clearly beneath the route lines, member nodes should be light green, chapter nodes should be dark/anchored green with a ring, steward nodes should be warm gold, and theme colors should explain relationships without overriding node identity.
-- The public map now treats theme connections as mycelial relationship lines generated from shared themes. Theme colors drive edges and chips; node type drives primary node color.
+- Steward-sync feedback is now an explicit implementation slice for the Home map: the world graphic needs to read clearly beneath the route lines, chapter nodes should be dark/anchored green with a ring, steward nodes should be warm gold, and theme colors should explain relationships without overriding node identity.
+- The homepage map treats theme connections as mycelial relationship lines generated from shared themes. Theme colors drive edges and chips; chapter and steward node identities remain visible, but homepage proof stats are limited to chapter count and podcast count.
+- The homepage must not surface steward count, member count, continent count, member-tier copy, self-node walkthroughs, or `/map/state` polling as proof/stat behavior.
+- Home map polish should retain non-color identity cues, accessible focus behavior, an accessible legend, and mobile/dense-region behavior that reduces mycelial edge noise.
+
+## Live Onboarding Mode Pass
+
 - Live Onboarding Mode is an admin-controlled intake setting for workshops and demos. Default remains moderated. When live mode is on, new submitted member nodes are approved immediately, audited privately as `system:live-onboarding`, and included in the public map state refresh for all viewers.
 - Live Onboarding Mode settings live in `packages/agent/migrations/003_map_node_intake_settings.sql` so existing databases that already recorded the baseline migration still receive the settings table.
-- The public website consumes `/map/state`, falls back to `/locations.json`, and polls about every two seconds only while live mode is active and the map is visible.
+- The public interactive map surface consumes `/map/state`, falls back to `/locations.json`, and polls about every two seconds only while live mode is active and that interactive map is visible. This is not homepage `/map/state` polling.
 - Live-mode map-state responses must avoid stale public caches so polling can show newly approved nodes quickly. Moderated mode can keep lightweight normal caching.
-- Map polish must include non-color identity cues and density controls: member fill, chapter ring, steward warm accent/shape, an accessible legend, and mobile/dense-region behavior that reduces mycelial edge noise.
 - The add-node flow must stay mobile-polished: large touch targets, city/place text fallback, clear mode copy, local pending self-node behavior in moderated mode, live success/error states, and no mobile overflow.
 
 ## Email Magic Link Node Updates Pass
