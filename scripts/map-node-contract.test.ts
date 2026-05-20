@@ -378,8 +378,13 @@ test('resend webhook migration stores delivery metadata without raw message cont
     new URL('../packages/agent/migrations/008_resend_webhook_events.sql', import.meta.url),
     'utf8'
   );
+  const rekeySql = await readFile(
+    new URL('../packages/agent/migrations/009_rekey_resend_recipient_hashes.sql', import.meta.url),
+    'utf8'
+  );
 
-  assert.equal(migrationFiles.at(-1), '008_resend_webhook_events.sql');
+  assert.equal(migrationFiles.includes('008_resend_webhook_events.sql'), true);
+  assert.equal(migrationFiles.at(-1), '009_rekey_resend_recipient_hashes.sql');
   assert.match(webhookSql, /add column if not exists provider_message_id text/);
   assert.match(webhookSql, /map_node_edit_tokens_provider_message_idx/);
   assert.match(webhookSql, /create table if not exists intake\.email_provider_events/);
@@ -393,6 +398,9 @@ test('resend webhook migration stores delivery metadata without raw message cont
   assert.doesNotMatch(webhookSql, /message_body/);
   assert.doesNotMatch(webhookSql, /\bhtml\b/);
   assert.match(webhookSql, /free-form provider diagnostic/);
+  assert.match(rekeySql, /RESEND_WEBHOOK_RECIPIENT_HASH_SECRET/);
+  assert.match(rekeySql, /set recipient_hash = null/);
+  assert.doesNotMatch(rekeySql, /raw_recipient/);
 });
 
 test('home map intake requires a valid email and stores local pending only after server accept', async () => {
