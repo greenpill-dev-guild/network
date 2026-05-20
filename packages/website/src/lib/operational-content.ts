@@ -14,6 +14,7 @@ const snapshotUrl = (
   ''
 ).trim();
 
+const shouldCacheRemoteSnapshot = !import.meta.env.DEV;
 let snapshotPromise: Promise<PublicOperationalContentSnapshot> | null = null;
 
 async function loadRemoteSnapshot(url: string) {
@@ -34,6 +35,10 @@ export async function getOperationalContentSnapshot() {
     return assertPublicOperationalContentSnapshot(
       localSnapshot
     ) as PublicOperationalContentSnapshot;
+  }
+
+  if (!shouldCacheRemoteSnapshot) {
+    return loadRemoteSnapshot(snapshotUrl);
   }
 
   snapshotPromise ??= loadRemoteSnapshot(snapshotUrl);

@@ -5,7 +5,7 @@
   "description": "Greenpill Network public website - Astro + Keystatic",
   "type": "module",
   "scripts": {
-    "dev": "bun run --cwd ../.. build:packages && bun --bun astro dev",
+    "dev": "bun --cwd ../.. scripts/dev-website.ts",
     "build": "bun run --cwd ../.. build:packages && bun --bun astro build",
     "preview": "bun run --cwd ../.. build:packages && bun --bun astro preview",
     "astro": "astro"
