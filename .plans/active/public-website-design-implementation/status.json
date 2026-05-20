@@ -10,7 +10,7 @@
     "overall_status": "active",
     "priority": "p0",
     "created_at": "2026-05-17T23:16:40.923Z",
-    "updated_at": "2026-05-19T23:32:41Z"
+    "updated_at": "2026-05-20T02:30:00Z"
   },
   "links": {
     "brief": "brief.md",
@@ -73,7 +73,7 @@
     },
     "qa_pass_1": {
       "owner": "claude",
-      "status": "blocked",
+      "status": "ready",
       "depends_on": [
         "ui",
         "content",
@@ -83,7 +83,7 @@
     },
     "qa_pass_2": {
       "owner": "codex",
-      "status": "blocked",
+      "status": "ready",
       "depends_on": [
         "qa_pass_1"
       ],
@@ -251,6 +251,41 @@
       "lane": "ui",
       "status": "ready",
       "note": "Locked the current public website route contract in the active plan: Garden owns onboarding, guild navigation links directly to Dev Guild and Writers Guild, project records remain internal proof/reference data only, and the retired onboarding, root guild directory, and project route families must not be reintroduced."
+    },
+    {
+      "timestamp": "2026-05-20T00:59:35Z",
+      "actor": "codex",
+      "lane": "platform",
+      "status": "ready",
+      "note": "Addressed validated map follow-ups within Codex scope: stale interactive map intake now requires a private owner email before saving local pending state, the edit-flow retention path has an operator cleanup command, contract tests cover both safeguards, and migration replay plus cleanup execution were proven against local Postgres with an explicit local DATABASE_URL. The full selected-node edit-link website UX remains the planned follow-up lane."
+    },
+    {
+      "timestamp": "2026-05-20T01:06:05Z",
+      "actor": "codex",
+      "lane": "qa_pass_2",
+      "status": "ready",
+      "note": "Completed the current deep production review for the public website and map edit-flow changes: fixed valid-email gating before local pending map-node storage, fixed the optional map-edit browser smoke command, verified route retirement and stat-scope guardrails, and passed typecheck, build, map-node, agent, content, chapter-impact, map-edit route, optional browser-smoke skip, plan tests, and plan validation. Remaining work is the selected-node Update this node entry point, neutral edit-link request UI, and mobile visual QA."
+    },
+    {
+      "timestamp": "2026-05-20T01:10:02Z",
+      "actor": "codex",
+      "lane": "ui",
+      "status": "ready",
+      "note": "Normalized active page typography to remove viewport-scaled font sizes and negative tracking, moved page hero scaling onto fixed breakpoint tokens, and added a public-content contract test so active Astro pages cannot reintroduce those typography regressions quietly."
+    },
+    {
+      "timestamp": "2026-05-20T02:02:13Z",
+      "actor": "codex",
+      "lane": "ui",
+      "status": "ready",
+      "note": "Completed a focused Library UI and shared-shell background pass: kept the map lane untouched, made the sticky header and footer translucent over the site-wide graphic background, rebuilt the Library around the HiFi sequence with an editorial hero, cardless book shelf, podcast feature plus public episode rows, guild cards, and Garden/resource cards, and added shell-background contract coverage."
+    },
+    {
+      "timestamp": "2026-05-20T02:30:00Z",
+      "actor": "claude",
+      "lane": "ui",
+      "status": "ready",
+      "note": "Implemented the selected-node 'Update this node' UI pass on the single home map and retired the competing ChapterMap.astro/scripts/map.ts surface. HomeMap now keeps its SSR mycelial map as a graceful no-JS baseline and progressively enhances: fetches /map/state with cache no-store, injects only approved-submission nodes as distinct teal member nodes, opens an in-flow selected panel on member activation, and offers owner edit-link requests for approved nodes only with neutral copy ('If this email matches the node owner...') shown on every post-validation outcome including network failure. Tokens stay on /map/edit only; no email/token in datasets, URLs, or storage. Added a mobile-safe collapsed add-node panel that writes local pending state only after the server accepts (approved skips local; reject/failure writes nothing). Browser QA found and fixed two real runtime bugs (panel/form queries were scoped to the canvas not the figure; JS-created nodes/chips lacked Astro's style-scope attribute) plus friendlier add-node network-error copy. Updated the map-node contract test to target HomeMap and assert the strengthened ordering, neutral edit-link, and token-surface boundary. Validation green: typecheck, test:agent, test:map-nodes, build:website, plans:validate."
     }
   ]
 }

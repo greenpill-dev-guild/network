@@ -19,7 +19,8 @@
 - [x] Implement the Live Onboarding Mode platform/API pass for submitted map-node intake
 - [x] Implement the Email Magic Link Node Updates platform/API foundation for self-service submitted-node edits
 - [x] Convert shared, agent, and repo contract/runtime scripts to TypeScript with a root typecheck path
-- [ ] Implement the Email Magic Link Node Updates website UX for `/map/edit`, selected-node update entry points, and mobile visual QA
+- [x] Implement the Email Magic Link Node Updates `/map/edit` route with token URL cleanup, public-field editing, pending update-request submission, and route/browser contract checks
+- [x] Implement selected-node "Update this node" entry points, the neutral edit-link request form, and mobile visual QA
 - [x] Implement the home page against the high-fidelity reference
 - [x] Implement chapter, library, story, guild, and garden surfaces in focused passes
 - [x] Run visual checks at desktop, tablet, and mobile breakpoints for each implemented surface
@@ -72,6 +73,7 @@
 
 - 2026-05-19 TypeScript foundation result: `packages/shared` and `packages/agent` now compile from TypeScript sources, their public package exports resolve through generated `dist` declarations and JavaScript, and repo runtime/contract scripts moved to Bun TypeScript entrypoints. The root `typecheck` path builds the package graph with `tsc -b`.
 - 2026-05-19 Codex platform/API foundation result: new public map-node submissions now require a valid owner email, the API exposes neutral edit-link, edit-session, and update-request routes, and migration `007_map_node_edit_tokens_update_requests.sql` adds hashed one-use edit tokens plus pending update requests. This pass intentionally did not implement the public `/map/edit` page, selected-node "Update this node" UI, token URL cleanup in the browser, or mobile visual QA; those remain the website UX follow-up above.
+- 2026-05-20 review result: the public `/map/edit` route now exists with token cleanup before page initialization, editable public fields, pending update-request submission, route tests, and an optional browser smoke command that skips cleanly when no Chrome binary is present. Remaining website work is the selected-node "Update this node" entry point, neutral edit-link request UI, and mobile visual QA.
 - V1 submitted-node ownership is email-only. Do not add wallet ownership, workspace auth, or local browser-secret authorization in this pass.
 - Make email required for new public map-node submissions. Treat `intake.map_node_private_contacts.email` as the private owner email for submitted map nodes going forward.
 - Existing seed/import rows without private contact email are not backfilled in this pass. Stewards/admins handle any owner-email correction in Directus/admin.

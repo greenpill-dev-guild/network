@@ -13,7 +13,7 @@ This contract keeps `greenpill.network` anonymous and public by default while al
 
 - `themes` is the shared public taxonomy for books, chapters, projects, stories, people/stewards, and approved submitted nodes.
 - `people` stores reusable public steward profiles only: display name, role, avatar, bio, public links, and themes.
-- `books` can now carry optional `sections`, `themeSlugs`, `relatedStorySlugs`, and `relatedProjectSlugs` while preserving existing PDFs and translations.
+- `books` can carry optional `sections`, `themeSlugs`, and `relatedStorySlugs` while preserving existing PDFs and translations. Project references belong to the operational snapshot/Directus boundary, not editorial book metadata.
 - Chapter map data is generated from the approved operational content snapshot through `/locations.json`; a checked-in public `locations.json` file is no longer a hand-maintained source of truth.
 - `GET /content/public-snapshot` is the agent-owned public snapshot route for published operational content. Static website builds can fetch that route or use the checked-in fallback snapshot.
 - Public snapshot rows are assembled from explicit SQL allowlists and then checked by `@greenpill-network/shared/public-content`; raw editor JSON and workflow metadata are not part of the public projection.

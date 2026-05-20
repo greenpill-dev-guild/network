@@ -65,8 +65,10 @@ auth:
   wallet_entry: login_screen
 
 content:
-  public_content_canonical: keystatic
-  public_map_source: packages/website/src/content/chapters
+  public_content_canonical: directus_postgres_public_snapshot
+  public_map_source: packages/website/src/data/operational-content-snapshot.json
+  operational_seed_source: packages/website/src/data/operational-content-seed
+  editorial_content_source: packages/website/src/content
   private_node_intake_store: postgres
   private_node_public_projection: public_map_nodes
   private_admin_default_to_evaluate_first: directus
@@ -255,7 +257,8 @@ migration_targets:
   - key: chapter_links
     source:
       - packages/website/src/pages/locations.json.ts
-      - packages/website/src/content/chapters/*.json
+      - packages/website/src/data/operational-content-snapshot.json
+      - packages/website/src/data/operational-content-seed/chapters/*.json
     current_url_pattern: legacy chapter content may still include retired Charmverse chapter pages
     target_route_pattern: /chapters/[slug]
     phase: P2

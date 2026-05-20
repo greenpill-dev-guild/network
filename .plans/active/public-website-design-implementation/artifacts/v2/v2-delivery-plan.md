@@ -149,8 +149,8 @@ Create the first real Greenpill workspace application and define the boundary be
 | Guild directory CTA | `packages/website/src/components/ParticipateSection.astro` | Legacy Charmverse guild directory page | Dev Guild and Writers Guild direct links | P1 | No root guild directory; route users to the relevant guild detail page |
 | Charmverse invite CTA | `packages/website/src/components/ExploreSection.astro` | Retired Charmverse invite page | Garden | P1 | Garden is the public orientation surface, not a workspace dependency |
 | Social singleton Charmverse links | `packages/website/src/content/social-links.json` | workspace and invite URLs | Garden and `https://app.greenpill.network/login` | P1 / P3 | Use Garden for public orientation and workspace login for member operations |
-| Chapter map links | `packages/website/src/pages/locations.json.ts` + `packages/website/src/content/chapters/*.json` | chapter-specific Charmverse pages | `/chapters/[slug]` | P2 | Generate public map data from chapter content and replace external map links with internal chapter detail routes |
-| Chapter content links | `packages/website/src/content/chapters/*.json` | chapter-specific Charmverse pages | `/chapters/[slug]` | P2 | Chapter profiles should become the canonical destination |
+| Chapter map links | `packages/website/src/pages/locations.json.ts` + `packages/website/src/data/operational-content-snapshot.json` | chapter-specific Charmverse pages | `/chapters/[slug]` | P2 | Generate public map data from the approved operational snapshot and replace external map links with internal chapter detail routes |
+| Chapter content links | `packages/website/src/data/operational-content-seed/chapters/*.json` during one-time seed; Directus/Postgres after migration | chapter-specific Charmverse pages | `/chapters/[slug]` | P2 | Chapter profiles should become the canonical destination through the public snapshot |
 
 ### Follow-up inventory outside the repo
 

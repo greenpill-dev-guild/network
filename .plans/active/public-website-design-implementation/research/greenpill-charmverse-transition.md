@@ -65,7 +65,7 @@ Key repo-level gaps:
   - beginner onboarding links in `packages/website/src/components/ParticipateSection.astro`
   - guild entry links in `packages/website/src/components/ParticipateSection.astro`
   - explore CTA links in `packages/website/src/components/ExploreSection.astro`
-  - chapter links in `packages/website/src/content/chapters/*.json`
+  - chapter links in the approved operational snapshot, seeded from `packages/website/src/data/operational-content-seed/chapters/*.json` and Directus/Postgres after migration
   - social links in `packages/website/src/content/social-links.json`
 - there is no member auth layer
 - there is no wallet session layer
