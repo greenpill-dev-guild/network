@@ -107,7 +107,8 @@ const classes = [
     color: var(--gp-primary);
   }
 
-  @media (max-width: 520px) {
+  /* Touch-target sizing keys off the input device, not container width. */
+  @media (pointer: coarse) {
     button.gp-chip,
     a.gp-chip {
       min-height: 44px;

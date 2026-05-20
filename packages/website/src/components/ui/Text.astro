@@ -116,7 +116,7 @@ const classes = ['gp-text', `is-${variant}`, className].filter(Boolean).join(' '
   }
 
   .gp-text.is-caption {
-    color: var(--gp-fg-dim);
+    color: var(--gp-fg-muted);
     font-size: var(--gp-caption);
     font-weight: 400;
     line-height: 1.4;
@@ -130,18 +130,6 @@ const classes = ['gp-text', `is-${variant}`, className].filter(Boolean).join(' '
     line-height: 1.2;
     text-transform: uppercase;
   }
-
-  @media (max-width: 520px) {
-    .gp-text.is-display {
-      font-size: 48px;
-    }
-
-    .gp-text.is-h1 {
-      font-size: 36px;
-    }
-
-    .gp-text.is-h2 {
-      font-size: 30px;
-    }
-  }
+  /* Display/h1/h2 sizes are fluid clamp() tokens (gp-tokens.css) — no
+     viewport @media step-down needed. */
 </style>

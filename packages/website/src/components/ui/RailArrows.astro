@@ -32,7 +32,8 @@
     background: var(--gp-green-800);
   }
 
-  @media (max-width: 520px) {
+  /* Touch-target sizing keys off the input device, not container width. */
+  @media (pointer: coarse) {
     .gp-rail-arrows button {
       width: 44px;
       height: 44px;
