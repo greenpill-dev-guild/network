@@ -82,6 +82,10 @@ const PRIVATE_OPERATIONAL_CONTENT_EXACT_FIELD_KEYS = Object.freeze([
   'ipaddr',
 ]);
 
+const PUBLIC_OPERATIONAL_CONTENT_EXACT_FIELD_KEY_ALLOWLIST = Object.freeze([
+  'reviewstatus',
+]);
+
 const WORKFLOW_FIELDS = Object.freeze([
   'publicationStatus',
   'publication_status',
@@ -359,8 +363,11 @@ export function containsPrivateOperationalContentField(value: unknown, seen: Set
   return Object.entries(value).some(([key, nestedValue]) => {
     const normalizedKey = normalizeFieldKey(key);
     if (
-      PRIVATE_OPERATIONAL_CONTENT_EXACT_FIELD_KEYS.includes(normalizedKey) ||
-      PRIVATE_OPERATIONAL_CONTENT_FIELD_PATTERNS.some((pattern) => normalizedKey.includes(pattern))
+      !PUBLIC_OPERATIONAL_CONTENT_EXACT_FIELD_KEY_ALLOWLIST.includes(normalizedKey) &&
+      (
+        PRIVATE_OPERATIONAL_CONTENT_EXACT_FIELD_KEYS.includes(normalizedKey) ||
+        PRIVATE_OPERATIONAL_CONTENT_FIELD_PATTERNS.some((pattern) => normalizedKey.includes(pattern))
+      )
     ) {
       return true;
     }
@@ -373,9 +380,35 @@ export function containsPrivateOperationalContentField(value: unknown, seen: Set
   });
 }
 
+function chapterHasPublicImageCandidate(chapter: UnknownRecord): boolean {
+  const media = normalizeObject(chapter.media);
+  const seo = normalizeObject(chapter.seo);
+  return Boolean(
+    cleanString(chapter.image) ||
+    cleanString(media.image) ||
+    cleanString(media.ogImage) ||
+    cleanString(seo.ogImage)
+  );
+}
+
+export function containsUnapprovedChapterMedia(value: unknown): boolean {
+  const chapters = asArray((value as UnknownRecord)?.chapters);
+
+  return chapters.some((chapter) => {
+    const record = normalizeObject(chapter);
+    const media = normalizeObject(record.media);
+    const reviewStatus = cleanString(media.reviewStatus).toLowerCase();
+    return chapterHasPublicImageCandidate(record) && reviewStatus !== 'approved';
+  });
+}
+
 export function assertPublicOperationalContentSnapshot<T>(payload: T): T {
   if (containsPrivateOperationalContentField(payload)) {
     throw new Error('Public operational content snapshot contains private fields');
+  }
+
+  if (containsUnapprovedChapterMedia(payload)) {
+    throw new Error('Public operational content snapshot contains unapproved chapter media');
   }
 
   for (const collection of PUBLIC_OPERATIONAL_CONTENT_COLLECTIONS) {

@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import {
   assertPublicOperationalContentSnapshot,
   containsPrivateOperationalContentField,
+  containsUnapprovedChapterMedia,
   toPublicOperationalContentSnapshot,
 } from '@greenpill-network/shared/public-content';
 import {
@@ -301,6 +302,9 @@ test('operational content snapshot generation rejects private fields and non-pub
   );
 
   assert.equal(containsPrivateOperationalContentField({ ip: '127.0.0.1' }), true);
+  assert.equal(containsPrivateOperationalContentField({ media: { reviewStatus: 'approved' } }), false);
+  assert.equal(containsPrivateOperationalContentField({ media: { reviewNotes: 'internal note' } }), true);
+  assert.equal(containsPrivateOperationalContentField({ rawSocialMetadata: { handle: '@example' } }), true);
 
   assert.throws(
     () => toPublicOperationalContentSnapshot({
@@ -327,6 +331,60 @@ test('operational content snapshot generation rejects private fields and non-pub
       impactSourceBindings: { version: 1, generatedAt: '2026-05-19T00:00:00.000Z', chapters: [] },
     }),
     /non-published/
+  );
+});
+
+test('public operational chapter media requires approved provenance', () => {
+  const base = {
+    version: 1,
+    generatedAt: '2026-05-20T00:00:00.000Z',
+    themes: [],
+    people: [],
+    chapterInitiatives: [],
+    guilds: [],
+    projects: [],
+    locations: [],
+    impactSourceBindings: { version: 1, generatedAt: '2026-05-20T00:00:00.000Z', chapters: [] },
+  };
+
+  assert.equal(containsUnapprovedChapterMedia({
+    ...base,
+    chapters: [{
+      slug: 'needs-photo',
+      name: 'Needs Photo',
+      media: { reviewStatus: 'needs-steward-photo' },
+    }],
+  }), false);
+
+  assert.throws(
+    () => assertPublicOperationalContentSnapshot({
+      ...base,
+      chapters: [{
+        slug: 'pending-photo',
+        name: 'Pending Photo',
+        image: 'https://example.com/photo.jpg',
+        media: { image: 'https://example.com/photo.jpg', reviewStatus: 'pending' },
+      }],
+    }),
+    /unapproved chapter media/
+  );
+
+  assert.doesNotThrow(
+    () => assertPublicOperationalContentSnapshot({
+      ...base,
+      chapters: [{
+        slug: 'approved-photo',
+        name: 'Approved Photo',
+        image: 'https://example.com/photo.jpg',
+        media: {
+          image: 'https://example.com/photo.jpg',
+          imageAlt: 'People gathered at a local chapter event.',
+          imageSourceUrl: 'https://example.com/event',
+          imageCredit: 'Example Chapter',
+          reviewStatus: 'approved',
+        },
+      }],
+    })
   );
 });
 
