@@ -3,7 +3,7 @@
   "city": "Distributed",
   "country": "Uganda",
   "region": "africa",
-  "status": "active",
+  "status": "inactive",
   "summary": "Adjacent public source-backed chapter record from the Regen Coordination Hub. It is not one of the priority 14 research rows, so launch feature placement needs steward review.",
   "introQuote": "",
   "introQuoteAttribution": "",
@@ -58,6 +58,6 @@
     "description": "Greenpill Uganda has an adjacent public Hub source and needs steward confirmation for launch feature placement.",
     "ogImage": "",
     "canonicalPath": "/chapters/uganda",
-    "noindex": false
+    "noindex": true
   }
 }

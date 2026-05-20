@@ -3,7 +3,7 @@
   "city": "Distributed",
   "country": "India",
   "region": "asia",
-  "status": "active",
+  "status": "inactive",
   "summary": "Adjacent public source-backed chapter record from the Regen Coordination Hub. It is not one of the priority 14 research rows, so feature only after a steward confirms current public activity.",
   "introQuote": "",
   "introQuoteAttribution": "",
@@ -57,6 +57,6 @@
     "description": "Greenpill India has an adjacent public Hub source and needs steward confirmation for launch feature placement.",
     "ogImage": "",
     "canonicalPath": "/chapters/india",
-    "noindex": false
+    "noindex": true
   }
 }

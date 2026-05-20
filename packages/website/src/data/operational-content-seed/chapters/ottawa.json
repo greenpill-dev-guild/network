@@ -12,8 +12,21 @@
   "lat": 45.4215,
   "long": -75.6972,
   "link": "https://x.com/greenpillottawa",
-  "stewards": [],
-  "stewardSlugs": [],
+  "stewards": [
+    {
+      "name": "Lana Dingwall",
+      "role": "Chapter steward",
+      "bio": "",
+      "location": "Ottawa, Canada",
+      "personSlug": "lana-dingwall",
+      "chapterSlug": "ottawa",
+      "avatar": "",
+      "wallet": ""
+    }
+  ],
+  "stewardSlugs": [
+    "lana-dingwall"
+  ],
   "themeSlugs": [
     "public",
     "events",
@@ -30,7 +43,17 @@
       "kind": "social"
     }
   ],
-  "connectLinks": [],
+  "connectLinks": [
+    {
+      "label": "X",
+      "url": "https://x.com/greenpillottawa",
+      "subtext": "Public chapter account",
+      "handle": "@greenpillottawa",
+      "action": "Follow",
+      "icon": "x",
+      "kind": "social"
+    }
+  ],
   "relatedChapterSlugs": [
     "toronto",
     "london-ontario",
@@ -50,7 +73,10 @@
   "media": {
     "image": "",
     "imageAlt": "",
-    "ogImage": ""
+    "imageSourceUrl": "",
+    "imageCredit": "",
+    "ogImage": "",
+    "reviewStatus": "needs-steward-photo"
   },
   "seo": {
     "title": "Greenpill Ottawa · Greenpill Network",

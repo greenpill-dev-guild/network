@@ -1,0 +1,37 @@
+{
+  "chapterSlug": "koh-pha-ngan",
+  "title": "10 Years of Ethereum Phangan",
+  "status": "active",
+  "summary": "Public local event page connected to Greenpill Koh Phangan's regenerative finance and public-goods activity.",
+  "description": "The current Koh Phangan chapter record links a public Luma event page and keeps the event as a source-backed activation rather than a standalone public route.",
+  "themeSlugs": [
+    "events",
+    "public",
+    "impact"
+  ],
+  "links": [
+    {
+      "label": "10 Years of Ethereum event",
+      "url": "https://luma.com/k057yjjx",
+      "subtext": "Public event page",
+      "handle": "Luma",
+      "action": "Open",
+      "icon": "calendar",
+      "kind": "external"
+    }
+  ],
+  "proofSignals": [
+    {
+      "label": "Public event",
+      "value": "10 Years of Ethereum",
+      "source": "S038",
+      "href": "https://luma.com/k057yjjx"
+    }
+  ],
+  "impactSources": {},
+  "relatedStorySlugs": [],
+  "relatedResourceSlugs": [
+    "crypto-altruism-ep138-refi-phangan"
+  ],
+  "featuredWeight": 80
+}

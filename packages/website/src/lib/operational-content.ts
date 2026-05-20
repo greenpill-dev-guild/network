@@ -62,6 +62,17 @@ export async function getOperationalChapters() {
   return chapters.filter((item) => !hasNoindex(item.data));
 }
 
+export async function getOperationalChapterInitiatives(chapterSlug = '') {
+  const initiatives = await getOperationalCollection('chapterInitiatives');
+  return initiatives
+    .filter((item) => !hasNoindex(item.data))
+    .filter((item) => !chapterSlug || item.data.chapterSlug === chapterSlug)
+    .sort((a, b) => (
+      Number(b.data.featuredWeight ?? 0) - Number(a.data.featuredWeight ?? 0) ||
+      String(a.data.title ?? a.id).localeCompare(String(b.data.title ?? b.id))
+    ));
+}
+
 export async function getOperationalGuilds() {
   return getOperationalCollection('guilds');
 }

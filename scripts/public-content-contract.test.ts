@@ -21,6 +21,11 @@ const keystaticConfigPath = join(rootDir, 'packages/website/keystatic.config.ts'
 const astroContentConfigPath = join(rootDir, 'packages/website/src/content/config.ts');
 const snapshotPath = join(rootDir, 'packages/website/src/data/operational-content-snapshot.json');
 const operationalContentScriptPath = join(rootDir, 'scripts/operational-content.ts');
+const homePagePath = join(rootDir, 'packages/website/src/pages/index.astro');
+const storyDetailPagePath = join(rootDir, 'packages/website/src/pages/stories/[slug].astro');
+const storiesIndexPagePath = join(rootDir, 'packages/website/src/pages/stories/index.astro');
+const chapterPagePath = join(rootDir, 'packages/website/src/pages/chapters/[slug].astro');
+const chapterInitiativesMigrationPath = join(rootDir, 'packages/agent/migrations/010_chapter_initiatives_operational_content.sql');
 
 async function readJson(relativePath) {
   return JSON.parse(await readFile(join(editorialContentDir, relativePath), 'utf8'));
@@ -28,8 +33,9 @@ async function readJson(relativePath) {
 
 async function readCollection(collection) {
   const entries = new Map();
+  const operationalCollections = ['themes', 'people', 'chapters', 'chapter-initiatives', 'guilds', 'projects'];
   const dir = join(
-    ['themes', 'people', 'chapters', 'guilds', 'projects'].includes(collection)
+    operationalCollections.includes(collection)
       ? operationalSeedDir
       : editorialContentDir,
     collection
@@ -161,6 +167,7 @@ test('operational content snapshot is public-safe and derived from approved oper
 
   assert.equal(snapshot.version, 1);
   assert.equal(snapshot.chapters.length > 0, true);
+  assert.equal(snapshot.chapterInitiatives.length > 0, true);
   assert.equal(snapshot.locations.length > 0, true);
   assert.equal(Array.isArray(snapshot.impactSourceBindings.chapters), true);
   assert.equal(containsPrivateOperationalContentField(snapshot), false);
@@ -173,11 +180,11 @@ test('Keystatic and Astro content configs expose editorial collections only', as
   ]);
   const astroCollections = astroContentConfig.match(/export const collections = \{([\s\S]*?)\n\};/)?.[1] ?? '';
 
-  for (const collection of ['themes', 'people', 'chapters', 'guilds', 'projects']) {
+  for (const collection of ['themes', 'people', 'chapters', 'chapterInitiatives', 'chapter_initiatives', 'guilds', 'projects']) {
     assert.doesNotMatch(keystaticConfig, new RegExp(`\\b${collection}:\\s*collection\\(`));
     assert.doesNotMatch(astroCollections, new RegExp(`\\b${collection}\\b`));
   }
-  assert.doesNotMatch(keystaticConfig, /Operational Project Slug|relatedProjectSlugs|value: 'projects'/);
+  assert.doesNotMatch(keystaticConfig, /Operational Project Slug|relatedProjectSlugs|value: 'projects'|chapterInitiatives|chapter_initiatives/);
   assert.doesNotMatch(astroContentConfig, /relatedProjectSlugs/);
 
   for (const collection of ['stories', 'resources', 'books']) {
@@ -196,6 +203,62 @@ test('editorial content does not carry project reference metadata', async () => 
   }
 
   assert.deepEqual(problems, []);
+});
+
+test('chapter initiatives are operational records and projects stay guild-owned', async () => {
+  const snapshot = assertPublicOperationalContentSnapshot(
+    JSON.parse(await readFile(snapshotPath, 'utf8'))
+  );
+  const chapterSlugs = new Set(snapshot.chapters.map((chapter) => chapter.slug));
+  const guildSlugs = new Set(snapshot.guilds.map((guild) => guild.slug));
+  const chapterInitiativeSeed = await readCollection('chapter-initiatives');
+
+  assert.equal(chapterInitiativeSeed.size, snapshot.chapterInitiatives.length);
+  for (const initiative of snapshot.chapterInitiatives) {
+    assert.equal(typeof initiative.chapterSlug, 'string');
+    assert.equal(chapterSlugs.has(initiative.chapterSlug), true);
+    assert.equal(Object.hasOwn(initiative, 'guild'), false);
+    assert.equal(Object.hasOwn(initiative, 'guildSlug'), false);
+  }
+
+  for (const project of snapshot.projects) {
+    assert.equal(typeof project.guild, 'string');
+    assert.equal(guildSlugs.has(project.guild), true);
+    assert.equal(Object.hasOwn(project, 'chapterSlug'), false);
+  }
+
+  const projected = toPublicOperationalContentSnapshot({
+    guilds: [{ slug: 'dev-guild', name: 'Dev Guild' }],
+    projects: [
+      { slug: 'valid-project', name: 'Valid Project', guild: 'dev-guild' },
+      { slug: 'missing-guild-project', name: 'Missing Guild Project', guild: 'missing-guild' },
+      { slug: 'blank-guild-project', name: 'Blank Guild Project', guild: '' },
+    ],
+  });
+  assert.deepEqual(projected.projects.map((project) => project.slug), ['valid-project']);
+});
+
+test('chapter initiative cards do not render dead links when no URL is present', async () => {
+  const source = await readFile(chapterPagePath, 'utf8');
+
+  assert.match(source, /<article class="gp-chapter-initiative">/);
+  assert.doesNotMatch(source, /href=\{href \|\| '#'\}/);
+});
+
+test('story pages render markdown lists and use authored featured ordering', async () => {
+  const [storyDetailPage, storiesIndexPage, homePage] = await Promise.all([
+    readFile(storyDetailPagePath, 'utf8'),
+    readFile(storiesIndexPagePath, 'utf8'),
+    readFile(homePagePath, 'utf8'),
+  ]);
+
+  assert.match(storyDetailPage, /kind: 'ul'/);
+  assert.match(storyDetailPage, /kind: 'ol'/);
+  assert.match(storyDetailPage, /<li>/);
+  assert.match(storyDetailPage, /linkifyText/);
+  assert.match(storiesIndexPage, /featuredStoryRank/);
+  assert.match(homePage, /homeStoryRank/);
+  assert.doesNotMatch(homePage, /Meta items=\{\['Chapter', region\]\}/);
 });
 
 test('website page typography avoids viewport-scaled type and negative tracking', async () => {
@@ -257,6 +320,7 @@ test('operational content snapshot generation rejects private fields and non-pub
       themes: [],
       people: [],
       chapters: [{ slug: 'draft-chapter', publicationStatus: 'pending_review' }],
+      chapterInitiatives: [],
       guilds: [],
       projects: [],
       locations: [],
@@ -267,7 +331,7 @@ test('operational content snapshot generation rejects private fields and non-pub
 });
 
 test('Directus operational access plan separates draft editors from publishers', () => {
-  const plan = buildDirectusOperationalPermissionPlan(['content.chapters'], [
+  const plan = buildDirectusOperationalPermissionPlan(['content.chapters', 'content.chapter_initiatives'], [
     'intake.map_node_submissions',
     'intake.map_node_private_contacts',
     'intake.map_node_reviews',
@@ -283,6 +347,16 @@ test('Directus operational access plan separates draft editors from publishers',
   const publisherUpdate = plan.permissions.find((permission) => (
     permission.role === 'Greenpill Trusted Publisher' &&
     permission.collection === 'content.chapters' &&
+    permission.action === 'update'
+  ));
+  const initiativeEditorUpdate = plan.permissions.find((permission) => (
+    permission.role === 'Greenpill Steward Editor' &&
+    permission.collection === 'content.chapter_initiatives' &&
+    permission.action === 'update'
+  ));
+  const initiativePublisherUpdate = plan.permissions.find((permission) => (
+    permission.role === 'Greenpill Trusted Publisher' &&
+    permission.collection === 'content.chapter_initiatives' &&
     permission.action === 'update'
   ));
   const operator = plan.policies.find((policy) => policy.name === 'Greenpill Operator');
@@ -317,15 +391,18 @@ test('Directus operational access plan separates draft editors from publishers',
     permission.action === 'read'
   ));
 
-  assert.deepEqual(editorUpdate.validation.publication_status._in, ['draft', 'pending_review']);
-  assert.equal(editorUpdate.fields.includes('published_at'), false);
-  assert.equal(editorUpdate.fields.includes('reviewed_at'), false);
-  assert.equal(editorUpdate.fields.includes('reviewed_by'), false);
+  assert.equal(editorUpdate, undefined);
+  assert.equal(initiativeEditorUpdate, undefined);
   assert.deepEqual(
     publisherUpdate.validation.publication_status._in,
     ['draft', 'pending_review', 'published', 'archived']
   );
   assert.equal(publisherUpdate.fields.includes('published_at'), true);
+  assert.deepEqual(
+    initiativePublisherUpdate.validation.publication_status._in,
+    ['draft', 'pending_review', 'published', 'archived']
+  );
+  assert.equal(initiativePublisherUpdate.fields.includes('published_at'), true);
   assert.equal(publisherUpdate.fields.includes('reviewed_at'), true);
   assert.equal(publisherUpdate.fields.includes('reviewed_by'), true);
   assert.ok(moderatorSubmissionRead);
@@ -357,10 +434,14 @@ test('Directus operational access plan separates draft editors from publishers',
 
 test('operational content migration preserves existing Directus-owned rows', async () => {
   const script = await readFile(operationalContentScriptPath, 'utf8');
+  const migration = await readFile(chapterInitiativesMigrationPath, 'utf8');
 
   assert.match(script, /on conflict \(slug\) do nothing/);
+  assert.match(script, /content\.chapter_initiatives/);
   assert.match(script, /--allow-existing/);
   assert.match(script, /content:migrate is a one-time seed/);
   assert.doesNotMatch(script, /publication_status = excluded\.publication_status/);
   assert.doesNotMatch(script, /data = excluded\.data/);
+  assert.match(migration, /join content\.guilds guild on guild\.slug = project\.guild_slug/);
+  assert.match(migration, /guild\.publication_status = 'published'/);
 });

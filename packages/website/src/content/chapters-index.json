@@ -25,8 +25,8 @@
       "key": "featured-chapters",
       "overline": "Featured",
       "title": "Start with the strongest public proof.",
-      "dek": "Nigeria, Brasil, GreenSofa, NYC, Koh Phangan, Cote d'Ivoire, Germany, and Uncommons have the clearest public footprints in the research artifact.",
-      "body": "Cape Town and California need steward backfill before they should carry strong launch claims.",
+      "dek": "Nigeria, Brasil, GreenSofa, NYC, Koh Phangan, Cote d'Ivoire, Germany, and Kenya have the clearest public footprints in the research artifact.",
+      "body": "Cape Town is active and still needs public-source backfill before it should carry strong launch claims.",
       "cta": {
         "label": "Review source inventory",
         "href": "/chapters",
@@ -59,7 +59,7 @@
     "new-york-city",
     "c-te-d-ivoire",
     "germany",
-    "uncommons"
+    "kenya"
   ],
   "filterCopy": {
     "regionLabel": "Region",

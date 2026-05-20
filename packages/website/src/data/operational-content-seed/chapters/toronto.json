@@ -12,8 +12,21 @@
   "lat": 43.6532,
   "long": -79.3832,
   "link": "https://greenpill.to",
-  "stewards": [],
-  "stewardSlugs": [],
+  "stewards": [
+    {
+      "name": "Kazander",
+      "role": "Chapter steward",
+      "bio": "",
+      "location": "Toronto, Canada",
+      "personSlug": "kazander",
+      "chapterSlug": "toronto",
+      "avatar": "",
+      "wallet": ""
+    }
+  ],
+  "stewardSlugs": [
+    "kazander"
+  ],
   "themeSlugs": [
     "public",
     "opensrc",
@@ -40,7 +53,17 @@
       "kind": "external"
     }
   ],
-  "connectLinks": [],
+  "connectLinks": [
+    {
+      "label": "Website",
+      "url": "https://greenpill.to",
+      "subtext": "Chapter website",
+      "handle": "greenpill.to",
+      "action": "Open",
+      "icon": "external",
+      "kind": "external"
+    }
+  ],
   "relatedChapterSlugs": [
     "ottawa",
     "london-ontario",
@@ -60,7 +83,10 @@
   "media": {
     "image": "",
     "imageAlt": "",
-    "ogImage": ""
+    "imageSourceUrl": "",
+    "imageCredit": "",
+    "ogImage": "",
+    "reviewStatus": "needs-steward-photo"
   },
   "seo": {
     "title": "Greenpill Toronto · Greenpill Network",

@@ -1,11 +1,11 @@
 {
   "title": "Greenpill Garden — Season One",
-  "status": "draft",
+  "status": "published",
   "category": "program",
   "publishDate": "2025",
-  "updatedDate": "",
-  "dek": "The public Garden thread gives the website a launch-safe onboarding and stewardship story.",
-  "excerpt": "A public Garden story connecting chapters, stewards, tools, impact reporting, and the website revamp.",
+  "updatedDate": "2026",
+  "dek": "Public Hub sources and the approved Paragraph preview give the website a launch-safe Garden story for stewardship, workshops, protocols, and next-step onboarding.",
+  "excerpt": "A public Garden story connecting chapters, stewards, workshops, protocols, tools, impact reporting, the website revamp, and the 2026 Garden model.",
   "region": "global",
   "tag": "Garden",
   "tags": [
@@ -13,7 +13,7 @@
     "onboarding",
     "stewardship"
   ],
-  "body": "Greenpill Garden is the best public bridge between the network structure and the new onboarding surface.\n\nThe public thread supports copy about stewardship, chapters, impact reporting, and Greenpill's need for a clearer website. Internal Garden Guide details should stay out of launch content until approved.\n\n## Sources\n\n- S042: https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363",
+  "body": "Greenpill Garden remains editorial site content for now, not a guild project.\n\nThe public Garden thread supports copy about stewardship, chapters, impact reporting, tools, IRL events, and Greenpill's need for a clearer onboarding surface. A February 2026 update adds launch-safe context about strategy workshops, feedback sessions, worksheets, and the next phase of the season.\n\nThe Regen Protocols thread adds supporting public context for Garden-adjacent onchain protocols and steward support systems. The approved Paragraph preview adds a clearer 2026 frame: a five-month Garden incubation launched at DevConnect, Theory of Change and coherent design strategy workshops, CIDS/outcomes work, tooling implementation, and a summer 2026 harvest.\n\nKeep this material editorial until the network chooses an operational owner model for Garden. Knowledge Garden, Sarafu, and Regen Reservoir references should support the Garden narrative without becoming operational records in this batch.\n\nInternal Garden Guide details should stay out of launch content until approved.\n\n## Sources\n\n- S042: https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363\n- S050: https://hub.regencoordination.xyz/t/regen-protocols/364\n- S071: https://paragraph.com/@greenpill/preview/rN8MvIeOa4RGvE8kJN9L",
   "image": "/images/hifi/garden-overlay.jpg",
   "author": "Greenpill Network research",
   "authorRole": "Source-backed seed copy",
@@ -23,10 +23,12 @@
   "relatedChapter": "",
   "relatedGuild": "writers-guild",
   "relatedStorySlugs": [
+    "greenpill-earth-week",
     "growing-greenpill-impact-framework"
   ],
   "continueReadingStorySlugs": [
     "growing-greenpill-impact-framework",
+    "greenpill-earth-week",
     "greenpill-nigeria-water-cup"
   ],
   "themeSlugs": [
@@ -42,6 +44,18 @@
       "value": "Season One",
       "source": "S042",
       "href": "https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363"
+    },
+    {
+      "label": "Regen Protocols",
+      "value": "Garden support context",
+      "source": "S050",
+      "href": "https://hub.regencoordination.xyz/t/regen-protocols/364"
+    },
+    {
+      "label": "2026 Garden model",
+      "value": "Approved Paragraph preview",
+      "source": "S071",
+      "href": "https://paragraph.com/@greenpill/preview/rN8MvIeOa4RGvE8kJN9L"
     }
   ],
   "featuredWeight": 85,

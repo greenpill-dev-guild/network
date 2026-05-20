@@ -3,17 +3,30 @@
   "city": "Cape Town",
   "country": "South Africa",
   "region": "africa",
-  "status": "forming",
-  "summary": "Held as a steward-review chapter record. The research artifact says Cape Town's public footprint is thin and depends on internal copy / Muizenberg-area references, so launch claims need public backfill.",
+  "status": "active",
+  "summary": "Active chapter in Cape Town, South Africa. Public source links and detailed program notes are being backfilled with stewards.",
   "introQuote": "",
   "introQuoteAttribution": "",
   "image": "",
   "founded": "",
   "lat": -33.9249,
   "long": 18.4241,
-  "link": "https://luma.com/greenpill-network",
-  "stewards": [],
-  "stewardSlugs": [],
+  "link": "https://luma.com/greenpill.capetown?k=c",
+  "stewards": [
+    {
+      "name": "Alwyn Anwyk",
+      "role": "Chapter steward",
+      "bio": "",
+      "location": "Cape Town, South Africa",
+      "personSlug": "alwyn-anwyk",
+      "chapterSlug": "cape-town",
+      "avatar": "",
+      "wallet": ""
+    }
+  ],
+  "stewardSlugs": [
+    "alwyn-anwyk"
+  ],
   "themeSlugs": [
     "events",
     "education",
@@ -22,16 +35,26 @@
   ],
   "links": [
     {
-      "label": "Greenpill Network Luma",
-      "url": "https://luma.com/greenpill-network",
-      "subtext": "General network calendar; chapter-specific source still needed",
+      "label": "Greenpill Cape Town Luma",
+      "url": "https://luma.com/greenpill.capetown?k=c",
+      "subtext": "Public chapter calendar; steward photo source still needed",
       "handle": "Luma",
       "action": "Open",
       "icon": "calendar",
       "kind": "external"
     }
   ],
-  "connectLinks": [],
+  "connectLinks": [
+    {
+      "label": "Luma",
+      "url": "https://luma.com/greenpill.capetown?k=c",
+      "subtext": "Public chapter calendar",
+      "handle": "Greenpill Cape Town",
+      "action": "Open",
+      "icon": "calendar",
+      "kind": "external"
+    }
+  ],
   "relatedChapterSlugs": [
     "nigeria",
     "kenya",
@@ -51,13 +74,16 @@
   "media": {
     "image": "",
     "imageAlt": "",
-    "ogImage": ""
+    "imageSourceUrl": "",
+    "imageCredit": "",
+    "ogImage": "",
+    "reviewStatus": "needs-steward-photo"
   },
   "seo": {
     "title": "Greenpill Cape Town · Greenpill Network",
-    "description": "Greenpill Cape Town needs steward review and a public chapter source before launch claims are featured.",
+    "description": "Greenpill Cape Town is an active chapter in South Africa, with public source links and detailed program notes being backfilled with stewards.",
     "ogImage": "",
     "canonicalPath": "/chapters/cape-town",
-    "noindex": true
+    "noindex": false
   }
 }

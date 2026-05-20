@@ -1,0 +1,56 @@
+{
+  "title": "Pioneering a Regenerative Stack",
+  "kind": "article",
+  "status": "published",
+  "summary": "Dev Guild series opener describing a four-layer regenerative funding loop across blockchain, protocol, social, and app layers.",
+  "description": "This Paragraph article frames the Dev Guild's regenerative stack and connects later posts on Squad Staking, Allo allocation, GreenWill, Green Goods, and capital formation.",
+  "author": "Greenpill Dev Guild",
+  "publishDate": "2025-06-30",
+  "updatedDate": "2025-06-30",
+  "primaryUrl": "https://paragraph.com/@greenpilldevguild/pioneering-a-regenerative-stack",
+  "resourcePath": "",
+  "image": "/images/hifi/topo-bg.png",
+  "imageAlt": "Topographic map texture",
+  "duration": "",
+  "readTime": "",
+  "episodeNumber": "",
+  "guest": "",
+  "host": "",
+  "tags": [
+    "regenerative-stack",
+    "dev-guild",
+    "coordination-tools"
+  ],
+  "themeSlugs": [
+    "coordination-tools",
+    "public",
+    "funding"
+  ],
+  "relatedChapterSlugs": [],
+  "relatedGuildSlugs": [
+    "dev-guild"
+  ],
+  "featuredWeight": 84,
+  "card": {
+    "eyebrow": "Dev Guild",
+    "title": "Pioneering a Regenerative Stack",
+    "summary": "A public overview of the Dev Guild's four-layer regenerative stack.",
+    "badge": "Source S060",
+    "surfaceType": "article",
+    "image": "/images/hifi/topo-bg.png",
+    "imageAlt": "Topographic map texture",
+    "href": "https://paragraph.com/@greenpilldevguild/pioneering-a-regenerative-stack"
+  },
+  "media": {
+    "image": "/images/hifi/topo-bg.png",
+    "imageAlt": "Topographic map texture",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Pioneering a Regenerative Stack · Greenpill Library",
+    "description": "Read the Dev Guild article introducing the regenerative stack.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

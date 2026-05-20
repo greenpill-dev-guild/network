@@ -1,0 +1,39 @@
+{
+  "chapterSlug": "nigeria",
+  "title": "Take the Greenpill with Greenpill Nigeria",
+  "status": "active",
+  "summary": "A 10-week public ReFi education program supported by the current Nigeria chapter seed and Regen Hub source.",
+  "description": "The current Nigeria chapter record links the public 10-week education program thread and treats it as chapter-owned education work.",
+  "themeSlugs": [
+    "education",
+    "public",
+    "events"
+  ],
+  "links": [
+    {
+      "label": "Take the Greenpill education series",
+      "url": "https://hub.regencoordination.xyz/t/take-the-greenpill-with-greenpill-nigeria-10-weeks-of-refi-education/324",
+      "subtext": "10-week public education program",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "education",
+      "kind": "external"
+    }
+  ],
+  "proofSignals": [
+    {
+      "label": "Education program",
+      "value": "10 weeks",
+      "source": "S016",
+      "href": "https://hub.regencoordination.xyz/t/take-the-greenpill-with-greenpill-nigeria-10-weeks-of-refi-education/324"
+    }
+  ],
+  "impactSources": {},
+  "relatedStorySlugs": [
+    "take-the-greenpill-nigeria-refi-education"
+  ],
+  "relatedResourceSlugs": [
+    "regen-coordination-hub"
+  ],
+  "featuredWeight": 90
+}

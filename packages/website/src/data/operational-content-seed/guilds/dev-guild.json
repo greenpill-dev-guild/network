@@ -23,6 +23,11 @@
       "href": "https://github.com/greenpill-dev-guild/greenwill"
     },
     {
+      "label": "Public goods staking",
+      "summary": "PGSP and Squad Staking explore validator rewards as recurring funding for public goods.",
+      "href": "https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0"
+    },
+    {
       "label": "Public writing",
       "summary": "The Dev Guild Paragraph documents builder work and grant-facing updates.",
       "href": "https://paragraph.com/@greenpilldevguild"
@@ -155,6 +160,12 @@
       "value": "$60k request",
       "source": "S012 Octant forum",
       "href": "https://discuss.octant.app/t/greenpill-dev-guild-regeneration-through-collaboration/456"
+    },
+    {
+      "label": "Regenerative stack",
+      "value": "Paragraph series",
+      "source": "S060",
+      "href": "https://paragraph.com/@greenpilldevguild/pioneering-a-regenerative-stack"
     }
   ],
   "media": {

@@ -59,8 +59,8 @@
       "key": "field-stories",
       "overline": "Stories",
       "title": "Field notes from chapters and guilds.",
-      "dek": "Real updates from Greenpill Nigeria, Brasil, London Ontario, GreenSofa, the Garden, and the Dev Guild are seeded for editorial review.",
-      "body": "Story cards should appear here only after each story is steward-approved and marked published. Keep draft stories and unsupported HiFi stories out of the public launch path.",
+      "dek": "Published source-backed updates now cover Greenpill Nigeria, Phangan, Earth Week, Brasil, London Ontario, GreenSofa, the Garden, Year in Review stories, and the Dev Guild regenerative stack.",
+      "body": "Keep public story cards limited to steward-approved, source-backed stories marked published. Draft stories and unsupported HiFi stories stay out of the public launch path.",
       "cta": {
         "label": "Read stories",
         "href": "/stories",
@@ -72,7 +72,7 @@
       "key": "library-preview",
       "overline": "Library",
       "title": "A public knowledge commons.",
-      "dek": "Books, podcast conversations, public Hub threads, Dev Guild writing, and Garden materials should sit together instead of being scattered across tools.",
+      "dek": "Books, podcast conversations, public Hub threads, Paragraph articles, Dev Guild writing, and Garden materials should sit together instead of being scattered across tools.",
       "body": "The Library should prioritize public, source-backed resources and avoid pretending draft guides or private docs are launch-ready public content.",
       "cta": {
         "label": "Browse library",
@@ -101,7 +101,7 @@
       "key": "guilds-projects",
       "overline": "Guilds",
       "title": "Builders, writers, and stewards ship the network.",
-      "dek": "The Dev Guild and Writers Guild should be visible pathways, with Green Goods linked through public proof and Dev Guild context for now.",
+      "dek": "The Dev Guild and Writers Guild should be visible pathways, with Green Goods and PGSP linked through public proof and Dev Guild context for now.",
       "body": "Use source-backed project pages and public links. Do not surface private member rosters or application state in the logged-out public site.",
       "cta": {
         "label": "Visit Dev Guild",
@@ -196,14 +196,23 @@
     "new-york-city",
     "c-te-d-ivoire",
     "germany",
-    "uncommons"
+    "kenya"
   ],
-  "featuredStorySlugs": [],
+  "featuredStorySlugs": [
+    "greenpill-2025-year-in-review",
+    "dev-guild-regenerative-stack",
+    "greenpill-2026-thesis",
+    "greenpill-nigeria-water-cup",
+    "greenpill-earth-week",
+    "greenpill-garden-season-one"
+  ],
   "featuredResourceSlugs": [
     "greenpill-podcast",
     "regen-coordination-hub",
     "green-goods-docs",
-    "trailblazers-octant-ep4-gpdg"
+    "trailblazers-octant-ep4-gpdg",
+    "dev-guild-public-goods-staking-protocol-v0",
+    "bread-cooperative-regen-coordination"
   ],
   "media": {
     "image": "/images/hifi/pill-3d.png",

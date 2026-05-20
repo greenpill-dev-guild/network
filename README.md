@@ -42,12 +42,15 @@ bun run preview:website
 
 `bun run dev`, `bun run build`, and `bun run preview` delegate to the website package. The production static build emits to `packages/website/dist/`.
 
-Keystatic is enabled only during local website development for editorial and site-composition authoring. It does not expose operational collections such as chapters, people, guilds, projects, or themes. There is no deployed Keystatic server, CMS API route, or public database connection in the website package.
+Keystatic is enabled only during local website development for editorial and site-composition authoring. It does not expose operational collections such as chapters, chapter initiatives, people, guilds, projects, or themes. There is no deployed Keystatic server, CMS API route, or public database connection in the website package.
 
-Operational content for chapters, public steward profiles, guilds, projects,
-locations, and impact source bindings is Directus/Postgres-owned after the
-one-time migration. The static website consumes an approved public snapshot at
-build time. By default local builds use
+Operational content for chapters, chapter initiatives, public steward profiles,
+guilds, guild-owned projects, locations, and impact source bindings is
+Directus/Postgres-owned after the one-time migration. Chapter initiatives are
+local chapter-owned programs, campaigns, events, education series, cleanups,
+Water Cup-style work, and impact efforts; guild `projects` remain
+guild-owned tools, products, and workstreams. The static website consumes an
+approved public snapshot at build time. By default local builds use
 `packages/website/src/data/operational-content-snapshot.json`; production builds
 can set `OPERATIONAL_CONTENT_SNAPSHOT_URL` to the agent route.
 The seed JSON used for the one-time migration and local snapshot refresh lives in
@@ -65,6 +68,7 @@ Useful operational content commands:
 bun run content:snapshot
 bun run content:migrate
 bun run directus:content:setup
+bun run directus:studio:setup
 ```
 
 `content:snapshot` validates current operational content and refreshes the
@@ -74,7 +78,9 @@ to run once operational rows exist unless `--allow-existing` is passed, and even
 then it only inserts missing rows without overwriting Directus-owned conflicts.
 `directus:content:setup` runs after Directus boots and applies the steward
 editor, steward moderator, trusted publisher, and operator access model through
-the Directus API.
+the Directus API. `directus:studio:setup` applies the Data Studio labels,
+field ordering, interfaces, displays, and hidden technical collections that make
+the same schema usable for steward editing.
 
 The current public site deployment can remain on the existing GitHub Pages path while this package restructure lands. If we later migrate the public site to Vercel, use the repo root as the project root, `bun install --frozen-lockfile` as install command, `bun run build:website` as build command, and `packages/website/dist` as output directory.
 
@@ -98,7 +104,7 @@ curl http://127.0.0.1:8787/impact/chapters/nigeria
 curl http://127.0.0.1:8787/content/public-snapshot
 ```
 
-`/health` is process-level health. `/ready` checks `DATABASE_URL` connectivity. `/content/public-snapshot` exposes only published public-safe operational content. `/impact/chapters/:slug`, `POST /map-nodes`, `GET /map-nodes/public`, `/map/state`, and the map-node edit-link/update-request routes remain behind the agent privacy boundary.
+`/health` is process-level health. `/ready` checks `DATABASE_URL` connectivity. `/content/public-snapshot` exposes only published public-safe operational content, including approved chapter initiatives for chapter detail pages. `/impact/chapters/:slug`, `POST /map-nodes`, `GET /map-nodes/public`, `/map/state`, and the map-node edit-link/update-request routes remain behind the agent privacy boundary.
 
 Public map-node submissions require an owner email. The agent stores that email only in `intake.map_node_private_contacts` so future owner updates can use one-use email magic links. Configure email sending on the agent with `RESEND_API_KEY`, `MAP_NODE_EMAIL_FROM`, `MAP_NODE_EMAIL_REPLY_TO`, and `MAP_NODE_EDIT_BASE_URL`; do not expose those values to the static website, Keystatic, generated JSON, or browser bundles. Map magic-link replies should route to the monitored map mailbox on the verified sending subdomain, currently `Greenpill Network <map@mail.greenpill.network>`. Missing or failing email provider configuration still returns the same neutral public edit-link response.
 
@@ -123,6 +129,7 @@ bun run db:local:up
 bun run db:migrate
 bun run dev:admin
 bun run directus:content:setup
+bun run directus:studio:setup
 ```
 
 The local Directus service runs at `http://localhost:8055` and connects to the
@@ -132,6 +139,41 @@ review only; keep public intake and public API traffic behind the agent routes.
 Standard steward moderators see review-safe map-node submission/update fields.
 Token rows, owner emails, IP/user-agent fields, rate-limit metadata, and raw
 request metadata are reserved for trusted publisher/operator access.
+
+Invite stewards without using the Directus UI by preparing a local TSV file with
+`email`, `name`, `location`, and optional `role` columns:
+
+```sh
+bun run directus:users:invite -- --input /path/to/stewards.tsv
+```
+
+The default role is `Greenpill Steward Editor`. Use `--admin <email>` only for
+the small number of users who should receive the admin-access
+`Greenpill Operator` role.
+
+Scope steward editing to assigned chapters and guilds with a local TSV file:
+
+```sh
+bun run directus:content-access -- assign --input /path/to/content-access.tsv
+```
+
+The TSV columns are `email`, `kind`, and `slug`, where `kind` is `chapter` or
+`guild`. `Greenpill Steward Editor` users can read published operational
+content, edit only assigned draft/pending chapter or guild content, and create
+chapter initiatives or guild projects only under assigned parent records.
+Publishing remains reserved for trusted publishers and operators.
+
+After changing roles, permissions, assignment data, or Directus metadata, run a
+temporary steward-session smoke test:
+
+```sh
+bun run directus:steward:smoke
+```
+
+The smoke test creates a temporary Steward Editor user, assigns it to one
+chapter and one guild, verifies assigned create/update behavior and forbidden
+unassigned creates through that user's token, then removes the temporary
+records.
 
 If Docker Desktop is installed but `docker` is not on your shell PATH, the local
 Docker scripts fall back to Docker Desktop's bundled CLI path on macOS. If

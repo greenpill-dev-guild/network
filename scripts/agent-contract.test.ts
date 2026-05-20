@@ -462,6 +462,23 @@ test('agent package exposes a Hono app with data-backed public routes', async ()
               karmaProjectSlug: 'greenpill-nigeria',
             },
           }],
+          chapterInitiatives: [{
+            slug: 'nigeria-water-cup',
+            chapterSlug: 'nigeria',
+            title: 'Water Cup',
+            status: 'active',
+            summary: 'Public water and impact mapping effort.',
+            themeSlugs: ['public'],
+            links: [{
+              label: 'Water Cup updates',
+              url: 'https://hub.regencoordination.xyz/t/greenpill-nigeria-project-water-cup-updates/307',
+            }],
+            proofSignals: [{
+              label: 'Water Cup Mapping',
+              value: 'Hypercert',
+              source: 'S046',
+            }],
+          }],
           guilds: [{
             slug: 'dev-guild',
             name: 'Dev Guild',
@@ -548,6 +565,8 @@ test('agent package exposes a Hono app with data-backed public routes', async ()
   assert.equal(publicContent.status, 200);
   const publicContentPayload = await publicContent.json();
   assert.equal(publicContentPayload.chapters.length, 1);
+  assert.equal(publicContentPayload.chapterInitiatives.length, 1);
+  assert.equal(publicContentPayload.chapterInitiatives[0].chapterSlug, 'nigeria');
   assert.equal(publicContentPayload.locations[0].id, 'nigeria');
   assert.equal(publicContentPayload.impactSourceBindings.chapters[0].chapterSlug, 'nigeria');
   assert.equal(containsPrivateOperationalContentField(publicContentPayload), false);

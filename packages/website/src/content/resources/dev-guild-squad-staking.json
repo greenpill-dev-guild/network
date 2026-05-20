@@ -1,0 +1,56 @@
+{
+  "title": "Squad Staking",
+  "kind": "article",
+  "status": "published",
+  "summary": "Dev Guild article on community staking, DVT, and validator rewards as a public-goods funding primitive.",
+  "description": "The Squad Staking article gives public context for the PGSP workstream and should be tied to the single PGSP project seed rather than becoming a separate project page.",
+  "author": "Greenpill Dev Guild",
+  "publishDate": "2025-07-01",
+  "updatedDate": "2025-07-01",
+  "primaryUrl": "https://paragraph.com/@greenpilldevguild/squad-staking-turning-validator-rewards-into-public-good",
+  "resourcePath": "",
+  "image": "/images/hifi/topo-bg.png",
+  "imageAlt": "Topographic map texture",
+  "duration": "",
+  "readTime": "",
+  "episodeNumber": "",
+  "guest": "",
+  "host": "",
+  "tags": [
+    "squad-staking",
+    "public-goods-staking",
+    "dev-guild"
+  ],
+  "themeSlugs": [
+    "funding",
+    "public",
+    "coordination-tools"
+  ],
+  "relatedChapterSlugs": [],
+  "relatedGuildSlugs": [
+    "dev-guild"
+  ],
+  "featuredWeight": 82,
+  "card": {
+    "eyebrow": "Dev Guild",
+    "title": "Squad Staking",
+    "summary": "Community staking and validator rewards for public-goods funding.",
+    "badge": "Source S061",
+    "surfaceType": "article",
+    "image": "/images/hifi/topo-bg.png",
+    "imageAlt": "Topographic map texture",
+    "href": "https://paragraph.com/@greenpilldevguild/squad-staking-turning-validator-rewards-into-public-good"
+  },
+  "media": {
+    "image": "/images/hifi/topo-bg.png",
+    "imageAlt": "Topographic map texture",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Squad Staking · Greenpill Library",
+    "description": "Read the Dev Guild article on squad staking and public-goods funding.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

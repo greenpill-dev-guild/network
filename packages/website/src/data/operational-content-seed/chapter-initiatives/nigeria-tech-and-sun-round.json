@@ -1,0 +1,40 @@
+{
+  "chapterSlug": "nigeria",
+  "title": "Tech & Sun Round",
+  "status": "active",
+  "summary": "Solar-powered public goods infrastructure and builder education effort sourced from Greenpill Nigeria's Localism Fund thread.",
+  "description": "The public Tech & Sun Round thread documents Greenpill Nigeria's work on solar, internet, campus infrastructure, and hands-on builder education. Keep final activation and usage metrics source-bound until steward review adds completed counts.",
+  "themeSlugs": [
+    "energy",
+    "education",
+    "public",
+    "impact"
+  ],
+  "links": [
+    {
+      "label": "Tech & Sun Round",
+      "url": "https://hub.regencoordination.xyz/t/tech-sun-round-by-greenpill-nigeria/393",
+      "subtext": "Localism Fund thread",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "energy",
+      "kind": "external"
+    }
+  ],
+  "proofSignals": [
+    {
+      "label": "Solar hub build",
+      "value": "Localism Fund updates",
+      "source": "S049",
+      "href": "https://hub.regencoordination.xyz/t/tech-sun-round-by-greenpill-nigeria/393"
+    }
+  ],
+  "impactSources": {},
+  "relatedStorySlugs": [
+    "greenpill-nigeria-tech-and-sun-round"
+  ],
+  "relatedResourceSlugs": [
+    "regen-coordination-hub"
+  ],
+  "featuredWeight": 95
+}

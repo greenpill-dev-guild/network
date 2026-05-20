@@ -1,0 +1,56 @@
+{
+  "title": "GreenWill",
+  "kind": "article",
+  "status": "published",
+  "summary": "Dev Guild article on GreenWill as reputation and governance-support tooling for regenerative action.",
+  "description": "The GreenWill Paragraph article strengthens the public proof for the existing GreenWill guild project and should not create a duplicate project.",
+  "author": "Greenpill Dev Guild",
+  "publishDate": "2025-07-03",
+  "updatedDate": "2025-07-03",
+  "primaryUrl": "https://paragraph.com/@greenpilldevguild/greenwill-powering-governance-through-reputation-tracking",
+  "resourcePath": "",
+  "image": "/images/hifi/topo-bg.png",
+  "imageAlt": "Topographic map texture",
+  "duration": "",
+  "readTime": "",
+  "episodeNumber": "",
+  "guest": "",
+  "host": "",
+  "tags": [
+    "greenwill",
+    "reputation",
+    "governance"
+  ],
+  "themeSlugs": [
+    "gov",
+    "impact",
+    "public"
+  ],
+  "relatedChapterSlugs": [],
+  "relatedGuildSlugs": [
+    "dev-guild"
+  ],
+  "featuredWeight": 74,
+  "card": {
+    "eyebrow": "Dev Guild",
+    "title": "GreenWill",
+    "summary": "Reputation and governance support for regenerative action.",
+    "badge": "Source S063",
+    "surfaceType": "article",
+    "image": "/images/hifi/topo-bg.png",
+    "imageAlt": "Topographic map texture",
+    "href": "https://paragraph.com/@greenpilldevguild/greenwill-powering-governance-through-reputation-tracking"
+  },
+  "media": {
+    "image": "/images/hifi/topo-bg.png",
+    "imageAlt": "Topographic map texture",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "GreenWill · Greenpill Library",
+    "description": "Read the Dev Guild GreenWill article on reputation and governance tooling.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

@@ -12,8 +12,21 @@
   "lat": 40.7128,
   "long": -74.006,
   "link": "https://luma.com/GPNYC",
-  "stewards": [],
-  "stewardSlugs": [],
+  "stewards": [
+    {
+      "name": "Matt Strachman",
+      "role": "Chapter steward",
+      "bio": "",
+      "location": "New York City",
+      "personSlug": "matt-mattycompost",
+      "chapterSlug": "new-york-city",
+      "avatar": "",
+      "wallet": ""
+    }
+  ],
+  "stewardSlugs": [
+    "matt-mattycompost"
+  ],
   "themeSlugs": [
     "education",
     "public",
@@ -49,7 +62,26 @@
       "kind": "social"
     }
   ],
-  "connectLinks": [],
+  "connectLinks": [
+    {
+      "label": "Luma",
+      "url": "https://luma.com/GPNYC",
+      "subtext": "Public chapter calendar",
+      "handle": "GPNYC",
+      "action": "Open calendar",
+      "icon": "calendar",
+      "kind": "external"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/greenpillnyc",
+      "subtext": "Public chapter account",
+      "handle": "@greenpillnyc",
+      "action": "Follow",
+      "icon": "x",
+      "kind": "social"
+    }
+  ],
   "relatedChapterSlugs": [
     "ottawa",
     "toronto",
@@ -69,7 +101,10 @@
   "media": {
     "image": "",
     "imageAlt": "",
-    "ogImage": ""
+    "imageSourceUrl": "",
+    "imageCredit": "",
+    "ogImage": "",
+    "reviewStatus": "needs-steward-photo"
   },
   "seo": {
     "title": "Greenpill NYC · Greenpill Network",

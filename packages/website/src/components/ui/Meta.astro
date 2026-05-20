@@ -11,20 +11,20 @@ const classes = ['gp-meta-line', className].filter(Boolean).join(' ');
 // Each `·`-separated chunk is its own segment so the row can wrap between
 // them (DESIGN.md). Splitting here keeps authored "A · B" content from
 // collapsing into a single un-wrappable nowrap span that overflows on mobile.
-const segments: string[] = [];
-let accentSegment = -1;
+const segments: Array<{ text: string; accented: boolean }> = [];
 items.forEach((item, i) => {
-  if (i === accentIndex) accentSegment = segments.length;
+  const accented = i === accentIndex;
   for (const part of String(item).split(/\s*·\s*/)) {
-    if (part.trim()) segments.push(part.trim());
+    const text = part.trim();
+    if (text) segments.push({ text, accented });
   }
 });
 ---
 
 <div class={classes}>
-  {segments.map((seg, index) => (
+  {segments.map((segment, index) => (
     <>
-      <span class:list={[{ 'is-accent': index === accentSegment }]}>{seg}</span>
+      <span class:list={[{ 'is-accent': segment.accented }]}>{segment.text}</span>
       {index < segments.length - 1 && <span aria-hidden="true" class="gp-meta-sep">&middot;</span>}
     </>
   ))}

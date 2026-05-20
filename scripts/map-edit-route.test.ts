@@ -218,6 +218,13 @@ test('built map edit route clears tokens before resource links and avoids token 
   assert.equal(html.includes('<a '), false);
 });
 
+test('built map edit route defines the H1 type token it relies on', () => {
+  // The standalone page carries its own inline tokens; a missing --gp-h1-size
+  // previously rendered the panel H1 at the tiny UA default size.
+  assert.match(routeHtml, /--gp-h1-size:\s*clamp\(/);
+  assert.match(routeHtml, /font-size:\s*var\(--gp-h1-size\)/);
+});
+
 test('missing token shows invalid-link state without calling the agent', async () => {
   const fetches = [];
   const harness = createHarness({

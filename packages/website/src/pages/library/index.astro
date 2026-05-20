@@ -633,8 +633,8 @@ const resourceMeta = (resource: typeof resources[number]) => [
 
   .gp-library-resource-arrow {
     position: absolute;
-    top: var(--gp-space-lg);
-    right: var(--gp-space-lg);
+    inset-block-start: var(--gp-space-lg);
+    inset-inline-end: var(--gp-space-lg);
     color: var(--gp-fg-dim);
     transition: color 200ms;
   }
@@ -739,6 +739,8 @@ const resourceMeta = (resource: typeof resources[number]) => [
       padding-inline-end: var(--gp-space-lg);
       scroll-snap-type: x mandatory;
       scrollbar-width: none;
+      /* Edge-fade affordance for the horizontal book rail (DESIGN.md). */
+      mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
     }
 
     .gp-library-books-grid::-webkit-scrollbar {

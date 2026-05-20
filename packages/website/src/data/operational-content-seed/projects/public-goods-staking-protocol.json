@@ -1,0 +1,60 @@
+{
+  "name": "Public Goods Staking Protocol",
+  "status": "active",
+  "guild": "dev-guild",
+  "summary": "Dev Guild workstream using validator infrastructure and vault routing to create recurring public-goods funding.",
+  "description": "The Public Goods Staking Protocol is a Greenpill Dev Guild workstream sourced from the Dev Guild Paragraph series. Public sources describe a path where validator infrastructure, Dappnode, Obol distributed validator technology, Lido CSM, and Octant-aligned vault routing can help communities generate recurring funding for public goods. Treat Squad Staking as part of this workstream, not a separate project seed in this batch.",
+  "image": "",
+  "techStack": [
+    "Ethereum validators",
+    "Distributed Validator Technology",
+    "Dappnode",
+    "Lido CSM",
+    "Octant Vaults"
+  ],
+  "repoUrl": "",
+  "liveUrl": "https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0",
+  "stewardSlugs": [
+    "afo-aiyeloja",
+    "matt-mattycompost"
+  ],
+  "themeSlugs": [
+    "funding",
+    "public",
+    "coordination-tools",
+    "opensrc"
+  ],
+  "featuredWeight": 88,
+  "proofSignals": [
+    {
+      "label": "PGSP v0",
+      "value": "Paragraph article",
+      "source": "S059",
+      "href": "https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0"
+    },
+    {
+      "label": "Squad Staking",
+      "value": "Community staking context",
+      "source": "S061",
+      "href": "https://paragraph.com/@greenpilldevguild/squad-staking-turning-validator-rewards-into-public-good"
+    },
+    {
+      "label": "Capital Formation",
+      "value": "Funding thesis",
+      "source": "S065",
+      "href": "https://paragraph.com/@greenpilldevguild/capital-formation-turning-impact-into-sustainable-revenue"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Public Goods Staking Protocol · Greenpill Network",
+    "description": "The Public Goods Staking Protocol is a Dev Guild workstream for recurring public-goods funding through validator infrastructure and vault routing.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

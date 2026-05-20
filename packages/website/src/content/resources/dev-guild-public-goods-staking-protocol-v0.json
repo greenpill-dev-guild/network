@@ -1,0 +1,57 @@
+{
+  "title": "The Public Goods Staking Protocol v0",
+  "kind": "article",
+  "status": "published",
+  "summary": "Dev Guild article on using validator infrastructure, DVT, and vaults to create recurring funding for public goods.",
+  "description": "The PGSP v0 article is the strongest current public source for the Dev Guild's public-goods staking workstream. Treat it as guild-owned project context, not chapter initiative content.",
+  "author": "Greenpill Dev Guild",
+  "publishDate": "2026-03-23",
+  "updatedDate": "2026-03-23",
+  "primaryUrl": "https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0",
+  "resourcePath": "",
+  "image": "/images/hifi/topo-bg.png",
+  "imageAlt": "Topographic map texture",
+  "duration": "",
+  "readTime": "",
+  "episodeNumber": "",
+  "guest": "",
+  "host": "",
+  "tags": [
+    "public-goods-staking",
+    "dev-guild",
+    "ethereum",
+    "funding"
+  ],
+  "themeSlugs": [
+    "funding",
+    "public",
+    "coordination-tools"
+  ],
+  "relatedChapterSlugs": [],
+  "relatedGuildSlugs": [
+    "dev-guild"
+  ],
+  "featuredWeight": 91,
+  "card": {
+    "eyebrow": "Dev Guild",
+    "title": "PGSP v0",
+    "summary": "Validator infrastructure and vaults as recurring public-goods funding.",
+    "badge": "Source S059",
+    "surfaceType": "article",
+    "image": "/images/hifi/topo-bg.png",
+    "imageAlt": "Topographic map texture",
+    "href": "https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0"
+  },
+  "media": {
+    "image": "/images/hifi/topo-bg.png",
+    "imageAlt": "Topographic map texture",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "The Public Goods Staking Protocol v0 · Greenpill Library",
+    "description": "Read the Greenpill Dev Guild PGSP v0 article on validator infrastructure and public-goods funding.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

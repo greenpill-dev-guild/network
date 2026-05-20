@@ -12,8 +12,21 @@
   "lat": 51.1657,
   "long": 10.4515,
   "link": "https://twitter.com/GreenPillGER",
-  "stewards": [],
-  "stewardSlugs": [],
+  "stewards": [
+    {
+      "name": "Leo",
+      "role": "Chapter steward",
+      "bio": "",
+      "location": "Germany",
+      "personSlug": "leo",
+      "chapterSlug": "germany",
+      "avatar": "",
+      "wallet": ""
+    }
+  ],
+  "stewardSlugs": [
+    "leo"
+  ],
   "themeSlugs": [
     "public",
     "education",
@@ -31,9 +44,18 @@
       "kind": "social"
     }
   ],
-  "connectLinks": [],
+  "connectLinks": [
+    {
+      "label": "X",
+      "url": "https://twitter.com/GreenPillGER",
+      "subtext": "Public chapter account",
+      "handle": "@GreenPillGER",
+      "action": "Follow",
+      "icon": "x",
+      "kind": "social"
+    }
+  ],
   "relatedChapterSlugs": [
-    "uncommons",
     "greensofa"
   ],
   "featuredStorySlugs": [],
@@ -50,7 +72,10 @@
   "media": {
     "image": "",
     "imageAlt": "",
-    "ogImage": ""
+    "imageSourceUrl": "",
+    "imageCredit": "",
+    "ogImage": "",
+    "reviewStatus": "needs-steward-photo"
   },
   "seo": {
     "title": "Greenpill Germany · Greenpill Network",

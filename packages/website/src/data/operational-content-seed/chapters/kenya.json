@@ -12,8 +12,21 @@
   "lat": -0.0236,
   "long": 37.9062,
   "link": "https://checker.gitcoin.co/public/project/show/greenpill-kenya-octant-community-round-1",
-  "stewards": [],
-  "stewardSlugs": [],
+  "stewards": [
+    {
+      "name": "David Moretech",
+      "role": "Chapter steward",
+      "bio": "",
+      "location": "Kenya",
+      "personSlug": "david-moretech",
+      "chapterSlug": "kenya",
+      "avatar": "",
+      "wallet": ""
+    }
+  ],
+  "stewardSlugs": [
+    "david-moretech"
+  ],
   "themeSlugs": [
     "food",
     "trees",
@@ -33,11 +46,20 @@
       "kind": "external"
     }
   ],
-  "connectLinks": [],
+  "connectLinks": [
+    {
+      "label": "Gitcoin project",
+      "url": "https://checker.gitcoin.co/public/project/show/greenpill-kenya-octant-community-round-1",
+      "subtext": "Public Octant community round project",
+      "handle": "greenpill-kenya",
+      "action": "View",
+      "icon": "gitcoin",
+      "kind": "external"
+    }
+  ],
   "relatedChapterSlugs": [
     "nigeria",
-    "c-te-d-ivoire",
-    "uganda"
+    "c-te-d-ivoire"
   ],
   "featuredStorySlugs": [],
   "authoredResourceSlugs": [],
@@ -61,7 +83,10 @@
   "media": {
     "image": "",
     "imageAlt": "",
-    "ogImage": ""
+    "imageSourceUrl": "",
+    "imageCredit": "",
+    "ogImage": "",
+    "reviewStatus": "needs-steward-photo"
   },
   "seo": {
     "title": "Greenpill Kenya · Greenpill Network",

@@ -309,6 +309,9 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
         --gp-label-sm: 12px;
         --gp-label-md: 14px;
         --gp-body-md: 16px;
+        /* Mirrors gp-tokens.css so the standalone page reads as one system; its
+           absence was rendering the H1 at the UA default size. */
+        --gp-h1-size: clamp(36px, calc(27.7px + 2.21vw), 56px);
         --gp-font-display: Georgia, "Times New Roman", serif;
         --gp-font-body: "Helvetica Neue", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
@@ -323,6 +326,7 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
       }
 
       body {
+        container-type: inline-size;
         margin: 0;
         min-height: 100vh;
         background: var(--gp-bg);
@@ -362,8 +366,9 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
         margin: 0;
         font-family: var(--gp-font-display);
         font-size: var(--gp-h1-size);
-        line-height: 1;
+        line-height: 1.05;
         letter-spacing: 0;
+        overflow-wrap: break-word;
       }
 
       .map-edit-copy {
@@ -506,7 +511,7 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
         display: none !important;
       }
 
-      @media (max-width: 640px) {
+      @container (max-width: 640px) {
         .map-edit-page {
           place-items: start stretch;
           padding: var(--gp-space-md);

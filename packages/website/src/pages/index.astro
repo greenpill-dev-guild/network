@@ -322,9 +322,7 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
               <Text variant="body-sm" class="gp-home-garden-body">{step.body}</Text>
               <footer class="gp-home-garden-foot">
                 {step.cta?.href && step.cta?.label && (
-                  step.cta.kind === 'external'
-                    ? <Button href={step.cta.href} variant="ghost">{step.cta.label}</Button>
-                    : <Button href={step.cta.href}>{step.cta.label}</Button>
+                  <Button href={step.cta.href} variant="ghost">{step.cta.label}</Button>
                 )}
               </footer>
             </article>
@@ -337,7 +335,7 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
 
 <style>
   .gp-home {
-    min-height: 100vh;
+    min-height: 100dvh;
     background: transparent;
   }
 
@@ -841,8 +839,10 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
     margin-top: auto;
   }
 
-  /* Responsive breakpoints */
-  @media (max-width: 1100px) {
+  /* Responsive reflow — @container against #main-content (the page-level
+     container in GpLayout), per DESIGN.md. Both queries are active at mobile,
+     so the mobile resets below must match the tablet placements' specificity. */
+  @container (max-width: 1100px) {
     .gp-home-stories-grid.count-4 {
       grid-template-columns: 1fr 1fr;
       grid-template-rows: auto auto auto;
@@ -872,7 +872,7 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
     }
   }
 
-  @media (max-width: 720px) {
+  @container (max-width: 720px) {
     .gp-home-hero {
       padding-block: var(--gp-space-2xl) var(--gp-space-3xl);
     }
@@ -888,7 +888,13 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
     .gp-home-stories-grid.count-4 {
       grid-template-columns: 1fr;
     }
-    .gp-home-stories-grid .gp-home-story {
+    /* Reset the count-4 bento placements at matching (0,4,0) specificity —
+       the max-width:1100px block above is still active here, so a low-specificity
+       reset would lose and leave the tablet bento's implicit columns at mobile. */
+    .gp-home-stories-grid.count-4 .gp-home-story.is-row-1,
+    .gp-home-stories-grid.count-4 .gp-home-story.is-row-2,
+    .gp-home-stories-grid.count-4 .gp-home-story.is-row-3,
+    .gp-home-stories-grid.count-4 .gp-home-story.is-row-4 {
       grid-column: 1 / -1;
       grid-row: auto;
     }

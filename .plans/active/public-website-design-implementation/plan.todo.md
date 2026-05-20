@@ -111,7 +111,7 @@
 
 - [ ] Archive this hub when the design implementation ships or is superseded.
 - [ ] Do not recreate root `docs/` unless a future plan defines durable operator/user docs with ownership.
-- [ ] During the focused Garden pass, add or retarget the `/garden#assessment` and `/garden#steward-call` CTA destinations.
+- [x] During the focused Garden pass, add or retarget the `/garden#assessment` and `/garden#steward-call` CTA destinations. (2026-05-20: added two anchored target panels — `#assessment` → "Map your next contribution" routing to chapters, `#steward-call` → "Talk to a real person" routing to the public chat — using the public-safe `assessmentPreview`/`stewardCallPreview` kicker+title with `scroll-margin` for the sticky header. Home's garden-ramp CTAs share these anchors and now resolve too.)
 - [ ] Before archiving or publishing the temporary review surface as durable documentation, remove the nested card sample and review-only placeholder copy from `/design-system`.
 
 ## Deferred UI-Standard Follow-Ups (post-revamp; do not rush — regression risk)

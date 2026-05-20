@@ -1,16 +1,21 @@
 ---
 interface Props {
+  // Render as a heading (e.g. "h2") where the overline IS the section label,
+  // so the document keeps a valid heading outline. Scoped styles are unlayered
+  // and win over the global heading reset, so the visual is unchanged.
+  as?: keyof HTMLElementTagNameMap;
   text?: string;
   segments?: string[];
   tone?: 'primary' | 'muted' | 'dim';
   class?: string;
 }
 
-const { text, segments, tone = 'primary', class: className } = Astro.props;
+const { as, text, segments, tone = 'primary', class: className } = Astro.props;
+const Tag = as ?? 'div';
 const classes = ['gp-overline-atom', `is-${tone}`, className].filter(Boolean).join(' ');
 ---
 
-<div class={classes}>
+<Tag class={classes}>
   {segments ? (
     segments.map((segment, index) => (
       <>
@@ -23,7 +28,7 @@ const classes = ['gp-overline-atom', `is-${tone}`, className].filter(Boolean).jo
   ) : (
     <slot />
   )}
-</div>
+</Tag>
 
 <style>
   .gp-overline-atom {

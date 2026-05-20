@@ -545,7 +545,7 @@ const radii = [
     overflow: hidden;
   }
 
-  @media (max-width: 980px) {
+  @container (max-width: 980px) {
     .gp-token-groups,
     .gp-foundation-grid,
     .gp-component-grid {
@@ -553,18 +553,10 @@ const radii = [
     }
   }
 
-  @media (max-width: 640px) {
+  @container (max-width: 640px) {
     .gp-type-row {
       grid-template-columns: 1fr;
       gap: var(--gp-space-md);
-    }
-
-    .gp-type-row :global(.gp-text.is-display) {
-      font-size: 34px;
-    }
-
-    .gp-type-row :global(.gp-text.is-h1) {
-      font-size: 32px;
     }
 
     .gp-type-meta {

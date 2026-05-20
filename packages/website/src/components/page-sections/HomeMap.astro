@@ -362,7 +362,14 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
           the active node a subtle nutrient pulse without idle noise. */}
       <g class="gp-home-map-stewards">
         {stewardNodes.map((s) => (
-          <g class="gp-home-map-node-link is-steward" tabindex="0" data-node-id={s.id} data-node-type="steward">
+          <g
+            class="gp-home-map-node-link is-steward"
+            tabindex="0"
+            role="button"
+            aria-label={`${s.name}, steward node, ${s.chapterName}`}
+            data-node-id={s.id}
+            data-node-type="steward"
+          >
             <title>{`${s.name} · Steward · ${s.chapterName}`}</title>
             <circle class="gp-home-map-node-halo" cx={s.x} cy={s.y} r="2.6" />
             <circle class="gp-home-map-node-dot" cx={s.x} cy={s.y} r="1.2" />
@@ -397,12 +404,18 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
       <g class="gp-home-map-members" data-home-map-members></g>
     </svg>
 
-    {/* Integrated stats overlay - top-right inside the map */}
+    {/* Integrated stats overlay - top-right inside the map. The people stat is
+        populated client-side from /map/state and ticks up as members join. */}
     <div class="gp-home-map-stats" aria-hidden="true">
       <span class="gp-home-map-stat">
         <span class="gp-home-map-stat-mark is-chapter" aria-hidden="true"></span>
         <span class="gp-home-map-stat-value">{chapterCount}</span>
         <span class="gp-home-map-stat-label">chapters</span>
+      </span>
+      <span class="gp-home-map-stat" data-home-map-people-stat hidden>
+        <span class="gp-home-map-stat-mark is-member" aria-hidden="true"></span>
+        <span class="gp-home-map-stat-value" data-home-map-people-count>0</span>
+        <span class="gp-home-map-stat-label">people</span>
       </span>
     </div>
 
@@ -486,8 +499,11 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
         </label>
       </div>
 
-      <fieldset class="gp-home-map-addnode-themes">
-        <legend>Themes</legend>
+      <fieldset class="gp-home-map-addnode-themes" data-home-map-themes>
+        <legend>
+          <span>Choose exactly four themes</span>
+          <span class="gp-home-map-addnode-theme-count" data-home-map-theme-count aria-live="polite">0 / 4</span>
+        </legend>
         <div class="gp-home-map-addnode-theme-options">
           {mapThemes.map((theme) => (
             <label class="gp-home-map-addnode-theme">
@@ -522,6 +538,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
   import {
     PENDING_NODE_UPDATED_EVENT,
     loadLocalPendingNodes,
+    reconcileLocalPendingNodes,
     saveLocalPendingNode,
   } from '@greenpill-network/shared/map-nodes';
 
@@ -801,6 +818,12 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     });
 
     selectedClose?.addEventListener('click', closeSelected);
+    // Escape closes the selected-node panel from anywhere (keyboard + a11y).
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && selectedEl && !selectedEl.hidden) {
+        closeSelected();
+      }
+    });
 
     // ---- Member node injection ---------------------------------------------
     const injectedKeys = new Set<string>();
@@ -821,10 +844,26 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
       link.addEventListener('focus', () => setFocus(link));
       link.addEventListener('mouseleave', clearFocus);
       link.addEventListener('blur', clearFocus);
-      if (!(link as HTMLElement).dataset.memberKey) return;
+      const memberKey = (link as HTMLElement).dataset.memberKey;
+      if (!memberKey) {
+        // Chapter nodes are <a> and navigate on click. Steward (and any other
+        // non-member) nodes have no panel, so a tap just highlights them and
+        // their adjacent threads — essential on touch, where there is no hover.
+        if (!link.hasAttribute('href')) {
+          const activate = () => setFocus(link);
+          link.addEventListener('click', activate);
+          link.addEventListener('keydown', (event) => {
+            const key = (event as KeyboardEvent).key;
+            if (key === 'Enter' || key === ' ') {
+              event.preventDefault();
+              activate();
+            }
+          });
+        }
+        return;
+      }
       const open = () => {
-        const key = (link as HTMLElement).dataset.memberKey || '';
-        const member = memberByKey.get(key);
+        const member = memberByKey.get(memberKey);
         if (member) openSelected(member, link);
       };
       link.addEventListener('click', open);
@@ -872,6 +911,20 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
 
       membersGroup.append(group);
       registerNode(group);
+    };
+
+    // Reconciliation: once a locally-stored pending node resurfaces as an
+    // approved public node, remove the optimistic copy so the map never shows a
+    // duplicate. Closes the selected panel if it was open on the removed node.
+    const removeInjectedMember = (key: string) => {
+      if (!injectedKeys.has(key)) return;
+      injectedKeys.delete(key);
+      memberByKey.delete(key);
+      const node = membersGroup?.querySelector(`[data-node-id="${CSS.escape(key)}"]`);
+      if (node) {
+        if (node.classList.contains('is-selected')) closeSelected();
+        node.remove();
+      }
     };
 
     const toMember = (
@@ -959,13 +1012,46 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     const setModeCopy = (mode: string) => {
       if (!modeCopyEl) return;
       modeCopyEl.textContent = mode === 'live'
-        ? 'Live onboarding is on — your node appears on the public map right after you submit. Your email stays private and is used only for future edit links.'
+        ? 'Live onboarding is on — your node appears on the public map right after you submit, and the map keeps refreshing as others join. Your email stays private and is used only for future edit links.'
         : 'In moderated mode, your node appears on your device while stewards review it. Your email stays private and is used only for future edit links.';
+    };
+
+    // ---- Live "people on the map" stat -------------------------------------
+    const peopleStat = root.querySelector('[data-home-map-people-stat]') as HTMLElement | null;
+    const peopleCountEl = root.querySelector('[data-home-map-people-count]') as HTMLElement | null;
+    const setPeopleStat = (count: number) => {
+      if (!peopleStat || !peopleCountEl) return;
+      if (count > 0) {
+        peopleCountEl.textContent = String(count);
+        peopleStat.hidden = false;
+      } else {
+        peopleStat.hidden = true;
+      }
     };
 
     let intakeMode: 'moderated' | 'live' = 'moderated';
 
-    // ---- /map/state fetch (single, no polling) -----------------------------
+    // ---- /map/state fetch + live growth ------------------------------------
+    // Fetched on load, again after every successful submit, and — while live
+    // onboarding is on — on a gentle visible-page poll so already-open browsers
+    // watch the relationship web grow as more people join.
+    const POLL_INTERVAL_MS = 20000;
+    let pollTimer: number | null = null;
+
+    const stopPolling = () => {
+      if (pollTimer !== null) {
+        window.clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    };
+
+    const startPolling = () => {
+      if (pollTimer !== null || intakeMode !== 'live') return;
+      pollTimer = window.setInterval(() => {
+        if (document.visibilityState === 'visible') void loadMapState();
+      }, POLL_INTERVAL_MS);
+    };
+
     const loadMapState = async () => {
       try {
         const response = await fetch(`${agentBaseUrl}/map/state`, { cache: 'no-store' });
@@ -973,21 +1059,45 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
         const state = await response.json();
         intakeMode = state?.intakeMode === 'live' ? 'live' : 'moderated';
         setModeCopy(intakeMode);
+
         const nodes = Array.isArray(state?.nodes) ? state.nodes : [];
-        nodes
-          .filter((node: Record<string, any>) => node?.source === 'approved-submission')
-          .forEach((node: Record<string, any>) => {
-            const member = toMember(node, 'approved-submission');
-            if (member) injectMember(member);
-          });
+        const approved = nodes.filter(
+          (node: Record<string, any>) => node?.source === 'approved-submission'
+        );
+        approved.forEach((node: Record<string, any>) => {
+          const member = toMember(node, 'approved-submission');
+          if (member) injectMember(member);
+        });
+
+        // Reconcile: drop optimistic local nodes that are now approved server-side
+        // so an approved submission never renders twice on the same device.
+        const { removed } = reconcileLocalPendingNodes(window.localStorage, approved);
+        if (removed.length > 0) {
+          removed.forEach((node) => removeInjectedMember(`local:${node.id}`));
+          window.dispatchEvent(new Event(PENDING_NODE_UPDATED_EVENT));
+        }
+
         renderDynamicThreads(
           nodes as Array<Record<string, any>>,
           Array.isArray(state?.edges) ? state.edges : []
         );
+
+        const approvedCount = Number(state?.counts?.approvedSubmittedNodes);
+        setPeopleStat(Number.isFinite(approvedCount) ? approvedCount : approved.length);
+
+        if (intakeMode === 'live') startPolling();
+        else stopPolling();
       } catch {
         // Agent unavailable: keep the SSR baseline map. No-op.
       }
     };
+
+    // Catch up immediately when a backgrounded tab returns to the foreground.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && intakeMode === 'live') {
+        void loadMapState();
+      }
+    });
 
     // ---- Add-node submission ------------------------------------------------
     const addForm = scope.querySelector('[data-home-map-addnode-form]') as HTMLFormElement | null;
@@ -1006,6 +1116,31 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
         : `local-${Date.now()}-${Math.round(Math.random() * 1e5)}`
     );
 
+    // ---- Exactly-four-theme activity rule ----------------------------------
+    const REQUIRED_THEME_COUNT = 4;
+    const themesFieldset = scope.querySelector('[data-home-map-themes]') as HTMLFieldSetElement | null;
+    const themeCountEl = scope.querySelector('[data-home-map-theme-count]') as HTMLElement | null;
+    const themeCheckboxes = Array.from(
+      addForm?.querySelectorAll('input[name="themes"][type="checkbox"]') ?? []
+    ) as HTMLInputElement[];
+
+    const syncThemeState = () => {
+      const selected = themeCheckboxes.filter((box) => box.checked).length;
+      if (themeCountEl) themeCountEl.textContent = `${selected} / ${REQUIRED_THEME_COUNT}`;
+      // Cap selection at four: once four are chosen the rest disable, so the rule
+      // is impossible to break rather than only validated after the fact.
+      themeCheckboxes.forEach((box) => {
+        box.disabled = !box.checked && selected >= REQUIRED_THEME_COUNT;
+      });
+      if (themesFieldset) {
+        themesFieldset.classList.toggle('is-complete', selected === REQUIRED_THEME_COUNT);
+        if (selected === REQUIRED_THEME_COUNT) themesFieldset.classList.remove('is-invalid');
+      }
+    };
+
+    themeCheckboxes.forEach((box) => box.addEventListener('change', syncThemeState));
+    syncThemeState();
+
     addForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
       const submitButton = addForm.querySelector('button[type="submit"]') as HTMLButtonElement | null;
@@ -1022,6 +1157,12 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
 
       if (!name || !place || lat === null || long === null || !emailInput?.checkValidity()) {
         setAddStatus('Add a name, place, latitude, longitude, and valid private email before submitting.', 'error');
+        return;
+      }
+
+      if (themes.length !== 4) {
+        setAddStatus('Choose exactly four themes — the four that best describe your work.', 'error');
+        themesFieldset?.classList.add('is-invalid');
         return;
       }
 
@@ -1055,7 +1196,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
           // pending state for an approved node.
           const member = toMember({ ...node, sourceId: node.id }, 'approved-submission');
           if (member) injectMember(member);
-          setAddStatus('Your node is approved and visible on the public map.', 'success');
+          setAddStatus('Your node is approved and visible on the public map. Find who you relate to in the network below.', 'success');
         } else {
           // Moderated: only now — after the server accepted — do we persist a
           // local pending node for this browser.
@@ -1074,6 +1215,10 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
           setAddStatus('Saved on this device and submitted for steward review.', 'success');
         }
         addForm.reset();
+        syncThemeState();
+        // Pull fresh state so server-generated relationship edges (and other new
+        // arrivals) redraw without a manual page reload.
+        void loadMapState();
       } catch (error) {
         // Server rejected or the request failed: do NOT write local pending state.
         // Surface server-provided validation messages, but show friendly copy for
@@ -1099,6 +1244,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
 
 <style>
   .gp-home-map {
+    container-type: inline-size;
     margin: 0;
     width: 100%;
     display: flex;
@@ -1373,6 +1519,11 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     gap: 8px;
     white-space: nowrap;
   }
+  /* The author display rule above outweighs the UA [hidden] rule, so the
+     client-toggled people stat needs an explicit hidden state. */
+  .gp-home-map-stat[hidden] {
+    display: none;
+  }
 
   .gp-home-map-stat-mark {
     width: 8px;
@@ -1383,6 +1534,11 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
 
   .gp-home-map-stat-mark.is-chapter {
     background: var(--gp-primary);
+    box-shadow: 0 0 0 1.5px var(--gp-green-950);
+  }
+
+  .gp-home-map-stat-mark.is-member {
+    background: #4FD1C5;
     box-shadow: 0 0 0 1.5px var(--gp-green-950);
   }
 
@@ -1720,6 +1876,29 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     padding: 0;
     margin: 0;
   }
+  .gp-home-map-addnode-themes > legend {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 0;
+    margin-bottom: 5px;
+  }
+  .gp-home-map-addnode-theme-count {
+    font-family: var(--gp-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    color: var(--gp-fg-muted);
+    white-space: nowrap;
+  }
+  .gp-home-map-addnode-themes.is-complete .gp-home-map-addnode-theme-count {
+    color: var(--gp-primary);
+  }
+  .gp-home-map-addnode-themes.is-invalid .gp-home-map-addnode-theme-count {
+    color: var(--gp-error);
+  }
   .gp-home-map-addnode-form input,
   .gp-home-map-addnode-form textarea {
     width: 100%;
@@ -1763,6 +1942,19 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     accent-color: var(--gp-primary);
   }
   .gp-home-map-addnode-theme span { font-size: 13px; font-weight: 600; }
+  /* Chosen themes read as selected; once four are chosen the rest disable so the
+     exactly-four rule cannot be broken. */
+  .gp-home-map-addnode-theme:has(input:checked) {
+    border-color: color-mix(in srgb, var(--gp-primary) 60%, transparent);
+    background: color-mix(in srgb, var(--gp-primary) 14%, transparent);
+  }
+  .gp-home-map-addnode-theme:has(input:disabled) {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .gp-home-map-addnode-theme:has(input:disabled) input {
+    cursor: not-allowed;
+  }
   .gp-home-map-addnode-footer {
     display: flex;
     align-items: center;
@@ -1802,7 +1994,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
   .gp-home-map-addnode-status[data-tone='error'] { color: #f0dca0; }
   .gp-home-map-addnode-status[data-tone='success'] { color: var(--gp-primary); }
 
-  @media (max-width: 640px) {
+  @container (max-width: 640px) {
     .gp-home-map-addnode-grid,
     .gp-home-map-addnode-theme-options {
       grid-template-columns: 1fr;
@@ -1854,7 +2046,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     }
   }
 
-  @media (max-width: 720px) {
+  @container (max-width: 720px) {
     .gp-home-map-canvas {
       aspect-ratio: 4 / 3;
       border-radius: var(--gp-radius-lg);
@@ -1892,7 +2084,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     }
   }
 
-  @media (max-width: 480px) {
+  @container (max-width: 480px) {
     .gp-home-map-legend-item:nth-child(n + 5) {
       display: none;
     }

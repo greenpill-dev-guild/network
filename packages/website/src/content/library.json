@@ -78,7 +78,7 @@
       "key": "tools-guides",
       "overline": "Tools and guides",
       "title": "Public docs for work that is already visible.",
-      "dek": "Green Goods docs, Regen Coordination Hub threads, and Dev Guild writing can render now; internal Drive drafts stay review-only.",
+      "dek": "Green Goods docs, Regen Coordination Hub threads, Regen Protocols, Paragraph articles, and Dev Guild writing can render now; internal Drive drafts stay review-only.",
       "body": "Use resource cards to connect readers to public docs without making Directus or private admin the content source.",
       "cta": {
         "label": "Open Green Goods docs",
@@ -95,6 +95,16 @@
           "collection": "resources",
           "slug": "regen-coordination-hub",
           "label": "Regen Coordination Hub"
+        },
+        {
+          "collection": "resources",
+          "slug": "regen-protocols",
+          "label": "Regen Protocols"
+        },
+        {
+          "collection": "resources",
+          "slug": "dev-guild-public-goods-staking-protocol-v0",
+          "label": "PGSP v0"
         }
       ]
     }
@@ -110,7 +120,12 @@
     "trailblazers-octant-ep4-gpdg",
     "green-goods-docs",
     "regen-coordination-hub",
-    "greenpill-garden-season-one"
+    "greenpill-garden-season-one",
+    "regen-protocols",
+    "dev-guild-public-goods-staking-protocol-v0",
+    "dev-guild-pioneering-regenerative-stack",
+    "bread-cooperative-regen-coordination",
+    "writers-guild-carbon-copy-web3-tooling"
   ],
   "featuredGuildSlugs": [
     "dev-guild",

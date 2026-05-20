@@ -308,3 +308,56 @@ export function removeLocalPendingNode(
   storage.setItem(PENDING_NODE_STORAGE_KEY, JSON.stringify(next));
   return next;
 }
+
+// A coordinate+name fingerprint used to recognize a local optimistic node once
+// the same submission resurfaces as an approved public node. Coordinates round
+// to two decimals (~1.1km) so an approved node that was nudged slightly during
+// review still matches; an empty string means the node lacks enough public
+// signal to reconcile and is left in place.
+export function localPendingNodeSignature(node: UnknownRecord | null | undefined): string {
+  const name = cleanString(node?.name ?? node?.displayName)
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+  const lat = normalizeNumber(node?.lat ?? node?.latitude);
+  const long = normalizeNumber(node?.long ?? node?.longitude);
+  if (!name || lat === null || long === null) return '';
+  return `${name}|${lat.toFixed(2)}|${long.toFixed(2)}`;
+}
+
+// Drops local pending nodes that now exist as approved public nodes so a browser
+// that submitted in moderated mode stops drawing a duplicate after a steward
+// approves it. Returns the removed nodes so the caller can clear their DOM.
+export function reconcileLocalPendingNodes(
+  storage: PendingMapNodeStorage | null | undefined,
+  approvedNodes: UnknownRecord[] | null | undefined
+): { removed: OptimisticPendingMapNode[]; remaining: OptimisticPendingMapNode[] } {
+  const pending = loadLocalPendingNodes(storage);
+  if (!storage || pending.length === 0) {
+    return { removed: [], remaining: pending };
+  }
+
+  const approvedSignatures = new Set(
+    (Array.isArray(approvedNodes) ? approvedNodes : [])
+      .map((node) => localPendingNodeSignature(node))
+      .filter(Boolean)
+  );
+  if (approvedSignatures.size === 0) {
+    return { removed: [], remaining: pending };
+  }
+
+  const removed: OptimisticPendingMapNode[] = [];
+  const remaining: OptimisticPendingMapNode[] = [];
+  for (const node of pending) {
+    const signature = localPendingNodeSignature(node);
+    if (signature && approvedSignatures.has(signature)) {
+      removed.push(node);
+    } else {
+      remaining.push(node);
+    }
+  }
+
+  if (removed.length > 0) {
+    storage.setItem(PENDING_NODE_STORAGE_KEY, JSON.stringify(remaining));
+  }
+  return { removed, remaining };
+}

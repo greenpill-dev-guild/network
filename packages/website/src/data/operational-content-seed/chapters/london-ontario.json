@@ -12,8 +12,21 @@
   "lat": 42.9849,
   "long": -81.2453,
   "link": "https://www.techalliance.ca/news/events/vibe-coding-for-good-a-collaborative-build-night-reimagine-co-presented-by-greenpill-london-ontario/",
-  "stewards": [],
-  "stewardSlugs": [],
+  "stewards": [
+    {
+      "name": "Heenal",
+      "role": "Chapter steward",
+      "bio": "",
+      "location": "London, Ontario, Canada",
+      "personSlug": "heenal",
+      "chapterSlug": "london-ontario",
+      "avatar": "",
+      "wallet": ""
+    }
+  ],
+  "stewardSlugs": [
+    "heenal"
+  ],
   "themeSlugs": [
     "opensrc",
     "events",
@@ -30,7 +43,17 @@
       "kind": "external"
     }
   ],
-  "connectLinks": [],
+  "connectLinks": [
+    {
+      "label": "Vibe Coding for Good",
+      "url": "https://www.techalliance.ca/news/events/vibe-coding-for-good-a-collaborative-build-night-reimagine-co-presented-by-greenpill-london-ontario/",
+      "subtext": "Public event listing",
+      "handle": "TechAlliance",
+      "action": "Open",
+      "icon": "calendar",
+      "kind": "external"
+    }
+  ],
   "relatedChapterSlugs": [
     "toronto",
     "ottawa",
@@ -59,7 +82,10 @@
   "media": {
     "image": "",
     "imageAlt": "",
-    "ogImage": ""
+    "imageSourceUrl": "",
+    "imageCredit": "",
+    "ogImage": "",
+    "reviewStatus": "needs-steward-photo"
   },
   "seo": {
     "title": "Greenpill London Ontario · Greenpill Network",

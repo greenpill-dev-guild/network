@@ -22,10 +22,21 @@
       "chapterSlug": "koh-pha-ngan",
       "avatar": "",
       "wallet": ""
+    },
+    {
+      "name": "Anastasia",
+      "role": "Chapter steward",
+      "bio": "",
+      "location": "Koh Phangan, Thailand",
+      "personSlug": "anastasia",
+      "chapterSlug": "koh-pha-ngan",
+      "avatar": "",
+      "wallet": ""
     }
   ],
   "stewardSlugs": [
-    "paul-burg"
+    "paul-burg",
+    "anastasia"
   ],
   "themeSlugs": [
     "water",
@@ -65,6 +76,15 @@
   ],
   "connectLinks": [
     {
+      "label": "Giveth project",
+      "url": "https://giveth.io/project/greenpill-phangan",
+      "subtext": "Public chapter project page",
+      "handle": "Greenpill Phangan",
+      "action": "Support",
+      "icon": "giveth",
+      "kind": "external"
+    },
+    {
       "label": "X",
       "url": "https://x.com/GreenPillKPG",
       "subtext": "Public chapter account",
@@ -102,7 +122,10 @@
   "media": {
     "image": "",
     "imageAlt": "",
-    "ogImage": ""
+    "imageSourceUrl": "",
+    "imageCredit": "",
+    "ogImage": "",
+    "reviewStatus": "needs-steward-photo"
   },
   "seo": {
     "title": "Greenpill Koh Phangan · Greenpill Network",

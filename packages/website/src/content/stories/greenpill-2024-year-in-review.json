@@ -1,0 +1,66 @@
+{
+  "title": "Greenpill 2024: A Year in Review",
+  "status": "published",
+  "category": "field-report",
+  "publishDate": "2024-12-31",
+  "updatedDate": "2024-12-31",
+  "dek": "The public Greenpill Year in Review gives the site a broad source for 2024 chapter, guild, governance, and education activity.",
+  "excerpt": "A network-level recap of 2024 across chapters, grant rounds, Greenpill Nigeria, Brasil, Uncommons, Gardens experiments, and Dev Guild work.",
+  "region": "global",
+  "tag": "Year in Review",
+  "tags": [
+    "year-in-review",
+    "chapters",
+    "guilds",
+    "public-goods"
+  ],
+  "body": "The 2024 Year in Review is a network-level source, not a shortcut for turning every mentioned activity into operational content.\n\nThe article documents a year where Greenpill chapters, guilds, and allied communities moved from broad movement energy into more specific local and builder work. It names grant rounds in Nigeria and Brazil, Squad Staking with New York City, Ottawa, and the Dev Guild, Brazil's IPFS and ReFi event work, Gardens governance experiments, Nigeria's sanitation and Impact Miner activity, Brasil's agroforestry and living-center work, and Uncommons education and publication activity.\n\nFor the website, the story should give readers a sourced overview while keeping operational records focused. Brasil's agroforestry and living-center work is strong enough to seed a chapter initiative; other single-line examples should stay narrative until stronger chapter-owned sources exist.\n\n## Sources\n\n- S069: https://paragraph.com/@greenpill/2024-a-year-in-review",
+  "image": "/images/hifi/topo-bg.png",
+  "author": "Greenpill Network research",
+  "authorRole": "Source-backed seed copy",
+  "authorBio": "",
+  "authorSlug": "",
+  "authorAvatar": "",
+  "relatedChapter": "",
+  "relatedGuild": "",
+  "relatedStorySlugs": [
+    "greenpill-brasil-gg20-climate-milestones",
+    "greenpill-nigeria-water-cup",
+    "dev-guild-regenerative-stack"
+  ],
+  "continueReadingStorySlugs": [
+    "greenpill-q1-2025-laying-groundwork",
+    "greenpill-2025-year-in-review",
+    "dev-guild-regenerative-stack"
+  ],
+  "themeSlugs": [
+    "public",
+    "funding",
+    "education",
+    "impact",
+    "local-regeneration"
+  ],
+  "translations": [],
+  "proofSignals": [
+    {
+      "label": "2024 Year in Review",
+      "value": "Paragraph article",
+      "source": "S069",
+      "href": "https://paragraph.com/@greenpill/2024-a-year-in-review"
+    }
+  ],
+  "featuredWeight": 83,
+  "readTime": "4 min read",
+  "media": {
+    "image": "/images/hifi/topo-bg.png",
+    "imageAlt": "Topographic map texture",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill 2024 Year in Review · Greenpill Stories",
+    "description": "Source-backed 2024 recap for Greenpill chapters, guilds, governance experiments, and public-goods work.",
+    "ogImage": "",
+    "canonicalPath": "/stories/greenpill-2024-year-in-review",
+    "noindex": false
+  }
+}

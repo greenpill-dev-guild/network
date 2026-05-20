@@ -120,7 +120,7 @@ const hero = chaptersIndex.hero ?? {};
       <section class="gp-chapters-section">
         <Container size="2xl">
           <div class="gp-chapters-section-head">
-            <Overline>Featured chapters</Overline>
+            <Overline as="h2">Featured chapters</Overline>
             <Text variant="caption">Strongest public proof in the network today.</Text>
           </div>
 
@@ -180,7 +180,7 @@ const hero = chaptersIndex.hero ?? {};
       <section class="gp-chapters-section">
         <Container size="2xl">
           <div class="gp-chapters-section-head">
-            <Overline>Full directory</Overline>
+            <Overline as="h2">Full directory</Overline>
             <Text variant="caption">{directory.length} chapters · sorted alphabetically.</Text>
           </div>
 
@@ -618,6 +618,18 @@ const hero = chaptersIndex.hero ?? {};
     .gp-chapters-grid.is-featured,
     .gp-chapters-grid.is-compact {
       grid-template-columns: 1fr;
+    }
+
+    /* 44px minimum touch targets at mobile width (DESIGN.md rule 12). The
+       coarse-pointer rule above covers touch devices; this covers the narrow
+       viewport the verifier renders. */
+    .gp-chapters-pill {
+      min-height: 44px;
+      padding-inline: 18px;
+    }
+
+    .gp-chapters-card-link-row {
+      min-height: 44px;
     }
   }
 </style>

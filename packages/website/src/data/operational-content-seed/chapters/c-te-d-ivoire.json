@@ -12,8 +12,21 @@
   "lat": 5.36,
   "long": -4.0083,
   "link": "https://hub.regencoordination.xyz/t/greenpill-civ-chapter-update-the-beginning-of-la-ligne-verte/333",
-  "stewards": [],
-  "stewardSlugs": [],
+  "stewards": [
+    {
+      "name": "Abraham Coulibaly",
+      "role": "Chapter steward",
+      "bio": "",
+      "location": "Cote d'Ivoire",
+      "personSlug": "abraham-coulibaly",
+      "chapterSlug": "c-te-d-ivoire",
+      "avatar": "",
+      "wallet": ""
+    }
+  ],
+  "stewardSlugs": [
+    "abraham-coulibaly"
+  ],
   "themeSlugs": [
     "water",
     "events",
@@ -31,7 +44,17 @@
       "kind": "external"
     }
   ],
-  "connectLinks": [],
+  "connectLinks": [
+    {
+      "label": "Regen Hub",
+      "url": "https://hub.regencoordination.xyz/t/greenpill-civ-chapter-update-the-beginning-of-la-ligne-verte/333",
+      "subtext": "La Ligne Verte chapter update",
+      "handle": "Greenpill Cote d'Ivoire",
+      "action": "Read",
+      "icon": "hub",
+      "kind": "external"
+    }
+  ],
   "relatedChapterSlugs": [
     "nigeria",
     "kenya"
@@ -51,7 +74,10 @@
   "media": {
     "image": "",
     "imageAlt": "",
-    "ogImage": ""
+    "imageSourceUrl": "",
+    "imageCredit": "",
+    "ogImage": "",
+    "reviewStatus": "needs-steward-photo"
   },
   "seo": {
     "title": "Greenpill Cote d'Ivoire · Greenpill Network",

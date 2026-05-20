@@ -6,7 +6,13 @@ import type { PublicImpactSourceBinding } from './chapter-impact.js';
 
 type UnknownRecord = Record<string, any>;
 
-export type PublicOperationalContentCollection = 'themes' | 'people' | 'chapters' | 'guilds' | 'projects';
+export type PublicOperationalContentCollection =
+  | 'themes'
+  | 'people'
+  | 'chapters'
+  | 'chapterInitiatives'
+  | 'guilds'
+  | 'projects';
 
 export interface PublicOperationalRecord {
   slug: string;
@@ -37,6 +43,7 @@ export interface PublicOperationalContentSnapshot {
   themes: PublicOperationalRecord[];
   people: PublicOperationalRecord[];
   chapters: PublicOperationalRecord[];
+  chapterInitiatives: PublicOperationalRecord[];
   guilds: PublicOperationalRecord[];
   projects: PublicOperationalRecord[];
   locations: PublicOperationalLocation[];
@@ -49,6 +56,7 @@ export const PUBLIC_OPERATIONAL_CONTENT_COLLECTIONS: readonly PublicOperationalC
   'themes',
   'people',
   'chapters',
+  'chapterInitiatives',
   'guilds',
   'projects',
 ]);
@@ -162,6 +170,17 @@ function defaultsForCollection(collection: PublicOperationalContentCollection | 
       seo: {},
     };
   }
+  if (collection === 'chapterInitiatives') {
+    return {
+      status: 'active',
+      themeSlugs: [],
+      links: [],
+      proofSignals: [],
+      impactSources: {},
+      relatedStorySlugs: [],
+      relatedResourceSlugs: [],
+    };
+  }
   if (collection === 'guilds') {
     return {
       type: 'guild',
@@ -212,7 +231,11 @@ function normalizeCollection(
       ...record,
     }))
     .sort((a, b) => (
-      Number(a.sortOrder ?? a.featuredWeight ?? 0) - Number(b.sortOrder ?? b.featuredWeight ?? 0) ||
+      (
+        collection === 'chapterInitiatives'
+          ? Number(b.featuredWeight ?? 0) - Number(a.featuredWeight ?? 0)
+          : Number(a.sortOrder ?? a.featuredWeight ?? 0) - Number(b.sortOrder ?? b.featuredWeight ?? 0)
+      ) ||
       cleanString(a.name ?? a.displayName ?? a.title ?? a.slug)
         .localeCompare(cleanString(b.name ?? b.displayName ?? b.title ?? b.slug))
     ));
@@ -292,6 +315,7 @@ export function toPublicOperationalContentSnapshot({
   themes = [],
   people = [],
   chapters = [],
+  chapterInitiatives = [],
   guilds = [],
   projects = [],
   generatedAt = new Date(),
@@ -299,21 +323,27 @@ export function toPublicOperationalContentSnapshot({
   themes?: UnknownRecord[];
   people?: UnknownRecord[];
   chapters?: UnknownRecord[];
+  chapterInitiatives?: UnknownRecord[];
   guilds?: UnknownRecord[];
   projects?: UnknownRecord[];
   generatedAt?: Date | string;
 } = {}): PublicOperationalContentSnapshot {
-  assertPublishedOperationalInput({ themes, people, chapters, guilds, projects });
+  assertPublishedOperationalInput({ themes, people, chapters, chapterInitiatives, guilds, projects });
 
   const publicChapters = normalizeCollection(chapters, 'chapters');
+  const publicGuilds = normalizeCollection(guilds, 'guilds');
+  const publicGuildSlugs = new Set(publicGuilds.map((guild) => guild.slug).filter(Boolean));
+  const publicProjects = normalizeCollection(projects, 'projects')
+    .filter((project) => publicGuildSlugs.has(cleanString(project.guild ?? project.guildSlug)));
   const snapshot: PublicOperationalContentSnapshot = {
     version: PUBLIC_OPERATIONAL_CONTENT_VERSION,
     generatedAt: toIso(generatedAt),
     themes: normalizeCollection(themes, 'themes'),
     people: normalizeCollection(people, 'people'),
     chapters: publicChapters,
-    guilds: normalizeCollection(guilds, 'guilds'),
-    projects: normalizeCollection(projects, 'projects'),
+    chapterInitiatives: normalizeCollection(chapterInitiatives, 'chapterInitiatives'),
+    guilds: publicGuilds,
+    projects: publicProjects,
     locations: toPublicOperationalLocations(publicChapters),
     impactSourceBindings: toPublicOperationalImpactSourceBindings(publicChapters, generatedAt),
   };

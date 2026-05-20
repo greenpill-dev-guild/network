@@ -1,0 +1,56 @@
+{
+  "title": "Validating the Regenerative Stack",
+  "kind": "article",
+  "status": "published",
+  "summary": "Dev Guild article on testing, iterating, and scaling the regenerative stack with metrics and milestones.",
+  "description": "The validating article closes the Dev Guild Paragraph series with public context on metrics, milestones, and the road ahead.",
+  "author": "Greenpill Dev Guild",
+  "publishDate": "2025-07-06",
+  "updatedDate": "2025-07-06",
+  "primaryUrl": "https://paragraph.com/@greenpilldevguild/validating-the-regenerative-stack",
+  "resourcePath": "",
+  "image": "/images/hifi/topo-bg.png",
+  "imageAlt": "Topographic map texture",
+  "duration": "",
+  "readTime": "",
+  "episodeNumber": "",
+  "guest": "",
+  "host": "",
+  "tags": [
+    "regenerative-stack",
+    "metrics",
+    "dev-guild"
+  ],
+  "themeSlugs": [
+    "impact",
+    "coordination-tools",
+    "funding"
+  ],
+  "relatedChapterSlugs": [],
+  "relatedGuildSlugs": [
+    "dev-guild"
+  ],
+  "featuredWeight": 78,
+  "card": {
+    "eyebrow": "Dev Guild",
+    "title": "Validating the Regenerative Stack",
+    "summary": "Metrics, milestones, and the road ahead for the Dev Guild stack.",
+    "badge": "Source S066",
+    "surfaceType": "article",
+    "image": "/images/hifi/topo-bg.png",
+    "imageAlt": "Topographic map texture",
+    "href": "https://paragraph.com/@greenpilldevguild/validating-the-regenerative-stack"
+  },
+  "media": {
+    "image": "/images/hifi/topo-bg.png",
+    "imageAlt": "Topographic map texture",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Validating the Regenerative Stack · Greenpill Library",
+    "description": "Read the Dev Guild article on metrics, milestones, and validating the regenerative stack.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "chapterSlug": "koh-pha-ngan",
+  "title": "Environmental Monitoring and Cleanup",
+  "status": "active",
+  "summary": "Source-backed Phangan cleanup and decentralized environmental monitoring work connected to DeCleanup public tooling.",
+  "description": "The public Phangan update thread connects beach cleanups, Monthly Earth Day activity, DeCleanup origins, and decentralized environmental monitoring analysis. DeCleanup is supporting tooling context; the chapter initiative remains Phangan-owned cleanup and monitoring work.",
+  "themeSlugs": [
+    "impact",
+    "opensrc",
+    "public",
+    "water"
+  ],
+  "links": [
+    {
+      "label": "GreenPill Phangan updates",
+      "url": "https://hub.regencoordination.xyz/t/greenpill-phangan-updates/95",
+      "subtext": "Public chapter thread",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "hub",
+      "kind": "external"
+    },
+    {
+      "label": "DeCleanup Network update",
+      "url": "https://hub.regencoordination.xyz/t/decleanup-network-base-app-launched-celo-in-testing-playbook-published-docs-live-heres-everything/394",
+      "subtext": "Supporting tooling context",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "impact",
+      "kind": "external"
+    }
+  ],
+  "proofSignals": [
+    {
+      "label": "Phangan cleanup and monitoring",
+      "value": "Public Hub updates",
+      "source": "S051",
+      "href": "https://hub.regencoordination.xyz/t/greenpill-phangan-updates/95"
+    },
+    {
+      "label": "DeCleanup tooling",
+      "value": "App and playbook update",
+      "source": "S052",
+      "href": "https://hub.regencoordination.xyz/t/decleanup-network-base-app-launched-celo-in-testing-playbook-published-docs-live-heres-everything/394"
+    }
+  ],
+  "impactSources": {},
+  "relatedStorySlugs": [
+    "greenpill-phangan-environmental-monitoring"
+  ],
+  "relatedResourceSlugs": [
+    "crypto-altruism-ep138-refi-phangan"
+  ],
+  "featuredWeight": 85
+}

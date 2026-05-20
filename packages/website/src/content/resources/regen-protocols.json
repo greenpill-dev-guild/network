@@ -1,0 +1,59 @@
+{
+  "title": "Regen Protocols",
+  "kind": "guide",
+  "status": "published",
+  "summary": "Public Garden-supporting thread describing regenerative onchain protocols, capital flows, and steward support systems.",
+  "description": "The Regen Protocols Hub thread is editorial context for Greenpill Garden. It frames onchain protocols as support infrastructure for stewards and regenerative initiatives without making them guild-owned projects.",
+  "author": "Greenpill Network",
+  "publishDate": "2025-11",
+  "updatedDate": "",
+  "primaryUrl": "https://hub.regencoordination.xyz/t/regen-protocols/364",
+  "resourcePath": "",
+  "image": "/images/hifi/garden-overlay.jpg",
+  "imageAlt": "Garden texture from the high-fidelity design package",
+  "duration": "",
+  "readTime": "",
+  "episodeNumber": "",
+  "guest": "",
+  "host": "",
+  "tags": [
+    "garden",
+    "protocols",
+    "stewardship",
+    "capital"
+  ],
+  "themeSlugs": [
+    "gov",
+    "currency",
+    "mutual",
+    "public"
+  ],
+  "relatedChapterSlugs": [],
+  "relatedGuildSlugs": [
+    "writers-guild",
+    "dev-guild"
+  ],
+  "featuredWeight": 72,
+  "card": {
+    "eyebrow": "Garden",
+    "title": "Regen Protocols",
+    "summary": "The public source for Garden-adjacent protocol and steward-support context.",
+    "badge": "Source S050",
+    "surfaceType": "garden",
+    "image": "/images/hifi/garden-overlay.jpg",
+    "imageAlt": "Garden texture from the high-fidelity design package",
+    "href": "https://hub.regencoordination.xyz/t/regen-protocols/364"
+  },
+  "media": {
+    "image": "/images/hifi/garden-overlay.jpg",
+    "imageAlt": "Garden texture from the high-fidelity design package",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Regen Protocols · Greenpill Library",
+    "description": "Read the public Regen Protocols thread supporting the Greenpill Garden editorial context.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

@@ -21,6 +21,11 @@
       "label": "Publication surfaces",
       "summary": "Greenpill Paragraph, podcast notes, newsletter copy, and public Hub threads.",
       "href": "https://paragraph.com/@greenpill"
+    },
+    {
+      "label": "Tooling research",
+      "summary": "The Carbon Copy collaboration explores how ReFi communities use Web3 tools.",
+      "href": "https://paragraph.com/@greenpill/preview/rN8MvIeOa4RGvE8kJN9L"
     }
   ],
   "mandateParagraphs": [
@@ -106,6 +111,12 @@
       "value": "293 episodes",
       "source": "S006",
       "href": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639"
+    },
+    {
+      "label": "Carbon Copy collaboration",
+      "value": "Web3 Tooling Series",
+      "source": "S071",
+      "href": "https://paragraph.com/@greenpill/preview/rN8MvIeOa4RGvE8kJN9L"
     }
   ],
   "media": {

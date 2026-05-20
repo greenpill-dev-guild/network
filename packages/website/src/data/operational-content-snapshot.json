@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-19T05:43:40.890Z",
+  "generatedAt": "2026-05-20T08:31:20.975Z",
   "themes": [
     {
       "name": "Local Regeneration",
@@ -491,7 +491,7 @@
       "id": "california"
     },
     {
-      "status": "forming",
+      "status": "active",
       "stewards": [],
       "stewardSlugs": [],
       "themeSlugs": [
@@ -535,16 +535,16 @@
       },
       "seo": {
         "title": "Greenpill Cape Town · Greenpill Network",
-        "description": "Greenpill Cape Town needs steward review and a public chapter source before launch claims are featured.",
+        "description": "Greenpill Cape Town is an active chapter in South Africa, with public source links and detailed program notes being backfilled with stewards.",
         "ogImage": "",
         "canonicalPath": "/chapters/cape-town",
-        "noindex": true
+        "noindex": false
       },
       "name": "Greenpill Cape Town",
       "city": "Cape Town",
       "country": "South Africa",
       "region": "africa",
-      "summary": "Held as a steward-review chapter record. The research artifact says Cape Town's public footprint is thin and depends on internal copy / Muizenberg-area references, so launch claims need public backfill.",
+      "summary": "Active chapter in Cape Town, South Africa. Public source links and detailed program notes are being backfilled with stewards.",
       "introQuote": "",
       "introQuoteAttribution": "",
       "image": "",
@@ -667,7 +667,7 @@
       "id": "dominican-republic"
     },
     {
-      "status": "active",
+      "status": "inactive",
       "stewards": [],
       "stewardSlugs": [],
       "themeSlugs": [
@@ -713,7 +713,7 @@
         "description": "Greenpill India has an adjacent public Hub source and needs steward confirmation for launch feature placement.",
         "ogImage": "",
         "canonicalPath": "/chapters/india",
-        "noindex": false
+        "noindex": true
       },
       "name": "Greenpill India",
       "city": "Distributed",
@@ -732,7 +732,7 @@
       "id": "india"
     },
     {
-      "status": "active",
+      "status": "inactive",
       "stewards": [],
       "stewardSlugs": [],
       "themeSlugs": [
@@ -779,7 +779,7 @@
         "description": "Greenpill Uganda has an adjacent public Hub source and needs steward confirmation for launch feature placement.",
         "ogImage": "",
         "canonicalPath": "/chapters/uganda",
-        "noindex": false
+        "noindex": true
       },
       "name": "Greenpill Uganda",
       "city": "Distributed",
@@ -1036,8 +1036,7 @@
       "connectLinks": [],
       "relatedChapterSlugs": [
         "nigeria",
-        "c-te-d-ivoire",
-        "uganda"
+        "c-te-d-ivoire"
       ],
       "featuredStorySlugs": [],
       "authoredResourceSlugs": [],
@@ -1108,7 +1107,6 @@
       ],
       "connectLinks": [],
       "relatedChapterSlugs": [
-        "uncommons",
         "greensofa"
       ],
       "featuredStorySlugs": [],
@@ -1217,7 +1215,7 @@
       "id": "c-te-d-ivoire"
     },
     {
-      "status": "active",
+      "status": "inactive",
       "stewards": [],
       "stewardSlugs": [],
       "themeSlugs": [
@@ -1263,7 +1261,9 @@
         "germany",
         "koh-pha-ngan"
       ],
-      "featuredStorySlugs": [],
+      "featuredStorySlugs": [
+        "greenpill-2025-year-in-review"
+      ],
       "authoredResourceSlugs": [],
       "impactSources": {},
       "proofSignals": [
@@ -1272,6 +1272,12 @@
           "value": "Formerly GreenPill CN",
           "source": "S023",
           "href": "https://hub.regencoordination.xyz/t/uncommons-previous-greenpill-cn/63"
+        },
+        {
+          "label": "Publications and learning",
+          "value": "Approved Paragraph preview",
+          "source": "S072",
+          "href": "https://paragraph.com/@greenpill/preview/IpvSMGPJ4B3szOkcVUQo"
         }
       ],
       "media": {
@@ -1284,7 +1290,7 @@
         "description": "Uncommons, formerly GreenPill CN, is a public crypto-humanities and public-goods builder community.",
         "ogImage": "",
         "canonicalPath": "/chapters/uncommons",
-        "noindex": false
+        "noindex": true
       },
       "name": "Uncommons",
       "city": "Distributed",
@@ -1556,7 +1562,6 @@
         }
       ],
       "relatedChapterSlugs": [
-        "uncommons",
         "koh-pha-ngan",
         "brasil"
       ],
@@ -1677,8 +1682,7 @@
       ],
       "relatedChapterSlugs": [
         "c-te-d-ivoire",
-        "kenya",
-        "uganda"
+        "kenya"
       ],
       "featuredStorySlugs": [],
       "authoredResourceSlugs": [],
@@ -1799,7 +1803,10 @@
         "greensofa",
         "koh-pha-ngan"
       ],
-      "featuredStorySlugs": [],
+      "featuredStorySlugs": [
+        "greenpill-brasil-gg20-climate-milestones",
+        "greenpill-2024-year-in-review"
+      ],
       "authoredResourceSlugs": [],
       "impactSources": {
         "impactEnabled": true,
@@ -1821,6 +1828,12 @@
           "value": "Greenpill Brazil",
           "source": "S020",
           "href": "https://checker.gitcoin.co/public/project/show/greenpill-brazil"
+        },
+        {
+          "label": "Agroforestry and living center",
+          "value": "Year in Review mention",
+          "source": "S069",
+          "href": "https://paragraph.com/@greenpill/2024-a-year-in-review"
         }
       ],
       "media": {
@@ -1851,6 +1864,464 @@
       "featuredWeight": 100,
       "slug": "brasil",
       "id": "brasil"
+    }
+  ],
+  "chapterInitiatives": [
+    {
+      "status": "active",
+      "themeSlugs": [
+        "water",
+        "impact",
+        "public"
+      ],
+      "links": [
+        {
+          "label": "Water Cup updates",
+          "url": "https://hub.regencoordination.xyz/t/greenpill-nigeria-project-water-cup-updates/307",
+          "subtext": "Public program thread",
+          "handle": "Regen Hub",
+          "action": "Read",
+          "icon": "hub",
+          "kind": "external"
+        },
+        {
+          "label": "Water Cup Mapping Hypercert",
+          "url": "https://app.hypercerts.org/hypercerts/42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-86091438830997431256233775680237357498368",
+          "subtext": "Public proof artifact",
+          "handle": "Hypercerts",
+          "action": "Open",
+          "icon": "impact",
+          "kind": "external"
+        }
+      ],
+      "proofSignals": [
+        {
+          "label": "Water Cup Mapping",
+          "value": "Hypercert",
+          "source": "S046",
+          "href": "https://app.hypercerts.org/hypercerts/42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-86091438830997431256233775680237357498368"
+        }
+      ],
+      "impactSources": {
+        "impactEnabled": true,
+        "greenGoodsGardenAddress": "0x35722eEdf3F7566A23FA871f0a04267AEe78E0dB",
+        "greenGoodsChainId": 42161,
+        "karmaProjectUID": "",
+        "karmaProjectSlug": "",
+        "karmaCommunitySlug": ""
+      },
+      "relatedStorySlugs": [
+        "greenpill-nigeria-water-cup"
+      ],
+      "relatedResourceSlugs": [
+        "regen-coordination-hub"
+      ],
+      "chapterSlug": "nigeria",
+      "title": "Water Cup",
+      "summary": "Source-backed local water and impact-mapping effort with public Regen Hub updates and a Water Cup Mapping Hypercert.",
+      "description": "The current Nigeria chapter record links the public Water Cup update thread and Hypercert. Keep downstream impact claims source-bound until steward review adds verified counts.",
+      "featuredWeight": 100,
+      "slug": "nigeria-water-cup",
+      "id": "nigeria-water-cup"
+    },
+    {
+      "status": "active",
+      "themeSlugs": [
+        "energy",
+        "education",
+        "public",
+        "impact"
+      ],
+      "links": [
+        {
+          "label": "Tech & Sun Round",
+          "url": "https://hub.regencoordination.xyz/t/tech-sun-round-by-greenpill-nigeria/393",
+          "subtext": "Localism Fund thread",
+          "handle": "Regen Hub",
+          "action": "Read",
+          "icon": "energy",
+          "kind": "external"
+        }
+      ],
+      "proofSignals": [
+        {
+          "label": "Solar hub build",
+          "value": "Localism Fund updates",
+          "source": "S049",
+          "href": "https://hub.regencoordination.xyz/t/tech-sun-round-by-greenpill-nigeria/393"
+        }
+      ],
+      "impactSources": {},
+      "relatedStorySlugs": [
+        "greenpill-nigeria-tech-and-sun-round"
+      ],
+      "relatedResourceSlugs": [
+        "regen-coordination-hub"
+      ],
+      "chapterSlug": "nigeria",
+      "title": "Tech & Sun Round",
+      "summary": "Solar-powered public goods infrastructure and builder education effort sourced from Greenpill Nigeria's Localism Fund thread.",
+      "description": "The public Tech & Sun Round thread documents Greenpill Nigeria's work on solar, internet, campus infrastructure, and hands-on builder education. Keep final activation and usage metrics source-bound until steward review adds completed counts.",
+      "featuredWeight": 95,
+      "slug": "nigeria-tech-and-sun-round",
+      "id": "nigeria-tech-and-sun-round"
+    },
+    {
+      "status": "active",
+      "themeSlugs": [
+        "education",
+        "public",
+        "events"
+      ],
+      "links": [
+        {
+          "label": "Take the Greenpill education series",
+          "url": "https://hub.regencoordination.xyz/t/take-the-greenpill-with-greenpill-nigeria-10-weeks-of-refi-education/324",
+          "subtext": "10-week public education program",
+          "handle": "Regen Hub",
+          "action": "Read",
+          "icon": "education",
+          "kind": "external"
+        }
+      ],
+      "proofSignals": [
+        {
+          "label": "Education program",
+          "value": "10 weeks",
+          "source": "S016",
+          "href": "https://hub.regencoordination.xyz/t/take-the-greenpill-with-greenpill-nigeria-10-weeks-of-refi-education/324"
+        }
+      ],
+      "impactSources": {},
+      "relatedStorySlugs": [
+        "take-the-greenpill-nigeria-refi-education"
+      ],
+      "relatedResourceSlugs": [
+        "regen-coordination-hub"
+      ],
+      "chapterSlug": "nigeria",
+      "title": "Take the Greenpill with Greenpill Nigeria",
+      "summary": "A 10-week public ReFi education program supported by the current Nigeria chapter seed and Regen Hub source.",
+      "description": "The current Nigeria chapter record links the public 10-week education program thread and treats it as chapter-owned education work.",
+      "featuredWeight": 90,
+      "slug": "nigeria-take-the-greenpill",
+      "id": "nigeria-take-the-greenpill"
+    },
+    {
+      "status": "active",
+      "themeSlugs": [
+        "impact",
+        "opensrc",
+        "public",
+        "water"
+      ],
+      "links": [
+        {
+          "label": "GreenPill Phangan updates",
+          "url": "https://hub.regencoordination.xyz/t/greenpill-phangan-updates/95",
+          "subtext": "Public chapter thread",
+          "handle": "Regen Hub",
+          "action": "Read",
+          "icon": "hub",
+          "kind": "external"
+        },
+        {
+          "label": "DeCleanup Network update",
+          "url": "https://hub.regencoordination.xyz/t/decleanup-network-base-app-launched-celo-in-testing-playbook-published-docs-live-heres-everything/394",
+          "subtext": "Supporting tooling context",
+          "handle": "Regen Hub",
+          "action": "Read",
+          "icon": "impact",
+          "kind": "external"
+        }
+      ],
+      "proofSignals": [
+        {
+          "label": "Phangan cleanup and monitoring",
+          "value": "Public Hub updates",
+          "source": "S051",
+          "href": "https://hub.regencoordination.xyz/t/greenpill-phangan-updates/95"
+        },
+        {
+          "label": "DeCleanup tooling",
+          "value": "App and playbook update",
+          "source": "S052",
+          "href": "https://hub.regencoordination.xyz/t/decleanup-network-base-app-launched-celo-in-testing-playbook-published-docs-live-heres-everything/394"
+        }
+      ],
+      "impactSources": {},
+      "relatedStorySlugs": [
+        "greenpill-phangan-environmental-monitoring"
+      ],
+      "relatedResourceSlugs": [
+        "crypto-altruism-ep138-refi-phangan"
+      ],
+      "chapterSlug": "koh-pha-ngan",
+      "title": "Environmental Monitoring and Cleanup",
+      "summary": "Source-backed Phangan cleanup and decentralized environmental monitoring work connected to DeCleanup public tooling.",
+      "description": "The public Phangan update thread connects beach cleanups, Monthly Earth Day activity, DeCleanup origins, and decentralized environmental monitoring analysis. DeCleanup is supporting tooling context; the chapter initiative remains Phangan-owned cleanup and monitoring work.",
+      "featuredWeight": 85,
+      "slug": "koh-phangan-environmental-monitoring",
+      "id": "koh-phangan-environmental-monitoring"
+    },
+    {
+      "status": "active",
+      "themeSlugs": [
+        "events",
+        "public",
+        "impact"
+      ],
+      "links": [
+        {
+          "label": "10 Years of Ethereum event",
+          "url": "https://luma.com/k057yjjx",
+          "subtext": "Public event page",
+          "handle": "Luma",
+          "action": "Open",
+          "icon": "calendar",
+          "kind": "external"
+        }
+      ],
+      "proofSignals": [
+        {
+          "label": "Public event",
+          "value": "10 Years of Ethereum",
+          "source": "S038",
+          "href": "https://luma.com/k057yjjx"
+        }
+      ],
+      "impactSources": {},
+      "relatedStorySlugs": [],
+      "relatedResourceSlugs": [
+        "crypto-altruism-ep138-refi-phangan"
+      ],
+      "chapterSlug": "koh-pha-ngan",
+      "title": "10 Years of Ethereum Phangan",
+      "summary": "Public local event page connected to Greenpill Koh Phangan's regenerative finance and public-goods activity.",
+      "description": "The current Koh Phangan chapter record links a public Luma event page and keeps the event as a source-backed activation rather than a standalone public route.",
+      "featuredWeight": 80,
+      "slug": "koh-phangan-ethereum-at-10",
+      "id": "koh-phangan-ethereum-at-10"
+    },
+    {
+      "status": "active",
+      "themeSlugs": [
+        "education",
+        "public",
+        "events"
+      ],
+      "links": [
+        {
+          "label": "Luma",
+          "url": "https://luma.com/GPNYC",
+          "subtext": "Public events",
+          "handle": "GPNYC",
+          "action": "Open calendar",
+          "icon": "calendar",
+          "kind": "external"
+        }
+      ],
+      "proofSignals": [
+        {
+          "label": "Luma calendar",
+          "value": "Monthly meetups",
+          "source": "S029",
+          "href": "https://luma.com/GPNYC"
+        }
+      ],
+      "impactSources": {},
+      "relatedStorySlugs": [],
+      "relatedResourceSlugs": [
+        "greenpill-network-luma"
+      ],
+      "chapterSlug": "new-york-city",
+      "title": "Greenpill NYC Monthly Meetups",
+      "summary": "Source-backed public-goods education and meetup activity hosted through the Greenpill NYC Luma calendar.",
+      "description": "The current NYC chapter record identifies monthly meetups from the public Luma calendar, with the Hub and X account kept as supporting chapter context.",
+      "featuredWeight": 75,
+      "slug": "new-york-city-monthly-meetups",
+      "id": "new-york-city-monthly-meetups"
+    },
+    {
+      "status": "active",
+      "themeSlugs": [
+        "trees",
+        "food",
+        "local-regeneration",
+        "education",
+        "public"
+      ],
+      "links": [
+        {
+          "label": "Greenpill 2024 Year in Review",
+          "url": "https://paragraph.com/@greenpill/2024-a-year-in-review",
+          "subtext": "Public Paragraph source",
+          "handle": "@greenpill",
+          "action": "Read",
+          "icon": "article",
+          "kind": "external"
+        }
+      ],
+      "proofSignals": [
+        {
+          "label": "Brasil agroforestry and living center",
+          "value": "Year in Review mention",
+          "source": "S069",
+          "href": "https://paragraph.com/@greenpill/2024-a-year-in-review"
+        }
+      ],
+      "impactSources": {},
+      "relatedStorySlugs": [
+        "greenpill-2024-year-in-review",
+        "greenpill-brasil-gg20-climate-milestones"
+      ],
+      "relatedResourceSlugs": [
+        "regen-coordination-hub"
+      ],
+      "chapterSlug": "brasil",
+      "title": "Agroforestry Task Force and Living Center",
+      "summary": "Greenpill Brasil's 2024 agroforestry and living-center work, sourced from the public Greenpill Year in Review.",
+      "description": "The public 2024 Year in Review names Greenpill Brasil's agroforestry task force and community living-center work as a concrete chapter effort. Keep this initiative qualitative until a chapter-owned follow-up source adds precise completion, attendance, food-sovereignty, or biodiversity metrics.",
+      "featuredWeight": 72,
+      "slug": "brasil-agroforestry-living-center",
+      "id": "brasil-agroforestry-living-center"
+    },
+    {
+      "status": "active",
+      "themeSlugs": [
+        "water",
+        "education",
+        "events",
+        "currency"
+      ],
+      "links": [
+        {
+          "label": "La Ligne Verte update",
+          "url": "https://hub.regencoordination.xyz/t/greenpill-civ-chapter-update-the-beginning-of-la-ligne-verte/333",
+          "subtext": "Public chapter update",
+          "handle": "Regen Hub",
+          "action": "Read",
+          "icon": "hub",
+          "kind": "external"
+        }
+      ],
+      "proofSignals": [
+        {
+          "label": "Green Mission targets",
+          "value": "2025-2026 goals",
+          "source": "S022",
+          "href": "https://hub.regencoordination.xyz/t/greenpill-civ-chapter-update-the-beginning-of-la-ligne-verte/333"
+        }
+      ],
+      "impactSources": {},
+      "relatedStorySlugs": [
+        "greenpill-cote-divoire-la-ligne-verte"
+      ],
+      "relatedResourceSlugs": [
+        "regen-coordination-hub"
+      ],
+      "chapterSlug": "c-te-d-ivoire",
+      "title": "La Ligne Verte",
+      "summary": "Public Green Mission source for environmental coordination around collection, education, and waste valorization.",
+      "description": "The current Cote d'Ivoire chapter record points at a public La Ligne Verte update and frames the targets as goals rather than completed metrics.",
+      "featuredWeight": 70,
+      "slug": "cote-divoire-la-ligne-verte",
+      "id": "cote-divoire-la-ligne-verte"
+    },
+    {
+      "status": "active",
+      "themeSlugs": [
+        "education",
+        "knowledge-commons",
+        "stories",
+        "public",
+        "opensrc"
+      ],
+      "links": [
+        {
+          "label": "Approved Paragraph preview",
+          "url": "https://paragraph.com/@greenpill/preview/IpvSMGPJ4B3szOkcVUQo",
+          "subtext": "Uncommons publications and learning context",
+          "handle": "@greenpill",
+          "action": "Read",
+          "icon": "article",
+          "kind": "external"
+        },
+        {
+          "label": "Uncommons website",
+          "url": "https://uncommons.cc",
+          "subtext": "Public chapter website",
+          "handle": "uncommons.cc",
+          "action": "Open",
+          "icon": "external",
+          "kind": "external"
+        }
+      ],
+      "proofSignals": [
+        {
+          "label": "Publications shipped",
+          "value": "Approved Paragraph preview",
+          "source": "S072",
+          "href": "https://paragraph.com/@greenpill/preview/IpvSMGPJ4B3szOkcVUQo"
+        },
+        {
+          "label": "Open Good recognition",
+          "value": "COSCon'25 mention",
+          "source": "S072",
+          "href": "https://paragraph.com/@greenpill/preview/IpvSMGPJ4B3szOkcVUQo"
+        }
+      ],
+      "impactSources": {},
+      "relatedStorySlugs": [
+        "greenpill-2025-year-in-review"
+      ],
+      "relatedResourceSlugs": [],
+      "chapterSlug": "uncommons",
+      "title": "Publications and Learning Series",
+      "summary": "Uncommons education, translation, publication, and public-learning work sourced from the approved Paragraph preview.",
+      "description": "The approved Paragraph preview documents Uncommons publications and learning work, including the 2025 Community Annual VOID, MycoFi translation and study activity, the P2P Commons Manifesto translation and book tour, Crypto Flight interview volumes, Summer of Protocols CN, the Chiang Mai Cypherpunk and Thinker Assembly, and Open Good recognition. Present this as an ongoing chapter-owned learning and publications initiative without adding unsupported distribution, attendance, or funding claims.",
+      "featuredWeight": 70,
+      "slug": "uncommons-publications-learning-series",
+      "id": "uncommons-publications-learning-series"
+    },
+    {
+      "status": "active",
+      "themeSlugs": [
+        "opensrc",
+        "events",
+        "education"
+      ],
+      "links": [
+        {
+          "label": "Vibe Coding for Good",
+          "url": "https://www.techalliance.ca/news/events/vibe-coding-for-good-a-collaborative-build-night-reimagine-co-presented-by-greenpill-london-ontario/",
+          "subtext": "Public event listing",
+          "handle": "TechAlliance",
+          "action": "Open",
+          "icon": "calendar",
+          "kind": "external"
+        }
+      ],
+      "proofSignals": [
+        {
+          "label": "Public build night",
+          "value": "April 28, 2025",
+          "source": "S033",
+          "href": "https://www.techalliance.ca/news/events/vibe-coding-for-good-a-collaborative-build-night-reimagine-co-presented-by-greenpill-london-ontario/"
+        }
+      ],
+      "impactSources": {},
+      "relatedStorySlugs": [
+        "vibe-coding-good-london-ontario"
+      ],
+      "relatedResourceSlugs": [],
+      "chapterSlug": "london-ontario",
+      "title": "Vibe Coding for Good",
+      "summary": "Collaborative build night at Reimagine Co presented by Greenpill London Ontario on April 28, 2025.",
+      "description": "The current London Ontario chapter record uses the public TechAlliance event listing as the launch-safe proof for this local build-night initiative.",
+      "featuredWeight": 65,
+      "slug": "london-ontario-vibe-coding-for-good",
+      "id": "london-ontario-vibe-coding-for-good"
     }
   ],
   "guilds": [
@@ -1910,6 +2381,12 @@
           "value": "293 episodes",
           "source": "S006",
           "href": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639"
+        },
+        {
+          "label": "Carbon Copy collaboration",
+          "value": "Web3 Tooling Series",
+          "source": "S071",
+          "href": "https://paragraph.com/@greenpill/preview/rN8MvIeOa4RGvE8kJN9L"
         }
       ],
       "media": {
@@ -1944,6 +2421,11 @@
           "label": "Publication surfaces",
           "summary": "Greenpill Paragraph, podcast notes, newsletter copy, and public Hub threads.",
           "href": "https://paragraph.com/@greenpill"
+        },
+        {
+          "label": "Tooling research",
+          "summary": "The Carbon Copy collaboration explores how ReFi communities use Web3 tools.",
+          "href": "https://paragraph.com/@greenpill/preview/rN8MvIeOa4RGvE8kJN9L"
         }
       ],
       "mandateParagraphs": [
@@ -2079,6 +2561,12 @@
           "value": "$60k request",
           "source": "S012 Octant forum",
           "href": "https://discuss.octant.app/t/greenpill-dev-guild-regeneration-through-collaboration/456"
+        },
+        {
+          "label": "Regenerative stack",
+          "value": "Paragraph series",
+          "source": "S060",
+          "href": "https://paragraph.com/@greenpilldevguild/pioneering-a-regenerative-stack"
         }
       ],
       "media": {
@@ -2113,6 +2601,11 @@
           "label": "Reputation primitives",
           "summary": "GreenWill explores public-good reputation and pay-it-forward activity.",
           "href": "https://github.com/greenpill-dev-guild/greenwill"
+        },
+        {
+          "label": "Public goods staking",
+          "summary": "PGSP and Squad Staking explore validator rewards as recurring funding for public goods.",
+          "href": "https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0"
         },
         {
           "label": "Public writing",
@@ -2266,6 +2759,12 @@
           "value": "Greenpill Dev Guild",
           "source": "S010",
           "href": "https://checker.gitcoin.co/public/project/show/greenpill-dev-guild"
+        },
+        {
+          "label": "Allo Alliance article",
+          "value": "Grant ships allocation context",
+          "source": "S062",
+          "href": "https://paragraph.com/@greenpilldevguild/the-allo-alliance-innovating-capital-allocation-on-chain"
         }
       ],
       "media": {
@@ -2310,6 +2809,12 @@
           "value": "cookie-jar",
           "source": "S008 GitHub org",
           "href": "https://github.com/greenpill-dev-guild/cookie-jar"
+        },
+        {
+          "label": "Allo Alliance article",
+          "value": "Cookie jar allocation context",
+          "source": "S062",
+          "href": "https://paragraph.com/@greenpilldevguild/the-allo-alliance-innovating-capital-allocation-on-chain"
         }
       ],
       "media": {
@@ -2334,51 +2839,6 @@
       "featuredWeight": 50,
       "slug": "cookie-jar",
       "id": "cookie-jar"
-    },
-    {
-      "status": "active",
-      "techStack": [
-        "Discourse",
-        "Public forum",
-        "Chapter updates"
-      ],
-      "stewardSlugs": [],
-      "themeSlugs": [
-        "gov",
-        "stories",
-        "public",
-        "events"
-      ],
-      "proofSignals": [
-        {
-          "label": "Public Hub",
-          "value": "hub.regencoordination.xyz",
-          "source": "S003",
-          "href": "https://hub.regencoordination.xyz/"
-        }
-      ],
-      "media": {
-        "image": "",
-        "imageAlt": "",
-        "ogImage": ""
-      },
-      "seo": {
-        "title": "Regen Coordination Hub · Greenpill Network",
-        "description": "The Regen Coordination Hub is Greenpill's public forum for chapter updates, proposals, and program coordination.",
-        "ogImage": "",
-        "canonicalPath": "",
-        "noindex": false
-      },
-      "name": "Regen Coordination Hub",
-      "guild": "",
-      "summary": "Public forum, chapter directory, and coordination surface for Greenpill and allied regen work.",
-      "description": "The Regen Coordination Hub is a public Discourse surface used for chapter updates, proposals, Greenpill Garden coordination, website revamp discussion, and network-level knowledge work. It appears at hub.regencoordination.xyz and hub.greenpill.network.",
-      "image": "",
-      "repoUrl": "",
-      "liveUrl": "https://hub.regencoordination.xyz/",
-      "featuredWeight": 60,
-      "slug": "regen-coordination-hub",
-      "id": "regen-coordination-hub"
     },
     {
       "status": "active",
@@ -2428,52 +2888,6 @@
       "featuredWeight": 65,
       "slug": "greenpill-impact-framework",
       "id": "greenpill-impact-framework"
-    },
-    {
-      "status": "active",
-      "techStack": [
-        "Onboarding",
-        "Stewardship",
-        "Chapters",
-        "Impact reporting"
-      ],
-      "stewardSlugs": [],
-      "themeSlugs": [
-        "gov",
-        "currency",
-        "mutual",
-        "public"
-      ],
-      "proofSignals": [
-        {
-          "label": "Public Garden thread",
-          "value": "Season One",
-          "source": "S042",
-          "href": "https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363"
-        }
-      ],
-      "media": {
-        "image": "/images/hifi/garden-overlay.jpg",
-        "imageAlt": "Garden texture from the high-fidelity design package",
-        "ogImage": ""
-      },
-      "seo": {
-        "title": "Greenpill Garden · Greenpill Network",
-        "description": "Greenpill Garden is a public onboarding and stewardship program connecting chapters, tools, and impact reporting.",
-        "ogImage": "",
-        "canonicalPath": "",
-        "noindex": false
-      },
-      "name": "Greenpill Garden",
-      "guild": "",
-      "summary": "Season-based public onboarding and stewardship program.",
-      "description": "Greenpill Garden Season One is a public program thread connecting stewardship, chapters, impact reporting, tools, and the website revamp. The public website should use it as the source-backed onboarding bridge while keeping private pledge and assessment state out of Keystatic.",
-      "image": "",
-      "repoUrl": "",
-      "liveUrl": "https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363",
-      "featuredWeight": 70,
-      "slug": "greenpill-garden",
-      "id": "greenpill-garden"
     },
     {
       "status": "active",
@@ -2541,6 +2955,12 @@
           "value": "greenwill",
           "source": "S008 GitHub org",
           "href": "https://github.com/greenpill-dev-guild/greenwill"
+        },
+        {
+          "label": "Dev Guild article",
+          "value": "GreenWill",
+          "source": "S063",
+          "href": "https://paragraph.com/@greenpilldevguild/greenwill-powering-governance-through-reputation-tracking"
         }
       ],
       "media": {
@@ -2565,6 +2985,68 @@
       "featuredWeight": 80,
       "slug": "greenwill",
       "id": "greenwill"
+    },
+    {
+      "status": "active",
+      "techStack": [
+        "Ethereum validators",
+        "Distributed Validator Technology",
+        "Dappnode",
+        "Lido CSM",
+        "Octant Vaults"
+      ],
+      "stewardSlugs": [
+        "afo-aiyeloja",
+        "matt-mattycompost"
+      ],
+      "themeSlugs": [
+        "funding",
+        "public",
+        "coordination-tools",
+        "opensrc"
+      ],
+      "proofSignals": [
+        {
+          "label": "PGSP v0",
+          "value": "Paragraph article",
+          "source": "S059",
+          "href": "https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0"
+        },
+        {
+          "label": "Squad Staking",
+          "value": "Community staking context",
+          "source": "S061",
+          "href": "https://paragraph.com/@greenpilldevguild/squad-staking-turning-validator-rewards-into-public-good"
+        },
+        {
+          "label": "Capital Formation",
+          "value": "Funding thesis",
+          "source": "S065",
+          "href": "https://paragraph.com/@greenpilldevguild/capital-formation-turning-impact-into-sustainable-revenue"
+        }
+      ],
+      "media": {
+        "image": "",
+        "imageAlt": "",
+        "ogImage": ""
+      },
+      "seo": {
+        "title": "Public Goods Staking Protocol · Greenpill Network",
+        "description": "The Public Goods Staking Protocol is a Dev Guild workstream for recurring public-goods funding through validator infrastructure and vault routing.",
+        "ogImage": "",
+        "canonicalPath": "",
+        "noindex": false
+      },
+      "name": "Public Goods Staking Protocol",
+      "guild": "dev-guild",
+      "summary": "Dev Guild workstream using validator infrastructure and vault routing to create recurring public-goods funding.",
+      "description": "The Public Goods Staking Protocol is a Greenpill Dev Guild workstream sourced from the Dev Guild Paragraph series. Public sources describe a path where validator infrastructure, Dappnode, Obol distributed validator technology, Lido CSM, and Octant-aligned vault routing can help communities generate recurring funding for public goods. Treat Squad Staking as part of this workstream, not a separate project seed in this batch.",
+      "image": "",
+      "repoUrl": "",
+      "liveUrl": "https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0",
+      "featuredWeight": 88,
+      "slug": "public-goods-staking-protocol",
+      "id": "public-goods-staking-protocol"
     },
     {
       "status": "active",
@@ -2598,6 +3080,12 @@
           "value": "docs.greengoods.app",
           "source": "S047",
           "href": "https://docs.greengoods.app/community/why-we-build"
+        },
+        {
+          "label": "Dev Guild article",
+          "value": "Green Goods",
+          "source": "S064",
+          "href": "https://paragraph.com/@greenpilldevguild/green-goods-simplifying-impact-capture-and-exchange"
         },
         {
           "label": "Octant proposal allocation",
@@ -2649,6 +3137,21 @@
       ]
     },
     {
+      "id": "cape-town",
+      "name": "Greenpill Cape Town",
+      "lat": -33.9249,
+      "long": 18.4241,
+      "link": "https://luma.com/greenpill-network",
+      "kind": "chapter",
+      "status": "active",
+      "themes": [
+        "events",
+        "education",
+        "currency",
+        "public"
+      ]
+    },
+    {
       "id": "c-te-d-ivoire",
       "name": "Greenpill Cote d'Ivoire",
       "lat": 5.36,
@@ -2676,20 +3179,6 @@
         "education",
         "trees",
         "funding"
-      ]
-    },
-    {
-      "id": "india",
-      "name": "Greenpill India",
-      "lat": 21.14,
-      "long": 79.09,
-      "link": "https://hub.regencoordination.xyz/t/greenpill-india-updates/97",
-      "kind": "chapter",
-      "status": "active",
-      "themes": [
-        "education",
-        "public",
-        "opensrc"
       ]
     },
     {
@@ -2800,21 +3289,6 @@
       ]
     },
     {
-      "id": "uganda",
-      "name": "Greenpill Uganda",
-      "lat": 1.37,
-      "long": 32.29,
-      "link": "https://hub.regencoordination.xyz/t/greenpill-uganda/29",
-      "kind": "chapter",
-      "status": "active",
-      "themes": [
-        "food",
-        "water",
-        "education",
-        "public"
-      ]
-    },
-    {
       "id": "greensofa",
       "name": "GreenSofa",
       "lat": 23.6978,
@@ -2830,28 +3304,11 @@
         "funding",
         "impact"
       ]
-    },
-    {
-      "id": "uncommons",
-      "name": "Uncommons",
-      "lat": 31.2304,
-      "long": 121.4737,
-      "link": "https://hub.regencoordination.xyz/t/uncommons-previous-greenpill-cn/63",
-      "kind": "chapter",
-      "status": "active",
-      "themes": [
-        "public",
-        "education",
-        "stories",
-        "gov",
-        "desci",
-        "opensrc"
-      ]
     }
   ],
   "impactSourceBindings": {
     "version": 1,
-    "generatedAt": "2026-05-19T05:43:40.890Z",
+    "generatedAt": "2026-05-20T08:31:20.975Z",
     "chapters": [
       {
         "chapterSlug": "brasil",

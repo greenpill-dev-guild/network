@@ -4,7 +4,10 @@ import { test } from 'node:test';
 import {
   containsPrivateMapNodeField,
   EDITABLE_MAP_NODE_UPDATE_FIELDS,
+  loadLocalPendingNodes,
+  localPendingNodeSignature,
   PRIVATE_MAP_NODE_FIELDS,
+  reconcileLocalPendingNodes,
   saveLocalPendingNode,
   toEditablePublicMapNode,
   toPublicMapNode,
@@ -139,6 +142,67 @@ test('local optimistic node storage stays public-safe', () => {
   const stored = JSON.parse(storage.getItem('greenpill.pendingMapNodes.v1'));
   assert.equal(stored.length, 1);
   assert.equal(containsPrivateMapNodeField(stored), false);
+});
+
+test('local pending nodes reconcile against approved nodes by name and coordinates', () => {
+  const storage = new MemoryStorage();
+  saveLocalPendingNode(storage, {
+    id: 'local-approved-soon',
+    name: 'Lagos Member',
+    place: 'Lagos',
+    lat: 6.5244,
+    long: 3.3792,
+    themes: ['public', 'events', 'trees', 'water'],
+  });
+  saveLocalPendingNode(storage, {
+    id: 'local-still-pending',
+    name: 'Nairobi Member',
+    place: 'Nairobi',
+    lat: -1.2921,
+    long: 36.8219,
+    themes: ['public', 'food', 'energy', 'gov'],
+  });
+
+  // Approved node carries /map/state shape (name + lat/long) and a slightly
+  // nudged coordinate that still falls inside the two-decimal fingerprint.
+  const result = reconcileLocalPendingNodes(storage, [
+    { name: 'Lagos Member', lat: 6.5249, long: 3.3795, status: 'approved' },
+  ]);
+
+  assert.equal(result.removed.length, 1);
+  assert.equal(result.removed[0].id, 'local-approved-soon');
+  assert.equal(result.remaining.length, 1);
+  assert.equal(result.remaining[0].id, 'local-still-pending');
+
+  const stored = loadLocalPendingNodes(storage);
+  assert.equal(stored.length, 1);
+  assert.equal(stored[0].id, 'local-still-pending');
+});
+
+test('reconcile leaves pending nodes untouched when nothing matches', () => {
+  const storage = new MemoryStorage();
+  saveLocalPendingNode(storage, {
+    id: 'local-unmatched',
+    name: 'Lisbon Member',
+    place: 'Lisbon',
+    lat: 38.7223,
+    long: -9.1393,
+    themes: ['public', 'events', 'trees', 'water'],
+  });
+
+  // A distant node with the same name must not be reconciled away.
+  const result = reconcileLocalPendingNodes(storage, [
+    { name: 'Lisbon Member', lat: 40.0, long: -9.1393 },
+  ]);
+
+  assert.equal(result.removed.length, 0);
+  assert.equal(loadLocalPendingNodes(storage).length, 1);
+  // A node without enough public signal yields no signature and never matches.
+  assert.equal(localPendingNodeSignature({ name: '', lat: 1, long: 2 }), '');
+  assert.equal(
+    localPendingNodeSignature({ name: 'A', lat: 1.239, long: -2.001 }),
+    'a|1.24|-2.00'
+  );
 });
 
 test('privacy guard catches snake_case private map-node fields', () => {
@@ -505,6 +569,57 @@ test('home map intake requires a valid email and stores local pending only after
   assert.match(component, /If this email matches the node owner, we'll send an edit link\./);
   assert.doesNotMatch(component, /edit-session/);
   assert.doesNotMatch(component, /update-requests/);
+});
+
+test('home map enforces the exactly-four-theme activity rule', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+
+  // The form labels the rule and a live counter, and the submit handler refuses
+  // anything other than four themes before it ever contacts the server.
+  assert.match(component, /Choose exactly four themes/);
+  assert.match(component, /data-home-map-theme-count/);
+  assert.match(component, /REQUIRED_THEME_COUNT = 4/);
+  assert.match(component, /themes\.length !== 4/);
+
+  // The exactly-four guard sits after the email check (so a local pending node
+  // is still never written before the email is valid) and before the fetch.
+  const submitIndex = component.indexOf("addForm?.addEventListener('submit'");
+  const emailValidationIndex = component.indexOf('emailInput?.checkValidity()', submitIndex);
+  const themeGuardIndex = component.indexOf('themes.length !== 4', submitIndex);
+  const fetchIndex = component.indexOf('await fetch(`${agentBaseUrl}/map-nodes`', submitIndex);
+  assert.ok(emailValidationIndex !== -1 && themeGuardIndex !== -1 && fetchIndex !== -1);
+  assert.ok(emailValidationIndex < themeGuardIndex, 'email validity is still checked first');
+  assert.ok(themeGuardIndex < fetchIndex, 'exactly-four rule is enforced before the network call');
+});
+
+test('home map grows live: reconciles, polls visibly, and redraws after submit', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+
+  // Local pending nodes reconcile against approved server nodes to avoid
+  // post-approval duplicates, using the shared (testable) helper.
+  assert.match(component, /reconcileLocalPendingNodes/);
+  assert.match(component, /removeInjectedMember/);
+
+  // A successful submit re-pulls /map/state so server-generated relationship
+  // edges redraw without a manual reload.
+  const submitIndex = component.indexOf("addForm?.addEventListener('submit'");
+  const redrawIndex = component.indexOf('void loadMapState();', submitIndex);
+  assert.ok(redrawIndex !== -1, 'submit handler must refresh /map/state after a successful submit');
+
+  // Live onboarding mode keeps already-open browsers fresh with a gentle,
+  // visibility-aware poll (paused while the tab is hidden).
+  assert.match(component, /intakeMode !== 'live'/);
+  assert.match(component, /document\.visibilityState === 'visible'/);
+  assert.match(component, /setInterval/);
+
+  // /map/state stays the canonical public source, fetched no-store.
+  assert.match(component, /\$\{agentBaseUrl\}\/map\/state`, \{ cache: 'no-store' \}/);
 });
 
 test('map-node edit flow has an operator cleanup command', async () => {

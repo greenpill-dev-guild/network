@@ -1,12 +1,14 @@
 {
-  "displayName": "Matt (mattycompost)",
-  "role": "Dev Guild and Garden contributor",
+  "displayName": "Matt Strachman",
+  "role": "Greenpill NYC steward and Dev Guild contributor",
   "avatar": "",
-  "bio": "Publicly referenced in Dev Guild / Garden research as part of Greenpill builder and stewardship work.",
+  "bio": "Greenpill NYC steward and publicly referenced in Dev Guild / Garden research as part of Greenpill builder and stewardship work.",
   "themeSlugs": [
+    "events",
+    "education",
+    "public",
     "opensrc",
-    "gov",
-    "public"
+    "gov"
   ],
   "links": [
     {
@@ -25,8 +27,8 @@
     "ogImage": ""
   },
   "seo": {
-    "title": "Matt · Greenpill Network",
-    "description": "Matt is publicly referenced in Greenpill Dev Guild and Garden research.",
+    "title": "Matt Strachman · Greenpill Network",
+    "description": "Matt Strachman is a Greenpill NYC steward and Dev Guild contributor.",
     "ogImage": "",
     "canonicalPath": "",
     "noindex": false

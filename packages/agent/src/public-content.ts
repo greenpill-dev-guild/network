@@ -57,6 +57,11 @@ export async function getPublicOperationalContentSnapshot(
     from content.public_chapters
     order by name
   `;
+  const chapterInitiatives = await sql`
+    select slug, data
+    from content.public_chapter_initiatives
+    order by chapter_slug, featured_weight desc, title
+  `;
   const guilds = await sql`
     select slug, data
     from content.public_guilds
@@ -73,6 +78,7 @@ export async function getPublicOperationalContentSnapshot(
     themes: rowsToRecords(themes),
     people: rowsToRecords(people),
     chapters: rowsToRecords(chapters),
+    chapterInitiatives: rowsToRecords(chapterInitiatives),
     guilds: rowsToRecords(guilds),
     projects: rowsToRecords(projects),
   }));

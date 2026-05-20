@@ -1,0 +1,57 @@
+{
+  "title": "The Allo Alliance",
+  "kind": "article",
+  "status": "published",
+  "summary": "Dev Guild article on onchain capital allocation tools including grant ships, streaming funds, conviction voting, and cookie jars.",
+  "description": "The Allo Alliance article is editorial/resource context for Dev Guild allocation tooling. It supports proof links for Grant Ships and Cookie Jar without creating a new project.",
+  "author": "Greenpill Dev Guild",
+  "publishDate": "2025-07-02",
+  "updatedDate": "2025-07-02",
+  "primaryUrl": "https://paragraph.com/@greenpilldevguild/the-allo-alliance-innovating-capital-allocation-on-chain",
+  "resourcePath": "",
+  "image": "/images/hifi/topo-bg.png",
+  "imageAlt": "Topographic map texture",
+  "duration": "",
+  "readTime": "",
+  "episodeNumber": "",
+  "guest": "",
+  "host": "",
+  "tags": [
+    "allo",
+    "grant-ships",
+    "cookie-jar",
+    "funding"
+  ],
+  "themeSlugs": [
+    "funding",
+    "public",
+    "coordination-tools"
+  ],
+  "relatedChapterSlugs": [],
+  "relatedGuildSlugs": [
+    "dev-guild"
+  ],
+  "featuredWeight": 72,
+  "card": {
+    "eyebrow": "Dev Guild",
+    "title": "The Allo Alliance",
+    "summary": "Onchain allocation tools for public-goods funding.",
+    "badge": "Source S062",
+    "surfaceType": "article",
+    "image": "/images/hifi/topo-bg.png",
+    "imageAlt": "Topographic map texture",
+    "href": "https://paragraph.com/@greenpilldevguild/the-allo-alliance-innovating-capital-allocation-on-chain"
+  },
+  "media": {
+    "image": "/images/hifi/topo-bg.png",
+    "imageAlt": "Topographic map texture",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "The Allo Alliance · Greenpill Library",
+    "description": "Read the Dev Guild article on Allo-aligned public-goods funding tools.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

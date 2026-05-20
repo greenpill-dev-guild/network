@@ -1,0 +1,42 @@
+{
+  "chapterSlug": "brasil",
+  "title": "Agroforestry Task Force and Living Center",
+  "status": "active",
+  "summary": "Greenpill Brasil's 2024 agroforestry and living-center work, sourced from the public Greenpill Year in Review.",
+  "description": "The public 2024 Year in Review names Greenpill Brasil's agroforestry task force and community living-center work as a concrete chapter effort. Keep this initiative qualitative until a chapter-owned follow-up source adds precise completion, attendance, food-sovereignty, or biodiversity metrics.",
+  "themeSlugs": [
+    "trees",
+    "food",
+    "local-regeneration",
+    "education",
+    "public"
+  ],
+  "links": [
+    {
+      "label": "Greenpill 2024 Year in Review",
+      "url": "https://paragraph.com/@greenpill/2024-a-year-in-review",
+      "subtext": "Public Paragraph source",
+      "handle": "@greenpill",
+      "action": "Read",
+      "icon": "article",
+      "kind": "external"
+    }
+  ],
+  "proofSignals": [
+    {
+      "label": "Brasil agroforestry and living center",
+      "value": "Year in Review mention",
+      "source": "S069",
+      "href": "https://paragraph.com/@greenpill/2024-a-year-in-review"
+    }
+  ],
+  "impactSources": {},
+  "relatedStorySlugs": [
+    "greenpill-2024-year-in-review",
+    "greenpill-brasil-gg20-climate-milestones"
+  ],
+  "relatedResourceSlugs": [
+    "regen-coordination-hub"
+  ],
+  "featuredWeight": 72
+}

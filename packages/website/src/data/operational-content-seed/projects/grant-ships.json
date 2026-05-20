@@ -25,6 +25,12 @@
       "value": "Greenpill Dev Guild",
       "source": "S010",
       "href": "https://checker.gitcoin.co/public/project/show/greenpill-dev-guild"
+    },
+    {
+      "label": "Allo Alliance article",
+      "value": "Grant ships allocation context",
+      "source": "S062",
+      "href": "https://paragraph.com/@greenpilldevguild/the-allo-alliance-innovating-capital-allocation-on-chain"
     }
   ],
   "media": {

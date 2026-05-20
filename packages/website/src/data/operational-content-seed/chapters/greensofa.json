@@ -12,8 +12,21 @@
   "lat": 23.6978,
   "long": 120.9605,
   "link": "https://hackmd.io/@greensofa/home",
-  "stewards": [],
-  "stewardSlugs": [],
+  "stewards": [
+    {
+      "name": "Swift Evo",
+      "role": "Chapter steward",
+      "bio": "",
+      "location": "Taiwan",
+      "personSlug": "swift-evo",
+      "chapterSlug": "greensofa",
+      "avatar": "",
+      "wallet": ""
+    }
+  ],
+  "stewardSlugs": [
+    "swift-evo"
+  ],
   "themeSlugs": [
     "public",
     "desci",
@@ -60,10 +73,18 @@
       "action": "Read",
       "icon": "article",
       "kind": "external"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/GreenSofa_TW",
+      "subtext": "Public chapter account",
+      "handle": "@GreenSofa_TW",
+      "action": "Follow",
+      "icon": "x",
+      "kind": "social"
     }
   ],
   "relatedChapterSlugs": [
-    "uncommons",
     "koh-pha-ngan",
     "brasil"
   ],
@@ -88,7 +109,10 @@
   "media": {
     "image": "",
     "imageAlt": "",
-    "ogImage": ""
+    "imageSourceUrl": "",
+    "imageCredit": "",
+    "ogImage": "",
+    "reviewStatus": "needs-steward-photo"
   },
   "seo": {
     "title": "GreenSofa · Greenpill Network",

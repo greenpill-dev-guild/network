@@ -2,11 +2,11 @@
   "title": "Greenpill Garden — Season One",
   "kind": "guide",
   "status": "published",
-  "summary": "Public Garden thread introducing a seasonal stewardship program and onboarding path for people who do not yet fit a chapter or guild.",
-  "description": "The Garden public thread connects stewardship, 8 Forms of Capital framing, impact reporting, tools, IRL events, and website implications. Treat internal Garden Guide material as review-only until approved.",
+  "summary": "Public Garden sources introducing seasonal stewardship, onboarding, February 2026 workshops, and the approved 2026 Garden model preview.",
+  "description": "The Garden public thread connects stewardship, 8 Forms of Capital framing, impact reporting, tools, IRL events, website implications, and later workshop progress. The approved Paragraph preview adds the five-month Garden incubation model, Theory of Change, strategy, CIDS, tooling, and harvest context. Treat internal Garden Guide material as review-only until approved.",
   "author": "Greenpill Network",
   "publishDate": "2025",
-  "updatedDate": "",
+  "updatedDate": "2026",
   "primaryUrl": "https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363",
   "resourcePath": "",
   "image": "/images/hifi/garden-overlay.jpg",
@@ -19,7 +19,8 @@
   "tags": [
     "garden",
     "onboarding",
-    "stewardship"
+    "stewardship",
+    "protocols"
   ],
   "themeSlugs": [
     "gov",
@@ -36,8 +37,8 @@
   "card": {
     "eyebrow": "Garden",
     "title": "Greenpill Garden Season One",
-    "summary": "The public source for the Garden onboarding and stewardship story.",
-    "badge": "Source S042",
+    "summary": "The public source bundle for Garden onboarding, stewardship, workshop progress, and the 2026 model.",
+    "badge": "Sources S042/S050/S071",
     "surfaceType": "garden",
     "image": "/images/hifi/garden-overlay.jpg",
     "imageAlt": "Garden texture from the high-fidelity design package",

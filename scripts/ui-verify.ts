@@ -35,6 +35,7 @@ import { fileURLToPath } from 'node:url';
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const distRoot = join(rootDir, 'packages/website/dist');
 const outDir = join(rootDir, 'packages/website/.ui-verify');
+const websiteSrcRoot = join(rootDir, 'packages/website/src');
 const required = process.env.UI_VERIFY_REQUIRED === '1';
 const widths = (process.env.UI_VERIFY_WIDTHS || '375,1024,1440')
   .split(',')
@@ -113,26 +114,25 @@ async function startStaticServer(): Promise<{ close: () => Promise<void>; origin
     try {
       const requestUrl = new URL(request.url || '/', 'http://127.0.0.1');
       let relativePath = decodeURIComponent(requestUrl.pathname).replace(/^\/+/, '');
-      if (!relativePath) relativePath = 'index.html';
-      else if (relativePath.endsWith('/')) relativePath = `${relativePath}index.html`;
-      let filePath = resolve(distRoot, relativePath);
-      if (filePath !== resolvedDistRoot && !filePath.startsWith(`${resolvedDistRoot}${sep}`)) {
-        response.writeHead(403); response.end('Forbidden'); return;
-      }
-      let fileStat;
-      try { fileStat = await stat(filePath); }
-      catch { filePath = `${filePath}.html`; fileStat = await stat(filePath).catch(() => null) as any; }
-      if (!fileStat) {
-        // Astro directory route: /chapters -> /chapters/index.html
-        const indexed = resolve(distRoot, relativePath, 'index.html');
-        const body = await readFile(indexed);
-        response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      const candidates = !relativePath
+        ? ['index.html']
+        : relativePath.endsWith('/')
+          ? [`${relativePath}index.html`]
+          : [relativePath, `${relativePath}.html`, `${relativePath}/index.html`];
+
+      for (const candidate of candidates) {
+        const candidatePath = resolve(distRoot, candidate);
+        if (candidatePath !== resolvedDistRoot && !candidatePath.startsWith(`${resolvedDistRoot}${sep}`)) {
+          response.writeHead(403); response.end('Forbidden'); return;
+        }
+        const fileStat = await stat(candidatePath).catch(() => null);
+        if (!fileStat) continue;
+        const resolvedPath = fileStat.isDirectory() ? join(candidatePath, 'index.html') : candidatePath;
+        const body = await readFile(resolvedPath);
+        response.writeHead(200, { 'Content-Type': contentTypeFor(resolvedPath) });
         response.end(body); return;
       }
-      const resolvedPath = fileStat.isDirectory() ? join(filePath, 'index.html') : filePath;
-      const body = await readFile(resolvedPath);
-      response.writeHead(200, { 'Content-Type': contentTypeFor(resolvedPath) });
-      response.end(body);
+      response.writeHead(404); response.end('Not found');
     } catch {
       response.writeHead(404); response.end('Not found');
     }
@@ -244,9 +244,71 @@ function discoverRoutes(): string[] {
   return [...routes].sort();
 }
 
+function discoverRoutesForRun(origin: string | undefined): string[] {
+  if (origin && !existsSync(distRoot)) return ['/'];
+  return discoverRoutes();
+}
+
 function slugFor(route: string): string {
   const s = route.replace(/^\/+|\/+$/g, '').replace(/[^a-z0-9]+/gi, '-');
   return s || 'home';
+}
+
+// ── Source CSS standard check ───────────────────────────────────────────────
+function sourceFilesToScan(): string[] {
+  const files: string[] = [];
+  const walk = (absDir: string) => {
+    for (const entry of readdirSync(absDir, { withFileTypes: true })) {
+      const abs = join(absDir, entry.name);
+      if (entry.isDirectory()) walk(abs);
+      else if (['.astro', '.css'].includes(extname(entry.name))) files.push(abs);
+    }
+  };
+  walk(websiteSrcRoot);
+  return files.sort();
+}
+
+function stripCommentsPreserveLines(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, (match) => '\n'.repeat((match.match(/\n/g) || []).length));
+}
+
+function lineForIndex(source: string, index: number): number {
+  return source.slice(0, index).split('\n').length;
+}
+
+function relativeSourcePath(absPath: string): string {
+  return absPath.replace(`${rootDir}${sep}`, '');
+}
+
+function isAllowedMediaQuery(absPath: string, query: string): boolean {
+  const rel = relativeSourcePath(absPath);
+  if (
+    rel === 'packages/website/src/components/shell/SiteHeader.astro' ||
+    rel === 'packages/website/src/components/shell/SiteFooter.astro'
+  ) return true;
+  return /pointer\s*:\s*coarse/i.test(query) || /prefers-reduced-motion/i.test(query);
+}
+
+async function auditSourceCss(): Promise<Violation[]> {
+  const out: Violation[] = [];
+  for (const file of sourceFilesToScan()) {
+    const source = await readFile(file, 'utf8');
+    const scan = stripCommentsPreserveLines(source);
+    const mediaPattern = /@media\s+([^{]+)\{/g;
+    let match: RegExpExecArray | null;
+    while ((match = mediaPattern.exec(scan))) {
+      const query = match[1].trim();
+      if (isAllowedMediaQuery(file, query)) continue;
+      const rel = relativeSourcePath(file);
+      out.push({
+        channel: 'source',
+        code: 'VIEWPORT_MEDIA_QUERY',
+        sev: 'hard',
+        msg: `${rel}:${lineForIndex(scan, match.index)} uses @media ${query}; use @container or document a reviewed exception`,
+      });
+    }
+  }
+  return out;
 }
 
 // ── In-page assertion bundle for channels 1 & 4 (single expression, returns Violation[]) ──
@@ -319,6 +381,23 @@ const DOM_ASSERTIONS = `
   for (const el of document.querySelectorAll('div[onclick],span[onclick],div[role="button"],span[role="button"]')) {
     out.push({channel:'semantic',code:'NON_SEMANTIC_CONTROL',sev:'warn',msg:tag(el)+' acts as a control; use <button>/<a>'});
   }
+  const svgInteractiveRoles = new Set(['button', 'link', 'checkbox', 'radio', 'switch', 'tab']);
+  for (const el of document.querySelectorAll('svg [tabindex]:not([tabindex="-1"])')) {
+    if (el.closest('[aria-hidden="true"]')) continue;
+    const elTag = el.tagName.toLowerCase();
+    if (elTag === 'a' || el.closest('a[href]')) continue;
+    const role = el.getAttribute('role') || '';
+    if (!svgInteractiveRoles.has(role)) {
+      out.push({channel:'semantic',code:'FOCUSABLE_SVG_NO_ROLE',sev:'hard',msg:tag(el)+' is focusable inside SVG without an interactive role'});
+      continue;
+    }
+    const label = el.getAttribute('aria-label') || el.getAttribute('title') || '';
+    const labelledBy = el.getAttribute('aria-labelledby');
+    const title = el.querySelector(':scope > title')?.textContent || '';
+    if (!label.trim() && !labelledBy && !title.trim()) {
+      out.push({channel:'semantic',code:'SVG_CONTROL_NO_NAME',sev:'hard',msg:tag(el)+' is a focusable SVG control without an accessible name'});
+    }
+  }
   for (const el of document.querySelectorAll('input:not([type="hidden"]),select,textarea')) {
     if (el.offsetParent === null && getComputedStyle(el).position !== 'fixed') continue; // not rendered
     const id = el.getAttribute('id');
@@ -356,7 +435,7 @@ async function auditAccessibilityTree(client: CdpClient, sessionId: string): Pro
   const roleOf = (n: any) => n?.role?.value;
   const nameOf = (n: any) => (n?.name?.value || '').trim();
   const roles = new Set(nodes.filter((n) => !n.ignored).map(roleOf));
-  if (!roles.has('main') && !roles.has('RootWebArea')) out.push({ channel: 'a11y-tree', code: 'NO_MAIN_LANDMARK', sev: 'hard', msg: 'no main landmark in the accessibility tree' });
+  if (!roles.has('main')) out.push({ channel: 'a11y-tree', code: 'NO_MAIN_LANDMARK', sev: 'hard', msg: 'no main landmark in the accessibility tree' });
   if (!roles.has('navigation')) out.push({ channel: 'a11y-tree', code: 'NO_NAV_LANDMARK', sev: 'warn', msg: 'no navigation landmark' });
   const interactiveRoles = new Set(['button', 'link', 'textbox', 'checkbox', 'radio', 'combobox', 'menuitem', 'switch', 'tab', 'searchbox']);
   let unnamed = 0;
@@ -407,6 +486,7 @@ async function verifyRouteAtWidth(client: CdpClient, origin: string, route: stri
   const attached = await client.send('Target.attachToTarget', { targetId: target.targetId, flatten: true });
   const sessionId = attached.sessionId;
   const tag = (v: Violation): Violation => ({ ...v, route, width });
+  const url = `${origin}${route}`;
   try {
     await client.send('Page.enable', {}, sessionId);
     await client.send('Runtime.enable', {}, sessionId);
@@ -414,11 +494,30 @@ async function verifyRouteAtWidth(client: CdpClient, origin: string, route: stri
       width, height: 900, deviceScaleFactor: 1, mobile: width <= 420,
     }, sessionId);
     await client.send('Page.addScriptToEvaluateOnNewDocument', { source: CLS_OBSERVER }, sessionId);
-    await client.send('Page.navigate', { url: `${origin}${route}` }, sessionId);
-    // Wait for the navigation to actually commit — about:blank already reports
-    // readyState 'complete', so without the location guard axe can run on the
-    // pre-navigation blank page (false document-title / html-has-lang).
-    await waitForExpression(client, sessionId, "location.href !== 'about:blank' && document.readyState === 'complete'", 12000);
+
+    let routeState: { href: string; readyState: string; title: string; lang: string; bodyText: string } | null = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await client.send('Page.navigate', { url }, sessionId);
+      // Wait for the navigation to actually commit — about:blank already reports
+      // readyState 'complete', so without the location guard axe can run on the
+      // pre-navigation blank page (false document-title / html-has-lang).
+      await waitForExpression(client, sessionId, "location.href !== 'about:blank' && document.readyState === 'complete'", 12000);
+      routeState = await evaluate(client, sessionId, `(() => ({
+        href: location.href,
+        readyState: document.readyState,
+        title: document.title || '',
+        lang: document.documentElement.getAttribute('lang') || '',
+        bodyText: (document.body?.innerText || '').trim()
+      }))()`).catch(() => null);
+      const staticNotFound = routeState?.bodyText === 'Not found' && !routeState.title && !routeState.lang;
+      if (!staticNotFound) break;
+      await new Promise((res) => setTimeout(res, 150));
+    }
+
+    if (routeState?.bodyText === 'Not found' && !routeState.title && !routeState.lang) {
+      return [tag({ channel: 'harness', code: 'ROUTE_LOAD_FAILED', sev: 'hard', msg: `static server returned Not found for ${route}` })];
+    }
+
     await waitForExpression(client, sessionId, 'document.fonts ? document.fonts.status === "loaded" : true', 6000);
     await evaluate(client, sessionId, `
       (async () => { await Promise.all([...document.images].filter(i=>!i.complete).map(i=>new Promise(r=>{i.onload=i.onerror=r; setTimeout(r,3000);}))); })()
@@ -457,7 +556,7 @@ async function run(): Promise<void> {
 
   if (!origin && !existsSync(distRoot)) throw new Error(`No built site at ${distRoot}. Run \`bun run build:website\` first, or set UI_VERIFY_ORIGIN.`);
   await mkdir(outDir, { recursive: true });
-  const routes = cliRoutes.length ? cliRoutes : (origin ? ['/'] : discoverRoutes());
+  const routes = cliRoutes.length ? cliRoutes : discoverRoutesForRun(origin);
 
   const staticServer = origin ? null : await startStaticServer();
   const baseOrigin = origin || staticServer!.origin;
@@ -465,6 +564,14 @@ async function run(): Promise<void> {
   let client: CdpClient | null = null;
   const all: Violation[] = [];
   try {
+    const sourceViolations = await auditSourceCss();
+    all.push(...sourceViolations);
+    if (sourceViolations.length > 0) {
+      console.log(`[ui-verify] source checks: ${sourceViolations.length} violation(s)`);
+      for (const x of sourceViolations) console.log(`      ${x.sev === 'hard' ? '✗' : '⚠'} [${x.channel}:${x.code}] ${x.msg}`);
+      console.log('');
+    }
+
     client = await CdpClient.connect(chrome.webSocketUrl);
     console.log(`[ui-verify] ${routes.length} route(s) × widths [${widths.join(', ')}] via ${chromeBinary.split('/').pop()}\n`);
     for (const route of routes) {

@@ -25,6 +25,12 @@
       "value": "greenwill",
       "source": "S008 GitHub org",
       "href": "https://github.com/greenpill-dev-guild/greenwill"
+    },
+    {
+      "label": "Dev Guild article",
+      "value": "GreenWill",
+      "source": "S063",
+      "href": "https://paragraph.com/@greenpilldevguild/greenwill-powering-governance-through-reputation-tracking"
     }
   ],
   "media": {

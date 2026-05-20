@@ -1,0 +1,55 @@
+{
+  "chapterSlug": "nigeria",
+  "title": "Water Cup",
+  "status": "active",
+  "summary": "Source-backed local water and impact-mapping effort with public Regen Hub updates and a Water Cup Mapping Hypercert.",
+  "description": "The current Nigeria chapter record links the public Water Cup update thread and Hypercert. Keep downstream impact claims source-bound until steward review adds verified counts.",
+  "themeSlugs": [
+    "water",
+    "impact",
+    "public"
+  ],
+  "links": [
+    {
+      "label": "Water Cup updates",
+      "url": "https://hub.regencoordination.xyz/t/greenpill-nigeria-project-water-cup-updates/307",
+      "subtext": "Public program thread",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "hub",
+      "kind": "external"
+    },
+    {
+      "label": "Water Cup Mapping Hypercert",
+      "url": "https://app.hypercerts.org/hypercerts/42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-86091438830997431256233775680237357498368",
+      "subtext": "Public proof artifact",
+      "handle": "Hypercerts",
+      "action": "Open",
+      "icon": "impact",
+      "kind": "external"
+    }
+  ],
+  "proofSignals": [
+    {
+      "label": "Water Cup Mapping",
+      "value": "Hypercert",
+      "source": "S046",
+      "href": "https://app.hypercerts.org/hypercerts/42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-86091438830997431256233775680237357498368"
+    }
+  ],
+  "impactSources": {
+    "impactEnabled": true,
+    "greenGoodsGardenAddress": "0x35722eEdf3F7566A23FA871f0a04267AEe78E0dB",
+    "greenGoodsChainId": 42161,
+    "karmaProjectUID": "",
+    "karmaProjectSlug": "",
+    "karmaCommunitySlug": ""
+  },
+  "relatedStorySlugs": [
+    "greenpill-nigeria-water-cup"
+  ],
+  "relatedResourceSlugs": [
+    "regen-coordination-hub"
+  ],
+  "featuredWeight": 100
+}

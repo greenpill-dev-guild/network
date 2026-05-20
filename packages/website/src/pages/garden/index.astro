@@ -82,6 +82,13 @@ const proofSignals = garden.proofSignals.length > 0
 const stickyCta = garden.stickyCta?.label ? garden.stickyCta : { label: 'Find your path', href: '/garden#assessment' };
 const seoTitle = garden.seo.title || `${title} · Greenpill Network`;
 const seoDescription = garden.seo.description || summary;
+
+// Targets for the Step 3/4 in-page anchors (/garden#assessment, /garden#steward-call).
+// Use the public-safe kicker/title from content; the authored *body* fields are
+// internal author notes, so the public framing below is written here.
+const assessmentPanel = garden.assessmentPreview;
+const stewardPanel = garden.stewardCallPreview;
+const publicChatHref = garden.telegramPreview?.cta?.href || 'https://t.me/+g9TM8i7GpxAzMGUx';
 ---
 
 <GpLayout
@@ -142,6 +149,32 @@ const seoDescription = garden.seo.description || summary;
               </div>
             </article>
           ))}
+        </div>
+      </section>
+
+      <section class="gp-garden-section">
+        <SectionHeader title="Go deeper when the moment is right." segments={['Garden', 'Deeper paths']} />
+        <div class="gp-garden-target-grid">
+          <div id="assessment" class="gp-garden-target">
+            <Card padded="lg">
+              <div class="gp-garden-card-copy">
+                <Meta items={['Step 3', assessmentPanel.kicker || 'Self-assessment']} accentIndex={0} />
+                <Text variant="title-lg">{assessmentPanel.title || 'Map your next contribution'}</Text>
+                <Text variant="body-sm">A short, public self-assessment is in design. Until it lands, the fastest way to find your fit is to explore active chapters and the builder and writer guilds.</Text>
+                <Button href="/chapters" variant="ghost">Browse chapters</Button>
+              </div>
+            </Card>
+          </div>
+          <div id="steward-call" class="gp-garden-target">
+            <Card padded="lg">
+              <div class="gp-garden-card-copy">
+                <Meta items={['Step 4', stewardPanel.kicker || 'Steward call']} accentIndex={0} />
+                <Text variant="title-lg">{stewardPanel.title || 'Talk to a real person'}</Text>
+                <Text variant="body-sm">Thinking about starting a chapter, joining a guild, or partnering on a project? Reach the network in the public chat and a steward will help you find the right next step.</Text>
+                <Button href={publicChatHref} variant="ghost">Open the public chat</Button>
+              </div>
+            </Card>
+          </div>
         </div>
       </section>
 
@@ -254,34 +287,18 @@ const seoDescription = garden.seo.description || summary;
     max-width: 360px;
     height: auto;
     filter: drop-shadow(0 24px 64px rgba(184, 232, 53, 0.25));
-    animation: gpGardenFloat 6s ease-in-out infinite;
   }
 
+  /* Static glow only — DESIGN.md reserves looping animation for the map node
+     pulse, so the former float/pulse on the hero pill is removed. */
   .gp-garden-hero-glow {
     position: absolute;
     inset: 12%;
     border-radius: 50%;
     background: radial-gradient(circle, rgba(184, 232, 53, 0.32), transparent 65%);
     filter: blur(20px);
+    opacity: 0.6;
     z-index: 0;
-    animation: gpGardenPulse 5s ease-in-out infinite;
-  }
-
-  @keyframes gpGardenFloat {
-    0%, 100% { transform: translateY(0); }
-    50%      { transform: translateY(-12px); }
-  }
-
-  @keyframes gpGardenPulse {
-    0%, 100% { opacity: 0.45; transform: scale(0.95); }
-    50%      { opacity: 0.7;  transform: scale(1.05); }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .gp-garden-hero-media img,
-    .gp-garden-hero-glow {
-      animation: none !important;
-    }
   }
 
   .gp-garden-stack {
@@ -338,6 +355,23 @@ const seoDescription = garden.seo.description || summary;
     gap: var(--gp-space-lg);
   }
 
+  .gp-garden-target-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--gp-space-lg);
+  }
+
+  /* Anchor target for the Step 3/4 CTAs — offset the scroll landing so the
+     sticky header does not cover the panel heading. */
+  .gp-garden-target {
+    display: flex;
+    scroll-margin-block-start: calc(var(--gp-header-height) + var(--gp-space-lg));
+  }
+
+  .gp-garden-target > :global(.gp-card) {
+    width: 100%;
+  }
+
   .gp-garden-card-copy {
     height: 100%;
   }
@@ -369,7 +403,8 @@ const seoDescription = garden.seo.description || summary;
 
   @container (max-width: 980px) {
     .gp-garden-hero-grid,
-    .gp-garden-after-grid {
+    .gp-garden-after-grid,
+    .gp-garden-target-grid {
       grid-template-columns: 1fr;
     }
 

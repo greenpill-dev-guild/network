@@ -1,0 +1,40 @@
+{
+  "chapterSlug": "c-te-d-ivoire",
+  "title": "La Ligne Verte",
+  "status": "active",
+  "summary": "Public Green Mission source for environmental coordination around collection, education, and waste valorization.",
+  "description": "The current Cote d'Ivoire chapter record points at a public La Ligne Verte update and frames the targets as goals rather than completed metrics.",
+  "themeSlugs": [
+    "water",
+    "education",
+    "events",
+    "currency"
+  ],
+  "links": [
+    {
+      "label": "La Ligne Verte update",
+      "url": "https://hub.regencoordination.xyz/t/greenpill-civ-chapter-update-the-beginning-of-la-ligne-verte/333",
+      "subtext": "Public chapter update",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "hub",
+      "kind": "external"
+    }
+  ],
+  "proofSignals": [
+    {
+      "label": "Green Mission targets",
+      "value": "2025-2026 goals",
+      "source": "S022",
+      "href": "https://hub.regencoordination.xyz/t/greenpill-civ-chapter-update-the-beginning-of-la-ligne-verte/333"
+    }
+  ],
+  "impactSources": {},
+  "relatedStorySlugs": [
+    "greenpill-cote-divoire-la-ligne-verte"
+  ],
+  "relatedResourceSlugs": [
+    "regen-coordination-hub"
+  ],
+  "featuredWeight": 70
+}

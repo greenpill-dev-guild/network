@@ -46,6 +46,7 @@ async function loadOperationalContent() {
     themes: await readCollection('themes'),
     people: await readCollection('people'),
     chapters: await readCollection('chapters'),
+    chapterInitiatives: await readCollection('chapter-initiatives'),
     guilds: await readCollection('guilds'),
     projects: await readCollection('projects'),
   });
@@ -204,6 +205,54 @@ async function upsertChapters(tx, records) {
   }
 }
 
+async function upsertChapterInitiatives(tx, records) {
+  for (const record of records) {
+    await tx`
+      insert into content.chapter_initiatives (
+        slug,
+        chapter_slug,
+        title,
+        entity_status,
+        summary,
+        description,
+        theme_slugs,
+        links,
+        proof_signals,
+        impact_sources,
+        related_story_slugs,
+        related_resource_slugs,
+        featured_weight,
+        publication_status,
+        published_at,
+        reviewed_at,
+        reviewed_by,
+        data
+      )
+      values (
+        ${record.slug},
+        ${cleanString(record.chapterSlug)},
+        ${cleanString(record.title)},
+        ${cleanString(record.status) || 'active'},
+        ${cleanString(record.summary)},
+        ${cleanString(record.description)},
+        ${asArray(record.themeSlugs)},
+        ${tx.json(asArray(record.links))},
+        ${tx.json(asArray(record.proofSignals))},
+        ${tx.json(asObject(record.impactSources))},
+        ${asArray(record.relatedStorySlugs)},
+        ${asArray(record.relatedResourceSlugs)},
+        ${Number(record.featuredWeight ?? 0)},
+        'published'::content.publication_status,
+        now(),
+        now(),
+        'system:initial-operational-content-migration',
+        ${tx.json(record)}
+      )
+      on conflict (slug) do nothing
+    `;
+  }
+}
+
 async function upsertGuilds(tx, records) {
   for (const record of records) {
     await tx`
@@ -335,6 +384,7 @@ async function countExistingOperationalRows(tx) {
         (select count(*) from content.themes) +
         (select count(*) from content.people) +
         (select count(*) from content.chapters) +
+        (select count(*) from content.chapter_initiatives) +
         (select count(*) from content.guilds) +
         (select count(*) from content.projects)
       )::int as count
@@ -363,6 +413,7 @@ async function migrateSnapshot(snapshot) {
       await upsertThemes(tx, snapshot.themes);
       await upsertPeople(tx, snapshot.people);
       await upsertChapters(tx, snapshot.chapters);
+      await upsertChapterInitiatives(tx, snapshot.chapterInitiatives);
       await upsertGuilds(tx, snapshot.guilds);
       await upsertProjects(tx, snapshot.projects);
     });
@@ -386,6 +437,7 @@ console.log(`Validated public operational content snapshot v${snapshot.version}`
 console.log(`Themes: ${snapshot.themes.length}`);
 console.log(`People: ${snapshot.people.length}`);
 console.log(`Chapters: ${snapshot.chapters.length}`);
+console.log(`Chapter initiatives: ${snapshot.chapterInitiatives.length}`);
 console.log(`Guilds: ${snapshot.guilds.length}`);
 console.log(`Projects: ${snapshot.projects.length}`);
 console.log(`Locations: ${snapshot.locations.length}`);

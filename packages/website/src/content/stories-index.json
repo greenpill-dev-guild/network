@@ -25,8 +25,8 @@
       "key": "featured",
       "overline": "Featured",
       "title": "Start with approved field work.",
-      "dek": "Nigeria Water Cup, Brasil GG20 climate milestones, GreenSofa funding receipts, and London Ontario's public build night are review candidates rather than public launch cards.",
-      "body": "Feature only stories with a public source URL, clear steward-approved evidence, and `published` status.",
+      "dek": "Nigeria Water Cup, Tech & Sun, Earth Week, Phangan environmental monitoring, Brasil GG20 climate milestones, the Garden, and the new Paragraph-backed network and Dev Guild stories now form the first published source-backed wave.",
+      "body": "Keep featured stories limited to public source URLs, clear steward-approved evidence, and `published` status.",
       "cta": {
         "label": "Read featured stories",
         "href": "/stories",
@@ -61,14 +61,31 @@
       "featuredRefs": []
     }
   ],
-  "featuredStorySlugs": [],
+  "featuredStorySlugs": [
+    "greenpill-2025-year-in-review",
+    "dev-guild-regenerative-stack",
+    "greenpill-2026-thesis",
+    "greenpill-nigeria-water-cup",
+    "greenpill-nigeria-tech-and-sun-round",
+    "greenpill-earth-week",
+    "greenpill-phangan-environmental-monitoring",
+    "greenpill-brasil-gg20-climate-milestones",
+    "greenpill-garden-season-one"
+  ],
   "topicTags": [
     "public-goods",
     "local-events",
     "impact-tracking",
     "education",
     "open-source",
-    "garden"
+    "garden",
+    "earth-week",
+    "energy",
+    "environmental-monitoring",
+    "tech-and-sun",
+    "year-in-review",
+    "public-goods-staking",
+    "regenerative-stack"
   ],
   "chapterTags": [
     "nigeria",
@@ -80,8 +97,14 @@
   ],
   "topicSpotlight": {
     "topic": "Impact verification",
-    "blurb": "Green Goods, Greenpill Nigeria's Water Cup proof, Brasil's KarmaGAP milestones, and the public Impact Framework thread show how the network is turning local work into verifiable public claims.",
-    "storySlugs": [],
+    "blurb": "Green Goods, Greenpill Nigeria's Water Cup proof, Brasil's KarmaGAP milestones, Tech & Sun's public infrastructure thread, PGSP, and the public Impact Framework discussion show how the network is turning local work into verifiable public claims.",
+    "storySlugs": [
+      "dev-guild-regenerative-stack",
+      "greenpill-nigeria-water-cup",
+      "greenpill-nigeria-tech-and-sun-round",
+      "greenpill-brasil-gg20-climate-milestones",
+      "growing-greenpill-impact-framework"
+    ],
     "proofSignals": [
       {
         "label": "Green Goods docs",
@@ -94,6 +117,12 @@
         "value": "Public Hub thread",
         "source": "S043",
         "href": "https://hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411"
+      },
+      {
+        "label": "PGSP v0",
+        "value": "Dev Guild Paragraph",
+        "source": "S059",
+        "href": "https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0"
       }
     ]
   },

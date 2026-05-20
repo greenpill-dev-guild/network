@@ -1,0 +1,54 @@
+{
+  "chapterSlug": "uncommons",
+  "title": "Publications and Learning Series",
+  "status": "active",
+  "summary": "Uncommons education, translation, publication, and public-learning work sourced from the approved Paragraph preview.",
+  "description": "The approved Paragraph preview documents Uncommons publications and learning work, including the 2025 Community Annual VOID, MycoFi translation and study activity, the P2P Commons Manifesto translation and book tour, Crypto Flight interview volumes, Summer of Protocols CN, the Chiang Mai Cypherpunk and Thinker Assembly, and Open Good recognition. Present this as an ongoing chapter-owned learning and publications initiative without adding unsupported distribution, attendance, or funding claims.",
+  "themeSlugs": [
+    "education",
+    "knowledge-commons",
+    "stories",
+    "public",
+    "opensrc"
+  ],
+  "links": [
+    {
+      "label": "Approved Paragraph preview",
+      "url": "https://paragraph.com/@greenpill/preview/IpvSMGPJ4B3szOkcVUQo",
+      "subtext": "Uncommons publications and learning context",
+      "handle": "@greenpill",
+      "action": "Read",
+      "icon": "article",
+      "kind": "external"
+    },
+    {
+      "label": "Uncommons website",
+      "url": "https://uncommons.cc",
+      "subtext": "Public chapter website",
+      "handle": "uncommons.cc",
+      "action": "Open",
+      "icon": "external",
+      "kind": "external"
+    }
+  ],
+  "proofSignals": [
+    {
+      "label": "Publications shipped",
+      "value": "Approved Paragraph preview",
+      "source": "S072",
+      "href": "https://paragraph.com/@greenpill/preview/IpvSMGPJ4B3szOkcVUQo"
+    },
+    {
+      "label": "Open Good recognition",
+      "value": "COSCon'25 mention",
+      "source": "S072",
+      "href": "https://paragraph.com/@greenpill/preview/IpvSMGPJ4B3szOkcVUQo"
+    }
+  ],
+  "impactSources": {},
+  "relatedStorySlugs": [
+    "greenpill-2025-year-in-review"
+  ],
+  "relatedResourceSlugs": [],
+  "featuredWeight": 70
+}

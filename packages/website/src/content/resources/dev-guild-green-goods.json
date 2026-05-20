@@ -1,0 +1,56 @@
+{
+  "title": "Green Goods",
+  "kind": "article",
+  "status": "published",
+  "summary": "Dev Guild article on Green Goods as impact verification infrastructure for regenerative work.",
+  "description": "The Green Goods Paragraph article supports the existing Green Goods project and the impact-verification story. It should remain a resource/proof source, not a new chapter initiative.",
+  "author": "Greenpill Dev Guild",
+  "publishDate": "2025-07-04",
+  "updatedDate": "2025-07-04",
+  "primaryUrl": "https://paragraph.com/@greenpilldevguild/green-goods-simplifying-impact-capture-and-exchange",
+  "resourcePath": "",
+  "image": "/images/hifi/topo-bg.png",
+  "imageAlt": "Topographic map texture",
+  "duration": "",
+  "readTime": "",
+  "episodeNumber": "",
+  "guest": "",
+  "host": "",
+  "tags": [
+    "green-goods",
+    "impact-verification",
+    "dev-guild"
+  ],
+  "themeSlugs": [
+    "impact",
+    "public",
+    "coordination-tools"
+  ],
+  "relatedChapterSlugs": [],
+  "relatedGuildSlugs": [
+    "dev-guild"
+  ],
+  "featuredWeight": 86,
+  "card": {
+    "eyebrow": "Dev Guild",
+    "title": "Green Goods",
+    "summary": "Making regenerative work visible and verifiable.",
+    "badge": "Source S064",
+    "surfaceType": "article",
+    "image": "/images/hifi/topo-bg.png",
+    "imageAlt": "Topographic map texture",
+    "href": "https://paragraph.com/@greenpilldevguild/green-goods-simplifying-impact-capture-and-exchange"
+  },
+  "media": {
+    "image": "/images/hifi/topo-bg.png",
+    "imageAlt": "Topographic map texture",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Green Goods · Greenpill Library",
+    "description": "Read the Dev Guild Green Goods article on regenerative impact verification.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

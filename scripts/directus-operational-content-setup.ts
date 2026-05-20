@@ -6,6 +6,7 @@ export const DIRECTUS_OPERATIONAL_COLLECTIONS = Object.freeze([
   'themes',
   'people',
   'chapters',
+  'chapter_initiatives',
   'guilds',
   'projects',
 ]);
@@ -17,6 +18,11 @@ export const DIRECTUS_INTAKE_COLLECTIONS = Object.freeze([
   'map_node_intake_settings',
   'map_node_edit_tokens',
   'map_node_update_requests',
+]);
+
+export const DIRECTUS_STEWARD_ACCESS_COLLECTIONS = Object.freeze([
+  'chapter_editor_assignments',
+  'guild_editor_assignments',
 ]);
 
 const WORKFLOW_FIELDS = Object.freeze([
@@ -80,6 +86,21 @@ const OPERATIONAL_COLLECTION_FIELDS = Object.freeze({
     'media',
     'seo',
   ],
+  chapter_initiatives: [
+    'slug',
+    'chapter_slug',
+    'title',
+    'entity_status',
+    'summary',
+    'description',
+    'theme_slugs',
+    'links',
+    'proof_signals',
+    'impact_sources',
+    'related_story_slugs',
+    'related_resource_slugs',
+    'featured_weight',
+  ],
   guilds: [
     'slug',
     'name',
@@ -134,11 +155,36 @@ const collectionFields = (collection, { publisher = false, read = false } = {}) 
   return [...new Set([...editable, ...workflow, ...readonly])];
 };
 
+const SCOPED_EDITOR_IMMUTABLE_UPDATE_FIELDS = Object.freeze([
+  'slug',
+  'chapter_slug',
+  'guild_slug',
+]);
+
+const scopedEditorFields = (collection, { create = false, read = false } = {}) => {
+  if (read || create) return collectionFields(collection, { read });
+  return collectionFields(collection).filter((field) => !SCOPED_EDITOR_IMMUTABLE_UPDATE_FIELDS.includes(field));
+};
+
 const statusFilter = (statuses) => ({
   publication_status: {
     _in: statuses,
   },
 });
+
+const andFilter = (...filters) => ({
+  _and: filters,
+});
+
+const orFilter = (...filters) => ({
+  _or: filters,
+});
+
+const currentUserEditorAssignmentFilter = {
+  directus_user_id: {
+    _eq: '$CURRENT_USER',
+  },
+};
 
 const intakeStatusFilter = (statuses) => ({
   status: {
@@ -271,6 +317,122 @@ const MAP_NODE_EDIT_TOKEN_TRUSTED_FIELDS = Object.freeze([
   'request_metadata',
   'created_at',
 ]);
+
+function assignmentFields(collection) {
+  const baseCollection = baseCollectionName(collection);
+  const ownerField = baseCollection === 'guild_editor_assignments' ? 'guild_slug' : 'chapter_slug';
+  return [
+    'id',
+    ownerField,
+    'directus_user_id',
+    'access_level',
+    'created_at',
+    'updated_at',
+  ];
+}
+
+function assignmentOwnerFilter(collection) {
+  const baseCollection = baseCollectionName(collection);
+  if (baseCollection === 'chapter_editor_assignments') {
+    return {
+      directus_user_id: {
+        _eq: '$CURRENT_USER',
+      },
+    };
+  }
+  if (baseCollection === 'guild_editor_assignments') {
+    return {
+      directus_user_id: {
+        _eq: '$CURRENT_USER',
+      },
+    };
+  }
+  return null;
+}
+
+function buildStewardAccessAssignmentPermissions(collectionNames = []) {
+  const permissions = [];
+  for (const collection of collectionNames) {
+    const ownerFilter = assignmentOwnerFilter(collection);
+    permissions.push(
+      {
+        role: 'Greenpill Steward Editor',
+        policy: 'Greenpill Steward Editor',
+        collection,
+        action: 'read',
+        permissions: ownerFilter,
+        validation: null,
+        presets: null,
+        fields: assignmentFields(collection),
+      },
+      {
+        role: 'Greenpill Trusted Publisher',
+        policy: 'Greenpill Trusted Publisher',
+        collection,
+        action: 'read',
+        permissions: null,
+        validation: null,
+        presets: null,
+        fields: assignmentFields(collection),
+      },
+      {
+        role: 'Greenpill Trusted Publisher',
+        policy: 'Greenpill Trusted Publisher',
+        collection,
+        action: 'create',
+        permissions: null,
+        validation: null,
+        presets: { access_level: 'editor' },
+        fields: assignmentFields(collection),
+      },
+      {
+        role: 'Greenpill Trusted Publisher',
+        policy: 'Greenpill Trusted Publisher',
+        collection,
+        action: 'update',
+        permissions: null,
+        validation: null,
+        presets: null,
+        fields: assignmentFields(collection),
+      },
+      {
+        role: 'Greenpill Trusted Publisher',
+        policy: 'Greenpill Trusted Publisher',
+        collection,
+        action: 'delete',
+        permissions: null,
+        validation: null,
+        presets: null,
+        fields: assignmentFields(collection),
+      }
+    );
+  }
+  return permissions;
+}
+
+function buildStewardUserContextPermissions() {
+  return [
+    {
+      role: 'Greenpill Steward Editor',
+      policy: 'Greenpill Steward Editor',
+      collection: 'directus_users',
+      action: 'read',
+      permissions: {
+        id: {
+          _eq: '$CURRENT_USER',
+        },
+      },
+      validation: null,
+      presets: null,
+      fields: [
+        'id',
+        'email',
+        'chapter_editor_assignments',
+        'guild_editor_assignments',
+      ],
+    },
+  ];
+}
 
 function buildIntakeModerationPermissions(collectionNames = []) {
   const collections = new Map(collectionNames.map((collection) => [baseCollectionName(collection), collection]));
@@ -488,7 +650,8 @@ function buildIntakeModerationPermissions(collectionNames = []) {
 
 export function buildDirectusOperationalPermissionPlan(
   collectionNames = DIRECTUS_OPERATIONAL_COLLECTIONS,
-  intakeCollectionNames = []
+  intakeCollectionNames = [],
+  stewardAccessCollectionNames = []
 ) {
   const collections = [...collectionNames];
   const editorStatuses = ['draft', 'pending_review'];
@@ -502,30 +665,10 @@ export function buildDirectusOperationalPermissionPlan(
         policy: 'Greenpill Steward Editor',
         collection,
         action: 'read',
-        permissions: statusFilter([...editorStatuses, 'published']),
+        permissions: statusFilter(['published']),
         validation: null,
         presets: null,
         fields: collectionFields(collection, { read: true }),
-      },
-      {
-        role: 'Greenpill Steward Editor',
-        policy: 'Greenpill Steward Editor',
-        collection,
-        action: 'create',
-        permissions: null,
-        validation: statusFilter(editorStatuses),
-        presets: { publication_status: 'draft' },
-        fields: collectionFields(collection),
-      },
-      {
-        role: 'Greenpill Steward Editor',
-        policy: 'Greenpill Steward Editor',
-        collection,
-        action: 'update',
-        permissions: statusFilter(editorStatuses),
-        validation: statusFilter(editorStatuses),
-        presets: null,
-        fields: collectionFields(collection),
       },
       {
         role: 'Greenpill Trusted Publisher',
@@ -620,6 +763,8 @@ export function buildDirectusOperationalPermissionPlan(
     permissions: [
       ...permissions,
       ...buildIntakeModerationPermissions(intakeCollectionNames),
+      ...buildStewardAccessAssignmentPermissions(stewardAccessCollectionNames),
+      ...buildStewardUserContextPermissions(),
     ],
   };
 }
@@ -639,29 +784,47 @@ type DirectusRequestOptions = {
   expected?: number[];
 };
 
-async function createDirectusClient({
+export async function createDirectusClient({
   url = directusUrlFromEnv(),
   token = cleanString(process.env.DIRECTUS_ADMIN_TOKEN),
   email = cleanString(process.env.DIRECTUS_ADMIN_EMAIL) || 'admin@greenpill.network',
   password = cleanString(process.env.DIRECTUS_ADMIN_PASSWORD) || 'directus-local-password',
+  timeoutMs = Number(process.env.DIRECTUS_REQUEST_TIMEOUT_MS || 60000),
 }: {
   url?: string;
   token?: string;
   email?: string;
   password?: string;
+  timeoutMs?: number;
   [key: string]: any;
 } = {}) {
   let accessToken = token;
 
   async function request(path: string, { method = 'GET', body, expected = [200, 201, 204] }: DirectusRequestOptions = {}) {
-    const response = await fetch(`${url}${path}`, {
-      method,
-      headers: {
-        ...(body ? { 'content-type': 'application/json' } : {}),
-        ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
+    const controller = new AbortController();
+    const timeout = timeoutMs > 0
+      ? setTimeout(() => controller.abort(), timeoutMs)
+      : null;
+    let response;
+
+    try {
+      response = await fetch(`${url}${path}`, {
+        method,
+        headers: {
+          ...(body ? { 'content-type': 'application/json' } : {}),
+          ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
+        },
+        body: body ? JSON.stringify(body) : undefined,
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error(`${method} ${path} timed out after ${timeoutMs}ms`);
+      }
+      throw error;
+    } finally {
+      if (timeout) clearTimeout(timeout);
+    }
 
     if (!expected.includes(response.status)) {
       const text = await response.text().catch(() => '');
@@ -669,7 +832,10 @@ async function createDirectusClient({
     }
 
     if (response.status === 204) return null;
-    return response.json();
+
+    const text = await response.text();
+    if (!text) return null;
+    return JSON.parse(text);
   }
 
   if (!accessToken) {
@@ -764,6 +930,26 @@ async function upsertPermission(client, permission) {
   return created?.data;
 }
 
+async function pruneManagedPermissions(client, policyMap, managedCollections, expectedKeys) {
+  for (const [policyName, policy] of policyMap) {
+    if (!policy?.id) continue;
+
+    const response = await client.request(`/permissions?filter[policy][_eq]=${policy.id}&limit=-1`);
+    for (const permission of response?.data ?? []) {
+      if (!managedCollections.has(permission.collection)) continue;
+
+      const key = `${permission.policy}:${permission.collection}:${permission.action}`;
+      if (expectedKeys.has(key)) continue;
+
+      await client.request(`/permissions/${permission.id}`, {
+        method: 'DELETE',
+        expected: [204],
+      });
+      console.log(`Removed obsolete Directus permission for ${policyName}: ${permission.collection}:${permission.action}`);
+    }
+  }
+}
+
 function resolveSchemaCollectionNames(availableCollectionNames, schema, collectionNames) {
   const names = new Set(availableCollectionNames);
   return collectionNames.map((collection) => {
@@ -799,9 +985,195 @@ function resolveIntakeCollectionNames(availableCollectionNames) {
   );
 }
 
+function resolveStewardAccessCollectionNames(availableCollectionNames) {
+  return resolveSchemaCollectionNames(
+    availableCollectionNames,
+    'content',
+    DIRECTUS_STEWARD_ACCESS_COLLECTIONS
+  );
+}
+
 async function getAvailableCollectionNames(client) {
   const response = await client.request('/collections?limit=-1');
   return (response?.data ?? []).map((collection) => collection.collection).filter(Boolean);
+}
+
+async function ensureRelation(client, relation) {
+  const params = new URLSearchParams();
+  params.set('filter[collection][_eq]', relation.collection_many);
+  params.set('filter[field][_eq]', relation.field_many);
+  params.set('limit', '1');
+
+  const existing = await client.request(`/relations?${params.toString()}`);
+  const item = existing?.data?.[0];
+  const payload = {
+    collection_many: relation.collection_many,
+    field_many: relation.field_many,
+    collection_one: relation.collection_one,
+    field_one: relation.field_one,
+    junction_field: relation.junction_field ?? null,
+  };
+
+  if (item) {
+    const currentMeta = item.meta ?? {};
+    if (
+      currentMeta.one_collection !== relation.collection_one ||
+      currentMeta.one_field !== relation.field_one ||
+      currentMeta.junction_field !== (relation.junction_field ?? null)
+    ) {
+      const updated = await client.request(`/relations/${encodeURIComponent(relation.collection_many)}/${encodeURIComponent(relation.field_many)}`, {
+        method: 'PATCH',
+        body: {
+          collection: relation.collection_many,
+          field: relation.field_many,
+          related_collection: relation.collection_one,
+          meta: {
+            many_collection: relation.collection_many,
+            many_field: relation.field_many,
+            one_collection: relation.collection_one,
+            one_field: relation.field_one,
+            one_allowed_collections: null,
+            one_collection_field: null,
+            one_deselect_action: 'delete',
+            junction_field: relation.junction_field ?? null,
+            sort_field: null,
+          },
+        },
+      });
+      return updated?.data ?? item;
+    }
+    return item;
+  }
+
+  const created = await client.request('/relations', {
+    method: 'POST',
+    body: payload,
+  });
+  return created?.data;
+}
+
+async function fieldExists(client, collection, field) {
+  const params = new URLSearchParams();
+  params.set('fields', 'field');
+  params.set('limit', '-1');
+  const response = await client.request(`/fields/${encodeURIComponent(collection)}?${params.toString()}`);
+  return (response?.data ?? []).some((item) => item.field === field);
+}
+
+async function ensureAliasField(client, collection, field, meta) {
+  const payload = {
+    field,
+    type: 'alias',
+    meta: {
+      collection,
+      field,
+      special: ['o2m'],
+      interface: 'list-o2m',
+      display: 'related-values',
+      readonly: true,
+      hidden: true,
+      sort: 1000,
+      width: 'full',
+      ...meta,
+    },
+    schema: null,
+  };
+
+  if (await fieldExists(client, collection, field)) {
+    const updated = await client.request(`/fields/${encodeURIComponent(collection)}/${encodeURIComponent(field)}`, {
+      method: 'PATCH',
+      body: { meta: payload.meta },
+    });
+    return updated?.data;
+  }
+
+  const created = await client.request(`/fields/${encodeURIComponent(collection)}`, {
+    method: 'POST',
+    body: payload,
+  });
+  return created?.data;
+}
+
+async function ensureStewardAccessRelations(client, collectionNames) {
+  const collections = new Map(collectionNames.map((collection) => [baseCollectionName(collection), collection]));
+  const chapters = collections.get('chapters');
+  const chapterInitiatives = collections.get('chapter_initiatives');
+  const chapterAssignments = collections.get('chapter_editor_assignments');
+  const guilds = collections.get('guilds');
+  const projects = collections.get('projects');
+  const guildAssignments = collections.get('guild_editor_assignments');
+
+  if (chapters && chapterAssignments) {
+    await ensureRelation(client, {
+      collection_many: chapterAssignments,
+      field_many: 'chapter_slug',
+      collection_one: chapters,
+      field_one: 'editor_assignments',
+    });
+    await ensureAliasField(client, chapters, 'editor_assignments', {
+      options: { template: '{{ directus_user_id.email }}' },
+      display_options: { template: '{{ directus_user_id.email }}' },
+    });
+    await ensureRelation(client, {
+      collection_many: chapterAssignments,
+      field_many: 'directus_user_id',
+      collection_one: 'directus_users',
+      field_one: 'chapter_editor_assignments',
+    });
+    await ensureAliasField(client, 'directus_users', 'chapter_editor_assignments', {
+      options: { template: '{{ chapter_slug.name }}' },
+      display_options: { template: '{{ chapter_slug.name }}' },
+    });
+  }
+
+  if (chapters && chapterInitiatives) {
+    await ensureRelation(client, {
+      collection_many: chapterInitiatives,
+      field_many: 'chapter_slug',
+      collection_one: chapters,
+      field_one: 'initiatives',
+    });
+  }
+
+  if (guilds && guildAssignments) {
+    await ensureRelation(client, {
+      collection_many: guildAssignments,
+      field_many: 'guild_slug',
+      collection_one: guilds,
+      field_one: 'editor_assignments',
+    });
+    await ensureAliasField(client, guilds, 'editor_assignments', {
+      options: { template: '{{ directus_user_id.email }}' },
+      display_options: { template: '{{ directus_user_id.email }}' },
+    });
+    await ensureRelation(client, {
+      collection_many: guildAssignments,
+      field_many: 'directus_user_id',
+      collection_one: 'directus_users',
+      field_one: 'guild_editor_assignments',
+    });
+    await ensureAliasField(client, 'directus_users', 'guild_editor_assignments', {
+      options: { template: '{{ guild_slug.name }}' },
+      display_options: { template: '{{ guild_slug.name }}' },
+    });
+  }
+
+  if (guilds && projects) {
+    try {
+      await ensureRelation(client, {
+        collection_many: projects,
+        field_many: 'guild_slug',
+        collection_one: guilds,
+        field_one: 'projects',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.includes('doesn\'t have a relationship')) {
+        throw error;
+      }
+      console.warn('Skipped Directus projects.guild_slug relation metadata until the database foreign key exists.');
+    }
+  }
 }
 
 export async function applyDirectusOperationalContentAccess(options: {
@@ -812,7 +1184,16 @@ export async function applyDirectusOperationalContentAccess(options: {
   const available = await getAvailableCollectionNames(client);
   const operationalCollections = resolveOperationalCollectionNames(available);
   const intakeCollections = resolveIntakeCollectionNames(available);
-  const plan = buildDirectusOperationalPermissionPlan(operationalCollections, intakeCollections);
+  const stewardAccessCollections = resolveStewardAccessCollectionNames(available);
+  await ensureStewardAccessRelations(client, [
+    ...operationalCollections,
+    ...stewardAccessCollections,
+  ]);
+  const plan = buildDirectusOperationalPermissionPlan(
+    operationalCollections,
+    intakeCollections,
+    stewardAccessCollections
+  );
 
   const roles = new Map();
   for (const role of plan.roles) {
@@ -831,22 +1212,33 @@ export async function applyDirectusOperationalContentAccess(options: {
     }
   }
 
+  const expectedPermissionKeys = new Set();
+  const managedCollections = new Set([
+    ...operationalCollections,
+    ...intakeCollections,
+    ...stewardAccessCollections,
+  ]);
+
   for (const permission of plan.permissions) {
     const policy = policies.get(permission.policy);
     if (!policy?.id) {
       throw new Error(`Missing Directus policy for ${permission.policy}`);
     }
+    expectedPermissionKeys.add(`${policy.id}:${permission.collection}:${permission.action}`);
     await upsertPermission(client, {
       ...permission,
       policy: policy.id,
     });
   }
 
+  await pruneManagedPermissions(client, policies, managedCollections, expectedPermissionKeys);
+
   return {
     url: client.url,
     collections: [
       ...operationalCollections,
       ...intakeCollections,
+      ...stewardAccessCollections,
     ],
     roles: [...roles.keys()],
     policies: [...policies.keys()],

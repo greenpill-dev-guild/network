@@ -1,0 +1,70 @@
+{
+  "title": "Greenpill Phangan Environmental Monitoring",
+  "status": "published",
+  "category": "chapter",
+  "publishDate": "2026-02-24",
+  "updatedDate": "",
+  "dek": "Greenpill Phangan's Hub updates connect beach cleanups, Monthly Earth Day, DeCleanup, and decentralized environmental monitoring.",
+  "excerpt": "A source-backed Phangan story for cleanup coordination, environmental monitoring, and public impact tooling.",
+  "region": "asia",
+  "tag": "Environmental Monitoring",
+  "tags": [
+    "koh-phangan",
+    "cleanup",
+    "decleanup",
+    "environmental-monitoring"
+  ],
+  "body": "Greenpill Phangan now has a stronger chapter-owned initiative than an event-only record.\n\nThe public Phangan update thread describes ongoing beach cleanup work, Monthly Earth Day activity, and the origin path for DeCleanup Rewards. A later update adds a decentralized environmental monitoring analysis for Koh Phangan using Altruist Sensors by the Robonomics DePIN Network.\n\nThe DeCleanup Network update gives the wider project context: app launch, Celo testing, playbook publication, and public docs. For the Greenpill site, the chapter-owned surface should stay focused on Phangan's cleanup and monitoring work while treating DeCleanup as supporting public tooling context.\n\n## Sources\n\n- S051: https://hub.regencoordination.xyz/t/greenpill-phangan-updates/95\n- S052: https://hub.regencoordination.xyz/t/decleanup-network-base-app-launched-celo-in-testing-playbook-published-docs-live-heres-everything/394",
+  "image": "",
+  "author": "Greenpill Network research",
+  "authorRole": "Source-backed seed copy",
+  "authorBio": "",
+  "authorSlug": "",
+  "authorAvatar": "",
+  "relatedChapter": "koh-pha-ngan",
+  "relatedGuild": "",
+  "relatedStorySlugs": [
+    "greenpill-earth-week"
+  ],
+  "continueReadingStorySlugs": [
+    "greenpill-earth-week",
+    "greensofa-taiwan-public-goods-tooling",
+    "greenpill-nigeria-water-cup"
+  ],
+  "themeSlugs": [
+    "impact",
+    "opensrc",
+    "public",
+    "events",
+    "water"
+  ],
+  "translations": [],
+  "proofSignals": [
+    {
+      "label": "Phangan updates",
+      "value": "Cleanup and monitoring",
+      "source": "S051",
+      "href": "https://hub.regencoordination.xyz/t/greenpill-phangan-updates/95"
+    },
+    {
+      "label": "DeCleanup update",
+      "value": "Public tooling context",
+      "source": "S052",
+      "href": "https://hub.regencoordination.xyz/t/decleanup-network-base-app-launched-celo-in-testing-playbook-published-docs-live-heres-everything/394"
+    }
+  ],
+  "featuredWeight": 78,
+  "readTime": "3 min read",
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill Phangan Environmental Monitoring · Greenpill Stories",
+    "description": "Source-backed story for Greenpill Phangan cleanup, environmental monitoring, and DeCleanup context.",
+    "ogImage": "",
+    "canonicalPath": "/stories/greenpill-phangan-environmental-monitoring",
+    "noindex": false
+  }
+}

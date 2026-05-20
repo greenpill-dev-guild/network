@@ -12,8 +12,32 @@
   "lat": -22.9068,
   "long": -43.1729,
   "link": "https://hub.regencoordination.xyz/t/greenpill-brasil/44",
-  "stewards": [],
-  "stewardSlugs": [],
+  "stewards": [
+    {
+      "name": "Caue Tomaz",
+      "role": "Chapter steward",
+      "bio": "",
+      "location": "Brasil",
+      "personSlug": "coi",
+      "chapterSlug": "brasil",
+      "avatar": "",
+      "wallet": ""
+    },
+    {
+      "name": "Luisa Fosco",
+      "role": "Chapter steward",
+      "bio": "",
+      "location": "Brasil",
+      "personSlug": "luisa-fosco",
+      "chapterSlug": "brasil",
+      "avatar": "",
+      "wallet": ""
+    }
+  ],
+  "stewardSlugs": [
+    "coi",
+    "luisa-fosco"
+  ],
   "themeSlugs": [
     "education",
     "stories",
@@ -77,7 +101,10 @@
     "koh-pha-ngan"
   ],
   "featuredStory": {},
-  "featuredStorySlugs": [],
+  "featuredStorySlugs": [
+    "greenpill-brasil-gg20-climate-milestones",
+    "greenpill-2024-year-in-review"
+  ],
   "authoredResourceSlugs": [],
   "impactSources": {
     "impactEnabled": true,
@@ -100,12 +127,21 @@
       "value": "Greenpill Brazil",
       "source": "S020",
       "href": "https://checker.gitcoin.co/public/project/show/greenpill-brazil"
+    },
+    {
+      "label": "Agroforestry and living center",
+      "value": "Year in Review mention",
+      "source": "S069",
+      "href": "https://paragraph.com/@greenpill/2024-a-year-in-review"
     }
   ],
   "media": {
     "image": "",
     "imageAlt": "",
-    "ogImage": ""
+    "imageSourceUrl": "",
+    "imageCredit": "",
+    "ogImage": "",
+    "reviewStatus": "needs-steward-photo"
   },
   "seo": {
     "title": "Greenpill Brasil · Greenpill Network",

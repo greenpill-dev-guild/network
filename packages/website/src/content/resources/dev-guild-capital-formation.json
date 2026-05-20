@@ -1,0 +1,56 @@
+{
+  "title": "Capital Formation",
+  "kind": "article",
+  "status": "published",
+  "summary": "Dev Guild article connecting impact verification, Green Goods, Squad Staking, and sustainable revenue for regenerative work.",
+  "description": "The Capital Formation article is resource context for the Dev Guild's funding thesis and should support the umbrella regenerative stack story.",
+  "author": "Greenpill Dev Guild",
+  "publishDate": "2025-07-05",
+  "updatedDate": "2025-07-05",
+  "primaryUrl": "https://paragraph.com/@greenpilldevguild/capital-formation-turning-impact-into-sustainable-revenue",
+  "resourcePath": "",
+  "image": "/images/hifi/topo-bg.png",
+  "imageAlt": "Topographic map texture",
+  "duration": "",
+  "readTime": "",
+  "episodeNumber": "",
+  "guest": "",
+  "host": "",
+  "tags": [
+    "capital-formation",
+    "green-goods",
+    "squad-staking"
+  ],
+  "themeSlugs": [
+    "funding",
+    "impact",
+    "public"
+  ],
+  "relatedChapterSlugs": [],
+  "relatedGuildSlugs": [
+    "dev-guild"
+  ],
+  "featuredWeight": 80,
+  "card": {
+    "eyebrow": "Dev Guild",
+    "title": "Capital Formation",
+    "summary": "Impact verification and yield as sustainable funding context.",
+    "badge": "Source S065",
+    "surfaceType": "article",
+    "image": "/images/hifi/topo-bg.png",
+    "imageAlt": "Topographic map texture",
+    "href": "https://paragraph.com/@greenpilldevguild/capital-formation-turning-impact-into-sustainable-revenue"
+  },
+  "media": {
+    "image": "/images/hifi/topo-bg.png",
+    "imageAlt": "Topographic map texture",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Capital Formation · Greenpill Library",
+    "description": "Read the Dev Guild article on impact, Green Goods, Squad Staking, and sustainable revenue.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}
