@@ -383,8 +383,11 @@ test('resend webhook migration stores delivery metadata without raw message cont
     'utf8'
   );
 
-  assert.equal(migrationFiles.includes('008_resend_webhook_events.sql'), true);
-  assert.equal(migrationFiles.at(-1), '009_rekey_resend_recipient_hashes.sql');
+  const webhookMigrationIndex = migrationFiles.indexOf('008_resend_webhook_events.sql');
+  const rekeyMigrationIndex = migrationFiles.indexOf('009_rekey_resend_recipient_hashes.sql');
+  assert.notEqual(webhookMigrationIndex, -1);
+  assert.notEqual(rekeyMigrationIndex, -1);
+  assert.ok(rekeyMigrationIndex > webhookMigrationIndex);
   assert.match(webhookSql, /add column if not exists provider_message_id text/);
   assert.match(webhookSql, /map_node_edit_tokens_provider_message_idx/);
   assert.match(webhookSql, /create table if not exists intake\.email_provider_events/);

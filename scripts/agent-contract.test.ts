@@ -175,7 +175,7 @@ test('resend webhook route stores only safe provider reason codes', async () => 
     data: {
       email_id: '1f3ab49b-c6ed-4790-b3f2-0b2550282120',
       to: ['Person@Example.org'],
-      failed: { reason: 'Mailbox Person@Example.org rejected this message' },
+      failed: { reason: 'Mailbox rejected this message' },
     },
   });
 
@@ -189,6 +189,29 @@ test('resend webhook route stores only safe provider reason codes', async () => 
   assert.equal(recorded[0].reason, 'provider_diagnostic');
   assert.equal(recorded[0].metadata.reason, 'provider_diagnostic');
   assert.doesNotMatch(JSON.stringify(recorded[0]), /Person@Example\.org/i);
+  assert.doesNotMatch(JSON.stringify(recorded[0]), /Mailbox rejected this message/i);
+
+  const safeRequest = signedResendWebhookRequest({
+    type: 'email.failed',
+    created_at: '2026-05-20T02:01:00.000Z',
+    data: {
+      email_id: '2f3ab49b-c6ed-4790-b3f2-0b2550282120',
+      to: ['Person@Example.org'],
+      failed: { reason: 'reached_daily_quota' },
+    },
+  }, {
+    svixId: 'msg_test_safe_reason',
+  });
+
+  const safeResponse = await app.request(RESEND_WEBHOOK_ROUTE, {
+    method: 'POST',
+    headers: safeRequest.headers,
+    body: safeRequest.rawBody,
+  });
+
+  assert.equal(safeResponse.status, 202);
+  assert.equal(recorded[1].reason, 'reached_daily_quota');
+  assert.equal(recorded[1].metadata.reason, 'reached_daily_quota');
 });
 
 test('resend webhook route rejects invalid signatures before persistence', async () => {

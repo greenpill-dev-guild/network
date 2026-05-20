@@ -174,10 +174,10 @@ function firstRecipient(value: unknown): string {
 }
 
 function safeProviderCode(value: unknown, fallback = 'provider_diagnostic'): string {
-  const cleaned = cleanString(value).toLowerCase().replace(/\s+/g, '_');
-  if (!cleaned) return '';
-  if (!/^[a-z0-9_.:-]+$/.test(cleaned) || cleaned.includes('@')) return fallback;
-  return truncate(cleaned, 80);
+  const raw = cleanString(value);
+  if (!raw) return '';
+  if (!/^[a-z0-9_.:-]+$/i.test(raw) || raw.includes('@')) return fallback;
+  return truncate(raw.toLowerCase(), 80);
 }
 
 function reasonForEvent(eventType: string, data: UnknownRecord): string {
