@@ -301,9 +301,9 @@ const hero = chaptersIndex.hero ?? {};
 
   .gp-chapters-hero-inner :global(.gp-chapters-hero-title) {
     max-width: 18ch;
-    font-size: clamp(40px, 6vw, 72px);
+    font-size: var(--gp-display-size);
     line-height: 1.04;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
   }
 
   .gp-chapters-hero-inner :global(.gp-chapters-hero-dek) {
@@ -328,10 +328,10 @@ const hero = chaptersIndex.hero ?? {};
   .gp-chapters-stat-big {
     color: var(--gp-secondary);
     font-family: var(--gp-font-display);
-    font-size: clamp(28px, 3vw, 42px);
+    font-size: var(--gp-h2-size);
     font-weight: 500;
     line-height: 1;
-    letter-spacing: -0.015em;
+    letter-spacing: 0;
   }
 
   .gp-chapters-stat.is-accent .gp-chapters-stat-big {
@@ -485,7 +485,7 @@ const hero = chaptersIndex.hero ?? {};
   }
 
   .gp-chapters-card-title {
-    letter-spacing: -0.01em;
+    letter-spacing: 0;
     transition: color 200ms;
   }
 

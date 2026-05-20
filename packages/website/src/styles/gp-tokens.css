@@ -120,6 +120,25 @@
   --gp-header-height: 72px;
 }
 
+@media (max-width: 720px) {
+  .gp-root {
+    --gp-display-size: 48px;
+    --gp-h1-size: 40px;
+    --gp-h2-size: 32px;
+    --gp-h3-size: 24px;
+    --gp-title-lg: 20px;
+  }
+}
+
+@media (max-width: 420px) {
+  .gp-root {
+    --gp-display-size: 42px;
+    --gp-h1-size: 36px;
+    --gp-h2-size: 30px;
+    --gp-h3-size: 22px;
+  }
+}
+
 /* ──────────────────────────────────────────────────────────────────
    Element defaults — opt in by setting class="gp-root" on <body>
    or any container. Avoids polluting hosts that load this file

@@ -391,9 +391,9 @@ function regionLabel(slug: string) {
 
   .gp-chapter-hero-inner :global(.gp-chapter-name) {
     max-width: 18ch;
-    font-size: clamp(40px, 6vw, 80px);
+    font-size: var(--gp-display-size);
     line-height: 1.02;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
   }
 
   .gp-chapter-hero-inner :global(.gp-chapter-place),
@@ -456,9 +456,9 @@ function regionLabel(slug: string) {
   .gp-chapter-proof-value {
     color: var(--gp-primary);
     font-family: var(--gp-font-display);
-    font-size: clamp(22px, 2vw, 28px);
+    font-size: var(--gp-h3-size);
     font-weight: 500;
-    letter-spacing: -0.01em;
+    letter-spacing: 0;
   }
 
   .gp-chapter-stewards {
@@ -501,7 +501,7 @@ function regionLabel(slug: string) {
     font-family: var(--gp-font-display);
     font-size: 28px;
     font-weight: 500;
-    letter-spacing: -0.01em;
+    letter-spacing: 0;
     line-height: 1;
   }
 
@@ -554,7 +554,7 @@ function regionLabel(slug: string) {
   }
 
   .gp-chapter-related-card :global(.gp-chapter-related-title) {
-    letter-spacing: -0.01em;
+    letter-spacing: 0;
   }
 
   .gp-chapter-cta {
