@@ -23,43 +23,43 @@ const swatchGroups = [
   {
     title: 'Brand roles',
     swatches: [
-      ['--gp-bg', '#0F3D2E', 'Canvas', 'light'],
-      ['--gp-primary', '#B8E835', 'Greenpill Lime', 'dark'],
-      ['--gp-secondary', '#F0DCA0', 'Steward Gold', 'dark'],
-      ['--gp-fg', '#FAF7EE', 'Warm off-white', 'dark'],
-      ['--gp-error', '#E07856', 'Terracotta', 'light'],
+      ['--gp-bg', '#0F3D2E', 'Canvas'],
+      ['--gp-primary', '#B8E835', 'Greenpill Lime'],
+      ['--gp-secondary', '#F0DCA0', 'Steward Gold'],
+      ['--gp-fg', '#FAF7EE', 'Warm off-white'],
+      ['--gp-error', '#E07856', 'Terracotta'],
     ],
   },
   {
     title: 'Green ramp',
     swatches: [
-      ['--gp-green-950', '#0A2D21', 'Deepest', 'light'],
-      ['--gp-green-900', '#0F3D2E', 'Canvas', 'light'],
-      ['--gp-green-800', '#143F30', 'Surface', 'light'],
-      ['--gp-green-700', '#1A4D3A', 'Card', 'light'],
-      ['--gp-green-600', '#235C46', 'Elevated', 'light'],
-      ['--gp-green-500', '#2A6B52', 'Border', 'light'],
-      ['--gp-green-400', '#3F8A6C', 'Mid', 'light'],
-      ['--gp-green-300', '#5BA889', 'Info', 'dark'],
-      ['--gp-green-200', '#8DC9AE', 'Soft', 'dark'],
-      ['--gp-green-100', '#C8E6D6', 'Pale', 'dark'],
+      ['--gp-green-950', '#0A2D21', 'Deepest'],
+      ['--gp-green-900', '#0F3D2E', 'Canvas'],
+      ['--gp-green-800', '#143F30', 'Surface'],
+      ['--gp-green-700', '#1A4D3A', 'Card'],
+      ['--gp-green-600', '#235C46', 'Elevated'],
+      ['--gp-green-500', '#2A6B52', 'Border'],
+      ['--gp-green-400', '#3F8A6C', 'Mid'],
+      ['--gp-green-300', '#5BA889', 'Info'],
+      ['--gp-green-200', '#8DC9AE', 'Soft'],
+      ['--gp-green-100', '#C8E6D6', 'Pale'],
     ],
   },
   {
     title: 'Lime and gold',
     swatches: [
-      ['--gp-lime-700', '#7FA61F', 'On light', 'light'],
-      ['--gp-lime-600', '#9BC326', 'Active', 'dark'],
-      ['--gp-lime-500', '#B8E835', 'Default', 'dark'],
-      ['--gp-lime-400', '#C4F02C', 'Hover', 'dark'],
-      ['--gp-lime-300', '#D4F564', 'Pale', 'dark'],
-      ['--gp-lime-200', '#E5FA9A', 'Faint', 'dark'],
-      ['--gp-lime-100', '#F2FCCC', 'Lightest', 'dark'],
-      ['--gp-gold-600', '#D4B97A', 'Dim', 'dark'],
-      ['--gp-gold-500', '#F0DCA0', 'Default', 'dark'],
-      ['--gp-gold-400', '#F5D896', 'Cream', 'dark'],
-      ['--gp-gold-300', '#FAE8C2', 'Pale', 'dark'],
-      ['--gp-gold-200', '#FCF1D8', 'Lightest', 'dark'],
+      ['--gp-lime-700', '#7FA61F', 'On light'],
+      ['--gp-lime-600', '#9BC326', 'Active'],
+      ['--gp-lime-500', '#B8E835', 'Default'],
+      ['--gp-lime-400', '#C4F02C', 'Hover'],
+      ['--gp-lime-300', '#D4F564', 'Pale'],
+      ['--gp-lime-200', '#E5FA9A', 'Faint'],
+      ['--gp-lime-100', '#F2FCCC', 'Lightest'],
+      ['--gp-gold-600', '#D4B97A', 'Dim'],
+      ['--gp-gold-500', '#F0DCA0', 'Default'],
+      ['--gp-gold-400', '#F5D896', 'Cream'],
+      ['--gp-gold-300', '#FAE8C2', 'Pale'],
+      ['--gp-gold-200', '#FCF1D8', 'Lightest'],
     ],
   },
 ];
@@ -126,12 +126,11 @@ const radii = [
               <div class="gp-card-stack">
                 <Text variant="title-md">{group.title}</Text>
                 <div class="gp-swatch-grid">
-                  {group.swatches.map(([token, hex, label, tone]) => (
-                    <div class="gp-swatch" style={`--swatch: ${hex}; --swatch-copy: ${tone === 'dark' ? 'var(--gp-primary-fg)' : 'var(--gp-fg)'};`}>
-                      <div class="gp-swatch-tile">
-                        <span>{hex}</span>
-                      </div>
+                  {group.swatches.map(([token, hex, label]) => (
+                    <div class="gp-swatch" style={`--swatch: ${hex};`}>
+                      <div class="gp-swatch-tile" aria-hidden="true"></div>
                       <code>{token}</code>
+                      <span class="gp-swatch-hex">{hex}</span>
                       <small>{label}</small>
                     </div>
                   ))}
@@ -383,17 +382,14 @@ const radii = [
   }
 
   .gp-swatch-tile {
-    display: flex;
-    align-items: flex-end;
     height: 88px;
-    padding: 12px;
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-md);
     background: var(--swatch);
-    color: var(--swatch-copy);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
 
-  .gp-swatch-tile span,
+  .gp-swatch-hex,
   .gp-swatch code,
   .gp-swatch small,
   .gp-space-row code,
@@ -406,6 +402,10 @@ const radii = [
 
   .gp-swatch code {
     color: var(--gp-fg);
+  }
+
+  .gp-swatch-hex {
+    color: var(--gp-fg-muted);
   }
 
   .gp-swatch small {
