@@ -119,20 +119,6 @@ type ChapterNode = {
   size: number;
 };
 
-type StewardNode = {
-  id: string;
-  type: 'steward';
-  name: string;
-  role: string;
-  chapterId: string;
-  chapterName: string;
-  themes: string[];
-  x: number;
-  y: number;
-};
-
-type RelationshipNode = StewardNode;
-
 const chapters = await getOperationalChapters();
 
 const chapterNodes: ChapterNode[] = chapters
@@ -141,7 +127,7 @@ const chapterNodes: ChapterNode[] = chapters
     const themes = (c.data.themeSlugs || []) as string[];
     const weight = c.data.featuredWeight ?? 0;
     const status = c.data.status || 'active';
-    const size = status !== 'active' ? 1.8 : weight >= 70 ? 2.4 : 2.1;
+    const size = status !== 'active' ? 1.35 : weight >= 70 ? 1.85 : 1.6;
     const chapterNodeId = `chapter:${c.id}`;
     return {
       id: chapterNodeId,
@@ -157,32 +143,8 @@ const chapterNodes: ChapterNode[] = chapters
     };
   });
 
-const stewardNodes: StewardNode[] = [];
-for (const c of chapters) {
-  if (typeof c.data.lat !== 'number' || typeof c.data.long !== 'number') continue;
-  const stewards = (c.data.stewards || []) as Array<Record<string, any>>;
-  stewards.forEach((s, i) => {
-    if (!s?.name) return;
-    // Deterministic small offset so stewards visually sit beside the chapter
-    // without overlapping; honest to the real source association.
-    const angle = (i + 1) * 1.7;
-    const radius = 2.4;
-    stewardNodes.push({
-      id: `steward-${c.id}-${i}`,
-      type: 'steward' as const,
-      name: s.name,
-      role: s.role || 'Steward',
-      chapterId: `chapter:${c.id}`,
-      chapterName: c.data.name,
-      themes: (c.data.themeSlugs || []) as string[],
-      x: lonToX(c.data.long) + Math.cos(angle) * radius,
-      y: latToY(c.data.lat) + Math.sin(angle) * radius,
-    });
-  });
-}
-
-// Mycelial threads are people/steward relationships only. Chapters remain map
-// anchors and never become relationship endpoints.
+// Mycelial threads are loaded from the public map-state endpoint. Chapters
+// remain map anchors and never become relationship endpoints.
 type Edge = {
   fromId: string;
   toId: string;
@@ -195,115 +157,15 @@ type Edge = {
   delay: number;
 };
 const edges: Edge[] = [];
-const seen = new Set<string>();
-
-const seedForEdge = (value: string) => Array.from(value).reduce((acc, char) => (
-  ((acc * 31) + char.charCodeAt(0)) % 100000
-), 17);
-
-const edgeRand = (seed: number) => {
-  let state = seed || 1;
-  return () => {
-    state = (state * 9301 + 49297) % 233280;
-    return state / 233280;
-  };
-};
-
-const mycelialPath = (a: { x: number; y: number }, b: { x: number; y: number }, seed: number) => {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  if (dist < 0.1) return `M ${a.x.toFixed(2)} ${a.y.toFixed(2)}`;
-  const rand = edgeRand(seed);
-  const nx = -dy / dist;
-  const ny = dx / dist;
-  const segments = Math.max(4, Math.min(12, Math.round(dist / 9)));
-  const points: Array<[number, number]> = [];
-  for (let i = 0; i <= segments; i++) {
-    const t = i / segments;
-    const taper = Math.sin(t * Math.PI);
-    const wobble = (rand() - 0.5) * Math.min(8, dist * 0.16) * taper;
-    points.push([
-      a.x + dx * t + nx * wobble,
-      a.y + dy * t + ny * wobble,
-    ]);
-  }
-
-  let d = `M ${points[0][0].toFixed(2)} ${points[0][1].toFixed(2)}`;
-  for (let i = 0; i < points.length - 1; i++) {
-    const p0 = points[Math.max(0, i - 1)];
-    const p1 = points[i];
-    const p2 = points[i + 1];
-    const p3 = points[Math.min(points.length - 1, i + 2)];
-    const k = 0.2;
-    const c1x = p1[0] + (p2[0] - p0[0]) * k;
-    const c1y = p1[1] + (p2[1] - p0[1]) * k;
-    const c2x = p2[0] - (p3[0] - p1[0]) * k;
-    const c2y = p2[1] - (p3[1] - p1[1]) * k;
-    d += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)} ${c2x.toFixed(2)} ${c2y.toFixed(2)} ${p2[0].toFixed(2)} ${p2[1].toFixed(2)}`;
-  }
-  return d;
-};
-
-const addEdge = (a: RelationshipNode, b: RelationshipNode, theme: string) => {
-  const key = [a.id, b.id].sort().join(':');
-  if (!theme || seen.has(key)) return;
-  seen.add(key);
-  edges.push({
-    fromId: a.id,
-    toId: b.id,
-    fromX: a.x,
-    fromY: a.y,
-    toX: b.x,
-    toY: b.y,
-    theme,
-    d: mycelialPath(a, b, seedForEdge(key)),
-    delay: (edges.length % 9) * 0.45,
-  });
-};
-
-const stewardEdgeLimit = Math.ceil(stewardNodes.length * 0.75);
-const stewardEdgeCandidates: Array<{
-  a: StewardNode;
-  b: StewardNode;
-  shared: string[];
-  distance: number;
-}> = [];
-for (let i = 0; i < stewardNodes.length; i++) {
-  for (let j = i + 1; j < stewardNodes.length; j++) {
-    const a = stewardNodes[i];
-    const b = stewardNodes[j];
-    const shared = a.themes.filter((t) => b.themes.includes(t));
-    if (!shared.length) continue;
-    stewardEdgeCandidates.push({
-      a,
-      b,
-      shared,
-      distance: Math.hypot(a.x - b.x, a.y - b.y),
-    });
-  }
-}
-for (const candidate of stewardEdgeCandidates
-  .sort((a, b) => (
-    b.shared.length - a.shared.length ||
-    a.distance - b.distance ||
-    a.a.name.localeCompare(b.a.name)
-  ))
-  .slice(0, stewardEdgeLimit)
-) {
-  addEdge(candidate.a, candidate.b, candidate.shared[0]);
-}
 
 const themeColor = (slug: string) => THEME_INFO[slug]?.color ?? '#B8E835';
 
 const chapterCount = chapterNodes.length;
-const stewardCount = stewardNodes.length;
 const nodeTypeFilters = [
   { id: 'chapter', label: 'Chapters', count: chapterCount },
   { id: 'member', label: 'Members', count: 0 },
-  { id: 'steward', label: 'Stewards', count: stewardCount },
 ] as const;
-const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount} stewards, and public member nodes.`;
+const statsA11y = `World map of ${chapterCount} active chapters and public member nodes.`;
 ---
 
 <figure class="gp-home-map" aria-labelledby="gp-home-map-title">
@@ -357,32 +219,6 @@ const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount}
         })}
       </g>
       <g class="gp-home-map-threads" data-home-map-dynamic-threads aria-hidden="true"></g>
-
-      {/* steward nodes — gold, smaller, sit beside their chapter. Two
-          ripple circles render in front and only animate on focus, giving
-          the active node a subtle nutrient pulse without idle noise. */}
-      <g class="gp-home-map-stewards">
-        {stewardNodes.map((s) => (
-          <g
-            class="gp-home-map-node-link is-steward"
-            tabindex="0"
-            role="button"
-            aria-label={`${s.name}, steward node, ${s.chapterName}`}
-            data-node-id={s.id}
-            data-node-type="steward"
-            data-node-name={s.name}
-            data-node-role="Steward"
-            data-node-place={s.chapterName}
-            data-node-themes={s.themes.join(' ')}
-          >
-            <title>{`${s.name} · Steward · ${s.chapterName}`}</title>
-            <circle class="gp-home-map-node-halo" cx={s.x} cy={s.y} r="2.6" />
-            <circle class="gp-home-map-node-dot" cx={s.x} cy={s.y} r="1.2" />
-            <circle class="gp-home-map-node-ripple is-ripple-a" cx={s.x} cy={s.y} r="0" />
-            <circle class="gp-home-map-node-ripple is-ripple-b" cx={s.x} cy={s.y} r="0" />
-          </g>
-        ))}
-      </g>
 
       {/* chapter nodes — dark green anchors */}
       <g class="gp-home-map-chapters">
@@ -525,12 +361,6 @@ const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount}
       <span aria-hidden="true">×</span>
     </button>
 
-    <div class="gp-home-map-addnode-progress" aria-hidden="true">
-      <span class="is-active" data-walkthrough-progress="themes"></span>
-      <span data-walkthrough-progress="identity"></span>
-      <span data-walkthrough-progress="review"></span>
-    </div>
-
     <form class="gp-home-map-addnode-form" data-home-map-addnode-form novalidate>
       <section class="gp-home-map-addnode-step is-active" data-walkthrough-step="themes">
         <p class="gp-home-map-addnode-kicker">Step · what you care about</p>
@@ -658,7 +488,7 @@ const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount}
     saveLocalPendingNode,
   } from '@greenpill-network/shared/map-nodes';
 
-  type DynamicMapNodeType = 'member' | 'steward';
+  type DynamicMapNodeType = 'member';
 
   type DynamicMapNode = {
     key: string;
@@ -723,7 +553,7 @@ const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount}
     const themeFilterButtons = Array.from(scope.querySelectorAll('[data-theme-filter]')) as HTMLButtonElement[];
     const filterToggleButtons = Array.from(scope.querySelectorAll('[data-filter-toggle]')) as HTMLButtonElement[];
     const filterPanels = Array.from(scope.querySelectorAll('[data-filter-panel]')) as HTMLElement[];
-    const activeTypes = new Set(['chapter', 'steward', 'member']);
+    const activeTypes = new Set(['chapter', 'member']);
     const activeThemes = new Set(themeFilterButtons.map((button) => clean(button.dataset.themeFilter)).filter(Boolean));
     const allThemeCount = activeThemes.size;
     let openFilterPanel = '';
@@ -1158,9 +988,8 @@ const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount}
       link.addEventListener('blur', clearFocus);
       const memberKey = (link as HTMLElement).dataset.memberKey;
       if (!memberKey) {
-        // Chapter nodes are <a> and navigate on click. Steward (and any other
-        // non-member) nodes have no panel, so a tap just highlights them and
-        // their adjacent threads — essential on touch, where there is no hover.
+        // Chapter nodes are <a> and navigate on click. Any non-member nodes have
+        // no panel, so a tap just highlights them and their adjacent threads.
         if (!link.hasAttribute('href')) {
           const activate = () => setFocus(link);
           link.addEventListener('click', activate);
@@ -1221,9 +1050,7 @@ const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount}
       title.textContent = `${member.name} · ${titleType}${member.place ? ` · ${member.place}` : ''}`;
       group.append(title);
       group.append(makeCircle('gp-home-map-node-halo', x, y, 4));
-      if (member.type !== 'steward') {
-        group.append(makeCircle('gp-home-map-node-ring', x, y, 2.3));
-      }
+      group.append(makeCircle('gp-home-map-node-ring', x, y, 2.3));
       group.append(makeCircle('gp-home-map-node-dot', x, y, 1.6));
       group.append(makeCircle('gp-home-map-node-ripple is-ripple-a', x, y, 0));
       group.append(makeCircle('gp-home-map-node-ripple is-ripple-b', x, y, 0));
@@ -1262,7 +1089,8 @@ const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount}
       const place = clean(raw.place || raw.placeName || raw.city);
       const approved = kind === 'approved-submission';
       const rawType = clean(raw.type || raw.nodeType);
-      const type: DynamicMapNodeType = rawType === 'steward' ? 'steward' : 'member';
+      if (rawType === 'steward') return null;
+      const type: DynamicMapNodeType = 'member';
       return {
         key: approved ? `submission:${sourceId}` : `local:${clean(raw.id) || `${lat},${long}`}`,
         sourceId: approved ? sourceId : '',
@@ -1283,13 +1111,13 @@ const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount}
     ) => {
       if (!dynamicThreadsGroup) return;
       dynamicThreadsGroup.textContent = '';
-      const nodeById = new Map<string, { x: number; y: number; type: 'member' | 'steward' }>();
+      const nodeById = new Map<string, { x: number; y: number; type: 'member' }>();
       rawNodes.forEach((node) => {
         const id = clean(node?.id);
         const lat = toFiniteNumber(node?.lat);
         const long = toFiniteNumber(node?.long);
         const type = filterTypeFor(node?.type);
-        if (type === 'chapter') return;
+        if (type !== 'member') return;
         if (!id || lat === null || long === null) return;
         nodeById.set(id, { x: lonToX(long), y: latToY(lat), type });
       });
@@ -1399,17 +1227,12 @@ const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount}
           Array.isArray(state?.edges) ? state.edges : []
         );
 
-        const submittedCounts = approved.reduce((counts: { member: number; steward: number }, node: Record<string, any>) => {
+        const submittedCounts = approved.reduce((counts: { member: number }, node: Record<string, any>) => {
           const type = filterTypeFor(node?.type ?? node?.nodeType);
-          if (type === 'steward') counts.steward += 1;
-          else counts.member += 1;
+          if (type === 'member') counts.member += 1;
           return counts;
-        }, { member: 0, steward: 0 });
-        const baseStewardCount = Number(
-          (scope.querySelector('[data-home-map-stat-count="steward"]') as HTMLElement | null)?.dataset.baseCount
-        );
+        }, { member: 0 });
         setTypeCount('member', submittedCounts.member);
-        setTypeCount('steward', (Number.isFinite(baseStewardCount) ? baseStewardCount : 0) + submittedCounts.steward);
 
         if (intakeMode === 'live') startPolling();
         else stopPolling();
@@ -2564,10 +2387,10 @@ const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount}
     position: relative;
     box-sizing: border-box;
     width: min(720px, calc(100vw - 32px));
-    height: min(760px, calc(100svh - 32px));
-    max-height: calc(100vh - 32px);
+    height: auto;
+    max-height: min(680px, calc(100svh - 32px));
     margin: auto;
-    padding: 28px;
+    padding: 24px 26px;
     border: 1px solid color-mix(in srgb, var(--gp-map-member) 34%, transparent);
     border-radius: var(--gp-radius-xl);
     background:
@@ -2627,12 +2450,7 @@ const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount}
   }
 
   .gp-home-map-addnode-progress {
-    position: relative;
-    z-index: 2;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 22px;
+    display: none;
   }
 
   .gp-home-map-addnode-progress span {
@@ -2650,17 +2468,17 @@ const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount}
   .gp-home-map-addnode-form {
     position: relative;
     z-index: 2;
-    min-height: calc(100% - 34px);
+    max-height: calc(100svh - 80px);
     display: grid;
     grid-template-rows: minmax(0, 1fr) auto;
-    gap: 20px;
+    gap: 14px;
   }
 
   .gp-home-map-addnode-step {
     min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
     overflow: auto;
     padding-right: 4px;
   }
@@ -2681,14 +2499,15 @@ const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount}
   }
 
   .gp-home-map-addnode-dialog h2 {
-    max-width: 12ch;
+    max-width: calc(100% - 52px);
     margin: 0;
     color: var(--gp-secondary);
     font-family: var(--gp-font-display);
-    font-size: 46px;
+    font-size: 38px;
     font-weight: 500;
     letter-spacing: 0;
-    line-height: 0.98;
+    line-height: 1.02;
+    white-space: nowrap;
   }
 
   .gp-home-map-addnode-copy,
@@ -2708,18 +2527,18 @@ const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount}
   .gp-home-map-addnode-theme-options {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 8px;
     margin-top: 2px;
   }
 
   .gp-home-map-addnode-theme {
-    min-height: 54px;
+    min-height: 46px;
     display: inline-flex;
     align-items: center;
     gap: 10px;
     border: 1px solid color-mix(in srgb, var(--theme-color, var(--gp-map-member)) 42%, rgba(250, 247, 238, 0.14));
     border-radius: var(--gp-radius-pill);
-    padding: 10px 14px;
+    padding: 8px 12px;
     background: color-mix(in srgb, var(--theme-color, var(--gp-map-member)) 10%, rgba(2, 12, 7, 0.42));
     color: var(--gp-fg);
     font: inherit;
@@ -2825,7 +2644,7 @@ const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount}
     display: flex;
     flex-direction: column;
     gap: 10px;
-    padding: 12px;
+    padding: 10px;
     border: 1px solid rgba(250, 247, 238, 0.12);
     border-radius: var(--gp-radius-lg);
     background: rgba(2, 12, 7, 0.24);
@@ -2861,7 +2680,7 @@ const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount}
   .gp-home-map-addnode-mini-map {
     position: relative;
     aspect-ratio: 2 / 1;
-    min-height: 190px;
+    min-height: 156px;
     border: 1px solid color-mix(in srgb, var(--gp-map-member) 24%, transparent);
     border-radius: var(--gp-radius-md);
     background: radial-gradient(ellipse at center, rgba(20, 68, 52, 0.72), rgba(7, 24, 15, 0.96));
@@ -2933,7 +2752,7 @@ const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount}
     display: flex;
     align-items: center;
     gap: 14px;
-    padding: 16px;
+    padding: 12px;
     border: 1px solid color-mix(in srgb, var(--gp-map-member) 26%, transparent);
     border-radius: var(--gp-radius-lg);
     background: rgba(2, 12, 7, 0.28);
@@ -2974,8 +2793,8 @@ const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount}
     grid-template-columns: minmax(90px, 0.32fr) minmax(0, 1fr) auto;
     align-items: center;
     gap: 12px;
-    min-height: 54px;
-    padding: 10px 0;
+    min-height: 46px;
+    padding: 8px 0;
     border-bottom: 1px solid rgba(250, 247, 238, 0.1);
   }
 
@@ -3034,13 +2853,13 @@ const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount}
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding-top: 4px;
+    padding-top: 0;
   }
 
   .gp-home-map-addnode-back,
   .gp-home-map-addnode-next,
   .gp-home-map-addnode-submit {
-    min-height: 48px;
+    min-height: 44px;
     border-radius: var(--gp-radius-pill);
     padding: 10px 18px;
     font: inherit;
@@ -3084,7 +2903,7 @@ const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount}
   @container (max-width: 640px) {
     .gp-home-map-addnode-dialog {
       width: calc(100vw - 20px);
-      height: calc(100svh - 20px);
+      max-height: calc(100svh - 20px);
       padding: 20px;
       border-radius: var(--gp-radius-lg);
     }
@@ -3094,13 +2913,14 @@ const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount}
       right: 16px;
     }
 
-    .gp-home-map-addnode-progress {
-      margin-bottom: 16px;
+    .gp-home-map-addnode-form {
+      max-height: calc(100svh - 60px);
     }
 
     .gp-home-map-addnode-dialog h2 {
-      max-width: 11ch;
-      font-size: 36px;
+      max-width: calc(100% - 48px);
+      font-size: 32px;
+      white-space: normal;
     }
 
     .gp-home-map-addnode-theme-options,

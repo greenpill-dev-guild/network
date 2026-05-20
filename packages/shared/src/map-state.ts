@@ -244,6 +244,10 @@ const mapSizeForType = (type: PublicMapNodeType): PublicMapNodeSize => {
   return 'S';
 };
 
+const isVisiblePublicMapStateNode = (node: PublicMapStateNode): boolean => (
+  node.type !== 'steward'
+);
+
 const normalizeSourceStatus = (status: unknown): PublicMapSourceStatusValue => {
   const cleaned = cleanString(status);
   return (PUBLIC_MAP_SOURCE_STATUSES as readonly string[]).includes(cleaned)
@@ -617,7 +621,9 @@ export function toPublicMapStatePayload({
   const nodes = [
     ...chapterLocations.map(toPublicMapStateChapterNode).filter(isPresent),
     ...publicMapNodes.map(toPublicMapStateSubmittedNode).filter(isPresent),
-  ].sort((a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name));
+  ]
+    .filter(isVisiblePublicMapStateNode)
+    .sort((a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name));
   const uniqueNodes = [...new Map(nodes.map((node) => [node.id, node])).values()];
   const publicEdges = (Array.isArray(edges)
     ? edges.map(normalizeEdge).filter(isPresent)

@@ -251,12 +251,12 @@ test('public map-state combines chapter anchors and approved submitted nodes saf
 
   assert.equal(payload.version, 1);
   assert.equal(payload.intakeMode, 'live');
-  assert.equal(payload.nodes.length, 2);
+  assert.equal(payload.nodes.length, 1);
   assert.equal(payload.nodes[0].type, 'chapter');
-  assert.equal(payload.nodes[1].type, 'steward');
+  assert.equal(payload.nodes.some((node) => node.type === 'steward'), false);
   assert.equal(payload.counts.chapterNodes, 1);
-  assert.equal(payload.counts.approvedSubmittedNodes, 1);
-  assert.equal(payload.counts.byTheme.public, 2);
+  assert.equal(payload.counts.approvedSubmittedNodes, 0);
+  assert.equal(payload.counts.byTheme.public, 1);
   assert.equal(payload.edges.length, 0);
   assert.equal(containsPrivateMapStateField(payload), false);
   assert.equal(JSON.stringify(payload).includes('private@example.com'), false);
@@ -309,21 +309,32 @@ test('public map-state generates person-first relationship edges', () => {
         status: 'approved',
         source: 'approved-submission',
       },
+      {
+        id: 'member-2',
+        name: 'Berlin Member',
+        place: 'Berlin',
+        lat: 52.52,
+        long: 13.405,
+        role: 'member',
+        themes: ['public', 'events'],
+        status: 'approved',
+        source: 'approved-submission',
+      },
     ],
   });
 
   assert.equal(payload.edges.some((edge) => edge.kind === 'chapter-theme'), false);
+  assert.equal(payload.nodes.some((node) => node.type === 'steward'), false);
   assert.equal(payload.edges.some((edge) => (
-    edge.kind === 'steward-member' &&
-    edge.from === 'submission:member-1' &&
-    edge.to === 'submission:steward-1'
+    edge.kind === 'member-member' &&
+    [edge.from, edge.to].sort().join(':') === 'submission:member-1:submission:member-2'
   )), true);
   assert.equal(payload.edges.some((edge) => (
     edge.from.startsWith('chapter:') || edge.to.startsWith('chapter:')
   )), false);
 });
 
-test('public map-state keeps steward-only relationships sparse and theme-based', () => {
+test('public map-state excludes steward-only submissions from launch payloads', () => {
   const stewardNodes = Array.from({ length: 8 }, (_, index) => ({
     id: `steward-${index + 1}`,
     name: `Steward ${index + 1}`,
@@ -350,10 +361,9 @@ test('public map-state keeps steward-only relationships sparse and theme-based',
   });
 
   const stewardEdges = payload.edges.filter((edge) => edge.kind === 'steward-steward');
-  assert.ok(stewardEdges.length > 0, 'shared-theme stewards should still connect without members');
-  assert.ok(stewardEdges.length <= Math.ceil(stewardNodes.length * 0.75));
-  assert.ok(stewardEdges.length < (stewardNodes.length * (stewardNodes.length - 1)) / 2);
-  assert.equal(stewardEdges.every((edge) => edge.theme === 'public'), true);
+  assert.equal(payload.nodes.some((node) => node.type === 'steward'), false);
+  assert.equal(payload.counts.approvedSubmittedNodes, 0);
+  assert.equal(stewardEdges.length, 0);
   assert.equal(payload.edges.some((edge) => (
     edge.from.startsWith('chapter:') || edge.to.startsWith('chapter:')
   )), false);
