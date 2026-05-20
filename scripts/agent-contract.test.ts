@@ -927,13 +927,16 @@ test('edit-link requests store token hashes only and preserve neutral provider f
   }, {
     env: {
       RESEND_API_KEY: 'resend-secret',
-      MAP_NODE_EMAIL_FROM: 'Greenpill Network <map@greenpill.network>',
+      MAP_NODE_EMAIL_FROM: 'Greenpill Network <map@mail.greenpill.network>',
+      MAP_NODE_EMAIL_REPLY_TO: 'Greenpill Network <map@mail.greenpill.network>',
       MAP_NODE_EDIT_BASE_URL: 'https://greenpill.network/map/edit',
     },
     fetchImpl: async (url, options) => {
       resendCalls += 1;
       assert.equal(url, 'https://api.resend.com/emails');
-      assert.match(JSON.parse(options.body).text, /token=/);
+      const payload = JSON.parse(options.body);
+      assert.equal(payload.reply_to, 'Greenpill Network <map@mail.greenpill.network>');
+      assert.match(payload.text, /token=/);
       return new Response('{}', { status: 500 });
     },
   });
@@ -967,7 +970,7 @@ test('edit-link cooldown and daily buckets record neutral attempts without sendi
     }, {
       env: {
         RESEND_API_KEY: 'resend-secret',
-        MAP_NODE_EMAIL_FROM: 'Greenpill Network <map@greenpill.network>',
+        MAP_NODE_EMAIL_FROM: 'Greenpill Network <map@mail.greenpill.network>',
         MAP_NODE_EDIT_BASE_URL: 'https://greenpill.network/map/edit',
       },
       fetchImpl: async () => {
@@ -995,7 +998,7 @@ test('edit-link cooldown stores and checks the canonical node id', async () => {
   }, {
     env: {
       RESEND_API_KEY: 'resend-secret',
-      MAP_NODE_EMAIL_FROM: 'Greenpill Network <map@greenpill.network>',
+      MAP_NODE_EMAIL_FROM: 'Greenpill Network <map@mail.greenpill.network>',
       MAP_NODE_EDIT_BASE_URL: 'https://greenpill.network/map/edit',
     },
     fetchImpl: async () => {

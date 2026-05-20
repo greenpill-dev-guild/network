@@ -548,6 +548,7 @@ function editLinkConfig(env: Record<string, string | undefined> = process.env) {
   return {
     apiKey: cleanString(env.RESEND_API_KEY),
     from: cleanString(env.MAP_NODE_EMAIL_FROM),
+    replyTo: cleanString(env.MAP_NODE_EMAIL_REPLY_TO),
     baseUrl: cleanString(env.MAP_NODE_EDIT_BASE_URL),
   };
 }
@@ -602,6 +603,7 @@ async function sendEditLinkEmail({
         to: email,
         subject,
         text,
+        ...(config.replyTo ? { reply_to: config.replyTo } : {}),
       }),
     });
     if (!response.ok) {
