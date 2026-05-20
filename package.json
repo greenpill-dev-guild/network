@@ -37,6 +37,9 @@
     "test:agent": "bun run build:packages && bun test scripts/agent-contract.test.ts",
     "test:chapter-impact": "bun run build:packages && bun test scripts/chapter-impact-contract.test.ts",
     "test:content": "bun run build:packages && bun test scripts/public-content-contract.test.ts",
+    "test:map-edit": "bun run build:website && bun test scripts/map-edit-route.test.ts",
+    "test:map-edit:browser": "bun run build:website && bun run scripts/map-edit-browser-smoke.ts",
+    "test:map-edit:browser:required": "MAP_EDIT_BROWSER_SMOKE_REQUIRED=1 bun run test:map-edit:browser",
     "test:map-nodes": "bun run build:packages && bun test scripts/map-node-contract.test.ts",
     "test:plans": "bun test scripts/plan-hub.test.ts"
   },

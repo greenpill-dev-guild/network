@@ -1,0 +1,614 @@
+---
+import { PUBLIC_MAP_THEMES } from '@greenpill-network/shared/map-state';
+
+const mapThemes = PUBLIC_MAP_THEMES;
+const pageTitle = 'Update your Greenpill Network map node';
+const pageDescription = 'Private magic-link surface for requesting edits to public Greenpill Network map-node fields.';
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="referrer" content="no-referrer" />
+    <script is:inline>
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        let editToken = params.get('token') || '';
+
+        if (params.has('token')) {
+          params.delete('token');
+          const nextSearch = params.toString();
+          window.history.replaceState(
+            window.history.state,
+            document.title,
+            `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`
+          );
+        }
+
+        const clean = (value) => (typeof value === 'string' ? value.trim() : '');
+        const toNumber = (value) => {
+          const number = Number(value);
+          return Number.isFinite(number) ? number : null;
+        };
+        const safeJson = async (response) => {
+          try {
+            return await response.json();
+          } catch {
+            return {};
+          }
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+          const loading = document.getElementById('map-edit-loading');
+          const invalid = document.getElementById('map-edit-invalid');
+          const success = document.getElementById('map-edit-success');
+          const failure = document.getElementById('map-edit-failure');
+          const form = document.getElementById('map-edit-form');
+          const submitButton = document.getElementById('map-edit-submit');
+          const extraThemes = document.getElementById('map-edit-extra-themes');
+
+          if (!loading || !invalid || !success || !failure || !form || !submitButton || !extraThemes) {
+            editToken = '';
+            return;
+          }
+
+          const field = (name) => form.elements.namedItem(name);
+          const isLocalHost = ['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(window.location.hostname);
+          const agentBaseUrl = isLocalHost ? 'http://127.0.0.1:8787' : 'https://agent.greenpill.network';
+          let nodeId = '';
+          let initialPublicFields = null;
+
+          const hideAllStates = () => {
+            loading.hidden = true;
+            invalid.hidden = true;
+            success.hidden = true;
+            failure.hidden = true;
+            form.hidden = true;
+          };
+
+          const showLoading = () => {
+            hideAllStates();
+            loading.hidden = false;
+          };
+
+          const showInvalid = () => {
+            editToken = '';
+            nodeId = '';
+            hideAllStates();
+            invalid.hidden = false;
+          };
+
+          const showForm = () => {
+            hideAllStates();
+            form.hidden = false;
+          };
+
+          const showFailure = (message) => {
+            failure.textContent = message;
+            failure.hidden = false;
+          };
+
+          const showBlockingFailure = (message) => {
+            hideAllStates();
+            showFailure(message);
+          };
+
+          const setSubmitting = (submitting) => {
+            submitButton.disabled = submitting;
+            submitButton.textContent = submitting ? 'Submitting...' : 'Submit update';
+          };
+
+          const setTextField = (name, value) => {
+            const element = field(name);
+            if (element && 'value' in element) element.value = value;
+          };
+
+          const setThemeFields = (themes) => {
+            const selected = new Set(Array.isArray(themes) ? themes.map(clean).filter(Boolean) : []);
+            const knownThemeInputs = Array.from(form.querySelectorAll('input[name="themes"][type="checkbox"]'));
+            const knownThemeIds = new Set();
+
+            knownThemeInputs.forEach((input) => {
+              knownThemeIds.add(input.value);
+              input.checked = selected.has(input.value);
+            });
+
+            extraThemes.textContent = '';
+            selected.forEach((theme) => {
+              if (knownThemeIds.has(theme)) return;
+              const input = document.createElement('input');
+              input.type = 'hidden';
+              input.name = 'themes';
+              input.value = theme;
+              extraThemes.append(input);
+            });
+          };
+
+          const normalizeThemes = (themes) => Array.from(
+            new Set(Array.isArray(themes) ? themes.map((value) => clean(String(value))).filter(Boolean) : [])
+          );
+
+          const comparablePublicFields = (fields) => ({
+            ...fields,
+            themes: [...fields.themes].sort(),
+          });
+
+          const publicFieldsMatch = (left, right) => (
+            JSON.stringify(comparablePublicFields(left)) === JSON.stringify(comparablePublicFields(right))
+          );
+
+          const renderNode = (node) => {
+            nodeId = clean(node?.id);
+            setTextField('display_name', clean(node?.display_name));
+            setTextField('place_name', clean(node?.place_name));
+            setTextField('city', clean(node?.city));
+            setTextField('region', clean(node?.region));
+            setTextField('country', clean(node?.country));
+            setTextField('latitude', node?.latitude ?? '');
+            setTextField('longitude', node?.longitude ?? '');
+            setThemeFields(node?.themes);
+            setTextField('public_note', clean(node?.public_note));
+            initialPublicFields = {
+              display_name: clean(node?.display_name),
+              place_name: clean(node?.place_name),
+              city: clean(node?.city),
+              region: clean(node?.region),
+              country: clean(node?.country),
+              latitude: toNumber(node?.latitude),
+              longitude: toNumber(node?.longitude),
+              themes: normalizeThemes(node?.themes),
+              public_note: clean(node?.public_note),
+            };
+          };
+
+          const collectPublicFields = () => {
+            const formData = new FormData(form);
+            const displayName = clean(formData.get('display_name'));
+            const placeName = clean(formData.get('place_name'));
+            const latitude = toNumber(formData.get('latitude'));
+            const longitude = toNumber(formData.get('longitude'));
+            const themes = normalizeThemes(formData.getAll('themes'));
+
+            if (!displayName || !placeName) {
+              throw new Error('Add a display name and place name before submitting.');
+            }
+            if (latitude === null || latitude < -90 || latitude > 90) {
+              throw new Error('Latitude must be a number between -90 and 90.');
+            }
+            if (longitude === null || longitude < -180 || longitude > 180) {
+              throw new Error('Longitude must be a number between -180 and 180.');
+            }
+
+            return {
+              display_name: displayName,
+              place_name: placeName,
+              city: clean(formData.get('city')),
+              region: clean(formData.get('region')),
+              country: clean(formData.get('country')),
+              latitude,
+              longitude,
+              themes,
+              public_note: clean(formData.get('public_note')),
+            };
+          };
+
+          const loadEditSession = async () => {
+            showLoading();
+            if (!editToken) {
+              showInvalid();
+              return;
+            }
+
+            try {
+              const response = await fetch(`${agentBaseUrl}/map-nodes/edit-session`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: editToken }),
+              });
+              const payload = await safeJson(response);
+
+              if (!response.ok) {
+                if (payload?.error?.code === 'invalid_edit_link') {
+                  showInvalid();
+                  return;
+                }
+                showBlockingFailure('We could not check this edit link right now. Please try again from the email link.');
+                return;
+              }
+
+              if (!payload?.node) {
+                showBlockingFailure('We could not load this map node right now. Please try again from the email link.');
+                return;
+              }
+
+              renderNode(payload.node);
+              if (!nodeId || !initialPublicFields || initialPublicFields.latitude === null || initialPublicFields.longitude === null) {
+                showInvalid();
+                return;
+              }
+
+              showForm();
+            } catch {
+              showBlockingFailure('We could not check this edit link right now. Please try again from the email link.');
+            }
+          };
+
+          form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            failure.hidden = true;
+
+            if (!editToken || !nodeId) {
+              showInvalid();
+              return;
+            }
+
+            let body;
+            try {
+              const publicFields = collectPublicFields();
+              if (initialPublicFields && publicFieldsMatch(publicFields, initialPublicFields)) {
+                showFailure('Make at least one public-field change before submitting.');
+                return;
+              }
+              body = {
+                token: editToken,
+                ...publicFields,
+              };
+            } catch (error) {
+              showFailure(error instanceof Error ? error.message : 'Check the public fields before submitting.');
+              return;
+            }
+
+            setSubmitting(true);
+            try {
+              const response = await fetch(`${agentBaseUrl}/map-nodes/${encodeURIComponent(nodeId)}/update-requests`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+              });
+              const payload = await safeJson(response);
+
+              if (!response.ok) {
+                if (payload?.error?.code === 'invalid_edit_link') {
+                  showInvalid();
+                  return;
+                }
+                throw new Error('submit_failed');
+              }
+
+              editToken = '';
+              nodeId = '';
+              hideAllStates();
+              success.hidden = false;
+            } catch {
+              showFailure('We could not submit this update request. Please try again.');
+            } finally {
+              setSubmitting(false);
+            }
+          });
+
+          loadEditSession();
+        });
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={pageDescription} />
+    <meta name="robots" content="noindex,nofollow" />
+    <style is:inline>
+      :root {
+        --gp-bg: #0f3d2e;
+        --gp-fg: #faf7ee;
+        --gp-primary: #b8e835;
+        --gp-primary-fg: #0f3d2e;
+        --gp-space-xs: 4px;
+        --gp-space-sm: 8px;
+        --gp-space-md: 16px;
+        --gp-space-lg: 24px;
+        --gp-space-2xl: 48px;
+        --gp-label-sm: 12px;
+        --gp-label-md: 14px;
+        --gp-body-md: 16px;
+        --gp-font-display: Georgia, "Times New Roman", serif;
+        --gp-font-body: "Helvetica Neue", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-height: 100%;
+        background: #0a2d21;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--gp-bg);
+        color: var(--gp-fg);
+        font-family: var(--gp-font-body);
+      }
+
+      .map-edit-page {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: var(--gp-space-2xl) var(--gp-space-md);
+        background:
+          radial-gradient(circle at top left, rgba(184, 232, 53, 0.14), transparent 20rem),
+          var(--gp-bg);
+      }
+
+      .map-edit-panel {
+        width: min(100%, 48rem);
+        border: 1px solid rgba(207, 247, 90, 0.18);
+        border-radius: 8px;
+        padding: clamp(var(--gp-space-lg), 4vw, var(--gp-space-2xl));
+        background: rgba(7, 24, 15, 0.76);
+        box-shadow: 0 20px 60px rgba(2, 12, 7, 0.32);
+      }
+
+      .map-edit-kicker {
+        margin: 0 0 var(--gp-space-sm);
+        color: var(--gp-primary);
+        font-size: var(--gp-label-sm);
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .map-edit-panel h1 {
+        margin: 0;
+        font-family: var(--gp-font-display);
+        font-size: clamp(2rem, 6vw, 3.25rem);
+        line-height: 1;
+        letter-spacing: 0;
+      }
+
+      .map-edit-copy {
+        max-width: 40rem;
+        margin: var(--gp-space-md) 0 var(--gp-space-lg);
+        color: rgba(250, 247, 238, 0.8);
+        font-size: var(--gp-body-md);
+        line-height: 1.6;
+      }
+
+      .map-edit-state {
+        border: 1px solid rgba(207, 247, 90, 0.18);
+        border-radius: 8px;
+        padding: var(--gp-space-md);
+        background: rgba(2, 12, 7, 0.48);
+        color: rgba(250, 247, 238, 0.86);
+        line-height: 1.5;
+      }
+
+      .map-edit-state.is-success {
+        border-color: rgba(184, 232, 53, 0.45);
+        color: var(--gp-primary);
+      }
+
+      .map-edit-state.is-error {
+        border-color: rgba(224, 120, 86, 0.5);
+        color: #ffd6ca;
+      }
+
+      .map-edit-form {
+        display: grid;
+        gap: var(--gp-space-md);
+      }
+
+      .map-edit-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--gp-space-md);
+      }
+
+      .map-edit-form label,
+      .map-edit-themes {
+        display: grid;
+        gap: var(--gp-space-xs);
+      }
+
+      .map-edit-form label span,
+      .map-edit-themes legend {
+        color: rgba(250, 247, 238, 0.84);
+        font-size: var(--gp-label-sm);
+        font-weight: 800;
+      }
+
+      .map-edit-form input,
+      .map-edit-form textarea {
+        width: 100%;
+        min-height: 2.85rem;
+        border: 1px solid rgba(207, 247, 90, 0.2);
+        border-radius: 8px;
+        padding: 0.75rem;
+        background: rgba(2, 12, 7, 0.72);
+        color: var(--gp-fg);
+        font: inherit;
+        outline: none;
+      }
+
+      .map-edit-form textarea {
+        min-height: 7rem;
+        resize: vertical;
+      }
+
+      .map-edit-form input:focus,
+      .map-edit-form textarea:focus {
+        border-color: rgba(212, 245, 100, 0.78);
+        box-shadow: 0 0 0 3px rgba(212, 245, 100, 0.12);
+      }
+
+      .map-edit-theme-options {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--gp-space-sm);
+      }
+
+      .map-edit-theme-options label {
+        min-height: 2.75rem;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        border: 1px solid rgba(207, 247, 90, 0.16);
+        border-radius: 8px;
+        padding: 0.5rem 0.6rem;
+        background: rgba(2, 12, 7, 0.36);
+        cursor: pointer;
+      }
+
+      .map-edit-theme-options input {
+        width: 1rem;
+        min-height: 1rem;
+        padding: 0;
+        accent-color: var(--gp-primary);
+      }
+
+      .map-edit-theme-options span {
+        font-weight: 700;
+      }
+
+      .map-edit-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--gp-space-md);
+      }
+
+      .map-edit-actions p {
+        margin: 0;
+        color: rgba(250, 247, 238, 0.68);
+        font-size: var(--gp-label-md);
+        line-height: 1.4;
+      }
+
+      .map-edit-actions button {
+        min-height: 3rem;
+        min-width: 9rem;
+        border: 0;
+        border-radius: 999px;
+        padding: 0.75rem 1.1rem;
+        background: var(--gp-primary);
+        color: var(--gp-primary-fg);
+        font: inherit;
+        font-weight: 900;
+        cursor: pointer;
+      }
+
+      .map-edit-actions button:disabled {
+        cursor: wait;
+        opacity: 0.64;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      @media (max-width: 640px) {
+        .map-edit-page {
+          place-items: start stretch;
+          padding: var(--gp-space-md);
+        }
+
+        .map-edit-panel {
+          padding: var(--gp-space-lg);
+        }
+
+        .map-edit-grid,
+        .map-edit-theme-options,
+        .map-edit-actions {
+          grid-template-columns: 1fr;
+        }
+
+        .map-edit-actions {
+          display: grid;
+        }
+
+        .map-edit-actions button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="map-edit-page">
+      <section class="map-edit-panel" aria-labelledby="map-edit-title">
+        <p class="map-edit-kicker">Greenpill Network map</p>
+        <h1 id="map-edit-title">Update your public map node</h1>
+        <p class="map-edit-copy">
+          Review the public fields below. Submitted changes wait for steward review before they appear on the map.
+        </p>
+
+        <div id="map-edit-loading" class="map-edit-state" role="status">Checking this edit link...</div>
+
+        <div id="map-edit-invalid" class="map-edit-state is-error" role="alert" hidden>
+          This edit link is invalid or expired. Request a new edit link to update this node.
+        </div>
+
+        <div id="map-edit-success" class="map-edit-state is-success" role="status" hidden>
+          Update request submitted. Your changes are pending steward review.
+        </div>
+
+        <div id="map-edit-failure" class="map-edit-state is-error" role="alert" hidden></div>
+
+        <form id="map-edit-form" class="map-edit-form" novalidate hidden>
+          <div class="map-edit-grid">
+            <label>
+              <span>Display name</span>
+              <input name="display_name" autocomplete="name" required />
+            </label>
+            <label>
+              <span>Place name</span>
+              <input name="place_name" autocomplete="address-level2" required />
+            </label>
+            <label>
+              <span>City</span>
+              <input name="city" autocomplete="address-level2" />
+            </label>
+            <label>
+              <span>Region</span>
+              <input name="region" autocomplete="address-level1" />
+            </label>
+            <label>
+              <span>Country</span>
+              <input name="country" autocomplete="country-name" />
+            </label>
+            <label>
+              <span>Latitude</span>
+              <input name="latitude" inputmode="decimal" required type="number" step="0.000001" min="-90" max="90" />
+            </label>
+            <label>
+              <span>Longitude</span>
+              <input name="longitude" inputmode="decimal" required type="number" step="0.000001" min="-180" max="180" />
+            </label>
+          </div>
+
+          <fieldset class="map-edit-themes">
+            <legend>Themes</legend>
+            <div class="map-edit-theme-options">
+              {mapThemes.map((theme) => (
+                <label>
+                  <input type="checkbox" name="themes" value={theme.id} />
+                  <span>{theme.label}</span>
+                </label>
+              ))}
+            </div>
+            <div id="map-edit-extra-themes"></div>
+          </fieldset>
+
+          <label>
+            <span>Public note</span>
+            <textarea name="public_note" rows="4" maxlength="500"></textarea>
+          </label>
+
+          <div class="map-edit-actions">
+            <p>Only public map fields are editable here.</p>
+            <button id="map-edit-submit" type="submit">Submit update</button>
+          </div>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>
