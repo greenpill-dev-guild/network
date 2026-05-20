@@ -246,6 +246,21 @@ test('chapter initiative cards do not render dead links when no URL is present',
   assert.doesNotMatch(source, /href=\{href \|\| '#'\}/);
 });
 
+test('chapter pages render approved media and steward avatar cards', async () => {
+  const [chapterPage, chapterIndexPage] = await Promise.all([
+    readFile(chapterPagePath, 'utf8'),
+    readFile(join(websitePagesDir, 'chapters/index.astro'), 'utf8'),
+  ]);
+
+  assert.match(chapterPage, /import Avatar from/);
+  assert.match(chapterPage, /media\.reviewStatus === 'approved'/);
+  assert.match(chapterPage, /gp-chapter-hero-media/);
+  assert.match(chapterPage, /gp-chapter-steward-card/);
+  assert.match(chapterIndexPage, /import AvatarStack from/);
+  assert.match(chapterIndexPage, /approvedImageFor/);
+  assert.match(chapterIndexPage, /gp-chapters-card-stewards/);
+});
+
 test('story pages render markdown lists and use authored featured ordering', async () => {
   const [storyDetailPage, storiesIndexPage, homePage] = await Promise.all([
     readFile(storyDetailPagePath, 'utf8'),

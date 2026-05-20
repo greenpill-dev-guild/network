@@ -7,6 +7,7 @@ import ArrowLink from '../../components/ui/ArrowLink.astro';
 import Overline from '../../components/ui/Overline.astro';
 import Text from '../../components/ui/Text.astro';
 import Meta from '../../components/ui/Meta.astro';
+import AvatarStack from '../../components/ui/AvatarStack.astro';
 import chaptersIndex from '../../content/chapters-index.json';
 import { getOperationalChapters } from '../../lib/operational-content';
 
@@ -44,6 +45,30 @@ const allRegions = Array.from(
 function regionLabel(slug: string) {
   if (!slug) return 'Global';
   return slug.charAt(0).toUpperCase() + slug.slice(1);
+}
+
+function titleCase(slug: string) {
+  return slug
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function stewardNamesFor(chapter: typeof all[number]) {
+  const stewardNames = (chapter.data.stewards ?? [])
+    .map((steward: any) => steward.name)
+    .filter(Boolean);
+
+  if (stewardNames.length > 0) return stewardNames;
+
+  return (chapter.data.stewardSlugs ?? [])
+    .map((slug: string) => titleCase(slug))
+    .filter(Boolean);
+}
+
+function approvedImageFor(chapter: typeof all[number]) {
+  const media = chapter.data.media ?? {};
+  if (media.reviewStatus !== 'approved') return '';
+  return media.image || chapter.data.image || '';
 }
 
 const hero = chaptersIndex.hero ?? {};
@@ -128,7 +153,8 @@ const hero = chaptersIndex.hero ?? {};
             {featured.map((chapter) => {
               const themes = (chapter.data.themeSlugs ?? []).slice(0, 4);
               const links = (chapter.data.links ?? []).filter((l) => l.url).slice(0, 3);
-              const stewards = chapter.data.stewardSlugs?.length ?? 0;
+              const stewardNames = stewardNamesFor(chapter);
+              const approvedImage = approvedImageFor(chapter);
               return (
                 <article
                   class="gp-chapters-card is-featured"
@@ -136,6 +162,16 @@ const hero = chaptersIndex.hero ?? {};
                   data-status={chapter.data.status || 'active'}
                 >
                   <a class="gp-chapters-card-link" href={`/chapters/${chapter.id}`}>
+                    {approvedImage && (
+                      <div class="gp-chapters-card-media">
+                        <img
+                          src={approvedImage}
+                          alt={chapter.data.media?.imageAlt || `${chapter.data.name} chapter activity`}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </div>
+                    )}
                     <header class="gp-chapters-card-head">
                       <Meta items={['Chapter', regionLabel(chapter.data.region || 'global'), chapter.data.status || 'active']} accentIndex={2} />
                     </header>
@@ -165,7 +201,12 @@ const hero = chaptersIndex.hero ?? {};
                     </ul>
                   )}
                   <footer class="gp-chapters-card-foot">
-                    {stewards > 0 && <Text variant="mono">{stewards} steward{stewards === 1 ? '' : 's'}</Text>}
+                    {stewardNames.length > 0 && (
+                      <div class="gp-chapters-card-stewards">
+                        <AvatarStack names={stewardNames} count={Math.min(stewardNames.length, 3)} extra={Math.max(0, stewardNames.length - 3)} size={28} />
+                        <Text variant="mono">{stewardNames.length} steward{stewardNames.length === 1 ? '' : 's'}</Text>
+                      </div>
+                    )}
                     <ArrowLink href={`/chapters/${chapter.id}`} size="sm">Open chapter</ArrowLink>
                   </footer>
                 </article>
@@ -185,24 +226,33 @@ const hero = chaptersIndex.hero ?? {};
           </div>
 
           <div class="gp-chapters-grid is-compact" data-chapter-grid>
-            {directory.map((chapter) => (
-              <a
-                class="gp-chapters-card is-compact"
-                href={`/chapters/${chapter.id}`}
-                data-region={chapter.data.region || 'global'}
-                data-status={chapter.data.status || 'active'}
-              >
-                <Meta items={[regionLabel(chapter.data.region || 'global'), chapter.data.status || 'active']} accentIndex={1} />
-                <Text variant="title-lg" class="gp-chapters-card-title">{chapter.data.name}</Text>
-                {chapter.data.city && (
-                  <Text variant="caption">{chapter.data.city}{chapter.data.country && `, ${chapter.data.country}`}</Text>
-                )}
-                {chapter.data.summary && (
-                  <Text variant="body-sm" class="gp-chapters-card-summary">{chapter.data.summary}</Text>
-                )}
-                <span class="gp-chapters-card-arrow" aria-hidden="true">→</span>
-              </a>
-            ))}
+            {directory.map((chapter) => {
+              const stewardNames = stewardNamesFor(chapter);
+              return (
+                <a
+                  class="gp-chapters-card is-compact"
+                  href={`/chapters/${chapter.id}`}
+                  data-region={chapter.data.region || 'global'}
+                  data-status={chapter.data.status || 'active'}
+                >
+                  <Meta items={[regionLabel(chapter.data.region || 'global'), chapter.data.status || 'active']} accentIndex={1} />
+                  <Text variant="title-lg" class="gp-chapters-card-title">{chapter.data.name}</Text>
+                  {chapter.data.city && (
+                    <Text variant="caption">{chapter.data.city}{chapter.data.country && `, ${chapter.data.country}`}</Text>
+                  )}
+                  {chapter.data.summary && (
+                    <Text variant="body-sm" class="gp-chapters-card-summary">{chapter.data.summary}</Text>
+                  )}
+                  {stewardNames.length > 0 && (
+                    <div class="gp-chapters-card-stewards is-compact">
+                      <AvatarStack names={stewardNames} count={Math.min(stewardNames.length, 3)} extra={Math.max(0, stewardNames.length - 3)} size={24} />
+                      <Text variant="mono">{stewardNames.length}</Text>
+                    </div>
+                  )}
+                  <span class="gp-chapters-card-arrow" aria-hidden="true">→</span>
+                </a>
+              );
+            })}
           </div>
 
           <p class="gp-chapters-empty" data-chapter-empty hidden>
@@ -480,6 +530,26 @@ const hero = chaptersIndex.hero ?? {};
     text-decoration: none;
   }
 
+  .gp-chapters-card-media {
+    margin-bottom: 2px;
+    overflow: hidden;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: 8px;
+    background: rgba(15, 61, 46, 0.52);
+  }
+
+  .gp-chapters-card-media img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .gp-chapters-card-link:hover .gp-chapters-card-media img {
+    transform: scale(1.02);
+  }
+
   .gp-chapters-card-link:hover :global(.gp-chapters-card-title) {
     color: var(--gp-primary);
   }
@@ -536,6 +606,27 @@ const hero = chaptersIndex.hero ?? {};
     gap: 12px;
     padding-top: var(--gp-space-sm);
     border-top: 1px solid var(--gp-border-soft);
+  }
+
+  .gp-chapters-card-stewards {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .gp-chapters-card-stewards :global(.gp-avatar-extra) {
+    display: none;
+  }
+
+  .gp-chapters-card-stewards :global(.gp-text) {
+    color: var(--gp-fg-dim);
+    white-space: nowrap;
+  }
+
+  .gp-chapters-card-stewards.is-compact {
+    margin-top: auto;
+    padding-top: var(--gp-space-sm);
   }
 
   .gp-chapters-card.is-compact {
