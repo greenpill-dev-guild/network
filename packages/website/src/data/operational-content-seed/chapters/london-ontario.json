@@ -7,7 +7,7 @@
   "summary": "Public TechAlliance listing confirms Greenpill London Ontario presented Vibe Coding for Good, a collaborative build night at Reimagine Co on April 28, 2025.",
   "introQuote": "",
   "introQuoteAttribution": "",
-  "image": "",
+  "image": "/images/chapters/greenpill-london-ontario-event.jpg",
   "founded": "",
   "lat": 42.9849,
   "long": -81.2453,
@@ -80,17 +80,17 @@
     }
   ],
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "imageSourceUrl": "",
-    "imageCredit": "",
-    "ogImage": "",
-    "reviewStatus": "needs-steward-photo"
+    "image": "/images/chapters/greenpill-london-ontario-event.jpg",
+    "imageAlt": "TechAlliance ecosystem events artwork for a Greenpill London Ontario collaborative build night.",
+    "imageSourceUrl": "https://www.techalliance.ca/news/events/vibe-coding-for-good-a-collaborative-build-night-reimagine-co-presented-by-greenpill-london-ontario/",
+    "imageCredit": "TechAlliance",
+    "ogImage": "/images/chapters/greenpill-london-ontario-event.jpg",
+    "reviewStatus": "approved"
   },
   "seo": {
     "title": "Greenpill London Ontario · Greenpill Network",
     "description": "Greenpill London Ontario has public event proof through the Vibe Coding for Good build night at Reimagine Co.",
-    "ogImage": "",
+    "ogImage": "/images/chapters/greenpill-london-ontario-event.jpg",
     "canonicalPath": "/chapters/london-ontario",
     "noindex": false
   }

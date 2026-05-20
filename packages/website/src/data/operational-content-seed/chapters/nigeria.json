@@ -7,7 +7,7 @@
   "summary": "Public goods and ReFi education chapter with source-backed Water Cup updates, a 10-week Take the Greenpill education program, an Ethereum-at-10 Awka event, and a public Water Cup Mapping Hypercert.",
   "introQuote": "",
   "introQuoteAttribution": "",
-  "image": "https://canada1.discourse-cdn.com/flex004/uploads/greenpill_hub/original/1X/6c9d0be1569379455fc39ba266ea03559234f4d6.jpeg",
+  "image": "/images/chapters/greenpill-nigeria-education.jpeg",
   "founded": "",
   "lat": 6.5244,
   "long": 3.3792,
@@ -154,17 +154,17 @@
     }
   ],
   "media": {
-    "image": "https://canada1.discourse-cdn.com/flex004/uploads/greenpill_hub/original/1X/6c9d0be1569379455fc39ba266ea03559234f4d6.jpeg",
+    "image": "/images/chapters/greenpill-nigeria-education.jpeg",
     "imageAlt": "Greenpill Nigeria participants gathered for a Take the Greenpill education session.",
     "imageSourceUrl": "https://hub.regencoordination.xyz/t/take-the-greenpill-with-greenpill-nigeria-10-weeks-of-refi-education/324",
     "imageCredit": "Greenpill Nigeria via Regen Hub",
-    "ogImage": "https://canada1.discourse-cdn.com/flex004/uploads/greenpill_hub/original/1X/6c9d0be1569379455fc39ba266ea03559234f4d6.jpeg",
+    "ogImage": "/images/chapters/greenpill-nigeria-education.jpeg",
     "reviewStatus": "approved"
   },
   "seo": {
     "title": "Greenpill Nigeria · Greenpill Network",
     "description": "Greenpill Nigeria runs source-backed Water Cup, ReFi education, Ethereum-at-10, and public impact proof work.",
-    "ogImage": "https://canada1.discourse-cdn.com/flex004/uploads/greenpill_hub/original/1X/6c9d0be1569379455fc39ba266ea03559234f4d6.jpeg",
+    "ogImage": "/images/chapters/greenpill-nigeria-education.jpeg",
     "canonicalPath": "/chapters/nigeria",
     "noindex": false
   }

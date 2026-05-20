@@ -7,7 +7,7 @@
   "summary": "Public sources identify Greenpill Toronto as a Toronto public-goods and regenerative cryptoeconomics chapter, including Consensus 2025 sponsor context and greenpill.to / greenpill.ca links.",
   "introQuote": "",
   "introQuoteAttribution": "",
-  "image": "",
+  "image": "/images/chapters/greenpill-toronto-web3-solutions.jpg",
   "founded": "",
   "lat": 43.6532,
   "long": -79.3832,
@@ -81,17 +81,17 @@
     }
   ],
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "imageSourceUrl": "",
-    "imageCredit": "",
-    "ogImage": "",
-    "reviewStatus": "needs-steward-photo"
+    "image": "/images/chapters/greenpill-toronto-web3-solutions.jpg",
+    "imageAlt": "GreenPill Toronto Web3 Solutions event artwork from a local impact and regeneration event.",
+    "imageSourceUrl": "https://luma.com/tgie0ose",
+    "imageCredit": "GreenPill Toronto via Luma",
+    "ogImage": "/images/chapters/greenpill-toronto-web3-solutions.jpg",
+    "reviewStatus": "approved"
   },
   "seo": {
     "title": "Greenpill Toronto · Greenpill Network",
     "description": "Greenpill Toronto is a source-backed chapter with public website and Consensus 2025 sponsor context.",
-    "ogImage": "",
+    "ogImage": "/images/chapters/greenpill-toronto-web3-solutions.jpg",
     "canonicalPath": "/chapters/toronto",
     "noindex": false
   }

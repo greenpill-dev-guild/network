@@ -7,7 +7,7 @@
   "summary": "Public sources connect Greenpill Koh Phangan to ReFi Phangan, local regenerative finance, PhanganQF, Re:Plast recycling context, Giveth, X, and a 10 Years of Ethereum Phangan event.",
   "introQuote": "",
   "introQuoteAttribution": "",
-  "image": "",
+  "image": "/images/chapters/greenpill-phangan-ethereum10.jpg",
   "founded": "",
   "lat": 9.7333,
   "long": 100.0167,
@@ -120,17 +120,17 @@
     }
   ],
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "imageSourceUrl": "",
-    "imageCredit": "",
-    "ogImage": "",
-    "reviewStatus": "needs-steward-photo"
+    "image": "/images/chapters/greenpill-phangan-ethereum10.jpg",
+    "imageAlt": "GreenPill Phangan Ethereum 10-year celebration artwork from Luma.",
+    "imageSourceUrl": "https://luma.com/k057yjjx",
+    "imageCredit": "GreenPill Phangan via Luma",
+    "ogImage": "/images/chapters/greenpill-phangan-ethereum10.jpg",
+    "reviewStatus": "approved"
   },
   "seo": {
     "title": "Greenpill Koh Phangan · Greenpill Network",
     "description": "Greenpill Koh Phangan connects ReFi Phangan, local impact, PhanganQF, recycling context, and public events.",
-    "ogImage": "",
+    "ogImage": "/images/chapters/greenpill-phangan-ethereum10.jpg",
     "canonicalPath": "/chapters/koh-pha-ngan",
     "noindex": false
   }

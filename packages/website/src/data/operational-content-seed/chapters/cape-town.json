@@ -7,7 +7,7 @@
   "summary": "Active chapter in Cape Town, South Africa. Public source links and detailed program notes are being backfilled with stewards.",
   "introQuote": "",
   "introQuoteAttribution": "",
-  "image": "",
+  "image": "/images/chapters/greenpill-cape-town-eth10-venue.jpg",
   "founded": "",
   "lat": -33.9249,
   "long": 18.4241,
@@ -72,17 +72,17 @@
     }
   ],
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "imageSourceUrl": "",
-    "imageCredit": "",
-    "ogImage": "",
-    "reviewStatus": "needs-steward-photo"
+    "image": "/images/chapters/greenpill-cape-town-eth10-venue.jpg",
+    "imageAlt": "A bright Cape Town venue used for an Ethereum anniversary gathering listed on Luma.",
+    "imageSourceUrl": "https://luma.com/ethereum-10y-capetown",
+    "imageCredit": "Ethereum 10Y Cape Town via Luma",
+    "ogImage": "/images/chapters/greenpill-cape-town-eth10-venue.jpg",
+    "reviewStatus": "approved"
   },
   "seo": {
     "title": "Greenpill Cape Town · Greenpill Network",
     "description": "Greenpill Cape Town is an active chapter in South Africa, with public source links and detailed program notes being backfilled with stewards.",
-    "ogImage": "",
+    "ogImage": "/images/chapters/greenpill-cape-town-eth10-venue.jpg",
     "canonicalPath": "/chapters/cape-town",
     "noindex": false
   }

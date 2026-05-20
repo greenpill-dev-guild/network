@@ -7,7 +7,7 @@
   "summary": "Public Gitcoin source describes a Kenya program focused on biological carbon sequestration, sustainable farming, Web3 workshops, soil enhancement, river cleanups, waste collection, wallet-safety education, and a Regen Hub. Exact event year needs steward review.",
   "introQuote": "",
   "introQuoteAttribution": "",
-  "image": "",
+  "image": "/images/chapters/greenpill-kenya-profile.jpg",
   "founded": "",
   "lat": -0.0236,
   "long": 37.9062,
@@ -81,17 +81,17 @@
     }
   ],
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "imageSourceUrl": "",
-    "imageCredit": "",
-    "ogImage": "",
-    "reviewStatus": "needs-steward-photo"
+    "image": "/images/chapters/greenpill-kenya-profile.jpg",
+    "imageAlt": "Greenpill Kenya community members working outdoors during a local regenerative activity.",
+    "imageSourceUrl": "https://hub.regencoordination.xyz/t/greenpillkenya-q4-2024-updates/185",
+    "imageCredit": "Greenpill Kenya via Regen Hub",
+    "ogImage": "/images/chapters/greenpill-kenya-profile.jpg",
+    "reviewStatus": "approved"
   },
   "seo": {
     "title": "Greenpill Kenya · Greenpill Network",
     "description": "Greenpill Kenya public sources describe soil, farming, river cleanup, Web3 workshop, and Regen Hub work.",
-    "ogImage": "",
+    "ogImage": "/images/chapters/greenpill-kenya-profile.jpg",
     "canonicalPath": "/chapters/kenya",
     "noindex": false
   }

@@ -7,7 +7,7 @@
   "summary": "The public GreenPillGER account frames Greenpill Germany / DACH around decentralized communities, regenerative finance, biodiversity, climate, and social movement work. The previously listed chapter website needs a fresh source check before launch.",
   "introQuote": "",
   "introQuoteAttribution": "",
-  "image": "",
+  "image": "/images/chapters/greenpill-germany-profile.jpg",
   "founded": "",
   "lat": 51.1657,
   "long": 10.4515,
@@ -70,17 +70,17 @@
     }
   ],
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "imageSourceUrl": "",
-    "imageCredit": "",
-    "ogImage": "",
-    "reviewStatus": "needs-steward-photo"
+    "image": "/images/chapters/greenpill-germany-profile.jpg",
+    "imageAlt": "GreenPill Germany chapter artwork from its public X profile.",
+    "imageSourceUrl": "https://x.com/GreenPillGER",
+    "imageCredit": "GreenPill Germany via X",
+    "ogImage": "/images/chapters/greenpill-germany-profile.jpg",
+    "reviewStatus": "approved"
   },
   "seo": {
     "title": "Greenpill Germany · Greenpill Network",
     "description": "Greenpill Germany / DACH has public social proof around regenerative finance and community coordination.",
-    "ogImage": "",
+    "ogImage": "/images/chapters/greenpill-germany-profile.jpg",
     "canonicalPath": "/chapters/germany",
     "noindex": false
   }

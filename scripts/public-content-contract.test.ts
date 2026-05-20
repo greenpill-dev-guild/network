@@ -12,6 +12,9 @@ import {
 import {
   buildDirectusOperationalPermissionPlan,
 } from './directus-operational-content-setup.ts';
+import {
+  loadChapterEnrichment,
+} from './directus-chapter-enrichment.ts';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const editorialContentDir = join(rootDir, 'packages/website/src/content');
@@ -27,6 +30,20 @@ const storyDetailPagePath = join(rootDir, 'packages/website/src/pages/stories/[s
 const storiesIndexPagePath = join(rootDir, 'packages/website/src/pages/stories/index.astro');
 const chapterPagePath = join(rootDir, 'packages/website/src/pages/chapters/[slug].astro');
 const chapterInitiativesMigrationPath = join(rootDir, 'packages/agent/migrations/010_chapter_initiatives_operational_content.sql');
+const activeChapterEnrichmentSlugs = [
+  'brasil',
+  'c-te-d-ivoire',
+  'cape-town',
+  'germany',
+  'greensofa',
+  'kenya',
+  'koh-pha-ngan',
+  'london-ontario',
+  'new-york-city',
+  'nigeria',
+  'ottawa',
+  'toronto',
+];
 
 async function readJson(relativePath) {
   return JSON.parse(await readFile(join(editorialContentDir, relativePath), 'utf8'));
@@ -401,6 +418,29 @@ test('public operational chapter media requires approved provenance', () => {
       }],
     })
   );
+});
+
+test('Directus chapter enrichment targets visible active chapters and public people only', async () => {
+  const enrichment = await loadChapterEnrichment();
+  const emailLike = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i;
+
+  assert.deepEqual(
+    enrichment.chapters.map((chapter) => chapter.slug).sort(),
+    activeChapterEnrichmentSlugs
+  );
+  assert.equal(enrichment.people.length, 16);
+  const chapterImageStatuses = enrichment.chapters.flatMap((chapter) => (
+    chapter.image || chapter.media?.image || chapter.media?.ogImage || chapter.seo?.ogImage
+      ? [`${chapter.slug}:${chapter.media?.reviewStatus}`]
+      : []
+  ));
+  assert.equal(chapterImageStatuses.length, activeChapterEnrichmentSlugs.length);
+  assert.deepEqual(
+    chapterImageStatuses.sort(),
+    activeChapterEnrichmentSlugs.map((slug) => `${slug}:approved`).sort()
+  );
+  assert.equal(emailLike.test(JSON.stringify(enrichment)), false);
+  assert.equal(enrichment.people.every((person) => person.avatar === ''), true);
 });
 
 test('Directus operational access plan separates draft editors from publishers', () => {

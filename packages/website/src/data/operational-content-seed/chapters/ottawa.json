@@ -7,7 +7,7 @@
   "summary": "Public research confirms an active Greenpill Ottawa X account. Deeper chapter activity needs steward backfill before launch copy makes specific program claims.",
   "introQuote": "",
   "introQuoteAttribution": "",
-  "image": "",
+  "image": "/images/chapters/greenpill-ottawa-reimagining-future.jpg",
   "founded": "",
   "lat": 45.4215,
   "long": -75.6972,
@@ -71,17 +71,17 @@
     }
   ],
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "imageSourceUrl": "",
-    "imageCredit": "",
-    "ogImage": "",
-    "reviewStatus": "needs-steward-photo"
+    "image": "/images/chapters/greenpill-ottawa-reimagining-future.jpg",
+    "imageAlt": "People gathered for the GreenPill Ottawa Reimagining Our Future event.",
+    "imageSourceUrl": "https://luma.com/pdtn6mhh",
+    "imageCredit": "GreenPill Ottawa via Luma",
+    "ogImage": "/images/chapters/greenpill-ottawa-reimagining-future.jpg",
+    "reviewStatus": "approved"
   },
   "seo": {
     "title": "Greenpill Ottawa · Greenpill Network",
     "description": "Greenpill Ottawa has a public account, with deeper chapter activity needing steward backfill.",
-    "ogImage": "",
+    "ogImage": "/images/chapters/greenpill-ottawa-reimagining-future.jpg",
     "canonicalPath": "/chapters/ottawa",
     "noindex": false
   }

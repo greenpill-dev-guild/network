@@ -7,7 +7,7 @@
   "summary": "Public sources describe Greenpill NYC as a public-goods education chapter with monthly meetups, a Luma calendar, and an active X account.",
   "introQuote": "",
   "introQuoteAttribution": "",
-  "image": "",
+  "image": "/images/chapters/greenpill-nyc-meetup.jpg",
   "founded": "",
   "lat": 40.7128,
   "long": -74.006,
@@ -99,17 +99,17 @@
     }
   ],
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "imageSourceUrl": "",
-    "imageCredit": "",
-    "ogImage": "",
-    "reviewStatus": "needs-steward-photo"
+    "image": "/images/chapters/greenpill-nyc-meetup.jpg",
+    "imageAlt": "Greenpill NYC meetup participants gathered indoors for a community event.",
+    "imageSourceUrl": "https://hub.regencoordination.xyz/t/greenpill-new-york-city/96",
+    "imageCredit": "Greenpill NYC via Regen Hub",
+    "ogImage": "/images/chapters/greenpill-nyc-meetup.jpg",
+    "reviewStatus": "approved"
   },
   "seo": {
     "title": "Greenpill NYC · Greenpill Network",
     "description": "Greenpill NYC hosts source-backed public-goods education and meetup activity through public Luma, Hub, and X sources.",
-    "ogImage": "",
+    "ogImage": "/images/chapters/greenpill-nyc-meetup.jpg",
     "canonicalPath": "/chapters/new-york-city",
     "noindex": false
   }

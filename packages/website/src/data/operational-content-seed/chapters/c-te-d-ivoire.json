@@ -7,7 +7,7 @@
   "summary": "Public Green Mission / La Ligne Verte source describes a coordination and environmental action platform around collection, education, and waste valorization. Targets should be published as goals, not completed metrics.",
   "introQuote": "",
   "introQuoteAttribution": "",
-  "image": "",
+  "image": "/images/chapters/greenpill-civ-mission.jpg",
   "founded": "",
   "lat": 5.36,
   "long": -4.0083,
@@ -72,17 +72,17 @@
     }
   ],
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "imageSourceUrl": "",
-    "imageCredit": "",
-    "ogImage": "",
-    "reviewStatus": "needs-steward-photo"
+    "image": "/images/chapters/greenpill-civ-mission.jpg",
+    "imageAlt": "GreenPill Cote d'Ivoire community members gathered with chapter flags after a local activity.",
+    "imageSourceUrl": "https://hub.regencoordination.xyz/t/building-a-more-regen-cote-d-ivoire-through-disruptive-technologies/167",
+    "imageCredit": "GreenPill CIV via Regen Hub",
+    "ogImage": "/images/chapters/greenpill-civ-mission.jpg",
+    "reviewStatus": "approved"
   },
   "seo": {
     "title": "Greenpill Cote d'Ivoire · Greenpill Network",
     "description": "Greenpill Cote d'Ivoire is building La Ligne Verte, a public environmental action and coordination platform.",
-    "ogImage": "",
+    "ogImage": "/images/chapters/greenpill-civ-mission.jpg",
     "canonicalPath": "/chapters/c-te-d-ivoire",
     "noindex": false
   }

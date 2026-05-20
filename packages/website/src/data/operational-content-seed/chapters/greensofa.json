@@ -7,7 +7,7 @@
   "summary": "GreenSofa, also referenced as Greenpill Taiwan, has public HackMD, Giveth, X, Hub, and Taiwan Hypercerts Dashboard sources with itemized public-goods tooling and event funding receipts.",
   "introQuote": "",
   "introQuoteAttribution": "",
-  "image": "",
+  "image": "/images/chapters/greensofa-ethereum-localism.jpg",
   "founded": "2023",
   "lat": 23.6978,
   "long": 120.9605,
@@ -107,17 +107,17 @@
     }
   ],
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "imageSourceUrl": "",
-    "imageCredit": "",
-    "ogImage": "",
-    "reviewStatus": "needs-steward-photo"
+    "image": "/images/chapters/greensofa-ethereum-localism.jpg",
+    "imageAlt": "GreenSofa Ethereum Localism event artwork from Luma.",
+    "imageSourceUrl": "https://lu.ma/qnfi7efi",
+    "imageCredit": "GreenSofa via Luma",
+    "ogImage": "/images/chapters/greensofa-ethereum-localism.jpg",
+    "reviewStatus": "approved"
   },
   "seo": {
     "title": "GreenSofa · Greenpill Network",
     "description": "GreenSofa is a Taiwan Greenpill chapter with public funding receipts, Hypercerts dashboard work, and public-goods tooling proof.",
-    "ogImage": "",
+    "ogImage": "/images/chapters/greensofa-ethereum-localism.jpg",
     "canonicalPath": "/chapters/greensofa",
     "noindex": false
   }

@@ -7,7 +7,7 @@
   "summary": "Source-backed public chapter with weekly Greenpilled sessions, Portuguese translations, ImpactEAS work, Green Goods contributions, Gitcoin / KarmaGAP climate milestones, and public events in Rio de Janeiro.",
   "introQuote": "",
   "introQuoteAttribution": "",
-  "image": "",
+  "image": "/images/chapters/greenpill-brasil-community.jpg",
   "founded": "",
   "lat": -22.9068,
   "long": -43.1729,
@@ -136,17 +136,17 @@
     }
   ],
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "imageSourceUrl": "",
-    "imageCredit": "",
-    "ogImage": "",
-    "reviewStatus": "needs-steward-photo"
+    "image": "/images/chapters/greenpill-brasil-community.jpg",
+    "imageAlt": "Greenpill Brasil community members seated in a discussion circle at a Regen Meetup in Rio de Janeiro.",
+    "imageSourceUrl": "https://hub.regencoordination.xyz/t/regen-meetup-greenpill-brazil-fabulosa-lab-innovating-for-climate-resilience/48",
+    "imageCredit": "Greenpill Brasil via Regen Hub",
+    "ogImage": "/images/chapters/greenpill-brasil-community.jpg",
+    "reviewStatus": "approved"
   },
   "seo": {
     "title": "Greenpill Brasil · Greenpill Network",
     "description": "Greenpill Brasil coordinates public-goods education, translations, climate milestones, Green Goods work, and local events.",
-    "ogImage": "",
+    "ogImage": "/images/chapters/greenpill-brasil-community.jpg",
     "canonicalPath": "/chapters/brasil",
     "noindex": false
   }
