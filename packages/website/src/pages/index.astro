@@ -43,7 +43,7 @@ const devGuildPath = publicGuildPath(devGuild?.id);
 const writersGuildPath = publicGuildPath(writersGuild?.id);
 
 const proofSignal = homePage.proofSignals?.find((s) => s.label === 'Podcast archive');
-const podcastEpisodeCount = proofSignal?.value ?? '293 episodes';
+const podcastEpisodeCount = proofSignal?.value ?? '296 episodes';
 const podcastHref = proofSignal?.href ?? 'https://podcasts.apple.com/us/podcast/greenpill/id1609313639';
 
 const activeChapterCount = chapters.length;
@@ -51,7 +51,6 @@ const activeChapterCount = chapters.length;
 const ecosystem = [
   { name: 'Gitcoin', blurb: 'Public goods funding rounds', href: 'https://www.gitcoin.co/' },
   { name: 'Octant', blurb: 'Epoch-based public goods', href: 'https://octant.app/' },
-  { name: 'Allo Protocol', blurb: 'Capital allocation infra', href: 'https://allo.gitcoin.co/' },
   { name: 'KarmaGAP', blurb: 'Grants, milestones, evidence', href: 'https://gap.karmahq.xyz/' },
   { name: 'Regen Coordination', blurb: 'The Hub for chapter updates', href: 'https://hub.regencoordination.xyz/' },
   { name: 'Green Goods', blurb: 'Public-goods impact tooling', href: 'https://docs.greengoods.app/' },
@@ -65,7 +64,7 @@ const heroTitle = homePage.hero?.title || homePage.title || 'A global regenerati
 const heroDek = homePage.hero?.body || homePage.hero?.dek ||
   `Drop in to see who you connect with - by theme, role, and what you bring or seek. ${activeChapterCount} chapters and counting.`;
 
-const primaryCta = homePage.hero?.primaryCta ?? { label: 'Enter the Garden', href: '/garden' };
+const primaryCta = homePage.hero?.primaryCta ?? { label: 'Find your people', href: '/garden' };
 const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', href: '/chapters' };
 ---
 
@@ -76,7 +75,6 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
   canonicalPath={homePage.seo?.canonicalPath || '/'}
   noindex={homePage.seo?.noindex}
   activeNav="Home"
-  showFooterWordmark
 >
   <main class="gp-home" id="home-top">
     <section class="gp-home-hero">
@@ -92,7 +90,7 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
           <Text variant="body-lg" class="gp-home-hero-dek">{heroDek}</Text>
 
           <div class="gp-home-hero-actions">
-            <Button href={primaryCta.href}>{primaryCta.label}</Button>
+            <Button type="button" data-home-map-open aria-haspopup="dialog">{primaryCta.label}</Button>
             <Button href={secondaryCta.href} variant="ghost">{secondaryCta.label}</Button>
           </div>
         </div>
@@ -368,8 +366,15 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
   }
 
   .gp-home-hero-inner :global(.gp-home-hero-title) {
-    max-width: 20ch;
+    max-width: 100%;
     text-wrap: balance;
+  }
+
+  @media (min-width: 900px) {
+    .gp-home-hero-inner :global(.gp-home-hero-title) {
+      white-space: nowrap;
+      text-wrap: nowrap;
+    }
   }
 
   .gp-home-hero-map {

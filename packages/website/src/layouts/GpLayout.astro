@@ -10,9 +10,7 @@ interface Props {
   canonicalPath?: string;
   activeNav?: string | null;
   noindex?: boolean;
-  showFooterWordmark?: boolean;
   hideShell?: boolean;
-  background?: 'graphic' | 'plain';
   ogType?: 'website' | 'article' | 'profile';
 }
 
@@ -23,16 +21,14 @@ const {
   canonicalPath = '',
   activeNav = null,
   noindex = false,
-  showFooterWordmark = false,
   hideShell = false,
-  background = 'graphic',
   ogType = 'website',
 } = Astro.props;
 const canonicalUrl = canonicalPath ? `https://greenpill.network${canonicalPath}` : 'https://greenpill.network';
 
 const bodyClasses = [
   'gp-root',
-  background === 'graphic' ? 'has-graphic-background' : 'has-plain-background',
+  'has-graphic-background',
 ];
 ---
 
@@ -70,7 +66,7 @@ const bodyClasses = [
     <div id="main-content" class="gp-main-target" tabindex="-1">
       <slot />
     </div>
-    {!hideShell && <SiteFooter showWordmark={showFooterWordmark} />}
+    {!hideShell && <SiteFooter />}
   </body>
 </html>
 
@@ -82,18 +78,20 @@ const bodyClasses = [
   body.gp-root {
     margin: 0;
     min-height: 100vh;
-    background-color: var(--gp-bg);
+    background-color: var(--gp-green-950);
+    background-image: url('/images/greenpill-bg.png');
+    background-position: top center;
+    background-repeat: repeat-y;
+    background-size: max(1400px, 100vw) auto;
+    position: relative;
+    isolation: isolate;
   }
 
   body.gp-root.has-graphic-background {
     background-image: url('/images/greenpill-bg.png');
     background-position: top center;
     background-repeat: repeat-y;
-    background-size: contain;
-  }
-
-  body.gp-root.has-plain-background {
-    background-image: none;
+    background-size: max(1400px, 100vw) auto;
   }
 
   body.gp-root a {

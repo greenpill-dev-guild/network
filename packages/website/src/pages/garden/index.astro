@@ -2,93 +2,55 @@
 import garden from '../../content/garden.json';
 import GpLayout from '../../layouts/GpLayout.astro';
 import Button from '../../components/ui/Button.astro';
-import Card from '../../components/ui/Card.astro';
-import Chip from '../../components/ui/Chip.astro';
 import Container from '../../components/ui/Container.astro';
-import CtaStrip from '../../components/ui/CtaStrip.astro';
+import EmailInput from '../../components/ui/EmailInput.astro';
 import Meta from '../../components/ui/Meta.astro';
 import Overline from '../../components/ui/Overline.astro';
 import SectionHeader from '../../components/ui/SectionHeader.astro';
-import StatusChip from '../../components/ui/StatusChip.astro';
 import Text from '../../components/ui/Text.astro';
 
 const fallbackSteps = [
   {
     level: 1,
     kicker: 'Read',
-    title: 'Learn the field',
-    body: 'Start with the public books, guides, and stories that explain regenerative coordination in practice.',
-    meta: 'Self-guided',
-    cta: { label: 'Open the library', href: '/library' },
+    title: 'Subscribe to field notes',
+    body: 'A monthly public digest with chapter updates, new resources, podcast highlights, and upcoming calls.',
+    meta: 'Monthly · public updates · no account',
+    cta: { label: 'Subscribe', href: '#step-1', kind: 'form' },
   },
   {
     level: 2,
     kicker: 'Meet',
-    title: 'Find your local node',
-    body: 'Browse chapters, then use the Dev Guild and Writers Guild pages when you are ready to contribute through builder or editorial work.',
-    meta: 'Chapters and guild pages',
-    cta: { label: 'Browse chapters', href: '/chapters' },
+    title: 'Join the public conversation',
+    body: 'Drop into the shared Greenpill chat and listen before you contribute.',
+    meta: 'Public conversation · listen first',
+    cta: { label: 'Open Telegram', href: 'https://t.me/+e-aa2Ed3LWVlYjNh', kind: 'external' },
   },
   {
     level: 3,
     kicker: 'Signal',
-    title: 'Share how you can contribute',
-    body: 'Tell the network what you are building, learning, hosting, writing, funding, or stewarding.',
-    meta: 'Public entry point',
-    cta: { label: 'Find your path', href: '/garden#assessment' },
+    title: 'Take the Regen Assessment',
+    body: 'Answer a short set of questions about what you bring, what you want to learn, and whether a chapter, guild, or story path is the best fit.',
+    meta: 'Self-guided · public · no account',
+    cta: { label: 'Start assessment', href: 'https://forms.gle/1JNLcvExXLekgzt59', kind: 'form' },
   },
   {
     level: 4,
     kicker: 'Grow',
-    title: 'Coordinate with stewards',
-    body: 'Bring projects, proof, questions, and local needs into the stewardship flow when you are ready for deeper coordination.',
-    meta: 'Next-step support',
-    cta: { label: 'Start a conversation', href: '/garden#steward-call' },
-  },
-];
-
-const fallbackAfterCards = [
-  {
-    kicker: 'Chapters',
-    title: 'Work locally',
-    body: 'Connect with people coordinating regenerative activity in their city or region.',
-    cta: { label: 'See chapters', href: '/chapters' },
-  },
-  {
-    kicker: 'Library',
-    title: 'Build shared language',
-    body: 'Use the books and guides as a common starting point for events, onboarding, and study groups.',
-    cta: { label: 'Read the books', href: '/library' },
-  },
-  {
-    kicker: 'Stories',
-    title: 'Learn from the field',
-    body: 'Follow public updates from chapters, guilds, and programs as the network keeps shipping.',
-    cta: { label: 'Browse stories', href: '/stories' },
+    title: 'Book a steward call',
+    body: 'For people thinking about starting a chapter, joining a guild, partnering on a project, or finding the right steward to talk with.',
+    meta: 'Private · by request',
+    cta: { label: 'Book a call', href: 'https://calendar.app.google/gia7UpaSVKwwEKxy5', kind: 'booking' },
   },
 ];
 
 const title = garden.title || 'Greenpill Garden';
 const summary = garden.summary || 'A participation ramp for people moving from reading about regeneration to joining chapters, contributing skills, and coordinating real-world public goods.';
 const steps = garden.steps.length > 0 ? garden.steps : fallbackSteps;
-const afterCards = garden.afterCards.length > 0 ? garden.afterCards : fallbackAfterCards;
-const proofSignals = garden.proofSignals.length > 0
-  ? garden.proofSignals
-  : [
-      { label: 'Entry points', value: '4' },
-      { label: 'Chapters', value: '18+' },
-      { label: 'Access', value: 'public' },
-    ];
-const stickyCta = garden.stickyCta?.label ? garden.stickyCta : { label: 'Find your path', href: '/garden#assessment' };
+const stickyCta = garden.stickyCta?.label ? garden.stickyCta : { label: 'Start with Step 1', href: '#step-1' };
 const seoTitle = garden.seo.title || `${title} · Greenpill Network`;
 const seoDescription = garden.seo.description || summary;
-
-// Targets for the Step 3/4 in-page anchors (/garden#assessment, /garden#steward-call).
-// Use the public-safe kicker/title from content; the authored *body* fields are
-// internal author notes, so the public framing below is written here.
-const assessmentPanel = garden.assessmentPreview;
-const stewardPanel = garden.stewardCallPreview;
-const publicChatHref = garden.telegramPreview?.cta?.href || 'https://t.me/+g9TM8i7GpxAzMGUx';
+const isExternalHref = (href = '') => /^https?:\/\//.test(href);
 ---
 
 <GpLayout
@@ -108,18 +70,16 @@ const publicChatHref = garden.telegramPreview?.cta?.href || 'https://t.me/+g9TM8
             <Text variant="display">{title}</Text>
             <Text variant="body-lg">{summary}</Text>
             <div class="gp-garden-actions">
-              <Button href={stickyCta.href || '/garden#assessment'}>{stickyCta.label || 'Find your path'}</Button>
-              <Button href="/library" variant="ghost">Read first</Button>
+              <Button href={stickyCta.href || '#step-1'}>{stickyCta.label || 'Start with Step 1'}</Button>
             </div>
           </div>
-          <div class="gp-garden-hero-media" aria-hidden="true">
+          <div class="gp-garden-hero-mark" aria-hidden="true">
             <img
-              src="/images/hero-pill.png"
+              src="/images/greenpill-logo.svg"
               alt=""
               loading="eager"
               decoding="async"
             />
-            <div class="gp-garden-hero-glow"></div>
           </div>
         </div>
       </Container>
@@ -128,103 +88,117 @@ const publicChatHref = garden.telegramPreview?.cta?.href || 'https://t.me/+g9TM8
     <Container size="2xl" class="gp-garden-stack">
       <section class="gp-garden-section">
         <SectionHeader title="The participation ramp." segments={['Garden', 'Ramp']}>
-          <StatusChip slot="side" tone="secondary">Public</StatusChip>
         </SectionHeader>
         <div class="gp-garden-steps">
-          {steps.map((step, index) => (
-            <article class="gp-garden-step">
-              <div class="gp-garden-step-index">
-                <span>{String(step.level || index + 1).padStart(2, '0')}</span>
-                <small>/ {String(steps.length).padStart(2, '0')}</small>
-              </div>
-              <div class="gp-garden-step-copy">
-                <Meta items={[step.kicker || 'Garden', step.meta || step.stage || 'Open path']} accentIndex={0} />
-                <Text variant="h3">{step.title}</Text>
-                <Text variant="body-sm">{step.body}</Text>
-                {step.cta?.label && step.cta?.href && (
-                  <div class="gp-garden-step-action">
-                    <Button href={step.cta.href} variant="ghost">{step.cta.label}</Button>
-                  </div>
-                )}
-              </div>
-            </article>
-          ))}
+          {steps.map((step, index) => {
+            const level = step.level || index + 1;
+            const stepHref = step.cta?.href || '';
+            const external = isExternalHref(stepHref);
+            return (
+              <article class="gp-garden-step" id={`step-${level}`}>
+                <div class="gp-garden-step-index">
+                  <span>{String(level).padStart(2, '0')}</span>
+                  <small>/ {String(steps.length).padStart(2, '0')}</small>
+                </div>
+                <div class="gp-garden-step-copy">
+                  <Meta items={[step.kicker || 'Garden', step.meta || step.stage || 'Open path']} accentIndex={0} />
+                  <Text variant="h3">{step.title}</Text>
+                  <Text variant="body-sm">{step.body}</Text>
+                  {level === 1 ? (
+                    <form class="gp-garden-subscribe" data-garden-subscribe-form novalidate>
+                      <EmailInput
+                        label="Email address"
+                        placeholder="you@example.com"
+                        autocomplete="email"
+                        required
+                        aria-describedby="garden-subscribe-status"
+                        data-garden-subscribe-email
+                      />
+                      <Button type="submit" data-garden-subscribe-submit>
+                        {step.cta?.label || 'Subscribe'}
+                      </Button>
+                      <p
+                        id="garden-subscribe-status"
+                        class="gp-garden-subscribe-status"
+                        data-garden-subscribe-status
+                        aria-live="polite"
+                      ></p>
+                    </form>
+                  ) : step.cta?.label && stepHref && (
+                    <div class="gp-garden-step-action">
+                      <Button
+                        href={stepHref}
+                        variant="ghost"
+                        target={external ? '_blank' : undefined}
+                        rel={external ? 'noopener noreferrer' : undefined}
+                      >
+                        {step.cta.label}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
-
-      <section class="gp-garden-section">
-        <SectionHeader title="Go deeper when the moment is right." segments={['Garden', 'Deeper paths']} />
-        <div class="gp-garden-target-grid">
-          <div id="assessment" class="gp-garden-target">
-            <Card padded="lg">
-              <div class="gp-garden-card-copy">
-                <Meta items={['Step 3', assessmentPanel.kicker || 'Self-assessment']} accentIndex={0} />
-                <Text variant="title-lg">{assessmentPanel.title || 'Map your next contribution'}</Text>
-                <Text variant="body-sm">A short, public self-assessment is in design. Until it lands, the fastest way to find your fit is to explore active chapters and the builder and writer guilds.</Text>
-                <Button href="/chapters" variant="ghost">Browse chapters</Button>
-              </div>
-            </Card>
-          </div>
-          <div id="steward-call" class="gp-garden-target">
-            <Card padded="lg">
-              <div class="gp-garden-card-copy">
-                <Meta items={['Step 4', stewardPanel.kicker || 'Steward call']} accentIndex={0} />
-                <Text variant="title-lg">{stewardPanel.title || 'Talk to a real person'}</Text>
-                <Text variant="body-sm">Thinking about starting a chapter, joining a guild, or partnering on a project? Reach the network in the public chat and a steward will help you find the right next step.</Text>
-                <Button href={publicChatHref} variant="ghost">Open the public chat</Button>
-              </div>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      <section class="gp-garden-section">
-        <SectionHeader title="What this opens." segments={['Network', 'Next paths']} />
-        <div class="gp-garden-after-grid">
-          {afterCards.map((card) => (
-            <Card padded="lg">
-              <div class="gp-garden-card-copy">
-                <Meta items={[card.kicker || 'Path']} accentIndex={0} />
-                <Text variant="title-lg">{card.title}</Text>
-                <Text variant="body-sm">{card.body}</Text>
-                {card.cta?.label && card.cta?.href && (
-                  <Button href={card.cta.href} variant="ghost">{card.cta.label}</Button>
-                )}
-              </div>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      <section class="gp-garden-section">
-        <Card padded="lg">
-          <div class="gp-garden-proof-row">
-            <div class="gp-garden-proof-copy">
-              <Overline text="Public-safe signals" />
-              <Text variant="h2">Start from public paths.</Text>
-            </div>
-            <div class="gp-garden-proof-chips">
-              {proofSignals.map((signal) => (
-                <Chip tone="soft-gold">
-                  {signal.label}{signal.value && ` · ${signal.value}`}
-                </Chip>
-              ))}
-            </div>
-          </div>
-        </Card>
-      </section>
-
-      <CtaStrip
-        overline="Enter the garden"
-        title="Move at the speed of trust."
-        body="Use the Garden as a public orientation path, then follow the chapter, guild, or story route that fits your next step."
-      >
-        <Button href={stickyCta.href || '/garden#assessment'}>{stickyCta.label || 'Find your path'}</Button>
-        <Button href="/chapters" variant="ghost">Find a chapter</Button>
-      </CtaStrip>
     </Container>
   </main>
 </GpLayout>
+
+<script>
+  (() => {
+    const form = document.querySelector('[data-garden-subscribe-form]');
+    if (!(form instanceof HTMLFormElement)) return;
+
+    const emailInput = form.querySelector('[data-garden-subscribe-email]');
+    const submitButton = form.querySelector('[data-garden-subscribe-submit]');
+    const status = form.querySelector('[data-garden-subscribe-status]');
+    if (!(emailInput instanceof HTMLInputElement) || !(submitButton instanceof HTMLButtonElement) || !status) return;
+
+    const clean = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+    const isLocalHost = ['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(window.location.hostname);
+    const agentBaseUrl = isLocalHost ? 'http://127.0.0.1:8787' : 'https://agent.greenpill.network';
+
+    const setStatus = (message: string, state: 'idle' | 'submitting' | 'success' | 'error') => {
+      status.textContent = message;
+      status.setAttribute('data-state', state);
+    };
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const email = clean(emailInput.value).toLowerCase();
+      emailInput.value = email;
+      if (!email || !emailInput.checkValidity()) {
+        setStatus('Enter a valid email address.', 'error');
+        return;
+      }
+
+      submitButton.disabled = true;
+      setStatus('Subscribing...', 'submitting');
+
+      try {
+        const response = await fetch(`${agentBaseUrl}/newsletter/subscribe`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || payload?.ok !== true) {
+          throw new Error('newsletter_subscribe_failed');
+        }
+
+        emailInput.value = '';
+        setStatus('You are subscribed.', 'success');
+      } catch {
+        setStatus('Subscription is unavailable right now. Please try again later.', 'error');
+      } finally {
+        submitButton.disabled = false;
+      }
+    });
+  })();
+</script>
 
 <style>
   .gp-garden-page {
@@ -242,13 +216,12 @@ const publicChatHref = garden.telegramPreview?.cta?.href || 'https://t.me/+g9TM8
     position: relative;
     z-index: 1;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 320px);
     gap: clamp(var(--gp-space-2xl), 6vw, var(--gp-space-4xl));
     align-items: center;
   }
 
   .gp-garden-hero-copy,
-  .gp-garden-card-copy,
   .gp-garden-step-copy {
     display: flex;
     flex-direction: column;
@@ -272,40 +245,47 @@ const publicChatHref = garden.telegramPreview?.cta?.href || 'https://t.me/+g9TM8
     gap: 12px;
   }
 
-  .gp-garden-hero-media {
+  .gp-garden-hero-mark {
     position: relative;
+    isolation: isolate;
     min-width: 0;
     display: flex;
     align-items: center;
     justify-content: center;
+    aspect-ratio: 1;
   }
 
-  .gp-garden-hero-media img {
+  .gp-garden-hero-mark::before {
+    position: absolute;
+    inset: 4%;
+    border: 1px solid rgba(184, 232, 53, 0.2);
+    border-radius: 50%;
+    content: '';
+  }
+
+  .gp-garden-hero-mark::after {
+    position: absolute;
+    inset: 18%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(184, 232, 53, 0.24), transparent 68%);
+    content: '';
+    filter: blur(18px);
+    z-index: -1;
+  }
+
+  .gp-garden-hero-mark img {
     position: relative;
     z-index: 1;
-    width: 100%;
-    max-width: 360px;
+    width: min(68%, 220px);
     height: auto;
     filter: drop-shadow(0 24px 64px rgba(184, 232, 53, 0.25));
-  }
-
-  /* Static glow only — DESIGN.md reserves looping animation for the map node
-     pulse, so the former float/pulse on the hero pill is removed. */
-  .gp-garden-hero-glow {
-    position: absolute;
-    inset: 12%;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(184, 232, 53, 0.32), transparent 65%);
-    filter: blur(20px);
-    opacity: 0.6;
-    z-index: 0;
   }
 
   .gp-garden-stack {
     display: flex;
     flex-direction: column;
-    gap: var(--gp-space-4xl);
-    padding-block: var(--gp-space-3xl) var(--gp-space-4xl);
+    gap: var(--gp-space-2xl);
+    padding-block: var(--gp-space-2xl) var(--gp-space-4xl);
   }
 
   .gp-garden-section {
@@ -314,17 +294,20 @@ const publicChatHref = garden.telegramPreview?.cta?.href || 'https://t.me/+g9TM8
 
   .gp-garden-steps {
     display: grid;
-    gap: var(--gp-space-lg);
+    gap: 0;
   }
 
   .gp-garden-step {
     display: grid;
-    grid-template-columns: 150px minmax(0, 1fr);
+    grid-template-columns: 132px minmax(0, 1fr);
     gap: var(--gp-space-2xl);
-    padding: var(--gp-space-2xl);
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-xl);
-    background: var(--gp-card);
+    padding: var(--gp-space-2xl) 0;
+    border-top: 1px solid var(--gp-border-soft);
+    scroll-margin-block-start: calc(var(--gp-header-height) + var(--gp-space-lg));
+  }
+
+  .gp-garden-step:last-child {
+    border-bottom: 1px solid var(--gp-border-soft);
   }
 
   .gp-garden-step-index {
@@ -349,76 +332,43 @@ const publicChatHref = garden.telegramPreview?.cta?.href || 'https://t.me/+g9TM8
     letter-spacing: 0.08em;
   }
 
-  .gp-garden-after-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--gp-space-lg);
-  }
-
-  .gp-garden-target-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--gp-space-lg);
-  }
-
-  /* Anchor target for the Step 3/4 CTAs — offset the scroll landing so the
-     sticky header does not cover the panel heading. */
-  .gp-garden-target {
+  .gp-garden-subscribe {
     display: flex;
-    scroll-margin-block-start: calc(var(--gp-header-height) + var(--gp-space-lg));
-  }
-
-  .gp-garden-target > :global(.gp-card) {
-    width: 100%;
-  }
-
-  .gp-garden-card-copy {
-    height: 100%;
-  }
-
-  .gp-garden-card-copy :global(.gp-button) {
-    margin-top: auto;
-  }
-
-  .gp-garden-proof-row {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--gp-space-2xl);
-    align-items: center;
-  }
-
-  .gp-garden-proof-copy {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gp-space-md);
-    min-width: 0;
-  }
-
-  .gp-garden-proof-chips {
-    display: flex;
+    align-items: flex-end;
     flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 10px;
+    gap: var(--gp-space-md);
+    max-width: 620px;
+  }
+
+  .gp-garden-subscribe :global(.gp-email-field) {
+    flex: 1 1 280px;
+  }
+
+  .gp-garden-subscribe-status {
+    flex-basis: 100%;
+    min-height: 1.4em;
+    margin: 0;
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-body-sm);
+    line-height: 1.4;
+  }
+
+  .gp-garden-subscribe-status[data-state='success'] {
+    color: var(--gp-primary);
+  }
+
+  .gp-garden-subscribe-status[data-state='error'] {
+    color: var(--gp-danger, #ff8a7a);
   }
 
   @container (max-width: 980px) {
-    .gp-garden-hero-grid,
-    .gp-garden-after-grid,
-    .gp-garden-target-grid {
+    .gp-garden-hero-grid {
       grid-template-columns: 1fr;
     }
 
-    .gp-garden-hero-media {
-      max-width: 520px;
-    }
-
-    .gp-garden-proof-row {
-      align-items: flex-start;
-      flex-direction: column;
-    }
-
-    .gp-garden-proof-chips {
-      justify-content: flex-start;
+    .gp-garden-hero-mark {
+      max-width: 340px;
     }
   }
 
@@ -426,12 +376,15 @@ const publicChatHref = garden.telegramPreview?.cta?.href || 'https://t.me/+g9TM8
     .gp-garden-step {
       grid-template-columns: 1fr;
       gap: var(--gp-space-lg);
-      padding: var(--gp-space-xl);
-      border-radius: var(--gp-radius-lg);
+      padding: var(--gp-space-xl) 0;
     }
 
     .gp-garden-step-index span {
       font-size: 42px;
+    }
+
+    .gp-garden-subscribe {
+      align-items: stretch;
     }
   }
 </style>

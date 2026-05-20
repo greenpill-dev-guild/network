@@ -2,8 +2,6 @@
 import GpLayout from '../../layouts/GpLayout.astro';
 import Container from '../../components/ui/Container.astro';
 import Button from '../../components/ui/Button.astro';
-import Chip from '../../components/ui/Chip.astro';
-import ArrowLink from '../../components/ui/ArrowLink.astro';
 import Overline from '../../components/ui/Overline.astro';
 import Text from '../../components/ui/Text.astro';
 import Meta from '../../components/ui/Meta.astro';
@@ -13,14 +11,7 @@ import { getOperationalChapters } from '../../lib/operational-content';
 
 const all = await getOperationalChapters();
 
-const featuredSlugs: string[] = chaptersIndex.featuredChapterSlugs ?? [];
-const featured = featuredSlugs
-  .map((slug) => all.find((c) => c.id === slug))
-  .filter((c): c is typeof all[number] => Boolean(c));
-
-const featuredIds = new Set(featured.map((c) => c.id));
-const directory = all
-  .filter((c) => !featuredIds.has(c.id))
+const directory = [...all]
   .sort((a, b) => a.data.name.localeCompare(b.data.name));
 
 const totals = {
@@ -65,10 +56,10 @@ function stewardNamesFor(chapter: typeof all[number]) {
     .filter(Boolean);
 }
 
-function approvedImageFor(chapter: typeof all[number]) {
+function imageFor(chapter: typeof all[number]) {
   const media = chapter.data.media ?? {};
-  if (media.reviewStatus !== 'approved') return '';
-  return media.image || chapter.data.image || '';
+  const seo = chapter.data.seo ?? {};
+  return media.image || chapter.data.image || media.ogImage || seo.ogImage || '';
 }
 
 const hero = chaptersIndex.hero ?? {};
@@ -141,115 +132,47 @@ const hero = chaptersIndex.hero ?? {};
       </Container>
     </section>
 
-    {featured.length > 0 && (
-      <section class="gp-chapters-section">
-        <Container size="2xl">
-          <div class="gp-chapters-section-head">
-            <Overline as="h2">Featured chapters</Overline>
-            <Text variant="caption">Strongest public proof in the network today.</Text>
-          </div>
-
-          <div class="gp-chapters-grid is-featured" data-chapter-grid>
-            {featured.map((chapter) => {
-              const themes = (chapter.data.themeSlugs ?? []).slice(0, 4);
-              const links = (chapter.data.links ?? []).filter((l) => l.url).slice(0, 3);
-              const stewardNames = stewardNamesFor(chapter);
-              const approvedImage = approvedImageFor(chapter);
-              return (
-                <article
-                  class="gp-chapters-card is-featured"
-                  data-region={chapter.data.region || 'global'}
-                  data-status={chapter.data.status || 'active'}
-                >
-                  <a class="gp-chapters-card-link" href={`/chapters/${chapter.id}`}>
-                    {approvedImage && (
-                      <div class="gp-chapters-card-media">
-                        <img
-                          src={approvedImage}
-                          alt={chapter.data.media?.imageAlt || `${chapter.data.name} chapter activity`}
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      </div>
-                    )}
-                    <header class="gp-chapters-card-head">
-                      <Meta items={['Chapter', regionLabel(chapter.data.region || 'global'), chapter.data.status || 'active']} accentIndex={2} />
-                    </header>
-                    <Text variant="h3" class="gp-chapters-card-title">{chapter.data.name}</Text>
-                    {chapter.data.city && (
-                      <Text variant="caption">{chapter.data.city}{chapter.data.country && `, ${chapter.data.country}`}</Text>
-                    )}
-                    <Text variant="body-sm" class="gp-chapters-card-summary">{chapter.data.summary}</Text>
-                  </a>
-                  {themes.length > 0 && (
-                    <div class="gp-chapters-card-themes">
-                      {themes.map((t) => (
-                        <Chip tone="soft-lime" size="sm">{t.replace(/-/g, ' ')}</Chip>
-                      ))}
-                    </div>
-                  )}
-                  {links.length > 0 && (
-                    <ul class="gp-chapters-card-links">
-                      {links.map((link) => (
-                        <li>
-                          <a href={link.url} target="_blank" rel="noopener" class="gp-chapters-card-link-row">
-                            <span>{link.label}</span>
-                            <span aria-hidden="true">↗</span>
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  <footer class="gp-chapters-card-foot">
-                    {stewardNames.length > 0 && (
-                      <div class="gp-chapters-card-stewards">
-                        <AvatarStack names={stewardNames} count={Math.min(stewardNames.length, 3)} extra={Math.max(0, stewardNames.length - 3)} size={28} />
-                        <Text variant="mono">{stewardNames.length} steward{stewardNames.length === 1 ? '' : 's'}</Text>
-                      </div>
-                    )}
-                    <ArrowLink href={`/chapters/${chapter.id}`} size="sm">Open chapter</ArrowLink>
-                  </footer>
-                </article>
-              );
-            })}
-          </div>
-        </Container>
-      </section>
-    )}
-
     {directory.length > 0 && (
       <section class="gp-chapters-section">
         <Container size="2xl">
-          <div class="gp-chapters-section-head">
-            <Overline as="h2">Full directory</Overline>
-            <Text variant="caption">{directory.length} chapters · sorted alphabetically.</Text>
-          </div>
-
-          <div class="gp-chapters-grid is-compact" data-chapter-grid>
+          <div class="gp-chapters-grid is-directory" data-chapter-grid>
             {directory.map((chapter) => {
               const stewardNames = stewardNamesFor(chapter);
+              const chapterImage = imageFor(chapter);
               return (
                 <a
-                  class="gp-chapters-card is-compact"
+                  class="gp-chapters-card is-directory"
                   href={`/chapters/${chapter.id}`}
                   data-region={chapter.data.region || 'global'}
                   data-status={chapter.data.status || 'active'}
                 >
-                  <Meta items={[regionLabel(chapter.data.region || 'global'), chapter.data.status || 'active']} accentIndex={1} />
-                  <Text variant="title-lg" class="gp-chapters-card-title">{chapter.data.name}</Text>
-                  {chapter.data.city && (
-                    <Text variant="caption">{chapter.data.city}{chapter.data.country && `, ${chapter.data.country}`}</Text>
-                  )}
-                  {chapter.data.summary && (
-                    <Text variant="body-sm" class="gp-chapters-card-summary">{chapter.data.summary}</Text>
-                  )}
-                  {stewardNames.length > 0 && (
-                    <div class="gp-chapters-card-stewards is-compact">
-                      <AvatarStack names={stewardNames} count={Math.min(stewardNames.length, 3)} extra={Math.max(0, stewardNames.length - 3)} size={24} />
-                      <Text variant="mono">{stewardNames.length}</Text>
+                  {chapterImage && (
+                    <div class="gp-chapters-card-media">
+                      <img
+                        src={chapterImage}
+                        alt={chapter.data.media?.imageAlt || `${chapter.data.name} chapter activity`}
+                        loading="lazy"
+                        decoding="async"
+                      />
                     </div>
                   )}
-                  <span class="gp-chapters-card-arrow" aria-hidden="true">→</span>
+                  <div class="gp-chapters-card-body">
+                    <Meta items={[regionLabel(chapter.data.region || 'global'), chapter.data.status || 'active']} accentIndex={1} />
+                    <Text variant="title-lg" class="gp-chapters-card-title">{chapter.data.name}</Text>
+                    {chapter.data.city && (
+                      <Text variant="caption">{chapter.data.city}{chapter.data.country && `, ${chapter.data.country}`}</Text>
+                    )}
+                    {chapter.data.summary && (
+                      <Text variant="body-sm" class="gp-chapters-card-summary">{chapter.data.summary}</Text>
+                    )}
+                    {stewardNames.length > 0 && (
+                      <div class="gp-chapters-card-stewards is-directory">
+                        <AvatarStack names={stewardNames} count={Math.min(stewardNames.length, 3)} extra={Math.max(0, stewardNames.length - 3)} size={24} />
+                        <Text variant="mono">{stewardNames.length}</Text>
+                      </div>
+                    )}
+                    <span class="gp-chapters-card-arrow" aria-hidden="true">→</span>
+                  </div>
                 </a>
               );
             })}
@@ -319,8 +242,12 @@ const hero = chaptersIndex.hero ?? {};
     filterRow.querySelectorAll('[data-status]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const s = (btn as HTMLElement).dataset.status || '';
-        if (status.has(s)) status.delete(s);
-        else status.add(s);
+        if (status.has(s)) {
+          if (status.size === 1) return;
+          status.delete(s);
+        } else {
+          status.add(s);
+        }
         btn.classList.toggle('is-active', status.has(s));
         btn.setAttribute('aria-pressed', String(status.has(s)));
         apply();
@@ -466,51 +393,31 @@ const hero = chaptersIndex.hero ?? {};
     border-top: 1px solid var(--gp-border-soft);
   }
 
-  .gp-chapters-section:first-of-type {
-    border-top: 0;
-  }
-
-  .gp-chapters-section-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--gp-space-md);
-    flex-wrap: wrap;
-    margin-bottom: var(--gp-space-lg);
-    padding-bottom: var(--gp-space-md);
-    border-bottom: 1px solid var(--gp-border-soft);
-  }
-
   .gp-chapters-grid {
     display: grid;
     gap: clamp(14px, 1.5vw, 20px);
   }
 
-  .gp-chapters-grid.is-featured {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .gp-chapters-grid.is-compact {
+  .gp-chapters-grid.is-directory {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .gp-chapters-card {
     display: flex;
     flex-direction: column;
-    gap: var(--gp-space-sm);
-    padding: clamp(var(--gp-space-lg), 2vw, var(--gp-space-xl));
+    gap: 0;
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-lg);
     background: var(--gp-card);
     color: var(--gp-fg);
     text-decoration: none;
     min-width: 0;
+    overflow: hidden;
     transition: border-color 200ms cubic-bezier(0.4, 0, 0.2, 1), background 200ms cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
   }
 
-  .gp-chapters-card:hover,
-  .gp-chapters-card .gp-chapters-card-link:hover {
+  .gp-chapters-card:hover {
     border-color: rgba(184, 232, 53, 0.32);
   }
 
@@ -518,40 +425,33 @@ const hero = chaptersIndex.hero ?? {};
     background: var(--gp-card-elev);
   }
 
-  .gp-chapters-card.is-featured {
-    gap: var(--gp-space-md);
-  }
-
-  .gp-chapters-card-link {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gp-space-sm);
-    color: inherit;
-    text-decoration: none;
-  }
-
   .gp-chapters-card-media {
-    margin-bottom: 2px;
+    width: 100%;
     overflow: hidden;
-    border: 1px solid var(--gp-border-soft);
-    border-radius: 8px;
-    background: rgba(15, 61, 46, 0.52);
+    border-bottom: 1px solid var(--gp-border-soft);
+    background: rgba(10, 45, 33, 0.52);
   }
 
   .gp-chapters-card-media img {
     display: block;
     width: 100%;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 16 / 10;
     object-fit: cover;
     transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  .gp-chapters-card-link:hover .gp-chapters-card-media img {
+  .gp-chapters-card:hover .gp-chapters-card-media img {
     transform: scale(1.02);
   }
 
-  .gp-chapters-card-link:hover :global(.gp-chapters-card-title) {
-    color: var(--gp-primary);
+  .gp-chapters-card-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--gp-space-sm);
+    min-height: 218px;
+    padding: var(--gp-space-lg);
+    position: relative;
   }
 
   .gp-chapters-card-title {
@@ -561,51 +461,10 @@ const hero = chaptersIndex.hero ?? {};
 
   .gp-chapters-card-summary {
     color: var(--gp-fg-muted);
-  }
-
-  .gp-chapters-card-themes {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .gp-chapters-card-links {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .gp-chapters-card-link-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 8px 12px;
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-md);
-    color: var(--gp-fg-muted);
-    font-family: var(--gp-font-body);
-    font-size: 13px;
-    text-decoration: none;
-    transition: border-color 200ms, color 200ms;
-  }
-
-  .gp-chapters-card-link-row:hover {
-    border-color: rgba(184, 232, 53, 0.42);
-    color: var(--gp-primary);
-  }
-
-  .gp-chapters-card-foot {
-    margin-top: auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding-top: var(--gp-space-sm);
-    border-top: 1px solid var(--gp-border-soft);
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
   }
 
   .gp-chapters-card-stewards {
@@ -624,24 +483,24 @@ const hero = chaptersIndex.hero ?? {};
     white-space: nowrap;
   }
 
-  .gp-chapters-card-stewards.is-compact {
+  .gp-chapters-card-stewards.is-directory {
     margin-top: auto;
     padding-top: var(--gp-space-sm);
   }
 
-  .gp-chapters-card.is-compact {
-    padding: var(--gp-space-lg);
+  .gp-chapters-card.is-directory {
+    padding: 0;
   }
 
-  .gp-chapters-card.is-compact .gp-chapters-card-arrow {
+  .gp-chapters-card.is-directory .gp-chapters-card-arrow {
     position: absolute;
-    top: var(--gp-space-lg);
+    bottom: var(--gp-space-lg);
     right: var(--gp-space-lg);
     color: var(--gp-fg-dim);
     transition: color 200ms, transform 200ms;
   }
 
-  .gp-chapters-card.is-compact:hover .gp-chapters-card-arrow {
+  .gp-chapters-card.is-directory:hover .gp-chapters-card-arrow {
     color: var(--gp-primary);
     transform: translateX(3px);
   }
@@ -685,8 +544,8 @@ const hero = chaptersIndex.hero ?? {};
     gap: 12px;
   }
 
-  @container (max-width: 980px) {
-    .gp-chapters-grid.is-compact {
+  @container (max-width: 1100px) {
+    .gp-chapters-grid.is-directory {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
@@ -706,9 +565,12 @@ const hero = chaptersIndex.hero ?? {};
       align-items: flex-start;
     }
 
-    .gp-chapters-grid.is-featured,
-    .gp-chapters-grid.is-compact {
+    .gp-chapters-grid.is-directory {
       grid-template-columns: 1fr;
+    }
+
+    .gp-chapters-card-body {
+      min-height: auto;
     }
 
     /* 44px minimum touch targets at mobile width (DESIGN.md rule 12). The
@@ -719,8 +581,5 @@ const hero = chaptersIndex.hero ?? {};
       padding-inline: 18px;
     }
 
-    .gp-chapters-card-link-row {
-      min-height: 44px;
-    }
   }
 </style>

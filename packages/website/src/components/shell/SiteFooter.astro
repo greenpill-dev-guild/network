@@ -1,10 +1,4 @@
 ---
-interface Props {
-  showWordmark?: boolean;
-}
-
-const { showWordmark = false } = Astro.props;
-
 const columns = [
   {
     heading: 'Network',
@@ -20,8 +14,8 @@ const columns = [
     items: [
       { label: 'Start in the Garden', href: '/garden' },
       { label: 'Attend an event', href: '/chapters' },
-      { label: 'Add yourself to the map', href: '/garden#assessment' },
-      { label: 'Talk to a steward', href: '/garden#steward-call' },
+      { label: 'Add yourself to the map', href: 'https://forms.gle/1JNLcvExXLekgzt59' },
+      { label: 'Talk to a steward', href: 'https://calendar.app.google/gia7UpaSVKwwEKxy5' },
     ],
   },
   {
@@ -37,7 +31,7 @@ const columns = [
     items: [
       { label: 'Twitter / X', href: 'https://twitter.com/greenpillnet' },
       { label: 'Warpcast', href: 'https://warpcast.com/~/channel/green-pill' },
-      { label: 'Telegram', href: 'https://t.me/+g9TM8i7GpxAzMGUx' },
+      { label: 'Telegram', href: 'https://t.me/+e-aa2Ed3LWVlYjNh' },
       { label: 'Regen Hub', href: 'https://hub.regencoordination.xyz' },
     ],
   },
@@ -45,12 +39,6 @@ const columns = [
 ---
 
 <footer class="gp-site-footer">
-  {showWordmark && (
-    <div class="gp-footer-wordmark is-centered">
-      <img src="/images/hifi/green-pill-wordmark.svg" alt="Greenpill Network" />
-    </div>
-  )}
-
   <div class="gp-footer-grid">
     {columns.map((column) => (
       <div class="gp-footer-column">
@@ -62,13 +50,6 @@ const columns = [
         </nav>
       </div>
     ))}
-
-    {!showWordmark && (
-      <div class="gp-footer-wordmark">
-        <img src="/images/hifi/green-pill-wordmark.svg" alt="Greenpill Network" />
-        <p>A CoordiNation across<br />Nations and Cultures.</p>
-      </div>
-    )}
   </div>
 
   <div class="gp-footer-bottom">
@@ -80,15 +61,15 @@ const columns = [
 <style>
   .gp-site-footer {
     position: relative;
-    margin-top: var(--gp-space-4xl);
+    margin-top: 0;
     padding: var(--gp-space-4xl) clamp(var(--gp-space-lg), 6vw, var(--gp-space-4xl)) var(--gp-space-3xl);
     border-top: 1px solid var(--gp-border-soft);
-    background: linear-gradient(180deg, rgba(7, 24, 15, 0), rgba(7, 24, 15, 0.34));
+    background: rgba(7, 24, 15, 0);
   }
 
   .gp-footer-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--gp-space-2xl);
     align-items: start;
     max-width: var(--gp-container-2xl);
@@ -133,38 +114,6 @@ const columns = [
     color: var(--gp-primary);
   }
 
-  .gp-footer-wordmark {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 14px;
-    min-width: 128px;
-  }
-
-  .gp-footer-wordmark.is-centered {
-    align-items: center;
-    margin: 0 auto var(--gp-space-3xl);
-  }
-
-  .gp-footer-wordmark img {
-    width: 132px;
-    height: auto;
-    color: var(--gp-secondary);
-    opacity: 0.88;
-  }
-
-  .gp-footer-wordmark.is-centered img {
-    width: min(260px, 70vw);
-  }
-
-  .gp-footer-wordmark p {
-    color: var(--gp-fg-muted);
-    font-size: var(--gp-caption);
-    line-height: 1.4;
-    margin: 0;
-    text-align: right;
-  }
-
   .gp-footer-bottom {
     display: flex;
     justify-content: space-between;
@@ -184,10 +133,6 @@ const columns = [
   @media (max-width: 900px) {
     .gp-footer-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .gp-footer-wordmark {
-      display: none;
     }
   }
 

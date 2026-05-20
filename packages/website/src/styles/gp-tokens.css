@@ -239,16 +239,9 @@
 @layer gp-utilities {
   .gp-topo {
     position: relative;
-    background: var(--gp-bg);
+    background: transparent;
   }
   .gp-topo::before {
-    content: "";
-    position: absolute; inset: 0;
-    background-image: url("/images/hifi/topo-bg.png");
-    background-size: cover;
-    background-position: center;
-    opacity: 0.12;
-    mix-blend-mode: overlay;
-    pointer-events: none;
+    content: none;
   }
 }

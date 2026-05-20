@@ -4,7 +4,6 @@ import GpLayout from '../../layouts/GpLayout.astro';
 import Container from '../../components/ui/Container.astro';
 import Card from '../../components/ui/Card.astro';
 import Button from '../../components/ui/Button.astro';
-import Chip from '../../components/ui/Chip.astro';
 import ArrowLink from '../../components/ui/ArrowLink.astro';
 import Overline from '../../components/ui/Overline.astro';
 import Text from '../../components/ui/Text.astro';
@@ -31,7 +30,8 @@ const featured = published[0];
 const rest = published.slice(1);
 
 const hero = storiesIndex.hero ?? {};
-const topicSpotlight = storiesIndex.topicSpotlight;
+const featuredImage = featured ? storyImage(featured) : '';
+const featuredImageAlt = featured ? storyImageAlt(featured) : '';
 
 function storyImage(story: typeof published[number]) {
   return story.data.media?.image || story.data.image || '';
@@ -102,20 +102,22 @@ function storyImageAlt(story: typeof published[number]) {
                 <Overline>Featured</Overline>
                 <Text variant="caption">Featured source-backed story.</Text>
               </div>
-              <a class="gp-stories-feature" href={`/stories/${featured.id}`}>
-                {storyImage(featured) && (
+              <a class:list={['gp-stories-feature', { 'has-media': Boolean(featuredImage) }]} href={`/stories/${featured.id}`}>
+                {featuredImage && (
                   <figure class="gp-stories-feature-media">
-                    <img src={storyImage(featured)} alt={storyImageAlt(featured)} loading="eager" decoding="async" />
+                    <img src={featuredImage} alt={featuredImageAlt} loading="eager" decoding="async" />
                   </figure>
                 )}
-                <Meta items={[featured.data.category || 'story', featured.data.region || 'global', featured.data.publishDate || '']} accentIndex={0} />
-                <Text variant="h2" class="gp-stories-feature-title">{featured.data.title}</Text>
-                {featured.data.dek && <Text variant="body-lg">{featured.data.dek}</Text>}
-                {featured.data.excerpt && !featured.data.dek && <Text variant="body-lg">{featured.data.excerpt}</Text>}
-                <footer class="gp-stories-feature-foot">
-                  {featured.data.author && <Text variant="mono">{featured.data.author}{featured.data.authorRole && ` · ${featured.data.authorRole}`}</Text>}
-                  <ArrowLink size="md">Read the story</ArrowLink>
-                </footer>
+                <div class="gp-stories-feature-copy">
+                  <Meta items={[featured.data.category || 'story', featured.data.region || 'global', featured.data.publishDate || '']} accentIndex={0} />
+                  <Text variant="h2" class="gp-stories-feature-title">{featured.data.title}</Text>
+                  {featured.data.dek && <Text variant="body-lg">{featured.data.dek}</Text>}
+                  {featured.data.excerpt && !featured.data.dek && <Text variant="body-lg">{featured.data.excerpt}</Text>}
+                  <footer class="gp-stories-feature-foot">
+                    {featured.data.author && <Text variant="mono">{featured.data.author}{featured.data.authorRole && ` · ${featured.data.authorRole}`}</Text>}
+                    <ArrowLink size="md">Read the story</ArrowLink>
+                  </footer>
+                </div>
               </a>
             </Container>
           </section>
@@ -152,29 +154,6 @@ function storyImageAlt(story: typeof published[number]) {
       </>
     )}
 
-    {topicSpotlight?.topic && (
-      <section class="gp-stories-section">
-        <Container size="2xl">
-          <Card padded="lg" class="gp-stories-spotlight">
-            <Overline tone="muted">Topic spotlight</Overline>
-            <Text variant="h2">{topicSpotlight.topic}</Text>
-            <Text variant="body">{topicSpotlight.blurb}</Text>
-            {topicSpotlight.proofSignals?.length > 0 && (
-              <div class="gp-stories-spotlight-proof">
-                {topicSpotlight.proofSignals.map((signal: any) => (
-                  <a class="gp-stories-spotlight-proof-row" href={signal.href || '#'} target="_blank" rel="noopener">
-                    <Text variant="mono">{signal.source || 'Source'}</Text>
-                    <Text variant="title-md">{signal.value}</Text>
-                    <Text variant="body-sm">{signal.label}</Text>
-                  </a>
-                ))}
-              </div>
-            )}
-          </Card>
-        </Container>
-      </section>
-    )}
-
     <section class="gp-stories-section" id="submit">
       <Container size="2xl">
         <Card padded="lg" class="gp-stories-submit">
@@ -206,6 +185,7 @@ function storyImageAlt(story: typeof published[number]) {
     position: relative;
     overflow: hidden;
     padding: clamp(var(--gp-space-3xl), 7vw, var(--gp-space-5xl)) 0 var(--gp-space-2xl);
+    background: transparent;
   }
 
   .gp-stories-hero-inner {
@@ -256,16 +236,22 @@ function storyImageAlt(story: typeof published[number]) {
   }
 
   .gp-stories-empty-card,
-  .gp-stories-submit,
-  .gp-stories-spotlight {
+  .gp-stories-submit {
     display: flex;
     flex-direction: column;
     gap: var(--gp-space-md);
   }
 
   .gp-stories-empty-card {
-    background: linear-gradient(135deg, rgba(240, 220, 160, 0.06), rgba(15, 61, 46, 0.5));
+    background: rgba(20, 63, 48, 0.7);
     border-color: rgba(240, 220, 160, 0.18);
+    backdrop-filter: blur(8px);
+  }
+
+  :global(.gp-stories-empty-card),
+  :global(.gp-stories-submit) {
+    background: rgba(20, 63, 48, 0.7);
+    backdrop-filter: blur(8px);
   }
 
   .gp-stories-empty-copy {
@@ -283,21 +269,28 @@ function storyImageAlt(story: typeof published[number]) {
   }
 
   .gp-stories-feature {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gp-space-md);
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: clamp(var(--gp-space-lg), 3vw, var(--gp-space-2xl));
+    align-items: stretch;
     padding: clamp(var(--gp-space-xl), 3vw, var(--gp-space-3xl));
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-xl);
-    background: var(--gp-card);
+    background: rgba(20, 63, 48, 0.72);
     color: var(--gp-fg);
     text-decoration: none;
+    min-width: 0;
+    backdrop-filter: blur(8px);
     transition: border-color 200ms, background 200ms;
+  }
+
+  .gp-stories-feature:not(.has-media) {
+    grid-template-columns: 1fr;
   }
 
   .gp-stories-feature:hover {
     border-color: rgba(184, 232, 53, 0.32);
-    background: var(--gp-card-elev);
+    background: rgba(35, 92, 70, 0.84);
   }
 
   .gp-stories-feature-media,
@@ -305,11 +298,16 @@ function storyImageAlt(story: typeof published[number]) {
     margin: 0;
     overflow: hidden;
     border: 1px solid var(--gp-border-soft);
-    background: rgba(255, 255, 255, 0.04);
+    background:
+      radial-gradient(circle at 30% 30%, rgba(240, 220, 160, 0.14), transparent 60%),
+      url('/images/greenpill-bg.png'),
+      var(--gp-green-800);
+    background-size: auto, cover;
+    background-position: center;
   }
 
   .gp-stories-feature-media {
-    aspect-ratio: 16 / 9;
+    min-height: clamp(320px, 36vw, 520px);
     border-radius: var(--gp-radius-lg);
   }
 
@@ -330,6 +328,18 @@ function storyImageAlt(story: typeof published[number]) {
     letter-spacing: 0;
   }
 
+  .gp-stories-feature-copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--gp-space-md);
+  }
+
+  .gp-stories-feature-copy :global(.gp-body-lg) {
+    color: var(--gp-fg-muted);
+  }
+
   .gp-stories-feature-foot {
     margin-top: auto;
     display: flex;
@@ -340,7 +350,7 @@ function storyImageAlt(story: typeof published[number]) {
 
   .gp-stories-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: clamp(14px, 1.5vw, 20px);
   }
 
@@ -351,15 +361,16 @@ function storyImageAlt(story: typeof published[number]) {
     padding: clamp(var(--gp-space-lg), 2vw, var(--gp-space-xl));
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-lg);
-    background: var(--gp-card);
+    background: rgba(20, 63, 48, 0.72);
     color: var(--gp-fg);
     text-decoration: none;
+    backdrop-filter: blur(8px);
     transition: border-color 200ms, background 200ms;
   }
 
   .gp-stories-card:hover {
     border-color: rgba(184, 232, 53, 0.32);
-    background: var(--gp-card-elev);
+    background: rgba(35, 92, 70, 0.84);
   }
 
   .gp-stories-card :global(.gp-stories-card-title) {
@@ -374,39 +385,34 @@ function storyImageAlt(story: typeof published[number]) {
     gap: 12px;
   }
 
-  .gp-stories-spotlight {
-    background: linear-gradient(135deg, rgba(184, 232, 53, 0.06), rgba(15, 61, 46, 0.5));
-    border-color: rgba(184, 232, 53, 0.18);
-  }
-
-  .gp-stories-spotlight-proof {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: var(--gp-space-md);
-    margin-top: var(--gp-space-sm);
-  }
-
-  .gp-stories-spotlight-proof-row {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: var(--gp-space-md);
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-md);
-    color: var(--gp-fg);
-    text-decoration: none;
-    transition: border-color 200ms;
-  }
-
-  .gp-stories-spotlight-proof-row:hover {
-    border-color: rgba(184, 232, 53, 0.42);
-  }
-
   .gp-stories-submit-copy {
     display: flex;
     flex-direction: column;
     gap: var(--gp-space-md);
     max-width: 720px;
+  }
+
+  .gp-stories-section#submit {
+    padding-bottom: clamp(var(--gp-space-xl), 4vw, var(--gp-space-2xl));
+  }
+
+  @container (max-width: 1100px) {
+    .gp-stories-feature {
+      grid-template-columns: 1fr;
+    }
+
+    .gp-stories-feature-media {
+      aspect-ratio: 16 / 9;
+      min-height: 0;
+    }
+
+    .gp-stories-feature-copy {
+      justify-content: flex-start;
+    }
+
+    .gp-stories-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   @container (max-width: 720px) {

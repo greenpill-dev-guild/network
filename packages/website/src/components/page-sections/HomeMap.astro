@@ -2,7 +2,7 @@
 import { getOperationalChapters } from '../../lib/operational-content';
 import { PUBLIC_MAP_THEMES } from '@greenpill-network/shared/map-state';
 
-// Add-node theme checkboxes use the canonical public theme list.
+// Add-node walkthrough theme choices use the canonical public theme list.
 const mapThemes = PUBLIC_MAP_THEMES;
 
 // Mirrors artifacts/hifi/hifi/map-themes.jsx labels and hues. Slugs match the
@@ -131,7 +131,7 @@ type StewardNode = {
   y: number;
 };
 
-type AnyNode = ChapterNode | StewardNode;
+type RelationshipNode = StewardNode;
 
 const chapters = await getOperationalChapters();
 
@@ -181,11 +181,8 @@ for (const c of chapters) {
   });
 }
 
-const allNodes: AnyNode[] = [...chapterNodes, ...stewardNodes];
-
-// Mycelial threads start with people/stewards. Chapter anchors only receive a
-// fallback thread when a sparse data set has no person-to-person relationship
-// yet, so the visual model stays centered on members rather than chapters.
+// Mycelial threads are people/steward relationships only. Chapters remain map
+// anchors and never become relationship endpoints.
 type Edge = {
   fromId: string;
   toId: string;
@@ -248,7 +245,7 @@ const mycelialPath = (a: { x: number; y: number }, b: { x: number; y: number }, 
   return d;
 };
 
-const addEdge = (a: AnyNode, b: AnyNode, theme: string) => {
+const addEdge = (a: RelationshipNode, b: RelationshipNode, theme: string) => {
   const key = [a.id, b.id].sort().join(':');
   if (!theme || seen.has(key)) return;
   seen.add(key);
@@ -265,45 +262,48 @@ const addEdge = (a: AnyNode, b: AnyNode, theme: string) => {
   });
 };
 
+const stewardEdgeLimit = Math.ceil(stewardNodes.length * 0.75);
+const stewardEdgeCandidates: Array<{
+  a: StewardNode;
+  b: StewardNode;
+  shared: string[];
+  distance: number;
+}> = [];
 for (let i = 0; i < stewardNodes.length; i++) {
   for (let j = i + 1; j < stewardNodes.length; j++) {
     const a = stewardNodes[i];
     const b = stewardNodes[j];
-    const shared = a.themes.find((t) => b.themes.includes(t));
-    if (shared) addEdge(a, b, shared);
+    const shared = a.themes.filter((t) => b.themes.includes(t));
+    if (!shared.length) continue;
+    stewardEdgeCandidates.push({
+      a,
+      b,
+      shared,
+      distance: Math.hypot(a.x - b.x, a.y - b.y),
+    });
   }
 }
-
-for (const steward of stewardNodes) {
-  if (edges.some((edge) => edge.fromId === steward.id || edge.toId === steward.id)) continue;
-  const chapter = chapterNodes.find((node) => node.id === steward.chapterId);
-  const shared = chapter?.themes.find((theme) => steward.themes.includes(theme));
-  if (chapter && shared) addEdge(steward, chapter, shared);
+for (const candidate of stewardEdgeCandidates
+  .sort((a, b) => (
+    b.shared.length - a.shared.length ||
+    a.distance - b.distance ||
+    a.a.name.localeCompare(b.a.name)
+  ))
+  .slice(0, stewardEdgeLimit)
+) {
+  addEdge(candidate.a, candidate.b, candidate.shared[0]);
 }
 
 const themeColor = (slug: string) => THEME_INFO[slug]?.color ?? '#B8E835';
-const themeLabel = (slug: string) => THEME_INFO[slug]?.label ?? slug.replace(/-/g, ' ');
-
-// Legend: themes used by visible chapters, sorted by count, plain-language labels.
-const themeUsage = new Map<string, number>();
-for (const node of chapterNodes) {
-  for (const slug of node.themes) {
-    if (!THEME_INFO[slug]) continue;
-    themeUsage.set(slug, (themeUsage.get(slug) ?? 0) + 1);
-  }
-}
-const legendThemes = Array.from(themeUsage.entries())
-  .sort((a, b) => b[1] - a[1])
-  .slice(0, 6)
-  .map(([slug, count]) => ({
-    slug,
-    label: themeLabel(slug),
-    color: themeColor(slug),
-    count,
-  }));
 
 const chapterCount = chapterNodes.length;
-const statsA11y = `World map of ${chapterCount} active chapters connected by shared themes.`;
+const stewardCount = stewardNodes.length;
+const nodeTypeFilters = [
+  { id: 'chapter', label: 'Chapters', count: chapterCount },
+  { id: 'member', label: 'Members', count: 0 },
+  { id: 'steward', label: 'Stewards', count: stewardCount },
+] as const;
+const statsA11y = `World map of ${chapterCount} active chapters, ${stewardCount} stewards, and public member nodes.`;
 ---
 
 <figure class="gp-home-map" aria-labelledby="gp-home-map-title">
@@ -347,6 +347,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
               class="gp-home-map-thread"
               data-from={edge.fromId}
               data-to={edge.toId}
+              data-theme={edge.theme}
               d={edge.d}
               pathLength="1"
               stroke={themeColor(edge.theme)}
@@ -369,6 +370,10 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
             aria-label={`${s.name}, steward node, ${s.chapterName}`}
             data-node-id={s.id}
             data-node-type="steward"
+            data-node-name={s.name}
+            data-node-role="Steward"
+            data-node-place={s.chapterName}
+            data-node-themes={s.themes.join(' ')}
           >
             <title>{`${s.name} · Steward · ${s.chapterName}`}</title>
             <circle class="gp-home-map-node-halo" cx={s.x} cy={s.y} r="2.6" />
@@ -379,7 +384,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
         ))}
       </g>
 
-      {/* chapter nodes — lime fill + dark ring, anchored */}
+      {/* chapter nodes — dark green anchors */}
       <g class="gp-home-map-chapters">
         {chapterNodes.map((c) => (
           <a
@@ -387,6 +392,10 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
             href={c.href}
             data-node-id={c.id}
             data-node-type="chapter"
+            data-node-name={c.name}
+            data-node-role="Chapter"
+            data-node-place={c.city || c.region}
+            data-node-themes={c.themes.join(' ')}
           >
             <title>{`${c.name}${c.city ? ` · ${c.city}` : ''}`}</title>
             <circle class="gp-home-map-node-halo" cx={c.x} cy={c.y} r={c.size + 2.6} />
@@ -404,19 +413,22 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
       <g class="gp-home-map-members" data-home-map-members></g>
     </svg>
 
-    {/* Integrated stats overlay - top-right inside the map. The people stat is
-        populated client-side from /map/state and ticks up as members join. */}
+    {/* Integrated stats overlay - top-right inside the map. Member/steward
+        counts stay visible at zero. */}
     <div class="gp-home-map-stats" aria-hidden="true">
-      <span class="gp-home-map-stat">
-        <span class="gp-home-map-stat-mark is-chapter" aria-hidden="true"></span>
-        <span class="gp-home-map-stat-value">{chapterCount}</span>
-        <span class="gp-home-map-stat-label">chapters</span>
-      </span>
-      <span class="gp-home-map-stat" data-home-map-people-stat hidden>
-        <span class="gp-home-map-stat-mark is-member" aria-hidden="true"></span>
-        <span class="gp-home-map-stat-value" data-home-map-people-count>0</span>
-        <span class="gp-home-map-stat-label">people</span>
-      </span>
+      {nodeTypeFilters.map((type) => (
+        <span class={`gp-home-map-stat is-${type.id}`}>
+          <span class={`gp-home-map-stat-mark is-${type.id}`} aria-hidden="true"></span>
+          <span
+            class="gp-home-map-stat-value"
+            data-home-map-stat-count={type.id}
+            data-base-count={type.count}
+          >
+            {type.count}
+          </span>
+          <span class="gp-home-map-stat-label">{type.label.toLowerCase()}</span>
+        </span>
+      ))}
     </div>
 
     {/* Focus card — populated by inline script on hover/focus */}
@@ -424,19 +436,49 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
       <span class="gp-home-map-focus-role" data-focus-role></span>
       <span class="gp-home-map-focus-name" data-focus-name></span>
       <span class="gp-home-map-focus-meta" data-focus-meta></span>
+      <span class="gp-home-map-focus-themes" data-focus-themes></span>
+      <span class="gp-home-map-focus-connections" data-focus-connections></span>
+    </div>
+
+    <div class="gp-home-map-controls" data-home-map-controls aria-label="Map controls">
+      <div class="gp-home-map-filter-panel" data-filter-panel="type" hidden>
+        {nodeTypeFilters.map((type) => (
+          <button
+            type="button"
+            class={`gp-home-map-filter-option is-${type.id}`}
+            data-type-filter={type.id}
+            aria-pressed="true"
+          >
+            <span class="gp-home-map-filter-marker" aria-hidden="true"></span>
+            <span>{type.label}</span>
+            <span class="gp-home-map-filter-count" data-home-map-type-count={type.id} data-base-count={type.count}>
+              {type.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div class="gp-home-map-filter-panel is-themes" data-filter-panel="theme" hidden>
+        {mapThemes.map((theme) => (
+          <button
+            type="button"
+            class="gp-home-map-filter-option is-theme"
+            data-theme-filter={theme.id}
+            aria-pressed="true"
+            style={`--theme-color: ${theme.color};`}
+          >
+            <span class="gp-home-map-filter-marker" aria-hidden="true"></span>
+            <span>{theme.label}</span>
+          </button>
+        ))}
+      </div>
+
+      <div class="gp-home-map-filter-tabs">
+        <button type="button" data-filter-toggle="theme" aria-expanded="false">Themes</button>
+        <button type="button" data-filter-toggle="type" aria-expanded="false">Types</button>
+      </div>
     </div>
   </div>
-
-  {legendThemes.length > 0 && (
-    <div class="gp-home-map-legend" role="list" aria-label="Theme legend">
-      {legendThemes.map((t) => (
-        <span class="gp-home-map-legend-item" role="listitem">
-          <span class="gp-home-map-legend-swatch" style={`background: ${t.color};`} aria-hidden="true"></span>
-          <span class="gp-home-map-legend-label">{t.label}</span>
-        </span>
-      ))}
-    </div>
-  )}
 
   {/* Theme labels/colors for client-rendered member chips, so the script does
       not need to import the shared map-state module into the browser bundle. */}
@@ -475,63 +517,137 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     </div>
   </div>
 
-  {/* Add-node panel — collapsed by default so the hero stays clean. Local
-      pending state is only written after the server accepts the submission. */}
-  <details class="gp-home-map-addnode" data-home-map-addnode>
-    <summary>Add your node</summary>
-    <form class="gp-home-map-addnode-form" data-home-map-addnode-form novalidate>
-      <div class="gp-home-map-addnode-grid">
-        <label>
-          <span>Name</span>
-          <input name="name" autocomplete="name" required placeholder="Your name or project" />
-        </label>
-        <label>
-          <span>City or place</span>
-          <input name="place" autocomplete="address-level2" required placeholder="Lagos, Nigeria" />
-        </label>
-        <label>
-          <span>Latitude</span>
-          <input name="lat" inputmode="decimal" required type="number" step="0.000001" min="-90" max="90" placeholder="6.5244" />
-        </label>
-        <label>
-          <span>Longitude</span>
-          <input name="long" inputmode="decimal" required type="number" step="0.000001" min="-180" max="180" placeholder="3.3792" />
-        </label>
-      </div>
+  {/* Find-your-people walkthrough. The visible trigger lives in the homepage
+      hero CTA; local pending state is still written only after server accept. */}
+  <dialog class="gp-home-map-addnode-dialog" data-home-map-addnode-dialog aria-labelledby="gp-home-map-addnode-title">
+    <div class="gp-home-map-addnode-topo" aria-hidden="true"></div>
+    <button type="button" class="gp-home-map-addnode-close" data-addnode-close aria-label="Close find-your-people dialog">
+      <span aria-hidden="true">×</span>
+    </button>
 
-      <fieldset class="gp-home-map-addnode-themes" data-home-map-themes>
-        <legend>
-          <span>Choose exactly four themes</span>
-          <span class="gp-home-map-addnode-theme-count" data-home-map-theme-count aria-live="polite">0 / 4</span>
-        </legend>
-        <div class="gp-home-map-addnode-theme-options">
+    <div class="gp-home-map-addnode-progress" aria-hidden="true">
+      <span class="is-active" data-walkthrough-progress="themes"></span>
+      <span data-walkthrough-progress="identity"></span>
+      <span data-walkthrough-progress="review"></span>
+    </div>
+
+    <form class="gp-home-map-addnode-form" data-home-map-addnode-form novalidate>
+      <section class="gp-home-map-addnode-step is-active" data-walkthrough-step="themes">
+        <p class="gp-home-map-addnode-kicker">Step · what you care about</p>
+        <h2 id="gp-home-map-addnode-title">What are you here to grow?</h2>
+        <p class="gp-home-map-addnode-copy">Pick exactly four. These choose the color of your threads on the map and find your people.</p>
+
+        <div class="gp-home-map-addnode-theme-options" data-home-map-themes>
           {mapThemes.map((theme) => (
-            <label class="gp-home-map-addnode-theme">
-              <input type="checkbox" name="themes" value={theme.id} />
+            <button
+              type="button"
+              class="gp-home-map-addnode-theme"
+              data-theme-choice={theme.id}
+              aria-pressed="false"
+              style={`--theme-color: ${theme.color};`}
+            >
+              <span class="gp-home-map-addnode-theme-dot" aria-hidden="true"></span>
               <span>{theme.label}</span>
-            </label>
+            </button>
           ))}
         </div>
-      </fieldset>
 
-      <label class="gp-home-map-addnode-note">
-        <span>Public note</span>
-        <textarea name="publicNote" rows="3" maxlength="280" placeholder="What are you working on with the network?"></textarea>
-      </label>
+        <p class="gp-home-map-addnode-theme-count" data-home-map-theme-count aria-live="polite">0 / 4 selected</p>
+      </section>
 
-      <label class="gp-home-map-addnode-email">
-        <span>Private email for future edits</span>
-        <input name="contact" autocomplete="email" type="email" required placeholder="you@example.org" />
-      </label>
+      <section class="gp-home-map-addnode-step" data-walkthrough-step="identity" hidden>
+        <p class="gp-home-map-addnode-kicker">Step · who & where</p>
+        <h2>Drop your pin.</h2>
+        <p class="gp-home-map-addnode-copy">Name yourself, place yourself, and add the private email stewards can use only for future edit links.</p>
+
+        <div class="gp-home-map-addnode-grid">
+          <label>
+            <span>Display name</span>
+            <input name="name" autocomplete="name" required placeholder="What should the network call you?" />
+          </label>
+          <label>
+            <span>Private email</span>
+            <input name="contact" autocomplete="email" type="email" required placeholder="you@example.org" />
+          </label>
+        </div>
+
+        <div class="gp-home-map-addnode-location">
+          <div class="gp-home-map-addnode-location-head">
+            <span>Your place in the world</span>
+            <button type="button" data-location-mode-toggle>or type a city ↗</button>
+          </div>
+
+          <div class="gp-home-map-addnode-mini-map" data-location-map>
+            <div class="gp-home-map-addnode-mini-topo" aria-hidden="true"></div>
+            <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} preserveAspectRatio="xMidYMid meet" aria-label="Click a place on the world map">
+              <g aria-hidden="true">
+                {landDots.map((d) => (
+                  <circle cx={d.cx} cy={d.cy} r="0.42" />
+                ))}
+              </g>
+              <circle data-location-pin cx="100" cy="50" r="2.2" hidden />
+            </svg>
+            <span data-location-map-hint>· click to place ·</span>
+          </div>
+
+          <label class="gp-home-map-addnode-city" data-location-text hidden>
+            <span>City search</span>
+            <input type="text" name="placeQuery" autocomplete="address-level2" placeholder="Berlin, Bogota, Bali..." />
+          </label>
+
+          <input type="hidden" name="place" data-location-place />
+          <input type="hidden" name="lat" data-location-lat />
+          <input type="hidden" name="long" data-location-long />
+
+          <p class="gp-home-map-addnode-location-status" data-location-status>Click anywhere on land to drop your pin.</p>
+        </div>
+
+        <label class="gp-home-map-addnode-note">
+          <span>Public note</span>
+          <textarea name="publicNote" rows="3" maxlength="280" placeholder="What are you working on with the network?"></textarea>
+        </label>
+      </section>
+
+      <section class="gp-home-map-addnode-step" data-walkthrough-step="review" hidden>
+        <p class="gp-home-map-addnode-kicker">Step · join the network</p>
+        <h2>Look right before you take root.</h2>
+
+        <div class="gp-home-map-addnode-preview">
+          <span class="gp-home-map-addnode-preview-dot" aria-hidden="true"></span>
+          <div>
+            <strong data-review-name>You</strong>
+            <span data-review-place>Member · —</span>
+          </div>
+        </div>
+
+        <div class="gp-home-map-addnode-review">
+          <div>
+            <span>Themes</span>
+            <div data-review-themes></div>
+            <button type="button" data-edit-step="themes">Edit</button>
+          </div>
+          <div>
+            <span>Public note</span>
+            <p data-review-note>None yet</p>
+            <button type="button" data-edit-step="identity">Edit</button>
+          </div>
+          <div>
+            <span>Private email</span>
+            <p>Saved privately for future edit links.</p>
+          </div>
+        </div>
+
+        <p class="gp-home-map-addnode-mode" data-home-map-mode-copy>In moderated mode, your node appears on your device while stewards review it. Your email stays private and is used only for future edit links.</p>
+        <p class="gp-home-map-addnode-status" data-home-map-addnode-status role="status"></p>
+      </section>
 
       <div class="gp-home-map-addnode-footer">
-        <p class="gp-home-map-addnode-mode" data-home-map-mode-copy>In moderated mode, your node appears on your device while stewards review it. Your email stays private and is used only for future edit links.</p>
-        <button type="submit" class="gp-home-map-addnode-submit">Add node</button>
+        <button type="button" class="gp-home-map-addnode-back" data-walkthrough-back hidden>← Back</button>
+        <button type="button" class="gp-home-map-addnode-next" data-walkthrough-next disabled>Continue →</button>
+        <button type="submit" class="gp-home-map-addnode-submit" data-walkthrough-submit hidden>Plant me on the map →</button>
       </div>
-
-      <p class="gp-home-map-addnode-status" data-home-map-addnode-status role="status"></p>
     </form>
-  </details>
+  </dialog>
 </figure>
 
 <script>
@@ -542,7 +658,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     saveLocalPendingNode,
   } from '@greenpill-network/shared/map-nodes';
 
-  type DynamicMapNodeType = 'member' | 'steward' | 'project' | 'place';
+  type DynamicMapNodeType = 'member' | 'steward';
 
   type DynamicMapNode = {
     key: string;
@@ -561,7 +677,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     const root = document.querySelector('[data-home-map]') as HTMLElement | null;
     if (!root) return;
     // root is the canvas (its .is-focused class drives the SVG focus styles).
-    // The legend, selected panel, update form, and add-node form live in the
+    // The controls, selected panel, update form, and add-node form live in the
     // surrounding <figure>, so query those from the figure scope, not root.
     const scope: ParentNode = root.closest('.gp-home-map') ?? document;
     // Astro scopes component <style> via a generated attribute. Elements created
@@ -587,6 +703,8 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     const focusRole = root.querySelector('[data-focus-role]') as HTMLElement | null;
     const focusName = root.querySelector('[data-focus-name]') as HTMLElement | null;
     const focusMeta = root.querySelector('[data-focus-meta]') as HTMLElement | null;
+    const focusThemes = root.querySelector('[data-focus-themes]') as HTMLElement | null;
+    const focusConnections = root.querySelector('[data-focus-connections]') as HTMLElement | null;
 
     // Theme labels/colors for member chips, serialized from SSR.
     const themeInfo: Record<string, { label: string; color: string }> = (() => {
@@ -599,8 +717,35 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     })();
     const themeLabel = (slug: string) => themeInfo[slug]?.label ?? slug.replace(/-/g, ' ');
     const themeColor = (slug: string) => themeInfo[slug]?.color ?? '#B8E835';
-
     const clean = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+
+    const typeFilterButtons = Array.from(scope.querySelectorAll('[data-type-filter]')) as HTMLButtonElement[];
+    const themeFilterButtons = Array.from(scope.querySelectorAll('[data-theme-filter]')) as HTMLButtonElement[];
+    const filterToggleButtons = Array.from(scope.querySelectorAll('[data-filter-toggle]')) as HTMLButtonElement[];
+    const filterPanels = Array.from(scope.querySelectorAll('[data-filter-panel]')) as HTMLElement[];
+    const activeTypes = new Set(['chapter', 'steward', 'member']);
+    const activeThemes = new Set(themeFilterButtons.map((button) => clean(button.dataset.themeFilter)).filter(Boolean));
+    const allThemeCount = activeThemes.size;
+    let openFilterPanel = '';
+    let applyMapFilters = () => {};
+
+    const filterTypeFor = (value: unknown): 'chapter' | 'steward' | 'member' => {
+      const type = clean(value).toLowerCase();
+      if (type === 'chapter') return 'chapter';
+      if (type === 'steward') return 'steward';
+      return 'member';
+    };
+
+    const nodeThemes = (node: Element): string[] => (
+      clean((node as HTMLElement).dataset.nodeThemes || node.getAttribute('data-node-themes'))
+        .split(/\s+/)
+        .filter(Boolean)
+    );
+
+    const themeIsActive = (theme: string) => (
+      !allThemeCount || activeThemes.size === allThemeCount || activeThemes.has(theme)
+    );
+
     const toFiniteNumber = (value: unknown) => {
       const num = typeof value === 'number' ? value : Number(value);
       return Number.isFinite(num) ? num : null;
@@ -698,19 +843,105 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
       if (focusEl && focusRole && focusName && focusMeta) {
         const raw = target.querySelector('title')?.textContent || '';
         const parts = raw.split('·').map((s) => s.trim());
-        focusName.textContent = parts[0] || '';
-        focusRole.textContent = type.charAt(0).toUpperCase() + type.slice(1);
-        focusMeta.textContent = parts.slice(1).join(' · ');
+        const targetEl = target as HTMLElement;
+        focusName.textContent = clean(targetEl.dataset.nodeName) || parts[0] || '';
+        const focusType = filterTypeFor(type);
+        const roleLabel = clean(targetEl.dataset.nodeRole) || focusType.charAt(0).toUpperCase() + focusType.slice(1);
+        const placeLabel = clean(targetEl.dataset.nodePlace) || parts.slice(1).join(' · ');
+        focusRole.textContent = placeLabel ? `${roleLabel} · ${placeLabel}` : roleLabel;
+        focusMeta.textContent = '';
+        if (focusThemes) {
+          focusThemes.textContent = '';
+          nodeThemes(target).slice(0, 4).forEach((slug) => {
+            const chip = document.createElement('span');
+            applyScope(chip);
+            chip.textContent = themeLabel(slug);
+            chip.style.setProperty('--chip-color', themeColor(slug));
+            focusThemes.append(chip);
+          });
+        }
+        if (focusConnections) {
+          let stewardConnections = 0;
+          let memberConnections = 0;
+          adjacentIds.forEach((adjacentId) => {
+            if (adjacentId === id) return;
+            const adjacent = root.querySelector(`[data-node-id="${CSS.escape(adjacentId)}"]`);
+            if (!adjacent) return;
+            const adjacentType = filterTypeFor(adjacent?.getAttribute('data-node-type'));
+            if (adjacentType === 'steward') stewardConnections += 1;
+            if (adjacentType === 'member') memberConnections += 1;
+          });
+          const pieces = [];
+          if (stewardConnections) pieces.push(`${stewardConnections} steward${stewardConnections === 1 ? '' : 's'}`);
+          if (memberConnections) pieces.push(`${memberConnections} member${memberConnections === 1 ? '' : 's'}`);
+          focusConnections.textContent = pieces.length ? pieces.join(' · ') : 'no connections yet';
+        }
+        const dot = target.querySelector('.gp-home-map-node-dot') as SVGCircleElement | null;
+        const cx = Number(dot?.getAttribute('cx'));
+        const cy = Number(dot?.getAttribute('cy'));
+        if (Number.isFinite(cx) && Number.isFinite(cy)) {
+          const xPct = (cx / VIEW_W) * 100;
+          const yPct = (cy / VIEW_H) * 100;
+          focusEl.style.left = `${xPct}%`;
+          focusEl.style.top = `${yPct}%`;
+          focusEl.style.transform = `translate(${xPct < 60 ? '22px' : 'calc(-100% - 22px)'}, ${yPct < 50 ? '22px' : 'calc(-100% - 22px)'})`;
+        }
+        focusEl.dataset.nodeType = focusType;
         focusEl.setAttribute('aria-hidden', 'false');
       }
     };
+
+    // SVG hit targets can be visually small. Track the nearest visible node
+    // from the map surface as well so chapter focus cards appear where users
+    // expect them, even when the pointer lands just outside the painted dot.
+    let pointerFocusTarget: Element | null = null;
+    const svgEl = root.querySelector('.gp-home-map-svg') as SVGSVGElement | null;
+    const nodeAtPointer = (event: PointerEvent): Element | null => {
+      if (!svgEl) return null;
+      const rect = svgEl.getBoundingClientRect();
+      const scale = Math.min(rect.width / VIEW_W, rect.height / VIEW_H);
+      if (!Number.isFinite(scale) || scale <= 0) return null;
+      const offsetX = (rect.width - VIEW_W * scale) / 2;
+      const offsetY = (rect.height - VIEW_H * scale) / 2;
+      const x = (event.clientX - rect.left - offsetX) / scale;
+      const y = (event.clientY - rect.top - offsetY) / scale;
+      if (x < 0 || x > VIEW_W || y < 0 || y > VIEW_H) return null;
+
+      let nearest: { node: Element; distance: number } | null = null;
+      root.querySelectorAll('.gp-home-map-node-link:not(.is-filtered-out)').forEach((node) => {
+        const dot = node.querySelector('.gp-home-map-node-dot') as SVGCircleElement | null;
+        const cx = Number(dot?.getAttribute('cx'));
+        const cy = Number(dot?.getAttribute('cy'));
+        const r = Number(dot?.getAttribute('r')) || 1.4;
+        if (!Number.isFinite(cx) || !Number.isFinite(cy)) return;
+        const distance = Math.hypot(x - cx, y - cy);
+        const hitRadius = Math.max(3.8, r + 3.2);
+        if (distance > hitRadius) return;
+        if (!nearest || distance < nearest.distance) nearest = { node, distance };
+      });
+      return nearest?.node ?? null;
+    };
+
+    root.addEventListener('pointermove', (event) => {
+      const target = nodeAtPointer(event);
+      if (!target) {
+        if (pointerFocusTarget) {
+          pointerFocusTarget = null;
+          clearFocus();
+        }
+        return;
+      }
+      if (target === pointerFocusTarget) return;
+      pointerFocusTarget = target;
+      setFocus(target);
+    });
 
     // ---- Selected-node panel + owner edit-link request ---------------------
     const selectedEl = scope.querySelector('[data-home-map-selected]') as HTMLElement | null;
     const selectedKicker = scope.querySelector('[data-selected-kicker]') as HTMLElement | null;
     const selectedName = scope.querySelector('[data-selected-name]') as HTMLElement | null;
     const selectedPlace = scope.querySelector('[data-selected-place]') as HTMLElement | null;
-    const selectedThemes = scope.querySelector('[data-selected-themes]') as HTMLElement | null;
+    const selectedThemesEl = scope.querySelector('[data-selected-themes]') as HTMLElement | null;
     const selectedClose = scope.querySelector('[data-selected-close]') as HTMLButtonElement | null;
     const updateWrap = scope.querySelector('[data-home-map-update]') as HTMLElement | null;
     const updateTrigger = scope.querySelector('[data-update-trigger]') as HTMLButtonElement | null;
@@ -751,14 +982,14 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
       }
       if (selectedName) selectedName.textContent = member.name;
       if (selectedPlace) selectedPlace.textContent = member.place;
-      if (selectedThemes) {
-        selectedThemes.textContent = '';
+      if (selectedThemesEl) {
+        selectedThemesEl.textContent = '';
         member.themes.slice(0, 4).forEach((slug) => {
           const chip = document.createElement('span');
           applyScope(chip);
           chip.textContent = themeLabel(slug);
           chip.style.setProperty('--chip-color', themeColor(slug));
-          selectedThemes.append(chip);
+          selectedThemesEl.append(chip);
         });
       }
 
@@ -769,6 +1000,87 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
       selectedEl.hidden = false;
       selectedEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     };
+
+    // ---- Embedded map filters ---------------------------------------------
+    const setFilterPanel = (panelName: string) => {
+      openFilterPanel = openFilterPanel === panelName ? '' : panelName;
+      filterPanels.forEach((panel) => {
+        panel.hidden = panel.dataset.filterPanel !== openFilterPanel;
+      });
+      filterToggleButtons.forEach((button) => {
+        const expanded = button.dataset.filterToggle === openFilterPanel;
+        button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        button.classList.toggle('is-active', expanded);
+      });
+    };
+
+    const nodeMatchesFilters = (node: Element) => {
+      const type = filterTypeFor(node.getAttribute('data-node-type'));
+      if (!activeTypes.has(type)) return false;
+      if (!allThemeCount || activeThemes.size === allThemeCount) return true;
+      return nodeThemes(node).some((theme) => activeThemes.has(theme));
+    };
+
+    const setNodeVisibility = (node: Element, visible: boolean) => {
+      node.classList.toggle('is-filtered-out', !visible);
+      node.setAttribute('aria-hidden', visible ? 'false' : 'true');
+      const type = filterTypeFor(node.getAttribute('data-node-type'));
+      if (!visible) {
+        node.setAttribute('tabindex', '-1');
+      } else if (type === 'chapter') {
+        node.removeAttribute('tabindex');
+      } else {
+        node.setAttribute('tabindex', '0');
+      }
+    };
+
+    applyMapFilters = () => {
+      const visibleNodeIds = new Set<string>();
+      root.querySelectorAll('.gp-home-map-node-link').forEach((node) => {
+        const visible = nodeMatchesFilters(node);
+        setNodeVisibility(node, visible);
+        const id = node.getAttribute('data-node-id');
+        if (visible && id) visibleNodeIds.add(id);
+      });
+
+      root.querySelectorAll<SVGPathElement>('.gp-home-map-thread').forEach((thread) => {
+        const from = thread.getAttribute('data-from') || '';
+        const to = thread.getAttribute('data-to') || '';
+        const theme = thread.getAttribute('data-theme') || '';
+        const visible = visibleNodeIds.has(from) && visibleNodeIds.has(to) && themeIsActive(theme);
+        thread.classList.toggle('is-filtered-out', !visible);
+      });
+
+      const selectedNode = root.querySelector('.gp-home-map-node-link.is-selected');
+      if (selectedNode?.classList.contains('is-filtered-out')) closeSelected();
+      const focusedNode = root.querySelector('.gp-home-map-node-link.is-adj.is-filtered-out');
+      if (focusedNode) clearFocus();
+    };
+
+    filterToggleButtons.forEach((button) => {
+      button.addEventListener('click', () => setFilterPanel(button.dataset.filterToggle || ''));
+    });
+
+    typeFilterButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const type = filterTypeFor(button.dataset.typeFilter);
+        if (activeTypes.has(type)) activeTypes.delete(type);
+        else activeTypes.add(type);
+        button.setAttribute('aria-pressed', activeTypes.has(type) ? 'true' : 'false');
+        applyMapFilters();
+      });
+    });
+
+    themeFilterButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const theme = clean(button.dataset.themeFilter);
+        if (!theme) return;
+        if (activeThemes.has(theme)) activeThemes.delete(theme);
+        else activeThemes.add(theme);
+        button.setAttribute('aria-pressed', activeThemes.has(theme) ? 'true' : 'false');
+        applyMapFilters();
+      });
+    });
 
     // Fire-and-forget. The public response is intentionally neutral, so the UI
     // shows the same copy whether or not the email/node match — and even if the
@@ -893,6 +1205,13 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
       group.setAttribute('role', 'button');
       group.setAttribute('data-node-id', member.key);
       group.setAttribute('data-node-type', member.type);
+      group.setAttribute('data-node-name', member.name);
+      group.setAttribute(
+        'data-node-role',
+        member.pending ? `Pending ${member.type}` : member.type.charAt(0).toUpperCase() + member.type.slice(1)
+      );
+      group.setAttribute('data-node-place', member.place);
+      group.setAttribute('data-node-themes', member.themes.join(' '));
       group.dataset.memberKey = member.key;
       const roleWord = member.pending ? `Pending ${member.type} node` : `${member.type} node`;
       group.setAttribute('aria-label', `${member.name}, ${roleWord}${member.place ? `, ${member.place}` : ''}`);
@@ -911,6 +1230,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
 
       membersGroup.append(group);
       registerNode(group);
+      applyMapFilters();
     };
 
     // Reconciliation: once a locally-stored pending node resurfaces as an
@@ -925,6 +1245,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
         if (node.classList.contains('is-selected')) closeSelected();
         node.remove();
       }
+      applyMapFilters();
     };
 
     const toMember = (
@@ -941,9 +1262,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
       const place = clean(raw.place || raw.placeName || raw.city);
       const approved = kind === 'approved-submission';
       const rawType = clean(raw.type || raw.nodeType);
-      const type = ['steward', 'project', 'place'].includes(rawType)
-        ? rawType as DynamicMapNodeType
-        : 'member';
+      const type: DynamicMapNodeType = rawType === 'steward' ? 'steward' : 'member';
       return {
         key: approved ? `submission:${sourceId}` : `local:${clean(raw.id) || `${lat},${long}`}`,
         sourceId: approved ? sourceId : '',
@@ -964,13 +1283,15 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     ) => {
       if (!dynamicThreadsGroup) return;
       dynamicThreadsGroup.textContent = '';
-      const nodeById = new Map<string, { x: number; y: number }>();
+      const nodeById = new Map<string, { x: number; y: number; type: 'member' | 'steward' }>();
       rawNodes.forEach((node) => {
         const id = clean(node?.id);
         const lat = toFiniteNumber(node?.lat);
         const long = toFiniteNumber(node?.long);
+        const type = filterTypeFor(node?.type);
+        if (type === 'chapter') return;
         if (!id || lat === null || long === null) return;
-        nodeById.set(id, { x: lonToX(long), y: latToY(lat) });
+        nodeById.set(id, { x: lonToX(long), y: latToY(lat), type });
       });
 
       rawEdges.forEach((edge, idx) => {
@@ -987,6 +1308,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
         path.setAttribute('class', 'gp-home-map-thread');
         path.setAttribute('data-from', from);
         path.setAttribute('data-to', to);
+        path.setAttribute('data-theme', theme);
         path.setAttribute('d', buildMycelialPath(a, b, seedForEdge(`${from}:${to}:${theme}`)));
         path.setAttribute('pathLength', '1');
         path.setAttribute('stroke', color);
@@ -998,6 +1320,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
         );
         dynamicThreadsGroup.append(path);
       });
+      applyMapFilters();
     };
 
     const renderLocalPending = () => {
@@ -1016,17 +1339,11 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
         : 'In moderated mode, your node appears on your device while stewards review it. Your email stays private and is used only for future edit links.';
     };
 
-    // ---- Live "people on the map" stat -------------------------------------
-    const peopleStat = root.querySelector('[data-home-map-people-stat]') as HTMLElement | null;
-    const peopleCountEl = root.querySelector('[data-home-map-people-count]') as HTMLElement | null;
-    const setPeopleStat = (count: number) => {
-      if (!peopleStat || !peopleCountEl) return;
-      if (count > 0) {
-        peopleCountEl.textContent = String(count);
-        peopleStat.hidden = false;
-      } else {
-        peopleStat.hidden = true;
-      }
+    // ---- Live map type counts ----------------------------------------------
+    const setTypeCount = (type: 'chapter' | 'steward' | 'member', count: number) => {
+      const safeCount = Number.isFinite(count) ? Math.max(0, Math.trunc(count)) : 0;
+      scope.querySelectorAll(`[data-home-map-stat-count="${type}"], [data-home-map-type-count="${type}"]`)
+        .forEach((el) => { el.textContent = String(safeCount); });
     };
 
     let intakeMode: 'moderated' | 'live' = 'moderated';
@@ -1082,8 +1399,17 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
           Array.isArray(state?.edges) ? state.edges : []
         );
 
-        const approvedCount = Number(state?.counts?.approvedSubmittedNodes);
-        setPeopleStat(Number.isFinite(approvedCount) ? approvedCount : approved.length);
+        const submittedCounts = approved.reduce((counts: { member: number; steward: number }, node: Record<string, any>) => {
+          const type = filterTypeFor(node?.type ?? node?.nodeType);
+          if (type === 'steward') counts.steward += 1;
+          else counts.member += 1;
+          return counts;
+        }, { member: 0, steward: 0 });
+        const baseStewardCount = Number(
+          (scope.querySelector('[data-home-map-stat-count="steward"]') as HTMLElement | null)?.dataset.baseCount
+        );
+        setTypeCount('member', submittedCounts.member);
+        setTypeCount('steward', (Number.isFinite(baseStewardCount) ? baseStewardCount : 0) + submittedCounts.steward);
 
         if (intakeMode === 'live') startPolling();
         else stopPolling();
@@ -1099,9 +1425,78 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
       }
     });
 
-    // ---- Add-node submission ------------------------------------------------
+    // ---- Find-your-people walkthrough submission ----------------------------
     const addForm = scope.querySelector('[data-home-map-addnode-form]') as HTMLFormElement | null;
     const addStatus = scope.querySelector('[data-home-map-addnode-status]') as HTMLElement | null;
+    const addDialog = scope.querySelector('[data-home-map-addnode-dialog]') as HTMLDialogElement | null;
+    const addTriggers = Array.from(document.querySelectorAll('[data-home-map-open]')) as HTMLButtonElement[];
+    const addClose = scope.querySelector('[data-addnode-close]') as HTMLButtonElement | null;
+    const stepEls = Array.from(scope.querySelectorAll('[data-walkthrough-step]')) as HTMLElement[];
+    const progressEls = Array.from(scope.querySelectorAll('[data-walkthrough-progress]')) as HTMLElement[];
+    const backButton = scope.querySelector('[data-walkthrough-back]') as HTMLButtonElement | null;
+    const nextButton = scope.querySelector('[data-walkthrough-next]') as HTMLButtonElement | null;
+    const submitButton = scope.querySelector('[data-walkthrough-submit]') as HTMLButtonElement | null;
+    const themeChoiceButtons = Array.from(scope.querySelectorAll('[data-theme-choice]')) as HTMLButtonElement[];
+    const themeCountEl = scope.querySelector('[data-home-map-theme-count]') as HTMLElement | null;
+    const locationMap = scope.querySelector('[data-location-map]') as HTMLElement | null;
+    const locationSvg = locationMap?.querySelector('svg') as SVGSVGElement | null;
+    const locationPin = scope.querySelector('[data-location-pin]') as SVGCircleElement | null;
+    const locationModeToggle = scope.querySelector('[data-location-mode-toggle]') as HTMLButtonElement | null;
+    const locationText = scope.querySelector('[data-location-text]') as HTMLElement | null;
+    const locationQuery = scope.querySelector('input[name="placeQuery"]') as HTMLInputElement | null;
+    const placeInput = scope.querySelector('[data-location-place]') as HTMLInputElement | null;
+    const latInput = scope.querySelector('[data-location-lat]') as HTMLInputElement | null;
+    const longInput = scope.querySelector('[data-location-long]') as HTMLInputElement | null;
+    const locationStatus = scope.querySelector('[data-location-status]') as HTMLElement | null;
+    const reviewName = scope.querySelector('[data-review-name]') as HTMLElement | null;
+    const reviewPlace = scope.querySelector('[data-review-place]') as HTMLElement | null;
+    const reviewThemes = scope.querySelector('[data-review-themes]') as HTMLElement | null;
+    const reviewNote = scope.querySelector('[data-review-note]') as HTMLElement | null;
+    const editStepButtons = Array.from(scope.querySelectorAll('[data-edit-step]')) as HTMLButtonElement[];
+
+    const REQUIRED_THEME_COUNT = 4;
+    const walkthroughSteps = ['themes', 'identity', 'review'];
+    const selectedThemes = new Set<string>();
+    let currentStep = 0;
+    let lastAddTrigger: HTMLElement | null = null;
+    let locationMode: 'map' | 'text' = 'map';
+
+    const xToLon = (x: number) => (x / VIEW_W) * 360 - 180;
+    const yToLat = (y: number) => 90 - (y / VIEW_H) * 180;
+    const placeIndex = [
+      ...Array.from(root.querySelectorAll('[data-node-type="chapter"]')).map((node) => {
+        const dot = node.querySelector('.gp-home-map-node-dot') as SVGCircleElement | null;
+        const x = Number(dot?.getAttribute('cx'));
+        const y = Number(dot?.getAttribute('cy'));
+        return {
+          label: clean((node as HTMLElement).dataset.nodeName) || 'Greenpill chapter',
+          lat: yToLat(y),
+          long: xToLon(x),
+        };
+      }).filter((place) => Number.isFinite(place.lat) && Number.isFinite(place.long)),
+      { label: 'Lagos', lat: 6.5244, long: 3.3792 },
+      { label: 'Berlin', lat: 52.52, long: 13.405 },
+      { label: 'Bogota', lat: 4.711, long: -74.0721 },
+      { label: 'Bali', lat: -8.3405, long: 115.092 },
+      { label: 'Toronto', lat: 43.6532, long: -79.3832 },
+      { label: 'New York City', lat: 40.7128, long: -74.006 },
+      { label: 'Nairobi', lat: -1.2864, long: 36.8172 },
+      { label: 'Cape Town', lat: -33.9249, long: 18.4241 },
+      { label: 'Sao Paulo', lat: -23.5505, long: -46.6333 },
+      { label: 'Tokyo', lat: 35.6762, long: 139.6503 },
+    ];
+
+    const nearestPlace = (lat: number, long: number) => (
+      placeIndex
+        .map((place) => ({
+          ...place,
+          distance: Math.hypot(
+            place.lat - lat,
+            (place.long - long) * Math.cos(((place.lat + lat) / 2) * Math.PI / 180)
+          ),
+        }))
+        .sort((a, b) => a.distance - b.distance)[0]
+    );
 
     const setAddStatus = (message: string, tone: 'idle' | 'success' | 'error' = 'idle') => {
       if (!addStatus) return;
@@ -1116,59 +1511,235 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
         : `local-${Date.now()}-${Math.round(Math.random() * 1e5)}`
     );
 
-    // ---- Exactly-four-theme activity rule ----------------------------------
-    const REQUIRED_THEME_COUNT = 4;
-    const themesFieldset = scope.querySelector('[data-home-map-themes]') as HTMLFieldSetElement | null;
-    const themeCountEl = scope.querySelector('[data-home-map-theme-count]') as HTMLElement | null;
-    const themeCheckboxes = Array.from(
-      addForm?.querySelectorAll('input[name="themes"][type="checkbox"]') ?? []
-    ) as HTMLInputElement[];
+    const selectedThemeIds = () => Array.from(selectedThemes);
 
-    const syncThemeState = () => {
-      const selected = themeCheckboxes.filter((box) => box.checked).length;
-      if (themeCountEl) themeCountEl.textContent = `${selected} / ${REQUIRED_THEME_COUNT}`;
-      // Cap selection at four: once four are chosen the rest disable, so the rule
-      // is impossible to break rather than only validated after the fact.
-      themeCheckboxes.forEach((box) => {
-        box.disabled = !box.checked && selected >= REQUIRED_THEME_COUNT;
-      });
-      if (themesFieldset) {
-        themesFieldset.classList.toggle('is-complete', selected === REQUIRED_THEME_COUNT);
-        if (selected === REQUIRED_THEME_COUNT) themesFieldset.classList.remove('is-invalid');
+    const setLocation = (lat: number, long: number, label: string) => {
+      if (!placeInput || !latInput || !longInput) return;
+      placeInput.value = label;
+      latInput.value = lat.toFixed(6);
+      longInput.value = long.toFixed(6);
+      if (locationStatus) locationStatus.textContent = `Pinning near ${label}`;
+      if (locationPin) {
+        locationPin.setAttribute('cx', lonToX(long).toFixed(2));
+        locationPin.setAttribute('cy', latToY(lat).toFixed(2));
+        locationPin.hidden = false;
+      }
+      syncWalkthroughState();
+    };
+
+    const syncReview = () => {
+      if (!addForm) return;
+      const data = new FormData(addForm);
+      const name = clean(data.get('name')) || 'You';
+      const place = clean(data.get('place'));
+      const publicNote = clean(data.get('publicNote'));
+      if (reviewName) reviewName.textContent = name;
+      if (reviewPlace) reviewPlace.textContent = `Member · ${place || '—'}`;
+      if (reviewNote) reviewNote.textContent = publicNote || 'None yet';
+      if (reviewThemes) {
+        reviewThemes.textContent = '';
+        selectedThemeIds().forEach((slug) => {
+          const chip = document.createElement('span');
+          applyScope(chip);
+          chip.textContent = themeLabel(slug);
+          chip.style.setProperty('--chip-color', themeColor(slug));
+          reviewThemes.append(chip);
+        });
       }
     };
 
-    themeCheckboxes.forEach((box) => box.addEventListener('change', syncThemeState));
-    syncThemeState();
+    function canAdvanceCurrentStep() {
+      if (!addForm) return false;
+      if (walkthroughSteps[currentStep] === 'themes') return selectedThemes.size === REQUIRED_THEME_COUNT;
+      if (walkthroughSteps[currentStep] !== 'identity') return true;
+      const data = new FormData(addForm);
+      const emailInput = addForm.elements.namedItem('contact') as HTMLInputElement | null;
+      return Boolean(
+        clean(data.get('name')) &&
+        clean(data.get('place')) &&
+        toFiniteNumber(data.get('lat')) !== null &&
+        toFiniteNumber(data.get('long')) !== null &&
+        emailInput?.checkValidity()
+      );
+    }
+
+    function syncWalkthroughState() {
+      const activeStep = walkthroughSteps[currentStep];
+      stepEls.forEach((step) => {
+        const active = step.dataset.walkthroughStep === activeStep;
+        step.hidden = !active;
+        step.classList.toggle('is-active', active);
+      });
+      progressEls.forEach((dot, index) => {
+        dot.classList.toggle('is-active', index <= currentStep);
+      });
+      themeChoiceButtons.forEach((button) => {
+        const theme = clean(button.dataset.themeChoice);
+        const on = selectedThemes.has(theme);
+        button.setAttribute('aria-pressed', on ? 'true' : 'false');
+        button.disabled = !on && selectedThemes.size >= REQUIRED_THEME_COUNT;
+      });
+      if (themeCountEl) themeCountEl.textContent = `${selectedThemes.size} / ${REQUIRED_THEME_COUNT} selected`;
+      if (backButton) backButton.hidden = currentStep === 0;
+      if (nextButton) {
+        nextButton.hidden = currentStep === walkthroughSteps.length - 1;
+        nextButton.disabled = !canAdvanceCurrentStep();
+        nextButton.textContent = currentStep === walkthroughSteps.length - 2 ? 'Review →' : 'Continue →';
+      }
+      if (submitButton) submitButton.hidden = currentStep !== walkthroughSteps.length - 1;
+      syncReview();
+    }
+
+    const setWalkthroughStep = (stepName: string) => {
+      const index = walkthroughSteps.indexOf(stepName);
+      if (index < 0) return;
+      currentStep = index;
+      syncWalkthroughState();
+      const firstField = stepEls[index]?.querySelector('button, input, textarea') as HTMLElement | null;
+      firstField?.focus();
+    };
+
+    const resetWalkthrough = () => {
+      addForm?.reset();
+      selectedThemes.clear();
+      currentStep = 0;
+      locationMode = 'map';
+      if (placeInput) placeInput.value = '';
+      if (latInput) latInput.value = '';
+      if (longInput) longInput.value = '';
+      if (locationPin) locationPin.hidden = true;
+      if (locationStatus) locationStatus.textContent = 'Click anywhere on land to drop your pin.';
+      if (locationText) locationText.hidden = true;
+      locationMap?.removeAttribute('hidden');
+      if (locationModeToggle) locationModeToggle.textContent = 'or type a city ↗';
+      setAddStatus('');
+      syncWalkthroughState();
+    };
+
+    const openAddDialog = (trigger?: HTMLElement) => {
+      if (!addDialog) return;
+      lastAddTrigger = trigger ?? null;
+      resetWalkthrough();
+      if (typeof addDialog.showModal === 'function') addDialog.showModal();
+      else addDialog.setAttribute('open', '');
+      window.requestAnimationFrame(() => {
+        const firstField = addDialog.querySelector('[data-theme-choice]') as HTMLElement | null;
+        firstField?.focus();
+      });
+    };
+
+    const closeAddDialog = () => {
+      if (!addDialog) return;
+      if (addDialog.open && typeof addDialog.close === 'function') addDialog.close();
+      else addDialog.removeAttribute('open');
+    };
+
+    addTriggers.forEach((trigger) => {
+      trigger.addEventListener('click', (event) => {
+        event.preventDefault();
+        openAddDialog(trigger);
+      });
+    });
+    addClose?.addEventListener('click', closeAddDialog);
+    addDialog?.addEventListener('close', () => lastAddTrigger?.focus());
+    addDialog?.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      closeAddDialog();
+    });
+    const closeAddDialogOnEscape = (event: KeyboardEvent) => {
+      if (!addDialog?.open) return;
+      if (event.key !== 'Escape' && event.key !== 'Esc' && event.code !== 'Escape') return;
+      event.preventDefault();
+      closeAddDialog();
+    };
+    addDialog?.addEventListener('keydown', closeAddDialogOnEscape);
+    window.addEventListener('keydown', closeAddDialogOnEscape, true);
+    addDialog?.addEventListener('click', (event) => {
+      if (event.target === addDialog) closeAddDialog();
+    });
+
+    themeChoiceButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const theme = clean(button.dataset.themeChoice);
+        if (!theme) return;
+        if (selectedThemes.has(theme)) selectedThemes.delete(theme);
+        else if (selectedThemes.size < REQUIRED_THEME_COUNT) selectedThemes.add(theme);
+        syncWalkthroughState();
+      });
+    });
+
+    nextButton?.addEventListener('click', () => {
+      if (!canAdvanceCurrentStep()) return;
+      currentStep = Math.min(walkthroughSteps.length - 1, currentStep + 1);
+      syncWalkthroughState();
+    });
+    backButton?.addEventListener('click', () => {
+      currentStep = Math.max(0, currentStep - 1);
+      syncWalkthroughState();
+    });
+    editStepButtons.forEach((button) => {
+      button.addEventListener('click', () => setWalkthroughStep(button.dataset.editStep || ''));
+    });
+
+    addForm?.addEventListener('input', syncWalkthroughState);
+    locationModeToggle?.addEventListener('click', () => {
+      locationMode = locationMode === 'map' ? 'text' : 'map';
+      const textMode = locationMode === 'text';
+      if (locationText) locationText.hidden = !textMode;
+      if (locationMap) locationMap.hidden = textMode;
+      if (locationModeToggle) locationModeToggle.textContent = textMode ? '← back to map' : 'or type a city ↗';
+      if (textMode) locationQuery?.focus();
+    });
+    locationSvg?.addEventListener('click', (event) => {
+      const rect = locationSvg.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) * VIEW_W;
+      const y = ((event.clientY - rect.top) / rect.height) * VIEW_H;
+      const lat = yToLat(y);
+      const long = xToLon(x);
+      const place = nearestPlace(lat, long);
+      setLocation(lat, long, place?.label || 'your place');
+    });
+    locationQuery?.addEventListener('input', () => {
+      const query = clean(locationQuery.value).toLowerCase();
+      if (query.length < 2) {
+        if (locationStatus) locationStatus.textContent = 'Type at least two letters to match a known city.';
+        return;
+      }
+      const match = placeIndex.find((place) => place.label.toLowerCase().startsWith(query))
+        || placeIndex.find((place) => place.label.toLowerCase().includes(query));
+      if (!match) {
+        if (locationStatus) locationStatus.textContent = 'No match yet — try a major city or chapter.';
+        return;
+      }
+      setLocation(match.lat, match.long, match.label);
+    });
 
     addForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
-      const submitButton = addForm.querySelector('button[type="submit"]') as HTMLButtonElement | null;
       const data = new FormData(addForm);
       const name = clean(data.get('name'));
       const place = clean(data.get('place'));
       const lat = toFiniteNumber(data.get('lat'));
       const long = toFiniteNumber(data.get('long'));
-      const themes = data.getAll('themes').map((v) => clean(v)).filter(Boolean);
+      const themes = selectedThemeIds();
       const publicNote = clean(data.get('publicNote'));
       const emailInput = addForm.elements.namedItem('contact') as HTMLInputElement | null;
       const email = clean(data.get('contact')).toLowerCase();
       if (emailInput) emailInput.value = email;
 
       if (!name || !place || lat === null || long === null || !emailInput?.checkValidity()) {
-        setAddStatus('Add a name, place, latitude, longitude, and valid private email before submitting.', 'error');
+        setWalkthroughStep('identity');
+        setAddStatus('Add a name, place, and valid private email before submitting.', 'error');
+        return;
+      }
+      if (themes.length !== REQUIRED_THEME_COUNT) {
+        setWalkthroughStep('themes');
+        setAddStatus('Choose exactly four themes before submitting.', 'error');
         return;
       }
 
-      if (themes.length !== 4) {
-        setAddStatus('Choose exactly four themes — the four that best describe your work.', 'error');
-        themesFieldset?.classList.add('is-invalid');
-        return;
-      }
-
-      setAddStatus('Submitting your node…', 'idle');
+      setAddStatus('Connecting threads...', 'idle');
       if (submitButton) submitButton.disabled = true;
-
       try {
         const response = await fetch(`${agentBaseUrl}/map-nodes`, {
           method: 'POST',
@@ -1192,14 +1763,10 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
 
         const node = payload?.node || payload;
         if (node?.status === 'approved') {
-          // Live onboarding: the node is public immediately. Never write local
-          // pending state for an approved node.
           const member = toMember({ ...node, sourceId: node.id }, 'approved-submission');
           if (member) injectMember(member);
-          setAddStatus('Your node is approved and visible on the public map. Find who you relate to in the network below.', 'success');
+          setAddStatus('Your node is approved and visible on the public map.', 'success');
         } else {
-          // Moderated: only now — after the server accepted — do we persist a
-          // local pending node for this browser.
           saveLocalPendingNode(window.localStorage, {
             id: createLocalId(),
             name,
@@ -1214,15 +1781,9 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
           renderLocalPending();
           setAddStatus('Saved on this device and submitted for steward review.', 'success');
         }
-        addForm.reset();
-        syncThemeState();
-        // Pull fresh state so server-generated relationship edges (and other new
-        // arrivals) redraw without a manual page reload.
         void loadMapState();
+        window.setTimeout(closeAddDialog, 700);
       } catch (error) {
-        // Server rejected or the request failed: do NOT write local pending state.
-        // Surface server-provided validation messages, but show friendly copy for
-        // raw network failures (fetch throws a TypeError when it cannot connect).
         const message = error instanceof Error && error.name !== 'TypeError'
           ? error.message
           : 'We could not reach the network right now. Please try again.';
@@ -1237,6 +1798,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     root.addEventListener('mouseleave', clearFocus);
     window.addEventListener(PENDING_NODE_UPDATED_EVENT, renderLocalPending);
 
+    applyMapFilters();
     renderLocalPending();
     loadMapState();
   })();
@@ -1244,6 +1806,11 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
 
 <style>
   .gp-home-map {
+    --gp-map-chapter: var(--gp-green-700);
+    --gp-map-chapter-ring: var(--gp-green-100);
+    --gp-map-member: var(--gp-green-100);
+    --gp-map-member-ring: var(--gp-lime-300);
+    --gp-map-steward: var(--gp-secondary);
     container-type: inline-size;
     margin: 0;
     width: 100%;
@@ -1329,6 +1896,10 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     opacity: 0.08;
   }
 
+  .gp-home-map-thread.is-filtered-out {
+    display: none;
+  }
+
   /* Node links */
   .gp-home-map-node-link {
     cursor: pointer;
@@ -1344,22 +1915,26 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     opacity: 1;
   }
 
-  /* Chapter node treatment — lime fill, dark ring, glow halo */
+  .gp-home-map-node-link.is-filtered-out {
+    display: none;
+  }
+
+  /* Chapter node treatment — dark green anchor, light green ring */
   .gp-home-map-node-link.is-chapter .gp-home-map-node-dot {
-    fill: var(--gp-primary);
+    fill: var(--gp-map-chapter);
     stroke: var(--gp-green-950);
     stroke-width: 0.6;
     transition: r 200ms cubic-bezier(0.22, 1, 0.36, 1);
   }
   .gp-home-map-node-link.is-chapter .gp-home-map-node-ring {
     fill: none;
-    stroke: var(--gp-green-950);
+    stroke: var(--gp-map-chapter-ring);
     stroke-width: 0.4;
     opacity: 0.65;
   }
   .gp-home-map-node-link.is-chapter .gp-home-map-node-halo {
-    fill: var(--gp-primary);
-    opacity: 0.12;
+    fill: var(--gp-map-chapter);
+    opacity: 0.2;
     transition: opacity 240ms cubic-bezier(0.4, 0, 0.2, 1);
   }
   .gp-home-map-node-link.is-chapter:hover .gp-home-map-node-halo,
@@ -1367,16 +1942,16 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     opacity: 0.42;
   }
   .gp-home-map-node-link.is-chapter:focus-visible .gp-home-map-node-dot {
-    stroke: var(--gp-lime-400);
+    stroke: var(--gp-map-chapter-ring);
     stroke-width: 0.9;
   }
 
   /* Steward node treatment — warm gold, smaller, no ring */
   .gp-home-map-node-link.is-steward .gp-home-map-node-dot {
-    fill: var(--gp-secondary);
+    fill: var(--gp-map-steward);
   }
   .gp-home-map-node-link.is-steward .gp-home-map-node-halo {
-    fill: var(--gp-secondary);
+    fill: var(--gp-map-steward);
     opacity: 0.15;
     transition: opacity 240ms cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -1385,12 +1960,11 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     opacity: 0.5;
   }
 
-  /* Member/project/place node treatment — submitted nodes injected client-side.
-     Teal keeps them distinct from lime chapters and gold stewards. */
+  /* Member node treatment — light green, distinct from chapter anchors. */
   .gp-home-map-node-link.is-member .gp-home-map-node-dot,
   .gp-home-map-node-link.is-project .gp-home-map-node-dot,
   .gp-home-map-node-link.is-place .gp-home-map-node-dot {
-    fill: #4FD1C5;
+    fill: var(--gp-map-member);
     stroke: var(--gp-green-950);
     stroke-width: 0.5;
     transition: r 200ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -1399,14 +1973,14 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
   .gp-home-map-node-link.is-project .gp-home-map-node-ring,
   .gp-home-map-node-link.is-place .gp-home-map-node-ring {
     fill: none;
-    stroke: #4FD1C5;
+    stroke: var(--gp-map-member-ring);
     stroke-width: 0.4;
     opacity: 0.6;
   }
   .gp-home-map-node-link.is-member .gp-home-map-node-halo,
   .gp-home-map-node-link.is-project .gp-home-map-node-halo,
   .gp-home-map-node-link.is-place .gp-home-map-node-halo {
-    fill: #4FD1C5;
+    fill: var(--gp-map-member);
     opacity: 0.14;
     transition: opacity 240ms cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -1427,15 +2001,15 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
   .gp-home-map-node-link.is-project.is-selected .gp-home-map-node-dot,
   .gp-home-map-node-link.is-place:focus-visible .gp-home-map-node-dot,
   .gp-home-map-node-link.is-place.is-selected .gp-home-map-node-dot {
-    stroke: var(--gp-lime-400);
+    stroke: var(--gp-map-member-ring);
     stroke-width: 0.8;
   }
   /* Pending nodes live only in this browser; render them as provisional. */
   .gp-home-map-node-link.is-member.is-pending .gp-home-map-node-dot,
   .gp-home-map-node-link.is-project.is-pending .gp-home-map-node-dot,
   .gp-home-map-node-link.is-place.is-pending .gp-home-map-node-dot {
-    fill: var(--gp-green-500);
-    stroke: #4FD1C5;
+    fill: color-mix(in srgb, var(--gp-map-member) 64%, var(--gp-green-500));
+    stroke: var(--gp-map-member-ring);
   }
   .gp-home-map-node-link.is-member.is-pending .gp-home-map-node-ring,
   .gp-home-map-node-link.is-project.is-pending .gp-home-map-node-ring,
@@ -1456,16 +2030,16 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     transform-box: fill-box;
   }
   .gp-home-map-node-link.is-chapter .gp-home-map-node-ripple {
-    stroke: var(--gp-primary);
+    stroke: var(--gp-map-chapter-ring);
   }
   .gp-home-map-node-link.is-steward .gp-home-map-node-ripple {
-    stroke: var(--gp-secondary);
+    stroke: var(--gp-map-steward);
     stroke-width: 0.14;
   }
   .gp-home-map-node-link.is-member .gp-home-map-node-ripple,
   .gp-home-map-node-link.is-project .gp-home-map-node-ripple,
   .gp-home-map-node-link.is-place .gp-home-map-node-ripple {
-    stroke: #4FD1C5;
+    stroke: var(--gp-map-member);
     stroke-width: 0.16;
   }
   .gp-home-map-node-link:hover .gp-home-map-node-ripple,
@@ -1484,7 +2058,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
   .gp-home-map-thread.is-adj {
     opacity: 0.95;
     stroke-width: 0.34;
-    stroke: var(--gp-lime-400);
+    stroke: var(--gp-map-member);
     /* Override the dasharray set by the grow-in animation so the blip
        gets a tight pattern to chase along the path. */
     stroke-dasharray: 0.04 0.96;
@@ -1501,8 +2075,8 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     right: 12px;
     display: inline-flex;
     align-items: center;
-    gap: 16px;
-    padding: 8px 14px;
+    gap: 20px;
+    padding: 11px 18px;
     background: rgba(11, 38, 28, 0.78);
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-pill);
@@ -1516,36 +2090,39 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
   .gp-home-map-stat {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     white-space: nowrap;
   }
-  /* The author display rule above outweighs the UA [hidden] rule, so the
-     client-toggled people stat needs an explicit hidden state. */
   .gp-home-map-stat[hidden] {
     display: none;
   }
 
   .gp-home-map-stat-mark {
-    width: 8px;
-    height: 8px;
+    width: 11px;
+    height: 11px;
     border-radius: 50%;
     flex: none;
   }
 
   .gp-home-map-stat-mark.is-chapter {
-    background: var(--gp-primary);
-    box-shadow: 0 0 0 1.5px var(--gp-green-950);
+    background: var(--gp-map-chapter);
+    box-shadow: 0 0 0 1.5px var(--gp-map-chapter-ring);
+  }
+
+  .gp-home-map-stat-mark.is-steward {
+    background: var(--gp-map-steward);
+    box-shadow: 0 0 0 1.5px rgba(7, 24, 15, 0.7);
   }
 
   .gp-home-map-stat-mark.is-member {
-    background: #4FD1C5;
+    background: var(--gp-map-member);
     box-shadow: 0 0 0 1.5px var(--gp-green-950);
   }
 
   .gp-home-map-stat-value {
     font-family: var(--gp-font-display);
     color: var(--gp-secondary);
-    font-size: 18px;
+    font-size: 24px;
     line-height: 1;
     font-weight: 500;
   }
@@ -1553,7 +2130,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
   .gp-home-map-stat-label {
     font-family: var(--gp-font-mono);
     color: var(--gp-fg-dim);
-    font-size: 10px;
+    font-size: 12px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     font-weight: 700;
@@ -1562,21 +2139,26 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
   /* Focus card */
   .gp-home-map-focus {
     position: absolute;
-    left: 12px;
-    bottom: 12px;
+    left: 50%;
+    top: 50%;
     display: none;
     flex-direction: column;
-    gap: 4px;
-    padding: 10px 14px;
-    border: 1px solid rgba(184, 232, 53, 0.32);
+    gap: 7px;
+    min-width: 220px;
+    max-width: min(280px, calc(100% - 24px));
+    padding: 13px 15px 14px;
+    border: 1px solid color-mix(in srgb, var(--gp-map-member) 32%, transparent);
     border-radius: var(--gp-radius-md);
-    background: rgba(15, 50, 38, 0.95);
+    background:
+      linear-gradient(135deg, rgba(250, 247, 238, 0.08), rgba(250, 247, 238, 0.02)),
+      rgba(9, 34, 25, 0.96);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     color: var(--gp-fg);
-    max-width: 60%;
-    z-index: 4;
+    box-shadow: 0 18px 48px -18px rgba(0, 0, 0, 0.72);
+    z-index: 6;
     pointer-events: none;
+    overflow-wrap: anywhere;
   }
 
   .gp-home-map-focus[aria-hidden='false'] {
@@ -1585,11 +2167,19 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
 
   .gp-home-map-focus-role {
     font-family: var(--gp-font-mono);
-    color: var(--gp-primary);
+    color: var(--gp-map-member);
     font-size: 10px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     font-weight: 700;
+  }
+
+  .gp-home-map-focus[data-node-type='chapter'] .gp-home-map-focus-role {
+    color: var(--gp-map-chapter-ring);
+  }
+
+  .gp-home-map-focus[data-node-type='steward'] .gp-home-map-focus-role {
+    color: var(--gp-map-steward);
   }
 
   .gp-home-map-focus-name {
@@ -1610,36 +2200,185 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     display: none;
   }
 
-  /* Plain-language theme legend underneath the map */
-  .gp-home-map-legend {
+  .gp-home-map-focus-themes {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
-    gap: 8px 14px;
+    gap: 5px;
   }
 
-  .gp-home-map-legend-item {
+  .gp-home-map-focus-themes:empty {
+    display: none;
+  }
+
+  .gp-home-map-focus-themes span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 2px 7px;
+    border: 1px solid color-mix(in srgb, var(--chip-color, var(--gp-map-member)) 54%, transparent);
+    border-radius: var(--gp-radius-pill);
+    background: color-mix(in srgb, var(--chip-color, var(--gp-map-member)) 16%, transparent);
+    color: var(--gp-fg);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .gp-home-map-focus-connections {
+    margin-top: 2px;
+    padding-top: 7px;
+    border-top: 1px solid rgba(250, 247, 238, 0.1);
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  /* Embedded HiFi-style map controls */
+  .gp-home-map-controls {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    max-width: min(390px, calc(100% - 24px));
+  }
+
+  .gp-home-map-filter-panel {
+    width: min(390px, calc(100vw - 64px));
+    max-height: min(290px, 58cqw);
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-md);
+    background: rgba(11, 38, 28, 0.92);
+    box-shadow: var(--gp-shadow-card-lg);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+
+  .gp-home-map-filter-panel[hidden] {
+    display: none;
+  }
+
+  .gp-home-map-filter-panel.is-themes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gp-home-map-filter-panel.is-themes[hidden] {
+    display: none;
+  }
+
+  .gp-home-map-filter-option {
+    min-height: 38px;
+    display: grid;
+    grid-template-columns: 16px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: var(--gp-radius-sm);
+    background: transparent;
+    color: var(--gp-fg);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 1.2;
+    text-align: left;
+    cursor: pointer;
+    transition: opacity 160ms ease, background 160ms ease;
+  }
+
+  .gp-home-map-filter-option[aria-pressed='false'] {
+    opacity: 0.38;
+  }
+
+  .gp-home-map-filter-option:hover,
+  .gp-home-map-filter-option:focus-visible {
+    background: rgba(250, 247, 238, 0.06);
+    outline: none;
+  }
+
+  .gp-home-map-filter-marker {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--theme-color, var(--gp-map-member));
+    box-shadow: 0 0 8px color-mix(in srgb, var(--theme-color, var(--gp-map-member)) 55%, transparent);
+  }
+
+  .gp-home-map-filter-option.is-chapter .gp-home-map-filter-marker {
+    background: var(--gp-map-chapter);
+    box-shadow: 0 0 0 1.5px var(--gp-map-chapter-ring);
+  }
+
+  .gp-home-map-filter-option.is-steward .gp-home-map-filter-marker {
+    background: var(--gp-map-steward);
+  }
+
+  .gp-home-map-filter-option.is-member .gp-home-map-filter-marker {
+    background: var(--gp-map-member);
+    box-shadow: 0 0 0 1.5px var(--gp-green-950);
+  }
+
+  .gp-home-map-filter-count {
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-mono);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .gp-home-map-filter-tabs {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 12px;
+    width: fit-content;
+    max-width: 100%;
+    padding: 4px;
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-pill);
-    background: rgba(15, 61, 46, 0.5);
-    color: var(--gp-fg-muted);
-    font-family: var(--gp-font-body);
-    font-size: 12px;
-    font-weight: 500;
-    line-height: 1;
-    white-space: nowrap;
+    background: rgba(11, 38, 28, 0.72);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
   }
 
-  .gp-home-map-legend-swatch {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex: none;
+  .gp-home-map-filter-tabs button {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 0;
+    border-radius: var(--gp-radius-pill);
+    padding: 8px 15px;
+    background: transparent;
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-body);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 160ms ease, color 160ms ease;
+  }
+
+  .gp-home-map-filter-tabs button:hover,
+  .gp-home-map-filter-tabs button:focus-visible,
+  .gp-home-map-filter-tabs button.is-active {
+    background: var(--gp-map-member);
+    color: var(--gp-green-900);
+    outline: none;
   }
 
   /* Selected-node panel — in-flow (not an overlay) so it never clips on
@@ -1652,7 +2391,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     flex-direction: column;
     gap: 6px;
     padding: 14px 16px;
-    border: 1px solid rgba(79, 209, 197, 0.32);
+    border: 1px solid color-mix(in srgb, var(--gp-map-member) 42%, transparent);
     border-radius: var(--gp-radius-md);
     background: rgba(15, 50, 38, 0.92);
   }
@@ -1681,7 +2420,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     margin: 0;
     padding-right: 38px;
     font-family: var(--gp-font-mono);
-    color: #7fe6da;
+    color: var(--gp-map-member);
     font-size: 10px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -1717,9 +2456,9 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     align-items: center;
     min-height: 26px;
     padding: 2px 9px;
-    border: 1px solid color-mix(in srgb, var(--chip-color, #4FD1C5) 60%, transparent);
+    border: 1px solid color-mix(in srgb, var(--chip-color, var(--gp-map-member)) 60%, transparent);
     border-radius: var(--gp-radius-pill);
-    background: color-mix(in srgb, var(--chip-color, #4FD1C5) 16%, transparent);
+    background: color-mix(in srgb, var(--chip-color, var(--gp-map-member)) 16%, transparent);
     color: var(--gp-fg);
     font-size: 12px;
     line-height: 1;
@@ -1734,17 +2473,19 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     display: inline-flex;
     align-items: center;
     padding: 8px 16px;
-    border: 1px solid rgba(79, 209, 197, 0.5);
+    border: 1px solid color-mix(in srgb, var(--gp-map-member) 55%, transparent);
     border-radius: var(--gp-radius-pill);
-    background: rgba(79, 209, 197, 0.14);
-    color: #b8f5ec;
+    background: color-mix(in srgb, var(--gp-map-member) 14%, transparent);
+    color: var(--gp-map-member);
     font-family: var(--gp-font-body);
     font-weight: 700;
     font-size: 14px;
     cursor: pointer;
     transition: background 160ms ease;
   }
-  .gp-home-map-update-trigger:hover { background: rgba(79, 209, 197, 0.24); }
+  .gp-home-map-update-trigger:hover {
+    background: color-mix(in srgb, var(--gp-map-member) 24%, transparent);
+  }
   .gp-home-map-update-trigger[hidden] { display: none; }
 
   .gp-home-map-update-form {
@@ -1777,8 +2518,8 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     outline: none;
   }
   .gp-home-map-update-field input:focus {
-    border-color: rgba(79, 209, 197, 0.78);
-    box-shadow: 0 0 0 3px rgba(79, 209, 197, 0.14);
+    border-color: color-mix(in srgb, var(--gp-map-member) 78%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--gp-map-member) 14%, transparent);
   }
   .gp-home-map-update-actions {
     display: flex;
@@ -1801,7 +2542,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
   }
   .gp-home-map-update-submit {
     border: 0;
-    background: #4FD1C5;
+    background: var(--gp-map-member);
     color: #07241a;
   }
   .gp-home-map-update-error {
@@ -1812,198 +2553,579 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
   .gp-home-map-update-error:empty { display: none; }
   .gp-home-map-update-success {
     margin: 6px 0 0;
-    color: #b8f5ec;
+    color: var(--gp-map-member);
     font-size: 14px;
     line-height: 1.4;
   }
   .gp-home-map-update-success[hidden] { display: none; }
 
-  /* Add-node panel — collapsed by default; keeps the hero uncluttered. */
-  .gp-home-map-addnode {
-    width: 100%;
+  /* Find-your-people walkthrough — modal layer, no map layout jump. */
+  .gp-home-map-addnode-dialog {
+    position: relative;
     box-sizing: border-box;
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-md);
-    background: rgba(7, 24, 15, 0.5);
+    width: min(720px, calc(100vw - 32px));
+    height: min(760px, calc(100svh - 32px));
+    max-height: calc(100vh - 32px);
+    margin: auto;
+    padding: 28px;
+    border: 1px solid color-mix(in srgb, var(--gp-map-member) 34%, transparent);
+    border-radius: var(--gp-radius-xl);
+    background:
+      radial-gradient(circle at 18% 8%, rgba(184, 232, 53, 0.12), transparent 30%),
+      linear-gradient(145deg, rgba(18, 72, 52, 0.98), rgba(6, 26, 18, 0.99));
+    color: var(--gp-fg);
+    box-shadow: 0 28px 88px -28px rgba(0, 0, 0, 0.82);
+    overflow: hidden;
   }
-  .gp-home-map-addnode > summary {
-    min-height: 48px;
-    display: flex;
+
+  .gp-home-map-addnode-dialog::backdrop {
+    background: rgba(2, 12, 7, 0.74);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+  }
+
+  .gp-home-map-addnode-dialog:not([open]) {
+    display: none;
+  }
+
+  .gp-home-map-addnode-topo {
+    position: absolute;
+    inset: 0;
+    background-image: url('/images/hifi/topo-bg.png');
+    background-size: cover;
+    background-position: center;
+    opacity: 0.18;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+  }
+
+  .gp-home-map-addnode-close {
+    position: absolute;
+    top: 22px;
+    right: 22px;
+    z-index: 3;
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
     align-items: center;
-    padding: 12px 16px;
-    color: var(--gp-primary);
-    font-family: var(--gp-font-body);
-    font-weight: 700;
-    cursor: pointer;
-    list-style: none;
-  }
-  .gp-home-map-addnode > summary::-webkit-details-marker { display: none; }
-  .gp-home-map-addnode > summary::before {
-    content: '+';
-    margin-right: 8px;
-    font-size: 18px;
+    justify-content: center;
+    border: 1px solid rgba(250, 247, 238, 0.18);
+    border-radius: var(--gp-radius-pill);
+    background: rgba(7, 24, 15, 0.68);
+    color: var(--gp-fg-muted);
+    font: inherit;
+    font-size: 20px;
     line-height: 1;
+    cursor: pointer;
   }
-  .gp-home-map-addnode[open] > summary::before { content: '\2013'; }
+
+  .gp-home-map-addnode-close:hover,
+  .gp-home-map-addnode-close:focus-visible {
+    color: var(--gp-fg);
+    border-color: color-mix(in srgb, var(--gp-map-member) 50%, transparent);
+    outline: none;
+  }
+
+  .gp-home-map-addnode-progress {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 22px;
+  }
+
+  .gp-home-map-addnode-progress span {
+    width: 42px;
+    height: 4px;
+    border-radius: var(--gp-radius-pill);
+    background: rgba(250, 247, 238, 0.16);
+  }
+
+  .gp-home-map-addnode-progress span.is-active {
+    background: var(--gp-map-member);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--gp-map-member) 44%, transparent);
+  }
 
   .gp-home-map-addnode-form {
+    position: relative;
+    z-index: 2;
+    min-height: calc(100% - 34px);
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 20px;
+  }
+
+  .gp-home-map-addnode-step {
+    min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    padding: 0 16px 16px;
+    gap: 16px;
+    overflow: auto;
+    padding-right: 4px;
   }
+
+  .gp-home-map-addnode-step[hidden] {
+    display: none;
+  }
+
+  .gp-home-map-addnode-kicker {
+    margin: 0;
+    color: var(--gp-map-member);
+    font-family: var(--gp-font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .gp-home-map-addnode-dialog h2 {
+    max-width: 12ch;
+    margin: 0;
+    color: var(--gp-secondary);
+    font-family: var(--gp-font-display);
+    font-size: 46px;
+    font-weight: 500;
+    letter-spacing: 0;
+    line-height: 0.98;
+  }
+
+  .gp-home-map-addnode-copy,
+  .gp-home-map-addnode-mode,
+  .gp-home-map-addnode-location-status,
+  .gp-home-map-addnode-status {
+    margin: 0;
+    color: var(--gp-fg-muted);
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .gp-home-map-addnode-copy {
+    max-width: 52ch;
+  }
+
+  .gp-home-map-addnode-theme-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 2px;
+  }
+
+  .gp-home-map-addnode-theme {
+    min-height: 54px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid color-mix(in srgb, var(--theme-color, var(--gp-map-member)) 42%, rgba(250, 247, 238, 0.14));
+    border-radius: var(--gp-radius-pill);
+    padding: 10px 14px;
+    background: color-mix(in srgb, var(--theme-color, var(--gp-map-member)) 10%, rgba(2, 12, 7, 0.42));
+    color: var(--gp-fg);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 750;
+    line-height: 1.15;
+    text-align: left;
+    cursor: pointer;
+    transition: background 160ms ease, border-color 160ms ease, opacity 160ms ease, transform 160ms ease;
+  }
+
+  .gp-home-map-addnode-theme:hover,
+  .gp-home-map-addnode-theme:focus-visible {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--theme-color, var(--gp-map-member)) 70%, transparent);
+    outline: none;
+  }
+
+  .gp-home-map-addnode-theme[aria-pressed='true'] {
+    background: color-mix(in srgb, var(--theme-color, var(--gp-map-member)) 28%, rgba(2, 12, 7, 0.38));
+    border-color: var(--theme-color, var(--gp-map-member));
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-color, var(--gp-map-member)) 16%, transparent);
+  }
+
+  .gp-home-map-addnode-theme:disabled {
+    opacity: 0.36;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .gp-home-map-addnode-theme-dot {
+    width: 12px;
+    height: 12px;
+    flex: none;
+    border-radius: 999px;
+    background: var(--theme-color, var(--gp-map-member));
+    box-shadow: 0 0 14px color-mix(in srgb, var(--theme-color, var(--gp-map-member)) 56%, transparent);
+  }
+
+  .gp-home-map-addnode-theme-count {
+    align-self: flex-start;
+    margin: 0;
+    padding: 7px 10px;
+    border: 1px solid rgba(250, 247, 238, 0.12);
+    border-radius: var(--gp-radius-pill);
+    background: rgba(2, 12, 7, 0.28);
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
   .gp-home-map-addnode-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
   }
-  .gp-home-map-addnode-form > label,
-  .gp-home-map-addnode-grid label,
-  .gp-home-map-addnode-themes {
+
+  .gp-home-map-addnode-form label {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 7px;
     min-width: 0;
   }
+
   .gp-home-map-addnode-form label > span,
-  .gp-home-map-addnode-themes > legend {
-    color: var(--gp-fg-muted);
+  .gp-home-map-addnode-location-head > span {
+    color: var(--gp-map-member);
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 800;
+    line-height: 1.1;
   }
-  .gp-home-map-addnode-themes {
-    border: 0;
-    padding: 0;
-    margin: 0;
-  }
-  .gp-home-map-addnode-themes > legend {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
-    width: 100%;
-    padding: 0;
-    margin-bottom: 5px;
-  }
-  .gp-home-map-addnode-theme-count {
-    font-family: var(--gp-font-mono);
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    font-weight: 700;
-    color: var(--gp-fg-muted);
-    white-space: nowrap;
-  }
-  .gp-home-map-addnode-themes.is-complete .gp-home-map-addnode-theme-count {
-    color: var(--gp-primary);
-  }
-  .gp-home-map-addnode-themes.is-invalid .gp-home-map-addnode-theme-count {
-    color: var(--gp-error);
-  }
+
   .gp-home-map-addnode-form input,
   .gp-home-map-addnode-form textarea {
     width: 100%;
     box-sizing: border-box;
-    min-height: 44px;
-    border: 1px solid var(--gp-border-soft);
+    min-height: 48px;
+    border: 1px solid rgba(250, 247, 238, 0.14);
     border-radius: var(--gp-radius-md);
-    padding: 10px 12px;
-    background: rgba(2, 12, 7, 0.7);
+    padding: 12px 13px;
+    background: rgba(2, 12, 7, 0.55);
     color: var(--gp-fg);
     font: inherit;
     outline: none;
   }
-  .gp-home-map-addnode-form textarea { min-height: 76px; resize: vertical; }
+
+  .gp-home-map-addnode-form textarea {
+    min-height: 88px;
+    resize: vertical;
+  }
+
   .gp-home-map-addnode-form input:focus,
   .gp-home-map-addnode-form textarea:focus {
-    border-color: rgba(184, 232, 53, 0.7);
-    box-shadow: 0 0 0 3px rgba(184, 232, 53, 0.12);
+    border-color: color-mix(in srgb, var(--gp-map-member) 76%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--gp-map-member) 14%, transparent);
   }
-  .gp-home-map-addnode-theme-options {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-  .gp-home-map-addnode-theme {
+
+  .gp-home-map-addnode-location {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid rgba(250, 247, 238, 0.12);
+    border-radius: var(--gp-radius-lg);
+    background: rgba(2, 12, 7, 0.24);
+  }
+
+  .gp-home-map-addnode-location-head {
+    display: flex;
     align-items: center;
-    gap: 8px;
-    min-height: 44px;
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-md);
-    padding: 6px 10px;
-    background: rgba(2, 12, 7, 0.36);
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .gp-home-map-addnode-location-head button,
+  .gp-home-map-addnode-review button {
+    border: 0;
+    background: transparent;
+    color: var(--gp-map-member);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
     cursor: pointer;
   }
-  .gp-home-map-addnode-theme input {
-    width: 16px;
-    min-height: 16px;
+
+  .gp-home-map-addnode-location-head button:hover,
+  .gp-home-map-addnode-location-head button:focus-visible,
+  .gp-home-map-addnode-review button:hover,
+  .gp-home-map-addnode-review button:focus-visible {
+    color: var(--gp-secondary);
+    outline: none;
+  }
+
+  .gp-home-map-addnode-mini-map {
+    position: relative;
+    aspect-ratio: 2 / 1;
+    min-height: 190px;
+    border: 1px solid color-mix(in srgb, var(--gp-map-member) 24%, transparent);
+    border-radius: var(--gp-radius-md);
+    background: radial-gradient(ellipse at center, rgba(20, 68, 52, 0.72), rgba(7, 24, 15, 0.96));
+    overflow: hidden;
+    cursor: crosshair;
+  }
+
+  .gp-home-map-addnode-mini-map[hidden],
+  .gp-home-map-addnode-city[hidden],
+  .gp-home-map-addnode-back[hidden],
+  .gp-home-map-addnode-next[hidden],
+  .gp-home-map-addnode-submit[hidden] {
+    display: none;
+  }
+
+  .gp-home-map-addnode-mini-topo {
+    position: absolute;
+    inset: 0;
+    background-image: url('/images/hifi/topo-bg.png');
+    background-size: cover;
+    background-position: center;
+    opacity: 0.15;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+  }
+
+  .gp-home-map-addnode-mini-map svg {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .gp-home-map-addnode-mini-map svg circle {
+    fill: var(--gp-green-400);
+    opacity: 0.52;
+  }
+
+  .gp-home-map-addnode-mini-map [data-location-pin] {
+    fill: var(--gp-map-member);
+    stroke: var(--gp-green-950);
+    stroke-width: 0.75;
+    opacity: 1;
+    filter: drop-shadow(0 0 5px var(--gp-map-member));
+  }
+
+  .gp-home-map-addnode-mini-map span {
+    position: absolute;
+    left: 50%;
+    bottom: 10px;
+    z-index: 2;
+    transform: translateX(-50%);
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .gp-home-map-addnode-note {
+    margin-top: 0;
+  }
+
+  .gp-home-map-addnode-preview {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    border: 1px solid color-mix(in srgb, var(--gp-map-member) 26%, transparent);
+    border-radius: var(--gp-radius-lg);
+    background: rgba(2, 12, 7, 0.28);
+  }
+
+  .gp-home-map-addnode-preview-dot {
+    width: 24px;
+    height: 24px;
     flex: none;
-    accent-color: var(--gp-primary);
+    border-radius: 999px;
+    background: var(--gp-map-member);
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--gp-map-member) 18%, transparent);
   }
-  .gp-home-map-addnode-theme span { font-size: 13px; font-weight: 600; }
-  /* Chosen themes read as selected; once four are chosen the rest disable so the
-     exactly-four rule cannot be broken. */
-  .gp-home-map-addnode-theme:has(input:checked) {
-    border-color: color-mix(in srgb, var(--gp-primary) 60%, transparent);
-    background: color-mix(in srgb, var(--gp-primary) 14%, transparent);
+
+  .gp-home-map-addnode-preview strong {
+    display: block;
+    color: var(--gp-secondary);
+    font-family: var(--gp-font-display);
+    font-size: 24px;
+    font-weight: 500;
+    line-height: 1.05;
   }
-  .gp-home-map-addnode-theme:has(input:disabled) {
-    opacity: 0.4;
-    cursor: not-allowed;
+
+  .gp-home-map-addnode-preview span:not(.gp-home-map-addnode-preview-dot) {
+    display: block;
+    margin-top: 3px;
+    color: var(--gp-fg-muted);
+    font-size: 13px;
   }
-  .gp-home-map-addnode-theme:has(input:disabled) input {
-    cursor: not-allowed;
+
+  .gp-home-map-addnode-review {
+    display: grid;
+    gap: 10px;
   }
+
+  .gp-home-map-addnode-review > div {
+    display: grid;
+    grid-template-columns: minmax(90px, 0.32fr) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    min-height: 54px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(250, 247, 238, 0.1);
+  }
+
+  .gp-home-map-addnode-review > div > span {
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .gp-home-map-addnode-review p {
+    margin: 0;
+    color: var(--gp-fg-muted);
+    font-size: 13px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .gp-home-map-addnode-review [data-review-themes] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .gp-home-map-addnode-review [data-review-themes] span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 2px 8px;
+    border: 1px solid color-mix(in srgb, var(--chip-color, var(--gp-map-member)) 54%, transparent);
+    border-radius: var(--gp-radius-pill);
+    background: color-mix(in srgb, var(--chip-color, var(--gp-map-member)) 16%, transparent);
+    color: var(--gp-fg);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .gp-home-map-addnode-status[data-tone='error'] {
+    color: #f0dca0;
+  }
+
+  .gp-home-map-addnode-status[data-tone='success'] {
+    color: var(--gp-map-member);
+  }
+
+  .gp-home-map-addnode-status:empty {
+    display: none;
+  }
+
   .gp-home-map-addnode-footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    flex-wrap: wrap;
+    padding-top: 4px;
   }
-  .gp-home-map-addnode-mode {
-    flex: 1 1 14rem;
-    margin: 0;
-    color: var(--gp-fg-muted);
-    font-size: 12px;
-    line-height: 1.4;
-  }
+
+  .gp-home-map-addnode-back,
+  .gp-home-map-addnode-next,
   .gp-home-map-addnode-submit {
     min-height: 48px;
-    min-width: 8.5rem;
-    border: 0;
     border-radius: var(--gp-radius-pill);
     padding: 10px 18px;
-    background: var(--gp-primary);
-    color: var(--gp-primary-fg);
     font: inherit;
-    font-weight: 800;
+    font-weight: 850;
     cursor: pointer;
-    transition: transform 160ms ease, opacity 160ms ease;
+    transition: transform 160ms ease, opacity 160ms ease, background 160ms ease;
   }
-  .gp-home-map-addnode-submit:disabled { opacity: 0.64; cursor: wait; }
-  .gp-home-map-addnode-submit:not(:disabled):hover { transform: translateY(-1px); }
-  .gp-home-map-addnode-status {
-    margin: 0;
-    color: var(--gp-primary);
-    font-size: 13px;
-    line-height: 1.4;
+
+  .gp-home-map-addnode-back {
+    border: 1px solid rgba(250, 247, 238, 0.16);
+    background: transparent;
+    color: var(--gp-fg-muted);
   }
-  .gp-home-map-addnode-status:empty { display: none; }
-  .gp-home-map-addnode-status[data-tone='error'] { color: #f0dca0; }
-  .gp-home-map-addnode-status[data-tone='success'] { color: var(--gp-primary); }
+
+  .gp-home-map-addnode-next,
+  .gp-home-map-addnode-submit {
+    margin-left: auto;
+    border: 0;
+    background: var(--gp-map-member);
+    color: var(--gp-green-950);
+    box-shadow: 0 12px 32px -18px var(--gp-map-member);
+  }
+
+  .gp-home-map-addnode-back:hover,
+  .gp-home-map-addnode-back:focus-visible,
+  .gp-home-map-addnode-next:not(:disabled):hover,
+  .gp-home-map-addnode-next:focus-visible,
+  .gp-home-map-addnode-submit:not(:disabled):hover,
+  .gp-home-map-addnode-submit:focus-visible {
+    transform: translateY(-1px);
+    outline: none;
+  }
+
+  .gp-home-map-addnode-next:disabled,
+  .gp-home-map-addnode-submit:disabled {
+    opacity: 0.46;
+    cursor: not-allowed;
+    transform: none;
+  }
 
   @container (max-width: 640px) {
-    .gp-home-map-addnode-grid,
-    .gp-home-map-addnode-theme-options {
+    .gp-home-map-addnode-dialog {
+      width: calc(100vw - 20px);
+      height: calc(100svh - 20px);
+      padding: 20px;
+      border-radius: var(--gp-radius-lg);
+    }
+
+    .gp-home-map-addnode-close {
+      top: 16px;
+      right: 16px;
+    }
+
+    .gp-home-map-addnode-progress {
+      margin-bottom: 16px;
+    }
+
+    .gp-home-map-addnode-dialog h2 {
+      max-width: 11ch;
+      font-size: 36px;
+    }
+
+    .gp-home-map-addnode-theme-options,
+    .gp-home-map-addnode-grid {
       grid-template-columns: 1fr;
     }
+
+    .gp-home-map-addnode-review > div {
+      grid-template-columns: 1fr auto;
+    }
+
+    .gp-home-map-addnode-review > div > span {
+      grid-column: 1 / -1;
+    }
+
     .gp-home-map-addnode-footer {
-      flex-direction: column;
       align-items: stretch;
     }
-    .gp-home-map-addnode-submit { width: 100%; }
+
+    .gp-home-map-addnode-back,
+    .gp-home-map-addnode-next,
+    .gp-home-map-addnode-submit {
+      flex: 1 1 auto;
+      padding-inline: 14px;
+    }
   }
 
   @keyframes gpMapThread {
@@ -2055,38 +3177,76 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     .gp-home-map-stats {
       top: 8px;
       right: 8px;
-      padding: 6px 10px;
+      padding: 8px 10px;
       gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
 
     .gp-home-map-stat-label {
-      display: none;
+      font-size: 10px;
+      letter-spacing: 0.08em;
     }
 
     .gp-home-map-stat-value {
-      font-size: 14px;
+      font-size: 18px;
     }
 
     .gp-home-map-focus {
-      left: 8px;
-      bottom: 8px;
       padding: 8px 10px;
-      max-width: 70%;
+      min-width: 180px;
+      max-width: min(240px, calc(100% - 16px));
     }
 
     .gp-home-map-focus-name {
       font-size: 14px;
     }
 
-    .gp-home-map-legend-item {
-      font-size: 11px;
-      padding: 5px 10px;
+    .gp-home-map-controls {
+      left: 8px;
+      bottom: 8px;
+      max-width: calc(100% - 16px);
+    }
+
+    .gp-home-map-filter-panel {
+      width: min(340px, calc(100vw - 40px));
+      max-height: 44cqw;
+      padding: 10px;
+    }
+
+    .gp-home-map-filter-panel.is-themes {
+      grid-template-columns: 1fr;
+    }
+
+    .gp-home-map-filter-tabs {
+      gap: 5px;
+    }
+
+    .gp-home-map-filter-tabs button {
+      min-height: 36px;
+      padding-inline: 12px;
+      font-size: 12px;
     }
   }
 
   @container (max-width: 480px) {
-    .gp-home-map-legend-item:nth-child(n + 5) {
-      display: none;
+    .gp-home-map-stats {
+      max-width: 52%;
+    }
+
+    .gp-home-map-stat {
+      gap: 6px;
+    }
+
+    .gp-home-map-stat-mark {
+      width: 9px;
+      height: 9px;
+    }
+
+    .gp-home-map-filter-tabs button {
+      min-height: 34px;
+      padding-inline: 10px;
+      font-size: 11px;
     }
   }
 </style>
