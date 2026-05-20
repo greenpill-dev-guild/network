@@ -29,15 +29,21 @@ Run installs and validation from the repo root.
 - `bun run content:snapshot` - validate current operational content and refresh the static fallback snapshot.
 - `bun run content:migrate` - one-time seed current operational content into the Postgres `content` schema; it refuses to run after rows exist unless `--allow-existing` is passed for controlled missing-row recovery.
 - `bun run directus:content:setup` - apply Directus roles, policies, and permissions for operational content and intake moderation after Directus boots.
+- `bun run directus:content-access` - assign Directus users to chapter or guild editing scopes from a TSV file.
+- `bun run directus:studio:setup` - apply steward-friendly Directus Data Studio collection and field metadata.
+- `bun run directus:steward:smoke` - create a temporary steward user and verify scoped Directus editing behavior.
 - `bun run test:agent`, `bun run test:chapter-impact`, `bun run test:content`, `bun run test:map-nodes`, `bun run plans:validate` - focused contract checks.
 
 ## Architecture Notes
 
 The public website remains static. Keystatic is enabled only during local website dev for editorial and site-composition content; there is no deployed Keystatic server or public website database connection.
 
-Operational content for chapters, public steward profiles, guilds, projects,
-locations, and impact source bindings is Directus/Postgres-owned after the
-one-time migration. The website consumes the approved public snapshot from
+Operational content for chapters, chapter initiatives, public steward profiles,
+guilds, guild-owned projects, locations, and impact source bindings is
+Directus/Postgres-owned after the one-time migration. Chapter initiatives are
+chapter-owned local programs, campaigns, events, impact efforts, education
+series, cleanups, and Water Cup-style work; `projects` remain guild-owned
+tools, products, and workstreams. The website consumes the approved public snapshot from
 `packages/website/src/data/operational-content-snapshot.json` by default, or
 from `OPERATIONAL_CONTENT_SNAPSHOT_URL` during production builds.
 
@@ -49,7 +55,7 @@ Website source and config live under `packages/website`:
 - `packages/website/src/content/config.ts` - Astro content schema validation.
 - `packages/website/keystatic.config.ts` - local Keystatic config.
 - `packages/website/src/scripts/` - browser interaction scripts.
-- `packages/website/src/styles/global.css` - global site styles.
+- `packages/website/src/styles/gp-tokens.css` - canonical design tokens + base styles (cascade layers, clamp() type). The UI standard is `packages/website/DESIGN.md`; `packages/website/CLAUDE.md` is the always-loaded rule digest. Verify UI with `bun run ui:verify` (`scripts/ui-verify.ts`, renders at 375/1024/1440 + axe) or the `greenpill-ui` skill.
 
 Generated public JSON routes include `/locations.json` and `/impact-sources.json`, derived from the approved operational content snapshot. Keep those outputs public-safe.
 
@@ -60,7 +66,10 @@ manage `directus_*` system tables, roles, permissions, and Data Studio views, bu
 Greenpill-owned schema migrations remain in `packages/agent/migrations`.
 Directus can edit the Greenpill-owned `content`, `intake`, and `impact` schemas
 only through role-scoped admin access configured by
-`bun run directus:content:setup`; it must not become the public API.
+`bun run directus:content:setup`; `bun run directus:studio:setup` owns the
+Data Studio labels, field ordering, interfaces, displays, and hidden technical
+collections that make the schema usable for stewards. Directus must not become
+the public API.
 
 ## Deployment Notes
 
