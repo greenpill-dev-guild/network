@@ -1,4 +1,4 @@
-import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { createDatabaseClient } from './db.js';
 
 export const RESEND_WEBHOOK_ROUTE = '/webhooks/resend';
@@ -23,6 +23,18 @@ const OUTBOUND_STATUS_BY_EVENT = Object.freeze({
   'email.bounced': 'bounced',
   'email.complained': 'complained',
   'email.suppressed': 'suppressed',
+});
+
+const STATUS_RANK = Object.freeze({
+  recorded: 0,
+  queued: 1,
+  sent: 2,
+  delivery_delayed: 3,
+  delivered: 4,
+  failed: 5,
+  bounced: 5,
+  complained: 5,
+  suppressed: 5,
 });
 
 type UnknownRecord = Record<string, any>;
@@ -54,6 +66,9 @@ const isRecord = (value: unknown): value is UnknownRecord => (
   typeof value === 'object' && value !== null && !Array.isArray(value)
 );
 const truncate = (value: string, max = 240): string => value.length > max ? value.slice(0, max) : value;
+const providerStatusRank = (status: string): number => (
+  (STATUS_RANK as Record<string, number>)[status] ?? 0
+);
 
 function toSqlJson(sql: SqlLike, value: unknown): unknown {
   return typeof sql.json === 'function' ? sql.json(value) : JSON.stringify(value);
@@ -147,9 +162,10 @@ function normalizedEmailAddress(value: unknown): string {
   return (bracketMatch?.[1] ?? email).trim().toLowerCase();
 }
 
-function hashRecipient(value: unknown): string {
+function hashRecipient(value: unknown, secret: string): string {
   const email = normalizedEmailAddress(value);
-  return email ? createHash('sha256').update(email).digest('hex') : '';
+  const key = cleanString(secret);
+  return email && key ? createHmac('sha256', key).update(email).digest('hex') : '';
 }
 
 function firstRecipient(value: unknown): string {
@@ -157,22 +173,28 @@ function firstRecipient(value: unknown): string {
   return cleanString(value);
 }
 
+function safeProviderCode(value: unknown, fallback = 'provider_diagnostic'): string {
+  const cleaned = cleanString(value).toLowerCase().replace(/\s+/g, '_');
+  if (!cleaned) return '';
+  if (!/^[a-z0-9_.:-]+$/.test(cleaned) || cleaned.includes('@')) return fallback;
+  return truncate(cleaned, 80);
+}
+
 function reasonForEvent(eventType: string, data: UnknownRecord): string {
   if (eventType === 'email.failed' && isRecord(data.failed)) {
-    return truncate(cleanString(data.failed.reason));
+    return safeProviderCode(data.failed.reason);
   }
   if (eventType === 'email.bounced' && isRecord(data.bounce)) {
     return truncate([
-      cleanString(data.bounce.type),
-      cleanString(data.bounce.subType),
-      cleanString(data.bounce.message),
+      safeProviderCode(data.bounce.type),
+      safeProviderCode(data.bounce.subType),
     ].filter(Boolean).join(': '));
   }
   if (eventType === 'email.suppressed' && isRecord(data.suppressed)) {
-    return truncate(cleanString(data.suppressed.reason) || cleanString(data.suppressed.message));
+    return safeProviderCode(data.suppressed.reason);
   }
   if (eventType === 'email.delivery_delayed' && isRecord(data.delivery_delayed)) {
-    return truncate(cleanString(data.delivery_delayed.reason) || cleanString(data.delivery_delayed.message));
+    return safeProviderCode(data.delivery_delayed.reason);
   }
   if (eventType === 'email.complained') return 'spam_complaint';
   return '';
@@ -189,8 +211,8 @@ function metadataForEvent(eventType: string, data: UnknownRecord, reason: string
 
   if (reason) metadata.reason = reason;
   if (eventType === 'email.bounced' && isRecord(data.bounce)) {
-    metadata.bounceType = cleanString(data.bounce.type);
-    metadata.bounceSubType = cleanString(data.bounce.subType);
+    metadata.bounceType = safeProviderCode(data.bounce.type);
+    metadata.bounceSubType = safeProviderCode(data.bounce.subType);
   }
   if (eventType === 'email.received') {
     metadata.attachmentCount = attachments.length;
@@ -198,7 +220,11 @@ function metadataForEvent(eventType: string, data: UnknownRecord, reason: string
   return metadata;
 }
 
-export function toResendWebhookEvent(payload: unknown, providerEventId: string): ResendWebhookEvent | null {
+export function toResendWebhookEvent(
+  payload: unknown,
+  providerEventId: string,
+  { recipientHashSecret }: { recipientHashSecret: string }
+): ResendWebhookEvent | null {
   if (!isRecord(payload)) return null;
   const eventType = cleanString(payload.type);
   if (!RESEND_WEBHOOK_EVENT_TYPES.includes(eventType)) return null;
@@ -212,7 +238,7 @@ export function toResendWebhookEvent(payload: unknown, providerEventId: string):
     providerMessageId,
     eventType,
     eventCreatedAt: cleanString(payload.created_at),
-    recipientHash: hashRecipient(recipient),
+    recipientHash: hashRecipient(recipient, recipientHashSecret),
     reason,
     metadata: metadataForEvent(eventType, data, reason),
     providerStatus: cleanString(OUTBOUND_STATUS_BY_EVENT[eventType]),
@@ -265,6 +291,18 @@ export async function recordResendWebhookEvent(sql: SqlLike, event: ResendWebhoo
         provider_status = ${event.providerStatus},
         provider_error = ${event.reason || null}
       where provider_message_id = ${event.providerMessageId}
+        and case provider_status
+          when 'recorded' then 0
+          when 'queued' then 1
+          when 'sent' then 2
+          when 'delivery_delayed' then 3
+          when 'delivered' then 4
+          when 'failed' then 5
+          when 'bounced' then 5
+          when 'complained' then 5
+          when 'suppressed' then 5
+          else 0
+        end <= ${providerStatusRank(event.providerStatus)}
     `;
   }
 
@@ -288,12 +326,14 @@ export async function handleResendWebhookRequest({
   rawBody,
   headers,
   webhookSecret,
+  recipientHashSecret,
   repository,
   now = Date.now(),
 }: {
   rawBody: string;
   headers: ResendWebhookHeaders;
   webhookSecret: string;
+  recipientHashSecret?: string;
   repository: ResendWebhookRepository;
   now?: number;
 }): Promise<{ status: number; body: UnknownRecord }> {
@@ -311,7 +351,9 @@ export async function handleResendWebhookRequest({
     return { status: 400, body: { ok: false, error: { code: 'invalid_webhook_payload' } } };
   }
 
-  const event = toResendWebhookEvent(payload, cleanString(headers.svixId));
+  const event = toResendWebhookEvent(payload, cleanString(headers.svixId), {
+    recipientHashSecret: cleanString(recipientHashSecret) || webhookSecret,
+  });
   if (!event) return { status: 202, body: { ok: true, ignored: true } };
 
   await repository.recordEvent(event);

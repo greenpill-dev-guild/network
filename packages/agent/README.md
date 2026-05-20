@@ -50,7 +50,9 @@ guard before returning data. `/impact/chapters/:slug`, `POST /map-nodes`, and
 `GET /map-nodes/public` preserve the same public/private boundary for impact and
 map-node data.
 
-`POST /webhooks/resend` receives Resend email delivery and inbound metadata. Set
-`RESEND_WEBHOOK_SECRET` from the Resend webhook details page before enabling the
-production endpoint. The route verifies Svix signatures and stores only
-operational metadata, never message bodies or raw recipient addresses.
+`POST /webhooks/resend` receives Resend email delivery and inbound metadata at
+`https://agent.greenpill.network/webhooks/resend`. Set `RESEND_WEBHOOK_SECRET`
+from the Resend webhook details page before enabling the production endpoint, and
+set `RESEND_WEBHOOK_RECIPIENT_HASH_SECRET` so stored recipient hashes are keyed.
+The route verifies Svix signatures and stores only operational metadata, never
+message bodies, raw recipient addresses, or free-form provider diagnostics.

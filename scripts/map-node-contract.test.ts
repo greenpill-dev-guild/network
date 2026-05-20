@@ -392,6 +392,7 @@ test('resend webhook migration stores delivery metadata without raw message cont
   assert.doesNotMatch(webhookSql, /raw_recipient/);
   assert.doesNotMatch(webhookSql, /message_body/);
   assert.doesNotMatch(webhookSql, /\bhtml\b/);
+  assert.match(webhookSql, /free-form provider diagnostic/);
 });
 
 test('home map intake requires a valid email and stores local pending only after server accept', async () => {

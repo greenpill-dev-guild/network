@@ -1,6 +1,7 @@
 -- Resend webhook delivery telemetry for map magic-link email operations.
 -- Store provider metadata only; do not persist message bodies, subjects,
--- sender addresses, or raw recipient addresses in this operational log.
+-- sender addresses, raw recipient addresses, or free-form provider diagnostic
+-- messages in this operational log.
 
 create extension if not exists pgcrypto;
 

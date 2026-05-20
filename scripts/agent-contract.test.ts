@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash, createHmac } from 'node:crypto';
 import { test } from 'node:test';
 import {
   createAgentApp,
@@ -73,6 +74,7 @@ test('agent package exposes stable public route contracts', () => {
 });
 
 const RESEND_TEST_WEBHOOK_SECRET = `whsec_${Buffer.from('test-resend-webhook-secret').toString('base64')}`;
+const RESEND_TEST_RECIPIENT_HASH_SECRET = 'test-recipient-hash-secret';
 
 function signedResendWebhookRequest(payload, {
   secret = RESEND_TEST_WEBHOOK_SECRET,
@@ -101,6 +103,7 @@ test('resend webhook route verifies signatures and records sanitized delivery me
   const app = createAgentApp({
     env: {
       RESEND_WEBHOOK_SECRET: RESEND_TEST_WEBHOOK_SECRET,
+      RESEND_WEBHOOK_RECIPIENT_HASH_SECRET: RESEND_TEST_RECIPIENT_HASH_SECRET,
     },
     resendWebhookRepository: {
       async recordEvent(event) {
@@ -119,7 +122,7 @@ test('resend webhook route verifies signatures and records sanitized delivery me
       bounce: {
         type: 'Permanent',
         subType: 'Suppressed',
-        message: 'Recipient is suppressed.',
+        message: 'Recipient Person@Example.org is suppressed.',
       },
     },
   });
@@ -137,11 +140,55 @@ test('resend webhook route verifies signatures and records sanitized delivery me
   assert.equal(recorded[0].providerMessageId, '1f3ab49b-c6ed-4790-b3f2-0b2550282120');
   assert.equal(recorded[0].providerStatus, 'bounced');
   assert.match(recorded[0].recipientHash, /^[a-f0-9]{64}$/);
-  assert.equal(recorded[0].metadata.bounceType, 'Permanent');
-  assert.equal(recorded[0].metadata.bounceSubType, 'Suppressed');
+  assert.equal(
+    recorded[0].recipientHash,
+    createHmac('sha256', RESEND_TEST_RECIPIENT_HASH_SECRET).update('person@example.org').digest('hex')
+  );
+  assert.notEqual(
+    recorded[0].recipientHash,
+    createHash('sha256').update('person@example.org').digest('hex')
+  );
+  assert.equal(recorded[0].reason, 'permanent: suppressed');
+  assert.equal(recorded[0].metadata.bounceType, 'permanent');
+  assert.equal(recorded[0].metadata.bounceSubType, 'suppressed');
   assert.doesNotMatch(JSON.stringify(recorded[0]), /Person@Example\.org/i);
   assert.doesNotMatch(JSON.stringify(recorded[0]), /Private map-node owner message/);
   assert.doesNotMatch(JSON.stringify(recorded[0]), /map@mail\.greenpill\.network/);
+});
+
+test('resend webhook route stores only safe provider reason codes', async () => {
+  const recorded = [];
+  const app = createAgentApp({
+    env: {
+      RESEND_WEBHOOK_SECRET: RESEND_TEST_WEBHOOK_SECRET,
+      RESEND_WEBHOOK_RECIPIENT_HASH_SECRET: RESEND_TEST_RECIPIENT_HASH_SECRET,
+    },
+    resendWebhookRepository: {
+      async recordEvent(event) {
+        recorded.push(event);
+      },
+    },
+  });
+  const request = signedResendWebhookRequest({
+    type: 'email.failed',
+    created_at: '2026-05-20T02:00:00.000Z',
+    data: {
+      email_id: '1f3ab49b-c6ed-4790-b3f2-0b2550282120',
+      to: ['Person@Example.org'],
+      failed: { reason: 'Mailbox Person@Example.org rejected this message' },
+    },
+  });
+
+  const response = await app.request(RESEND_WEBHOOK_ROUTE, {
+    method: 'POST',
+    headers: request.headers,
+    body: request.rawBody,
+  });
+
+  assert.equal(response.status, 202);
+  assert.equal(recorded[0].reason, 'provider_diagnostic');
+  assert.equal(recorded[0].metadata.reason, 'provider_diagnostic');
+  assert.doesNotMatch(JSON.stringify(recorded[0]), /Person@Example\.org/i);
 });
 
 test('resend webhook route rejects invalid signatures before persistence', async () => {
@@ -149,6 +196,7 @@ test('resend webhook route rejects invalid signatures before persistence', async
   const app = createAgentApp({
     env: {
       RESEND_WEBHOOK_SECRET: RESEND_TEST_WEBHOOK_SECRET,
+      RESEND_WEBHOOK_RECIPIENT_HASH_SECRET: RESEND_TEST_RECIPIENT_HASH_SECRET,
     },
     resendWebhookRepository: {
       async recordEvent(event) {
@@ -222,6 +270,7 @@ test('resend webhook persistence links provider message ids without raw recipien
   assert.ok(update);
   assert.equal(update.values.includes('failed'), true);
   assert.equal(update.values.includes('reached_daily_quota'), true);
+  assert.match(update.text, /case provider_status/);
 });
 
 test('agent package exposes a Hono app with data-backed public routes', async () => {

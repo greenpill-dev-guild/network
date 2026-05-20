@@ -138,6 +138,7 @@ export function createAgentApp({
           svixSignature: context.req.header('svix-signature'),
         },
         webhookSecret: env.RESEND_WEBHOOK_SECRET ?? '',
+        recipientHashSecret: env.RESEND_WEBHOOK_RECIPIENT_HASH_SECRET ?? '',
         repository: resendWebhookRepository as any,
       });
       return context.json(result.body, result.status as any);
