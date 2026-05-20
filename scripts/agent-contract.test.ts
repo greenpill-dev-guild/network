@@ -853,6 +853,45 @@ test('map-node submissions stay pending unless live onboarding is enabled', asyn
   );
 });
 
+test('map-node steward role can only be set by an allowlisted owner email', async () => {
+  const regular = createFakeSubmissionSql({ liveOnboardingEnabled: false });
+  await createMapNodeSubmission(regular.sql, {
+    name: 'Public Claimed Steward',
+    place: 'Oakland',
+    lat: 37.8044,
+    long: -122.2712,
+    role: 'chapter steward',
+    email: 'person@example.org',
+  });
+
+  const regularInsert = regular.statements.find((statement) => (
+    statement.text.includes('insert into intake.map_node_submissions')
+  ));
+  assert.ok(regularInsert);
+  assert.equal(regularInsert.values.includes('chapter steward'), false);
+  assert.equal(regularInsert.values.includes('member'), true);
+
+  const steward = createFakeSubmissionSql({ liveOnboardingEnabled: false });
+  await createMapNodeSubmission(steward.sql, {
+    name: 'Allowlisted Steward',
+    place: 'Lagos',
+    lat: 6.5244,
+    long: 3.3792,
+    role: 'member',
+    email: 'Steward@Example.org',
+  }, {}, {
+    env: {
+      MAP_NODE_STEWARD_EMAIL_ALLOWLIST: 'steward@example.org, other@example.org',
+    },
+  });
+
+  const stewardInsert = steward.statements.find((statement) => (
+    statement.text.includes('insert into intake.map_node_submissions')
+  ));
+  assert.ok(stewardInsert);
+  assert.equal(stewardInsert.values.includes('steward'), true);
+});
+
 test('live onboarding auto-approves submissions and appends private audit row', async () => {
   const { sql, statements } = createFakeSubmissionSql({ liveOnboardingEnabled: true });
   const node = await createMapNodeSubmission(sql, {

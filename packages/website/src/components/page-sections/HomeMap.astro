@@ -142,8 +142,9 @@ const chapterNodes: ChapterNode[] = chapters
     const weight = c.data.featuredWeight ?? 0;
     const status = c.data.status || 'active';
     const size = status !== 'active' ? 1.8 : weight >= 70 ? 2.4 : 2.1;
+    const chapterNodeId = `chapter:${c.id}`;
     return {
-      id: c.id,
+      id: chapterNodeId,
       type: 'chapter' as const,
       name: c.data.name,
       city: c.data.city || '',
@@ -171,7 +172,7 @@ for (const c of chapters) {
       type: 'steward' as const,
       name: s.name,
       role: s.role || 'Steward',
-      chapterId: c.id,
+      chapterId: `chapter:${c.id}`,
       chapterName: c.data.name,
       themes: (c.data.themeSlugs || []) as string[],
       x: lonToX(c.data.long) + Math.cos(angle) * radius,
@@ -182,9 +183,9 @@ for (const c of chapters) {
 
 const allNodes: AnyNode[] = [...chapterNodes, ...stewardNodes];
 
-// Mycelial threads: between chapters that share at least one theme. Each pair
-// gets a single edge tinted by the shared theme; we bias toward shorter spans
-// so the network reads as place-based.
+// Mycelial threads start with people/stewards. Chapter anchors only receive a
+// fallback thread when a sparse data set has no person-to-person relationship
+// yet, so the visual model stays centered on members rather than chapters.
 type Edge = {
   fromId: string;
   toId: string;
@@ -198,43 +199,86 @@ type Edge = {
 };
 const edges: Edge[] = [];
 const seen = new Set<string>();
-for (let i = 0; i < chapterNodes.length; i++) {
-  for (let j = i + 1; j < chapterNodes.length; j++) {
-    const a = chapterNodes[i];
-    const b = chapterNodes[j];
-    const shared = a.themes.find((t) => b.themes.includes(t));
-    if (!shared) continue;
-    const dx = a.x - b.x;
-    const dy = a.y - b.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist > 88) continue;
 
-    const key = `${a.id}-${b.id}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
+const seedForEdge = (value: string) => Array.from(value).reduce((acc, char) => (
+  ((acc * 31) + char.charCodeAt(0)) % 100000
+), 17);
 
-    // Bow the path perpendicular to the segment so threads read as organic.
-    const mx = (a.x + b.x) / 2;
-    const my = (a.y + b.y) / 2;
-    const len = Math.max(0.1, dist);
-    const nx = -dy / len;
-    const ny = dx / len;
-    const offset = Math.min(6, len * 0.18);
-    const cx = mx + nx * offset;
-    const cy = my + ny * offset;
+const edgeRand = (seed: number) => {
+  let state = seed || 1;
+  return () => {
+    state = (state * 9301 + 49297) % 233280;
+    return state / 233280;
+  };
+};
 
-    edges.push({
-      fromId: a.id,
-      toId: b.id,
-      fromX: a.x,
-      fromY: a.y,
-      toX: b.x,
-      toY: b.y,
-      theme: shared,
-      d: `M ${a.x.toFixed(2)} ${a.y.toFixed(2)} Q ${cx.toFixed(2)} ${cy.toFixed(2)} ${b.x.toFixed(2)} ${b.y.toFixed(2)}`,
-      delay: (edges.length % 9) * 0.45,
-    });
+const mycelialPath = (a: { x: number; y: number }, b: { x: number; y: number }, seed: number) => {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist < 0.1) return `M ${a.x.toFixed(2)} ${a.y.toFixed(2)}`;
+  const rand = edgeRand(seed);
+  const nx = -dy / dist;
+  const ny = dx / dist;
+  const segments = Math.max(4, Math.min(12, Math.round(dist / 9)));
+  const points: Array<[number, number]> = [];
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const taper = Math.sin(t * Math.PI);
+    const wobble = (rand() - 0.5) * Math.min(8, dist * 0.16) * taper;
+    points.push([
+      a.x + dx * t + nx * wobble,
+      a.y + dy * t + ny * wobble,
+    ]);
   }
+
+  let d = `M ${points[0][0].toFixed(2)} ${points[0][1].toFixed(2)}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[Math.max(0, i - 1)];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[Math.min(points.length - 1, i + 2)];
+    const k = 0.2;
+    const c1x = p1[0] + (p2[0] - p0[0]) * k;
+    const c1y = p1[1] + (p2[1] - p0[1]) * k;
+    const c2x = p2[0] - (p3[0] - p1[0]) * k;
+    const c2y = p2[1] - (p3[1] - p1[1]) * k;
+    d += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)} ${c2x.toFixed(2)} ${c2y.toFixed(2)} ${p2[0].toFixed(2)} ${p2[1].toFixed(2)}`;
+  }
+  return d;
+};
+
+const addEdge = (a: AnyNode, b: AnyNode, theme: string) => {
+  const key = [a.id, b.id].sort().join(':');
+  if (!theme || seen.has(key)) return;
+  seen.add(key);
+  edges.push({
+    fromId: a.id,
+    toId: b.id,
+    fromX: a.x,
+    fromY: a.y,
+    toX: b.x,
+    toY: b.y,
+    theme,
+    d: mycelialPath(a, b, seedForEdge(key)),
+    delay: (edges.length % 9) * 0.45,
+  });
+};
+
+for (let i = 0; i < stewardNodes.length; i++) {
+  for (let j = i + 1; j < stewardNodes.length; j++) {
+    const a = stewardNodes[i];
+    const b = stewardNodes[j];
+    const shared = a.themes.find((t) => b.themes.includes(t));
+    if (shared) addEdge(a, b, shared);
+  }
+}
+
+for (const steward of stewardNodes) {
+  if (edges.some((edge) => edge.fromId === steward.id || edge.toId === steward.id)) continue;
+  const chapter = chapterNodes.find((node) => node.id === steward.chapterId);
+  const shared = chapter?.themes.find((theme) => steward.themes.includes(theme));
+  if (chapter && shared) addEdge(steward, chapter, shared);
 }
 
 const themeColor = (slug: string) => THEME_INFO[slug]?.color ?? '#B8E835';
@@ -311,6 +355,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
           );
         })}
       </g>
+      <g class="gp-home-map-threads" data-home-map-dynamic-threads aria-hidden="true"></g>
 
       {/* steward nodes — gold, smaller, sit beside their chapter. Two
           ripple circles render in front and only animate on focus, giving
@@ -480,9 +525,12 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     saveLocalPendingNode,
   } from '@greenpill-network/shared/map-nodes';
 
-  type MemberNode = {
+  type DynamicMapNodeType = 'member' | 'steward' | 'project' | 'place';
+
+  type DynamicMapNode = {
     key: string;
     sourceId: string;
+    type: DynamicMapNodeType;
     name: string;
     place: string;
     themes: string[];
@@ -517,6 +565,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     const agentBaseUrl = isLocalHost ? 'http://127.0.0.1:8787' : 'https://agent.greenpill.network';
 
     const membersGroup = root.querySelector('[data-home-map-members]') as SVGGElement | null;
+    const dynamicThreadsGroup = root.querySelector('[data-home-map-dynamic-threads]') as SVGGElement | null;
     const focusEl = root.querySelector('[data-home-map-focus]') as HTMLElement | null;
     const focusRole = root.querySelector('[data-focus-role]') as HTMLElement | null;
     const focusName = root.querySelector('[data-focus-name]') as HTMLElement | null;
@@ -538,6 +587,58 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     const toFiniteNumber = (value: unknown) => {
       const num = typeof value === 'number' ? value : Number(value);
       return Number.isFinite(num) ? num : null;
+    };
+
+    const seedForEdge = (value: string) => Array.from(value).reduce((acc, char) => (
+      ((acc * 31) + char.charCodeAt(0)) % 100000
+    ), 17);
+
+    const edgeRand = (seed: number) => {
+      let state = seed || 1;
+      return () => {
+        state = (state * 9301 + 49297) % 233280;
+        return state / 233280;
+      };
+    };
+
+    const buildMycelialPath = (
+      a: { x: number; y: number },
+      b: { x: number; y: number },
+      seed: number
+    ) => {
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 0.1) return `M ${a.x.toFixed(2)} ${a.y.toFixed(2)}`;
+      const rand = edgeRand(seed);
+      const nx = -dy / dist;
+      const ny = dx / dist;
+      const segments = Math.max(4, Math.min(12, Math.round(dist / 9)));
+      const points: Array<[number, number]> = [];
+      for (let i = 0; i <= segments; i += 1) {
+        const t = i / segments;
+        const taper = Math.sin(t * Math.PI);
+        const wobble = (rand() - 0.5) * Math.min(8, dist * 0.16) * taper;
+        points.push([
+          a.x + dx * t + nx * wobble,
+          a.y + dy * t + ny * wobble,
+        ]);
+      }
+
+      let d = `M ${points[0][0].toFixed(2)} ${points[0][1].toFixed(2)}`;
+      for (let i = 0; i < points.length - 1; i += 1) {
+        const p0 = points[Math.max(0, i - 1)];
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        const p3 = points[Math.min(points.length - 1, i + 2)];
+        const k = 0.2;
+        const c1x = p1[0] + (p2[0] - p0[0]) * k;
+        const c1y = p1[1] + (p2[1] - p0[1]) * k;
+        const c2x = p2[0] - (p3[0] - p1[0]) * k;
+        const c2y = p2[1] - (p3[1] - p1[1]) * k;
+        d += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)} ${c2x.toFixed(2)} ${c2y.toFixed(2)} ${p2[0].toFixed(2)} ${p2[1].toFixed(2)}`;
+      }
+      return d;
     };
 
     // ---- Hover / focus card (lightweight, pointer-events:none) -------------
@@ -581,7 +682,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
         const raw = target.querySelector('title')?.textContent || '';
         const parts = raw.split('·').map((s) => s.trim());
         focusName.textContent = parts[0] || '';
-        focusRole.textContent = type === 'chapter' ? 'Chapter' : type === 'member' ? 'Member' : 'Steward';
+        focusRole.textContent = type.charAt(0).toUpperCase() + type.slice(1);
         focusMeta.textContent = parts.slice(1).join(' · ');
         focusEl.setAttribute('aria-hidden', 'false');
       }
@@ -621,13 +722,16 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
       root.querySelectorAll('.gp-home-map-node-link.is-selected').forEach((l) => l.classList.remove('is-selected'));
     };
 
-    const openSelected = (member: MemberNode, link: Element) => {
+    const openSelected = (member: DynamicMapNode, link: Element) => {
       if (!selectedEl) return;
       resetUpdateState();
       root.querySelectorAll('.gp-home-map-node-link.is-selected').forEach((l) => l.classList.remove('is-selected'));
       link.classList.add('is-selected');
 
-      if (selectedKicker) selectedKicker.textContent = member.pending ? 'Pending node' : 'Member node';
+      if (selectedKicker) {
+        const typeLabel = member.type.charAt(0).toUpperCase() + member.type.slice(1);
+        selectedKicker.textContent = member.pending ? `Pending ${member.type} node` : `${typeLabel} node`;
+      }
       if (selectedName) selectedName.textContent = member.name;
       if (selectedPlace) selectedPlace.textContent = member.place;
       if (selectedThemes) {
@@ -700,7 +804,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
 
     // ---- Member node injection ---------------------------------------------
     const injectedKeys = new Set<string>();
-    const memberByKey = new Map<string, MemberNode>();
+    const memberByKey = new Map<string, DynamicMapNode>();
 
     const makeCircle = (cls: string, cx: number, cy: number, r: number) => {
       const circle = document.createElementNS(SVG_NS, 'circle');
@@ -717,7 +821,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
       link.addEventListener('focus', () => setFocus(link));
       link.addEventListener('mouseleave', clearFocus);
       link.addEventListener('blur', clearFocus);
-      if (!link.classList.contains('is-member')) return;
+      if (!(link as HTMLElement).dataset.memberKey) return;
       const open = () => {
         const key = (link as HTMLElement).dataset.memberKey || '';
         const member = memberByKey.get(key);
@@ -733,7 +837,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
       });
     };
 
-    const injectMember = (member: MemberNode) => {
+    const injectMember = (member: DynamicMapNode) => {
       if (!membersGroup || injectedKeys.has(member.key)) return;
       injectedKeys.add(member.key);
       memberByKey.set(member.key, member);
@@ -744,21 +848,24 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
       applyScope(group);
       group.setAttribute(
         'class',
-        `gp-home-map-node-link is-member${member.pending ? ' is-pending' : ''}`
+        `gp-home-map-node-link is-${member.type}${member.pending ? ' is-pending' : ''}`
       );
       group.setAttribute('tabindex', '0');
       group.setAttribute('role', 'button');
       group.setAttribute('data-node-id', member.key);
-      group.setAttribute('data-node-type', 'member');
+      group.setAttribute('data-node-type', member.type);
       group.dataset.memberKey = member.key;
-      const roleWord = member.pending ? 'Pending member node' : 'Member node';
+      const roleWord = member.pending ? `Pending ${member.type} node` : `${member.type} node`;
       group.setAttribute('aria-label', `${member.name}, ${roleWord}${member.place ? `, ${member.place}` : ''}`);
 
       const title = document.createElementNS(SVG_NS, 'title');
-      title.textContent = `${member.name} · Member${member.place ? ` · ${member.place}` : ''}`;
+      const titleType = member.type.charAt(0).toUpperCase() + member.type.slice(1);
+      title.textContent = `${member.name} · ${titleType}${member.place ? ` · ${member.place}` : ''}`;
       group.append(title);
       group.append(makeCircle('gp-home-map-node-halo', x, y, 4));
-      group.append(makeCircle('gp-home-map-node-ring', x, y, 2.3));
+      if (member.type !== 'steward') {
+        group.append(makeCircle('gp-home-map-node-ring', x, y, 2.3));
+      }
       group.append(makeCircle('gp-home-map-node-dot', x, y, 1.6));
       group.append(makeCircle('gp-home-map-node-ripple is-ripple-a', x, y, 0));
       group.append(makeCircle('gp-home-map-node-ripple is-ripple-b', x, y, 0));
@@ -770,7 +877,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     const toMember = (
       raw: Record<string, any>,
       kind: 'approved-submission' | 'local-pending'
-    ): MemberNode | null => {
+    ): DynamicMapNode | null => {
       const lat = toFiniteNumber(raw.lat ?? raw.latitude);
       const long = toFiniteNumber(raw.long ?? raw.longitude);
       if (lat === null || long === null) return null;
@@ -780,9 +887,14 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
       const themes = Array.isArray(raw.themes) ? raw.themes.map(clean).filter(Boolean) : [];
       const place = clean(raw.place || raw.placeName || raw.city);
       const approved = kind === 'approved-submission';
+      const rawType = clean(raw.type || raw.nodeType);
+      const type = ['steward', 'project', 'place'].includes(rawType)
+        ? rawType as DynamicMapNodeType
+        : 'member';
       return {
         key: approved ? `submission:${sourceId}` : `local:${clean(raw.id) || `${lat},${long}`}`,
         sourceId: approved ? sourceId : '',
+        type,
         name,
         place,
         themes,
@@ -791,6 +903,48 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
         approved,
         pending: !approved,
       };
+    };
+
+    const renderDynamicThreads = (
+      rawNodes: Array<Record<string, any>>,
+      rawEdges: Array<Record<string, any>>
+    ) => {
+      if (!dynamicThreadsGroup) return;
+      dynamicThreadsGroup.textContent = '';
+      const nodeById = new Map<string, { x: number; y: number }>();
+      rawNodes.forEach((node) => {
+        const id = clean(node?.id);
+        const lat = toFiniteNumber(node?.lat);
+        const long = toFiniteNumber(node?.long);
+        if (!id || lat === null || long === null) return;
+        nodeById.set(id, { x: lonToX(long), y: latToY(lat) });
+      });
+
+      rawEdges.forEach((edge, idx) => {
+        const from = clean(edge?.from);
+        const to = clean(edge?.to);
+        const a = nodeById.get(from);
+        const b = nodeById.get(to);
+        if (!from || !to || !a || !b) return;
+
+        const theme = clean(edge?.theme);
+        const color = themeColor(theme);
+        const path = document.createElementNS(SVG_NS, 'path');
+        applyScope(path);
+        path.setAttribute('class', 'gp-home-map-thread');
+        path.setAttribute('data-from', from);
+        path.setAttribute('data-to', to);
+        path.setAttribute('d', buildMycelialPath(a, b, seedForEdge(`${from}:${to}:${theme}`)));
+        path.setAttribute('pathLength', '1');
+        path.setAttribute('stroke', color);
+        const growDelay = (idx % 12) * 0.12;
+        const pulseDelay = (idx % 9) * 0.45;
+        path.setAttribute(
+          'style',
+          `--thread-color: ${color}; --thread-grow-delay: ${growDelay}s; --thread-pulse-delay: ${pulseDelay}s; animation-delay: ${growDelay}s, ${pulseDelay + 1.6}s;`
+        );
+        dynamicThreadsGroup.append(path);
+      });
     };
 
     const renderLocalPending = () => {
@@ -826,6 +980,10 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
             const member = toMember(node, 'approved-submission');
             if (member) injectMember(member);
           });
+        renderDynamicThreads(
+          nodes as Array<Record<string, any>>,
+          Array.isArray(state?.edges) ? state.edges : []
+        );
       } catch {
         // Agent unavailable: keep the SSR baseline map. No-op.
       }
@@ -1081,41 +1239,61 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     opacity: 0.5;
   }
 
-  /* Member node treatment — submitted nodes injected client-side. Teal keeps
-     them distinct from lime chapters and gold stewards. */
-  .gp-home-map-node-link.is-member .gp-home-map-node-dot {
+  /* Member/project/place node treatment — submitted nodes injected client-side.
+     Teal keeps them distinct from lime chapters and gold stewards. */
+  .gp-home-map-node-link.is-member .gp-home-map-node-dot,
+  .gp-home-map-node-link.is-project .gp-home-map-node-dot,
+  .gp-home-map-node-link.is-place .gp-home-map-node-dot {
     fill: #4FD1C5;
     stroke: var(--gp-green-950);
     stroke-width: 0.5;
     transition: r 200ms cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .gp-home-map-node-link.is-member .gp-home-map-node-ring {
+  .gp-home-map-node-link.is-member .gp-home-map-node-ring,
+  .gp-home-map-node-link.is-project .gp-home-map-node-ring,
+  .gp-home-map-node-link.is-place .gp-home-map-node-ring {
     fill: none;
     stroke: #4FD1C5;
     stroke-width: 0.4;
     opacity: 0.6;
   }
-  .gp-home-map-node-link.is-member .gp-home-map-node-halo {
+  .gp-home-map-node-link.is-member .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-project .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-place .gp-home-map-node-halo {
     fill: #4FD1C5;
     opacity: 0.14;
     transition: opacity 240ms cubic-bezier(0.4, 0, 0.2, 1);
   }
   .gp-home-map-node-link.is-member:hover .gp-home-map-node-halo,
   .gp-home-map-node-link.is-member:focus-visible .gp-home-map-node-halo,
-  .gp-home-map-node-link.is-member.is-selected .gp-home-map-node-halo {
+  .gp-home-map-node-link.is-member.is-selected .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-project:hover .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-project:focus-visible .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-project.is-selected .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-place:hover .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-place:focus-visible .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-place.is-selected .gp-home-map-node-halo {
     opacity: 0.46;
   }
   .gp-home-map-node-link.is-member:focus-visible .gp-home-map-node-dot,
-  .gp-home-map-node-link.is-member.is-selected .gp-home-map-node-dot {
+  .gp-home-map-node-link.is-member.is-selected .gp-home-map-node-dot,
+  .gp-home-map-node-link.is-project:focus-visible .gp-home-map-node-dot,
+  .gp-home-map-node-link.is-project.is-selected .gp-home-map-node-dot,
+  .gp-home-map-node-link.is-place:focus-visible .gp-home-map-node-dot,
+  .gp-home-map-node-link.is-place.is-selected .gp-home-map-node-dot {
     stroke: var(--gp-lime-400);
     stroke-width: 0.8;
   }
   /* Pending nodes live only in this browser; render them as provisional. */
-  .gp-home-map-node-link.is-member.is-pending .gp-home-map-node-dot {
+  .gp-home-map-node-link.is-member.is-pending .gp-home-map-node-dot,
+  .gp-home-map-node-link.is-project.is-pending .gp-home-map-node-dot,
+  .gp-home-map-node-link.is-place.is-pending .gp-home-map-node-dot {
     fill: var(--gp-green-500);
     stroke: #4FD1C5;
   }
-  .gp-home-map-node-link.is-member.is-pending .gp-home-map-node-ring {
+  .gp-home-map-node-link.is-member.is-pending .gp-home-map-node-ring,
+  .gp-home-map-node-link.is-project.is-pending .gp-home-map-node-ring,
+  .gp-home-map-node-link.is-place.is-pending .gp-home-map-node-ring {
     stroke-dasharray: 0.8 0.8;
     opacity: 0.9;
   }
@@ -1138,7 +1316,9 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     stroke: var(--gp-secondary);
     stroke-width: 0.14;
   }
-  .gp-home-map-node-link.is-member .gp-home-map-node-ripple {
+  .gp-home-map-node-link.is-member .gp-home-map-node-ripple,
+  .gp-home-map-node-link.is-project .gp-home-map-node-ripple,
+  .gp-home-map-node-link.is-place .gp-home-map-node-ripple {
     stroke: #4FD1C5;
     stroke-width: 0.16;
   }

@@ -88,6 +88,7 @@ export const MAP_NODE_EDIT_LINK_COOLDOWN_MINUTES = 15;
 export const MAP_NODE_EDIT_LINK_DAILY_IP_LIMIT = 30;
 export const MAP_NODE_EDIT_LINK_DAILY_EMAIL_LIMIT = 10;
 export const RESEND_EMAILS_ENDPOINT = 'https://api.resend.com/emails';
+export const MAP_NODE_STEWARD_EMAIL_ALLOWLIST_ENV = 'MAP_NODE_STEWARD_EMAIL_ALLOWLIST';
 
 const cleanString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 const cleanIpAddress = (value: unknown): string => {
@@ -116,6 +117,42 @@ export function normalizeOwnerEmail(value: unknown): string {
 export function isValidOwnerEmail(value: unknown): boolean {
   const email = normalizeOwnerEmail(value);
   return email.length > 3 && email.length <= 320 && EMAIL_PATTERN.test(email);
+}
+
+export function parseMapNodeStewardEmailAllowlist(
+  env: Record<string, string | undefined> = process.env
+): Set<string> {
+  return new Set(
+    cleanString(env[MAP_NODE_STEWARD_EMAIL_ALLOWLIST_ENV])
+      .split(/[\s,]+/)
+      .map(normalizeOwnerEmail)
+      .filter(isValidOwnerEmail)
+  );
+}
+
+export function isMapNodeStewardEmailAllowlisted(
+  email: string,
+  env: Record<string, string | undefined> = process.env
+): boolean {
+  return parseMapNodeStewardEmailAllowlist(env).has(normalizeOwnerEmail(email));
+}
+
+function normalizeSubmittedRole(
+  role: unknown,
+  { stewardAllowlisted }: { stewardAllowlisted: boolean }
+): string {
+  if (stewardAllowlisted) return 'steward';
+
+  const requestedRole = cleanString(role);
+  const normalizedRole = requestedRole.toLowerCase();
+  if (
+    normalizedRole.includes('steward') ||
+    normalizedRole.includes('organizer') ||
+    normalizedRole.includes('coordinator')
+  ) {
+    return 'member';
+  }
+  return requestedRole || 'member';
 }
 
 function normalizeLookupNodeId(value: unknown): string {
@@ -246,7 +283,10 @@ export async function getMapNodeIntakeMode(sql: SqlLike): Promise<PublicMapIntak
   return enabled ? 'live' : 'moderated';
 }
 
-function normalizeSubmissionInput(input: PublicMapNodeSubmissionInput = {}) {
+function normalizeSubmissionInput(
+  input: PublicMapNodeSubmissionInput = {},
+  { env = process.env }: { env?: Record<string, string | undefined> } = {}
+) {
   const displayName = cleanString(input.displayName ?? input.name);
   const placeName = cleanString(input.placeName ?? input.place);
   const lat = normalizeNumber(input.lat ?? input.latitude);
@@ -269,6 +309,8 @@ function normalizeSubmissionInput(input: PublicMapNodeSubmissionInput = {}) {
     throw new PublicInputError('invalid_email', 'A valid email is required.');
   }
 
+  const stewardAllowlisted = isMapNodeStewardEmailAllowlisted(email, env);
+
   return {
     displayName,
     placeName,
@@ -277,7 +319,7 @@ function normalizeSubmissionInput(input: PublicMapNodeSubmissionInput = {}) {
     country: cleanString(input.country),
     lat,
     long,
-    role: cleanString(input.role ?? input.intent),
+    role: normalizeSubmittedRole(input.role ?? input.intent, { stewardAllowlisted }),
     themes: normalizeThemes(input.themes),
     publicNote: cleanString(input.publicNote ?? input.public_note),
     rawNote: cleanString(input.rawNote ?? input.raw_note),
@@ -304,9 +346,10 @@ export function getRequestMeta(context: {
 export async function createMapNodeSubmission(
   sql: SqlLike,
   input: PublicMapNodeSubmissionInput,
-  requestMeta: RequestMeta = {}
+  requestMeta: RequestMeta = {},
+  { env = process.env }: { env?: Record<string, string | undefined> } = {}
 ): Promise<SubmittedMapNode> {
-  const normalized = normalizeSubmissionInput(input);
+  const normalized = normalizeSubmissionInput(input, { env });
   const meta = {
     ipAddress: cleanString(requestMeta.ipAddress),
     userAgent: cleanString(requestMeta.userAgent),
@@ -1057,7 +1100,7 @@ export function createMapNodeRepository({
 } = {}) {
   return {
     createSubmission(input, requestMeta) {
-      return withSql(createSql, (sql) => createMapNodeSubmission(sql, input, requestMeta));
+      return withSql(createSql, (sql) => createMapNodeSubmission(sql, input, requestMeta, { env }));
     },
     requestEditLink(nodeId, email, requestMeta) {
       return withSql(createSql, (sql) => createMapNodeEditLinkRequest(sql, nodeId, email, requestMeta, {

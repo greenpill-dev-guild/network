@@ -363,27 +363,142 @@ export function generatePublicMapEdges(
   { limit = 160 }: { limit?: number } = {}
 ): PublicMapStateEdge[] {
   const chapters = nodes.filter((node) => node.type === 'chapter');
+  const stewards = nodes.filter((node) => node.type === 'steward');
+  const members = nodes.filter((node) => node.type === 'member');
   const nonChapters = nodes.filter((node) => node.type !== 'chapter');
   const edges: PublicMapStateEdge[] = [];
+  const edgeKeys = new Set<string>();
+  const personLinked = new Set<string>();
 
-  for (let i = 0; i < chapters.length; i += 1) {
-    for (let j = i + 1; j < chapters.length; j += 1) {
-      const shared = sharedThemes(chapters[i], chapters[j]);
-      if (!shared.length) continue;
-      edges.push({
-        id: `edge:${chapters[i].id}:${chapters[j].id}:${shared[0]}`,
-        from: chapters[i].id,
-        to: chapters[j].id,
-        kind: 'chapter-theme',
-        theme: shared[0],
-        weight: Math.min(3, shared.length),
-        source: 'generated-theme-match',
+  const addEdge = ({
+    from,
+    to,
+    kind,
+    theme,
+    weight = 1,
+  }: {
+    from: PublicMapStateNode;
+    to: PublicMapStateNode;
+    kind: string;
+    theme: string;
+    weight?: number;
+  }) => {
+    if (from.id === to.id || edges.length >= limit) return;
+    const key = `${kind}:${[from.id, to.id].sort().join(':')}`;
+    if (edgeKeys.has(key)) return;
+    edgeKeys.add(key);
+    edges.push({
+      id: `edge:${from.id}:${to.id}:${theme || 'related'}`,
+      from: from.id,
+      to: to.id,
+      kind,
+      theme,
+      weight: Math.min(3, Math.max(1, weight)),
+      source: 'generated-theme-match',
+    });
+    if (from.type !== 'chapter') personLinked.add(from.id);
+    if (to.type !== 'chapter') personLinked.add(to.id);
+  };
+
+  // Steward-member edges are the primary local web: members find nearby
+  // stewards first, with shared themes increasing the relationship weight.
+  for (const member of members) {
+    const nearStewards = stewards
+      .map((steward) => ({
+        steward,
+        shared: sharedThemes(member, steward),
+        distance: distanceDegrees(member, steward),
+      }))
+      .filter((candidate) => candidate.distance <= 12)
+      .sort((a, b) => (
+        b.shared.length - a.shared.length ||
+        a.distance - b.distance ||
+        a.steward.name.localeCompare(b.steward.name)
+      ))
+      .slice(0, 2);
+
+    for (const match of nearStewards) {
+      addEdge({
+        from: member,
+        to: match.steward,
+        kind: 'steward-member',
+        theme: match.shared[0] || member.primaryTheme || match.steward.primaryTheme,
+        weight: match.shared.length || 1,
       });
       if (edges.length >= limit) return edges;
     }
   }
 
+  // Steward-steward edges carry cross-chapter thematic relationships.
+  const stewardCandidates: Array<{
+    a: PublicMapStateNode;
+    b: PublicMapStateNode;
+    shared: string[];
+    distance: number;
+  }> = [];
+  for (let i = 0; i < stewards.length; i += 1) {
+    for (let j = i + 1; j < stewards.length; j += 1) {
+      const shared = sharedThemes(stewards[i], stewards[j]);
+      if (!shared.length) continue;
+      stewardCandidates.push({
+        a: stewards[i],
+        b: stewards[j],
+        shared,
+        distance: distanceDegrees(stewards[i], stewards[j]),
+      });
+    }
+  }
+  for (const candidate of stewardCandidates.sort((a, b) => (
+    b.shared.length - a.shared.length ||
+    a.distance - b.distance ||
+    a.a.name.localeCompare(b.a.name)
+  ))) {
+    addEdge({
+      from: candidate.a,
+      to: candidate.b,
+      kind: 'steward-steward',
+      theme: candidate.shared[0],
+      weight: candidate.shared.length,
+    });
+    if (edges.length >= limit) return edges;
+  }
+
+  // Member-member edges stay rarer and require stronger theme overlap.
+  const memberCandidates: Array<{
+    a: PublicMapStateNode;
+    b: PublicMapStateNode;
+    shared: string[];
+    distance: number;
+  }> = [];
+  for (let i = 0; i < members.length; i += 1) {
+    for (let j = i + 1; j < members.length; j += 1) {
+      const shared = sharedThemes(members[i], members[j]);
+      if (shared.length < 2) continue;
+      const distance = distanceDegrees(members[i], members[j]);
+      if (distance < 30) continue;
+      memberCandidates.push({ a: members[i], b: members[j], shared, distance });
+    }
+  }
+  for (const candidate of memberCandidates.sort((a, b) => (
+    b.shared.length - a.shared.length ||
+    b.distance - a.distance ||
+    a.a.name.localeCompare(b.a.name)
+  ))) {
+    addEdge({
+      from: candidate.a,
+      to: candidate.b,
+      kind: 'member-member',
+      theme: candidate.shared[0],
+      weight: candidate.shared.length,
+    });
+    if (edges.length >= limit) return edges;
+  }
+
+  // Fallback anchor: if a submitted public node has no person relationship yet,
+  // attach that individual to the closest compatible chapter so a sparse first
+  // workshop still renders context without creating chapter-to-chapter claims.
   for (const node of nonChapters) {
+    if (personLinked.has(node.id)) continue;
     const match = chapters
       .map((chapter) => ({
         chapter,
@@ -394,14 +509,12 @@ export function generatePublicMapEdges(
       .sort((a, b) => b.shared.length - a.shared.length || a.distance - b.distance)[0];
 
     if (!match) continue;
-    edges.push({
-      id: `edge:${node.id}:${match.chapter.id}:${match.shared[0]}`,
-      from: node.id,
-      to: match.chapter.id,
-      kind: 'node-theme',
+    addEdge({
+      from: node,
+      to: match.chapter,
+      kind: 'person-anchor',
       theme: match.shared[0],
-      weight: Math.min(3, match.shared.length),
-      source: 'generated-theme-match',
+      weight: match.shared.length,
     });
     if (edges.length >= limit) return edges;
   }

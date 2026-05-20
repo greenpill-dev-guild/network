@@ -200,6 +200,66 @@ test('public map-state combines chapter anchors and approved submitted nodes saf
   assert.equal(JSON.stringify(payload).includes('private submission context'), false);
 });
 
+test('public map-state generates person-first relationship edges', () => {
+  const payload = toPublicMapStatePayload({
+    generatedAt: '2026-05-20T12:00:00.000Z',
+    chapterLocations: [
+      {
+        id: 'nigeria',
+        name: 'Nigeria',
+        lat: 9.082,
+        long: 8.6753,
+        link: '/chapters/nigeria',
+        status: 'active',
+        themes: ['public'],
+      },
+      {
+        id: 'kenya',
+        name: 'Kenya',
+        lat: -1.2921,
+        long: 36.8219,
+        link: '/chapters/kenya',
+        status: 'active',
+        themes: ['public'],
+      },
+    ],
+    publicMapNodes: [
+      {
+        id: 'steward-1',
+        name: 'Lagos Steward',
+        place: 'Lagos',
+        lat: 6.5244,
+        long: 3.3792,
+        role: 'steward',
+        themes: ['public'],
+        status: 'approved',
+        source: 'approved-submission',
+      },
+      {
+        id: 'member-1',
+        name: 'Lagos Member',
+        place: 'Lagos',
+        lat: 6.6,
+        long: 3.45,
+        role: 'member',
+        themes: ['public', 'events'],
+        status: 'approved',
+        source: 'approved-submission',
+      },
+    ],
+  });
+
+  assert.equal(payload.edges.some((edge) => edge.kind === 'chapter-theme'), false);
+  assert.equal(payload.edges.some((edge) => (
+    edge.kind === 'steward-member' &&
+    edge.from === 'submission:member-1' &&
+    edge.to === 'submission:steward-1'
+  )), true);
+  assert.equal(payload.edges.some((edge) => (
+    edge.from.startsWith('chapter:') && edge.to.startsWith('chapter:')
+  )), false);
+});
+
 test('public content seed map nodes are approved-only projection fixtures', async () => {
   const fixture = await readPublicContentSeedFixture();
   const publicMapNodes = fixture.publicMapNodes.map((node) => ({
