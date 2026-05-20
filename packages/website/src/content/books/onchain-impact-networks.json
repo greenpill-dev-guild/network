@@ -9,8 +9,12 @@
   "ebookLink": "/pdf/onchain-impact-networks.pdf",
   "formats": [],
   "translations": [],
-  "themeSlugs": ["impact", "public", "opensrc", "funding"],
-  "relatedProjectSlugs": ["green-goods", "greenpill-impact-framework"],
+  "themeSlugs": [
+    "impact",
+    "public",
+    "opensrc",
+    "funding"
+  ],
   "card": {
     "eyebrow": "Impact library",
     "title": "Onchain Impact Networks",

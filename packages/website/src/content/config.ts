@@ -1,26 +1,5 @@
 import { defineCollection, z } from 'astro:content';
 
-const stewardSchema = z.object({
-  name: z.string().default(''),
-  role: z.string().optional().default(''),
-  bio: z.string().optional().default(''),
-  location: z.string().optional().default(''),
-  personSlug: z.string().optional().default(''),
-  chapterSlug: z.string().optional().default(''),
-  avatar: z.string().optional().default(''),
-  wallet: z.string().optional().default(''),
-});
-
-const linkSchema = z.object({
-  label: z.string().default(''),
-  url: z.string().default(''),
-  subtext: z.string().optional().default(''),
-  handle: z.string().optional().default(''),
-  action: z.string().optional().default(''),
-  icon: z.string().optional().default(''),
-  kind: z.enum(['internal', 'external', 'email', 'form', 'booking', 'social']).optional().default('external'),
-});
-
 const slugListSchema = z.array(z.string()).optional().default([]);
 
 const seoSchema = z.object({
@@ -51,16 +30,6 @@ const translationSchema = z.object({
   slug: z.string().optional().default(''),
 });
 
-const publicPersonReferenceSchema = z.object({
-  personSlug: z.string().optional().default(''),
-  name: z.string().optional().default(''),
-  role: z.string().optional().default(''),
-  bio: z.string().optional().default(''),
-  location: z.string().optional().default(''),
-  chapterSlug: z.string().optional().default(''),
-  avatar: z.string().optional().default(''),
-});
-
 const libraryCardSchema = z.object({
   eyebrow: z.string().optional().default(''),
   title: z.string().optional().default(''),
@@ -71,140 +40,6 @@ const libraryCardSchema = z.object({
   imageAlt: z.string().optional().default(''),
   href: z.string().optional().default(''),
 }).optional().default({});
-
-const impactSourcesSchema = z.object({
-  impactEnabled: z.boolean().optional().default(false),
-  greenGoodsGardenAddress: z.string().optional().default(''),
-  greenGoodsChainId: z.number().int().optional().default(42161),
-  karmaProjectUID: z.string().optional().default(''),
-  karmaProjectSlug: z.string().optional().default(''),
-  karmaCommunitySlug: z.string().optional().default(''),
-}).optional().default({});
-
-const themes = defineCollection({
-  type: 'data',
-  schema: z.object({
-    name: z.string(),
-    summary: z.string().optional().default(''),
-    sortOrder: z.number().optional().default(0),
-  }),
-});
-
-const people = defineCollection({
-  type: 'data',
-  schema: z.object({
-    displayName: z.string(),
-    role: z.string().optional().default(''),
-    avatar: z.string().optional().default(''),
-    bio: z.string().optional().default(''),
-    themeSlugs: slugListSchema,
-    links: z.array(linkSchema).optional().default([]),
-    media: mediaSchema,
-    seo: seoSchema,
-  }),
-});
-
-const chapters = defineCollection({
-  type: 'data',
-  schema: z.object({
-    name: z.string(),
-    city: z.string().optional().default(''),
-    country: z.string().optional().default(''),
-    region: z.enum(['americas', 'africa', 'asia', 'europe', 'oceania']).optional().default('americas'),
-    status: z.enum(['active', 'forming', 'inactive']).optional().default('active'),
-    summary: z.string().optional().default(''),
-    introQuote: z.string().optional().default(''),
-    introQuoteAttribution: z.string().optional().default(''),
-    image: z.string().optional().default(''),
-    founded: z.string().optional().default(''),
-    lat: z.number(),
-    long: z.number(),
-    link: z.string().optional(),
-    stewards: z.array(stewardSchema).optional().default([]),
-    stewardSlugs: slugListSchema,
-    themeSlugs: slugListSchema,
-    links: z.array(linkSchema).optional().default([]),
-    connectLinks: z.array(linkSchema).optional().default([]),
-    relatedChapterSlugs: slugListSchema,
-    featuredStory: z.object({
-      storySlug: z.string().optional().default(''),
-      headline: z.string().optional().default(''),
-      blurb: z.string().optional().default(''),
-      image: z.string().optional().default(''),
-      imageAlt: z.string().optional().default(''),
-    }).optional().default({}),
-    featuredStorySlugs: slugListSchema,
-    authoredResourceSlugs: slugListSchema,
-    impactSources: impactSourcesSchema,
-    featuredWeight: z.number().optional().default(0),
-    proofSignals: z.array(proofSignalSchema).optional().default([]),
-    media: mediaSchema,
-    seo: seoSchema,
-  }),
-});
-
-const guilds = defineCollection({
-  type: 'data',
-  schema: z.object({
-    name: z.string(),
-    type: z.enum(['guild', 'pod']).default('guild'),
-    status: z.enum(['active', 'forming', 'inactive']).default('active'),
-    summary: z.string().optional().default(''),
-    description: z.string().optional().default(''),
-    foundedYear: z.number().int().optional(),
-    oneliner: z.string().optional().default(''),
-    outputs: z.array(z.object({
-      label: z.string().default(''),
-      summary: z.string().optional().default(''),
-      href: z.string().optional().default(''),
-    })).optional().default([]),
-    mandateParagraphs: z.array(z.string()).optional().default([]),
-    cadence: z.object({
-      summary: z.string().optional().default(''),
-      callTime: z.string().optional().default(''),
-      format: z.string().optional().default(''),
-      recordingsHref: z.string().optional().default(''),
-    }).optional().default({}),
-    principles: z.array(z.object({
-      order: z.number().optional().default(0),
-      title: z.string().default(''),
-      body: z.string().optional().default(''),
-    })).optional().default([]),
-    image: z.string().optional().default(''),
-    stewards: z.array(stewardSchema).optional().default([]),
-    stewardSlugs: slugListSchema,
-    memberSlugs: slugListSchema,
-    publicMembers: z.array(publicPersonReferenceSchema).optional().default([]),
-    themeSlugs: slugListSchema,
-    links: z.array(linkSchema).optional().default([]),
-    connectLinks: z.array(linkSchema).optional().default([]),
-    featuredWeight: z.number().optional().default(0),
-    proofSignals: z.array(proofSignalSchema).optional().default([]),
-    media: mediaSchema,
-    seo: seoSchema,
-  }),
-});
-
-const projects = defineCollection({
-  type: 'data',
-  schema: z.object({
-    name: z.string(),
-    status: z.enum(['active', 'beta', 'experimental', 'archived']).default('active'),
-    guild: z.string().optional().default(''),
-    summary: z.string().optional().default(''),
-    description: z.string().optional().default(''),
-    image: z.string().optional().default(''),
-    techStack: z.array(z.string()).optional().default([]),
-    repoUrl: z.string().optional().default(''),
-    liveUrl: z.string().optional().default(''),
-    stewardSlugs: slugListSchema,
-    themeSlugs: slugListSchema,
-    featuredWeight: z.number().optional().default(0),
-    proofSignals: z.array(proofSignalSchema).optional().default([]),
-    media: mediaSchema,
-    seo: seoSchema,
-  }),
-});
 
 const stories = defineCollection({
   type: 'data',
@@ -233,7 +68,6 @@ const stories = defineCollection({
     authorAvatar: z.string().optional().default(''),
     relatedChapter: z.string().optional().default(''),
     relatedGuild: z.string().optional().default(''),
-    relatedProjectSlugs: slugListSchema,
     relatedStorySlugs: slugListSchema,
     continueReadingStorySlugs: slugListSchema,
     themeSlugs: slugListSchema,
@@ -272,7 +106,6 @@ const resources = defineCollection({
     themeSlugs: slugListSchema,
     relatedChapterSlugs: slugListSchema,
     relatedGuildSlugs: slugListSchema,
-    relatedProjectSlugs: slugListSchema,
     featuredWeight: z.number().optional().default(0),
     card: libraryCardSchema,
     media: mediaSchema,
@@ -312,7 +145,6 @@ const books = defineCollection({
     })).optional().default([]),
     themeSlugs: slugListSchema,
     relatedStorySlugs: slugListSchema,
-    relatedProjectSlugs: slugListSchema,
     group: z.enum(['main', 'bonus']).default('main'),
     sortOrder: z.number().default(0),
     card: libraryCardSchema,
@@ -322,11 +154,6 @@ const books = defineCollection({
 });
 
 export const collections = {
-  themes,
-  people,
-  chapters,
-  guilds,
-  projects,
   stories,
   resources,
   books,

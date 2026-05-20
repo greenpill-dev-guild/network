@@ -1,50 +1,5 @@
 import { config, fields, collection, singleton } from '@keystatic/core';
 
-const stewardField = fields.array(
-  fields.object({
-    name: fields.text({ label: 'Name' }),
-    role: fields.text({ label: 'Role' }),
-    bio: fields.text({ label: 'Public Bio', multiline: true }),
-    location: fields.text({ label: 'Public Location' }),
-    personSlug: fields.text({ label: 'Person Slug' }),
-    chapterSlug: fields.text({ label: 'Chapter Slug' }),
-    avatar: fields.text({ label: 'Avatar Path' }),
-    wallet: fields.text({ label: 'Wallet (optional)' }),
-  }),
-  { label: 'Stewards', itemLabel: (props) => props.fields.name.value },
-);
-
-const linkItemField = fields.object({
-  label: fields.text({ label: 'Label' }),
-  url: fields.text({ label: 'URL or Path' }),
-  subtext: fields.text({ label: 'Card Subtext' }),
-  handle: fields.text({ label: 'Handle or Detail' }),
-  action: fields.text({ label: 'Action Label' }),
-  icon: fields.text({ label: 'Icon Key' }),
-  kind: fields.select({
-    label: 'Kind',
-    options: [
-      { label: 'Internal', value: 'internal' },
-      { label: 'External', value: 'external' },
-      { label: 'Email', value: 'email' },
-      { label: 'Form', value: 'form' },
-      { label: 'Booking', value: 'booking' },
-      { label: 'Social', value: 'social' },
-    ],
-    defaultValue: 'external',
-  }),
-});
-
-const linkField = fields.array(
-  linkItemField,
-  { label: 'Links', itemLabel: (props) => props.fields.label.value },
-);
-
-const connectLinkCardsField = fields.array(
-  linkItemField,
-  { label: 'Connect Link Cards', itemLabel: (props) => props.fields.label.value },
-);
-
 const slugListField = (label: string, itemLabel = 'Slug') => fields.array(
   fields.text({ label: itemLabel }),
   { label, itemLabel: (props) => props.value },
@@ -100,19 +55,6 @@ const translationsField = fields.array(
   { label: 'Translations', itemLabel: (props) => props.fields.language.value },
 );
 
-const publicPersonRefsField = fields.array(
-  fields.object({
-    personSlug: fields.text({ label: 'Person Slug' }),
-    name: fields.text({ label: 'Fallback Name' }),
-    role: fields.text({ label: 'Public Role' }),
-    bio: fields.text({ label: 'Public Bio', multiline: true }),
-    location: fields.text({ label: 'Public Location' }),
-    chapterSlug: fields.text({ label: 'Chapter Slug' }),
-    avatar: fields.text({ label: 'Avatar Path' }),
-  }),
-  { label: 'Public Members', itemLabel: (props) => props.fields.personSlug.value || props.fields.name.value },
-);
-
 const libraryCardField = fields.object({
   eyebrow: fields.text({ label: 'Eyebrow' }),
   title: fields.text({ label: 'Card Title Override' }),
@@ -140,11 +82,10 @@ const libraryCardField = fields.object({
 const featuredRefsField = fields.array(
   fields.object({
     collection: fields.select({
-      label: 'Collection',
+      label: 'Reference Type',
       options: [
-        { label: 'Chapters', value: 'chapters' },
-        { label: 'Guilds', value: 'guilds' },
-        { label: 'Project References', value: 'projects' },
+        { label: 'Operational Chapter Slug', value: 'chapters' },
+        { label: 'Operational Guild Slug', value: 'guilds' },
         { label: 'Stories', value: 'stories' },
         { label: 'Resources', value: 'resources' },
         { label: 'Books', value: 'books' },
@@ -190,54 +131,12 @@ const previewCardField = fields.object({
   cta: ctaField,
 }, { label: 'Preview Card' });
 
-const impactSourcesField = fields.object({
-  impactEnabled: fields.checkbox({
-    label: 'Show Impact Feed',
-    defaultValue: false,
-    description: 'Enable only after at least one public impact source is mapped.',
-  }),
-  greenGoodsGardenAddress: fields.text({
-    label: 'Green Goods Garden Address',
-    description: 'Public garden contract address, e.g. 0x...',
-  }),
-  greenGoodsChainId: fields.number({
-    label: 'Green Goods Chain ID',
-    defaultValue: 42161,
-    description: 'Arbitrum is 42161.',
-  }),
-  karmaProjectUID: fields.text({
-    label: 'KarmaGAP Project UID',
-    description: 'Optional 0x project UID from KarmaGAP.',
-  }),
-  karmaProjectSlug: fields.text({
-    label: 'KarmaGAP Project Slug',
-    description: 'Optional public project slug from KarmaGAP.',
-  }),
-  karmaCommunitySlug: fields.text({
-    label: 'KarmaGAP Community Slug',
-    description: 'Optional community slug for aggregate impact endpoints.',
-  }),
-}, { label: 'Impact Sources' });
-
 const regionOptions = [
   { label: 'Americas', value: 'americas' },
   { label: 'Africa', value: 'africa' },
   { label: 'Asia', value: 'asia' },
   { label: 'Europe', value: 'europe' },
   { label: 'Oceania', value: 'oceania' },
-];
-
-const entityStatusOptions = [
-  { label: 'Active', value: 'active' },
-  { label: 'Forming', value: 'forming' },
-  { label: 'Inactive', value: 'inactive' },
-];
-
-const projectStatusOptions = [
-  { label: 'Active', value: 'active' },
-  { label: 'Beta', value: 'beta' },
-  { label: 'Experimental', value: 'experimental' },
-  { label: 'Archived', value: 'archived' },
 ];
 
 const storyCategoryOptions = [
@@ -271,166 +170,6 @@ export default config({
   storage: { kind: 'local' },
 
   collections: {
-    themes: collection({
-      label: 'Themes',
-      slugField: 'name',
-      path: 'src/content/themes/*',
-      format: { data: 'json' },
-      columns: ['sortOrder'],
-      schema: {
-        name: fields.slug({ name: { label: 'Theme Name' } }),
-        summary: fields.text({ label: 'Summary', multiline: true }),
-        sortOrder: fields.number({ label: 'Sort Order', defaultValue: 0 }),
-      },
-    }),
-
-    people: collection({
-      label: 'People & Stewards',
-      slugField: 'displayName',
-      path: 'src/content/people/*',
-      format: { data: 'json' },
-      schema: {
-        displayName: fields.slug({ name: { label: 'Display Name' } }),
-        role: fields.text({ label: 'Public Role' }),
-        avatar: fields.text({ label: 'Avatar Path' }),
-        bio: fields.text({ label: 'Public Bio', multiline: true }),
-        themeSlugs: slugListField('Public Theme Slugs', 'Theme Slug'),
-        links: linkField,
-        media: mediaField,
-        seo: seoField,
-      },
-    }),
-
-    chapters: collection({
-      label: 'Chapters',
-      slugField: 'name',
-      path: 'src/content/chapters/*',
-      format: { data: 'json' },
-      schema: {
-        name: fields.slug({ name: { label: 'Chapter Name' } }),
-        city: fields.text({ label: 'City' }),
-        country: fields.text({ label: 'Country' }),
-        region: fields.select({ label: 'Region', options: regionOptions, defaultValue: 'americas' }),
-        status: fields.select({ label: 'Status', options: entityStatusOptions, defaultValue: 'active' }),
-        summary: fields.text({ label: 'Summary', multiline: true }),
-        introQuote: fields.text({ label: 'Intro Quote', multiline: true }),
-        introQuoteAttribution: fields.text({ label: 'Intro Quote Attribution' }),
-        image: fields.text({ label: 'Image Path' }),
-        founded: fields.text({ label: 'Founded (year)' }),
-        lat: fields.number({ label: 'Latitude', validation: { isRequired: true } }),
-        long: fields.number({ label: 'Longitude', validation: { isRequired: true } }),
-        link: fields.url({ label: 'Primary Link (legacy / external)' }),
-        stewards: stewardField,
-        stewardSlugs: slugListField('Reusable Steward Slugs', 'Person Slug'),
-        themeSlugs: slugListField('Theme Slugs', 'Theme Slug'),
-        links: linkField,
-        connectLinks: connectLinkCardsField,
-        relatedChapterSlugs: slugListField('Related Chapter Slugs', 'Chapter Slug'),
-        featuredStory: fields.object({
-          storySlug: fields.text({ label: 'Story Slug' }),
-          headline: fields.text({ label: 'Headline Override' }),
-          blurb: fields.text({ label: 'Blurb Override', multiline: true }),
-          image: fields.text({ label: 'Image Path' }),
-          imageAlt: fields.text({ label: 'Image Alt Text' }),
-        }, { label: 'Featured Story Card' }),
-        featuredStorySlugs: slugListField('Featured Story Slugs', 'Story Slug'),
-        authoredResourceSlugs: slugListField('Chapter-authored Resource Slugs', 'Resource Slug'),
-        impactSources: impactSourcesField,
-        featuredWeight: fields.number({ label: 'Featured Weight', defaultValue: 0 }),
-        proofSignals: proofSignalsField,
-        media: mediaField,
-        seo: seoField,
-      },
-    }),
-
-    guilds: collection({
-      label: 'Guilds & Pods',
-      slugField: 'name',
-      path: 'src/content/guilds/*',
-      format: { data: 'json' },
-      schema: {
-        name: fields.slug({ name: { label: 'Guild Name' } }),
-        type: fields.select({
-          label: 'Type',
-          options: [
-            { label: 'Guild', value: 'guild' },
-            { label: 'Pod', value: 'pod' },
-          ],
-          defaultValue: 'guild',
-        }),
-        status: fields.select({ label: 'Status', options: entityStatusOptions, defaultValue: 'active' }),
-        summary: fields.text({ label: 'Summary' }),
-        description: fields.text({ label: 'Description', multiline: true }),
-        foundedYear: fields.number({ label: 'Founded Year' }),
-        oneliner: fields.text({ label: 'Public Oneliner' }),
-        outputs: fields.array(
-          fields.object({
-            label: fields.text({ label: 'Output Label' }),
-            summary: fields.text({ label: 'Summary', multiline: true }),
-            href: fields.text({ label: 'URL or Path' }),
-          }),
-          { label: 'Outputs', itemLabel: (props) => props.fields.label.value },
-        ),
-        mandateParagraphs: fields.array(
-          fields.text({ label: 'Paragraph', multiline: true }),
-          { label: 'Mandate Paragraphs', itemLabel: (props) => props.value },
-        ),
-        cadence: fields.object({
-          summary: fields.text({ label: 'Cadence Summary', multiline: true }),
-          callTime: fields.text({ label: 'Call Time' }),
-          format: fields.text({ label: 'Format' }),
-          recordingsHref: fields.text({ label: 'Recordings URL or Path' }),
-        }, { label: 'Cadence' }),
-        principles: fields.array(
-          fields.object({
-            order: fields.number({ label: 'Order', defaultValue: 0 }),
-            title: fields.text({ label: 'Title' }),
-            body: fields.text({ label: 'Body', multiline: true }),
-          }),
-          { label: 'Principles', itemLabel: (props) => props.fields.title.value },
-        ),
-        image: fields.text({ label: 'Image Path' }),
-        stewards: stewardField,
-        stewardSlugs: slugListField('Reusable Steward Slugs', 'Person Slug'),
-        memberSlugs: slugListField('Public Member Slugs', 'Person Slug'),
-        publicMembers: publicPersonRefsField,
-        themeSlugs: slugListField('Theme Slugs', 'Theme Slug'),
-        links: linkField,
-        connectLinks: connectLinkCardsField,
-        featuredWeight: fields.number({ label: 'Featured Weight', defaultValue: 0 }),
-        proofSignals: proofSignalsField,
-        media: mediaField,
-        seo: seoField,
-      },
-    }),
-
-    projects: collection({
-      label: 'Project References',
-      slugField: 'name',
-      path: 'src/content/projects/*',
-      format: { data: 'json' },
-      schema: {
-        name: fields.slug({ name: { label: 'Project Name' } }),
-        status: fields.select({ label: 'Status', options: projectStatusOptions, defaultValue: 'active' }),
-        guild: fields.text({ label: 'Guild (slug or name)' }),
-        summary: fields.text({ label: 'Summary' }),
-        description: fields.text({ label: 'Description', multiline: true }),
-        image: fields.text({ label: 'Image Path' }),
-        techStack: fields.array(fields.text({ label: 'Tech' }), {
-          label: 'Tech Stack',
-          itemLabel: (props) => props.value,
-        }),
-        repoUrl: fields.url({ label: 'Repository URL' }),
-        liveUrl: fields.url({ label: 'Live URL' }),
-        stewardSlugs: slugListField('Reusable Steward Slugs', 'Person Slug'),
-        themeSlugs: slugListField('Theme Slugs', 'Theme Slug'),
-        featuredWeight: fields.number({ label: 'Featured Weight', defaultValue: 0 }),
-        proofSignals: proofSignalsField,
-        media: mediaField,
-        seo: seoField,
-      },
-    }),
-
     stories: collection({
       label: 'Stories & Updates',
       slugField: 'title',
@@ -471,7 +210,6 @@ export default config({
         authorAvatar: fields.text({ label: 'Author Avatar Path' }),
         relatedChapter: fields.text({ label: 'Related Chapter (slug)' }),
         relatedGuild: fields.text({ label: 'Related Guild (slug)' }),
-        relatedProjectSlugs: slugListField('Related Project Slugs', 'Project Slug'),
         relatedStorySlugs: slugListField('Related Story Slugs', 'Story Slug'),
         continueReadingStorySlugs: slugListField('Continue Reading Story Slugs', 'Story Slug'),
         themeSlugs: slugListField('Theme Slugs', 'Theme Slug'),
@@ -514,7 +252,6 @@ export default config({
         themeSlugs: slugListField('Theme Slugs', 'Theme Slug'),
         relatedChapterSlugs: slugListField('Related Chapter Slugs', 'Chapter Slug'),
         relatedGuildSlugs: slugListField('Related Guild Slugs', 'Guild Slug'),
-        relatedProjectSlugs: slugListField('Related Project Slugs', 'Project Slug'),
         featuredWeight: fields.number({ label: 'Featured Weight', defaultValue: 0 }),
         card: libraryCardField,
         media: mediaField,
@@ -567,7 +304,6 @@ export default config({
         ),
         themeSlugs: slugListField('Theme Slugs', 'Theme Slug'),
         relatedStorySlugs: slugListField('Related Story Slugs', 'Story Slug'),
-        relatedProjectSlugs: slugListField('Related Project Slugs', 'Project Slug'),
         group: fields.select({
           label: 'Book Group',
           options: [

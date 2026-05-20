@@ -21,9 +21,11 @@
       "anchor": "pathways"
     }
   ],
-  "themeSlugs": ["local-regeneration", "knowledge-commons"],
+  "themeSlugs": [
+    "local-regeneration",
+    "knowledge-commons"
+  ],
   "relatedStorySlugs": [],
-  "relatedProjectSlugs": [],
   "card": {
     "eyebrow": "Regeneration guide",
     "title": "Pathways to Regeneration",

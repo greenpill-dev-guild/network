@@ -67,8 +67,12 @@
       "link": "/pdf/greenpill-translations/greenpill-turkish.pdf"
     }
   ],
-  "themeSlugs": ["public", "funding", "local-regeneration", "knowledge-commons"],
-  "relatedProjectSlugs": ["greenpill-garden", "greenpill-impact-framework", "greenpill-v2-website"],
+  "themeSlugs": [
+    "public",
+    "funding",
+    "local-regeneration",
+    "knowledge-commons"
+  ],
   "card": {
     "eyebrow": "Foundational book",
     "title": "Greenpill v0",

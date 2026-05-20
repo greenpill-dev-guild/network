@@ -31,10 +31,6 @@
   "relatedGuildSlugs": [
     "dev-guild"
   ],
-  "relatedProjectSlugs": [
-    "greenpill-impact-framework",
-    "green-goods"
-  ],
   "featuredWeight": 70,
   "card": {
     "eyebrow": "Impact",

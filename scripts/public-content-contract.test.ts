@@ -13,22 +13,58 @@ import {
 } from './directus-operational-content-setup.ts';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const contentDir = join(rootDir, 'packages/website/src/content');
+const editorialContentDir = join(rootDir, 'packages/website/src/content');
+const operationalSeedDir = join(rootDir, 'packages/website/src/data/operational-content-seed');
+const websitePagesDir = join(rootDir, 'packages/website/src/pages');
+const websiteShellDir = join(rootDir, 'packages/website/src/components/shell');
+const keystaticConfigPath = join(rootDir, 'packages/website/keystatic.config.ts');
+const astroContentConfigPath = join(rootDir, 'packages/website/src/content/config.ts');
 const snapshotPath = join(rootDir, 'packages/website/src/data/operational-content-snapshot.json');
 const operationalContentScriptPath = join(rootDir, 'scripts/operational-content.ts');
 
 async function readJson(relativePath) {
-  return JSON.parse(await readFile(join(contentDir, relativePath), 'utf8'));
+  return JSON.parse(await readFile(join(editorialContentDir, relativePath), 'utf8'));
 }
 
 async function readCollection(collection) {
   const entries = new Map();
-  const dir = join(contentDir, collection);
+  const dir = join(
+    ['themes', 'people', 'chapters', 'guilds', 'projects'].includes(collection)
+      ? operationalSeedDir
+      : editorialContentDir,
+    collection
+  );
   for (const file of await readdir(dir)) {
     if (!file.endsWith('.json')) continue;
     entries.set(file.replace(/\.json$/, ''), JSON.parse(await readFile(join(dir, file), 'utf8')));
   }
   return entries;
+}
+
+async function readAstroFiles(dir) {
+  const files = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...await readAstroFiles(fullPath));
+    } else if (entry.name.endsWith('.astro')) {
+      files.push(fullPath);
+    }
+  }
+  return files;
+}
+
+async function readFilesWithExtensions(dir, extensions) {
+  const files = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...await readFilesWithExtensions(fullPath, extensions));
+    } else if (extensions.some((extension) => entry.name.endsWith(extension))) {
+      files.push(fullPath);
+    }
+  }
+  return files;
 }
 
 function walk(value, visit, path = '$') {
@@ -128,6 +164,63 @@ test('operational content snapshot is public-safe and derived from approved oper
   assert.equal(snapshot.locations.length > 0, true);
   assert.equal(Array.isArray(snapshot.impactSourceBindings.chapters), true);
   assert.equal(containsPrivateOperationalContentField(snapshot), false);
+});
+
+test('Keystatic and Astro content configs expose editorial collections only', async () => {
+  const [keystaticConfig, astroContentConfig] = await Promise.all([
+    readFile(keystaticConfigPath, 'utf8'),
+    readFile(astroContentConfigPath, 'utf8'),
+  ]);
+  const astroCollections = astroContentConfig.match(/export const collections = \{([\s\S]*?)\n\};/)?.[1] ?? '';
+
+  for (const collection of ['themes', 'people', 'chapters', 'guilds', 'projects']) {
+    assert.doesNotMatch(keystaticConfig, new RegExp(`\\b${collection}:\\s*collection\\(`));
+    assert.doesNotMatch(astroCollections, new RegExp(`\\b${collection}\\b`));
+  }
+  assert.doesNotMatch(keystaticConfig, /Operational Project Slug|relatedProjectSlugs|value: 'projects'/);
+  assert.doesNotMatch(astroContentConfig, /relatedProjectSlugs/);
+
+  for (const collection of ['stories', 'resources', 'books']) {
+    assert.match(keystaticConfig, new RegExp(`\\b${collection}:\\s*collection\\(`));
+    assert.match(astroCollections, new RegExp(`\\b${collection}\\b`));
+  }
+});
+
+test('editorial content does not carry project reference metadata', async () => {
+  const problems = [];
+  for (const filePath of await readFilesWithExtensions(editorialContentDir, ['.json'])) {
+    const source = await readFile(filePath, 'utf8');
+    if (/"collection"\s*:\s*"projects"|relatedProjectSlugs/.test(source)) {
+      problems.push(filePath.replace(`${rootDir}/`, ''));
+    }
+  }
+
+  assert.deepEqual(problems, []);
+});
+
+test('website page typography avoids viewport-scaled type and negative tracking', async () => {
+  const problems = [];
+  for (const filePath of await readAstroFiles(websitePagesDir)) {
+    const source = await readFile(filePath, 'utf8');
+    if (/font-size:\s*clamp\([^;]*(?:vw|vi)/.test(source)) {
+      problems.push(`${filePath.replace(`${rootDir}/`, '')} uses viewport-scaled font-size`);
+    }
+    if (/letter-spacing:\s*-\d/.test(source)) {
+      problems.push(`${filePath.replace(`${rootDir}/`, '')} uses negative letter-spacing`);
+    }
+  }
+
+  assert.deepEqual(problems, []);
+});
+
+test('site shell keeps the graphic page background visible', async () => {
+  const header = await readFile(join(websiteShellDir, 'SiteHeader.astro'), 'utf8');
+  const footer = await readFile(join(websiteShellDir, 'SiteFooter.astro'), 'utf8');
+
+  assert.match(header, /rgba\(7,\s*24,\s*15,\s*0\.[0-6]/);
+  assert.doesNotMatch(header, /var\(--gp-bg\)\s*92%/);
+  assert.match(footer, /rgba\(7,\s*24,\s*15,\s*0\)/);
+  assert.doesNotMatch(footer, /background:\s*var\(--gp-green-950\)/);
 });
 
 test('operational content snapshot generation rejects private fields and non-published records', () => {

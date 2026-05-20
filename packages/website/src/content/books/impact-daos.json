@@ -19,8 +19,11 @@
       "link": "/pdf/impact-daos/impact-daos-chinese.pdf"
     }
   ],
-  "themeSlugs": ["public", "funding", "impact"],
-  "relatedProjectSlugs": ["green-goods", "grant-ships", "cookie-jar"],
+  "themeSlugs": [
+    "public",
+    "funding",
+    "impact"
+  ],
   "card": {
     "eyebrow": "Impact library",
     "title": "Impact DAOs",

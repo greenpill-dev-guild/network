@@ -118,11 +118,6 @@
           "collection": "guilds",
           "slug": "writers-guild",
           "label": "Writers Guild"
-        },
-        {
-          "collection": "projects",
-          "slug": "green-goods",
-          "label": "Green Goods"
         }
       ]
     },
@@ -191,11 +186,6 @@
       "collection": "guilds",
       "slug": "dev-guild",
       "label": "Dev Guild"
-    },
-    {
-      "collection": "projects",
-      "slug": "green-goods",
-      "label": "Green Goods"
     }
   ],
   "featuredChapterSlugs": [

@@ -36,9 +36,6 @@
   "relatedGuildSlugs": [
     "dev-guild"
   ],
-  "relatedProjectSlugs": [
-    "green-goods"
-  ],
   "featuredWeight": 85,
   "card": {
     "eyebrow": "Docs",

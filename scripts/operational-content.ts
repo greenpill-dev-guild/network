@@ -10,7 +10,9 @@ import {
 } from '@greenpill-network/shared/public-content';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const contentDir = join(rootDir, 'packages/website/src/content');
+// These folders are operational seed inputs for Directus/Postgres and the
+// checked-in fallback snapshot. Keystatic authoring is editorial-only.
+const operationalSeedDir = join(rootDir, 'packages/website/src/data/operational-content-seed');
 const snapshotPath = join(rootDir, 'packages/website/src/data/operational-content-snapshot.json');
 const shouldWriteSnapshot = process.argv.includes('--write-snapshot');
 const shouldMigrate = process.argv.includes('--migrate');
@@ -23,7 +25,7 @@ const asObject = (value) => (
 );
 
 async function readCollection(collection) {
-  const dir = join(contentDir, collection);
+  const dir = join(operationalSeedDir, collection);
   const records = [];
   for (const file of await readdir(dir)) {
     if (!file.endsWith('.json')) continue;
