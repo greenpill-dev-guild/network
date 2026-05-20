@@ -7,13 +7,25 @@ interface Props {
 
 const { items = [], accentIndex, class: className } = Astro.props;
 const classes = ['gp-meta-line', className].filter(Boolean).join(' ');
+
+// Each `·`-separated chunk is its own segment so the row can wrap between
+// them (DESIGN.md). Splitting here keeps authored "A · B" content from
+// collapsing into a single un-wrappable nowrap span that overflows on mobile.
+const segments: string[] = [];
+let accentSegment = -1;
+items.forEach((item, i) => {
+  if (i === accentIndex) accentSegment = segments.length;
+  for (const part of String(item).split(/\s*·\s*/)) {
+    if (part.trim()) segments.push(part.trim());
+  }
+});
 ---
 
 <div class={classes}>
-  {items.map((item, index) => (
+  {segments.map((seg, index) => (
     <>
-      <span class:list={[{ 'is-accent': index === accentIndex }]}>{item}</span>
-      {index < items.length - 1 && <span aria-hidden="true" class="gp-meta-sep">&middot;</span>}
+      <span class:list={[{ 'is-accent': index === accentSegment }]}>{seg}</span>
+      {index < segments.length - 1 && <span aria-hidden="true" class="gp-meta-sep">&middot;</span>}
     </>
   ))}
 </div>

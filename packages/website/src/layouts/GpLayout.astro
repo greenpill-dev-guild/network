@@ -126,6 +126,13 @@ const bodyClasses = [
     transform: translateY(0);
   }
 
+  /* Page-level container-query context. Components reflow via @container
+     against this; safe because no position:fixed elements live inside
+     #main-content (the skip link + header overlay are siblings). */
+  .gp-main-target {
+    container-type: inline-size;
+  }
+
   .gp-main-target:focus {
     outline: none;
   }

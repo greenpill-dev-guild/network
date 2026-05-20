@@ -12,6 +12,9 @@ dist/
 output/
 tmp/
 
+# UI verification screenshots (scripts/ui-verify.ts)
+packages/website/.ui-verify/
+
 # Root-level scratch data belongs in packages/ or .plans artifacts.
 /data/
 
