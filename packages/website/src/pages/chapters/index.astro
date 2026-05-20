@@ -281,7 +281,7 @@ const hero = chaptersIndex.hero ?? {};
 
 <style>
   .gp-chapters {
-    min-height: 100vh;
+    min-height: 100dvh;
     background: transparent;
   }
 
@@ -594,7 +594,7 @@ const hero = chaptersIndex.hero ?? {};
     gap: 12px;
   }
 
-  @media (max-width: 980px) {
+  @container (max-width: 980px) {
     .gp-chapters-grid.is-compact {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -605,7 +605,7 @@ const hero = chaptersIndex.hero ?? {};
     }
   }
 
-  @media (max-width: 720px) {
+  @container (max-width: 720px) {
     .gp-chapters-filters {
       position: static;
     }

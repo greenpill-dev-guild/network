@@ -195,7 +195,7 @@ const seoDescription = garden.seo.description || summary;
 
 <style>
   .gp-garden-page {
-    min-height: 100vh;
+    min-height: 100dvh;
     background: transparent;
   }
 
@@ -367,7 +367,7 @@ const seoDescription = garden.seo.description || summary;
     gap: 10px;
   }
 
-  @media (max-width: 980px) {
+  @container (max-width: 980px) {
     .gp-garden-hero-grid,
     .gp-garden-after-grid {
       grid-template-columns: 1fr;
@@ -387,7 +387,7 @@ const seoDescription = garden.seo.description || summary;
     }
   }
 
-  @media (max-width: 640px) {
+  @container (max-width: 640px) {
     .gp-garden-step {
       grid-template-columns: 1fr;
       gap: var(--gp-space-lg);

@@ -261,7 +261,7 @@ const resourceMeta = (resource: typeof resources[number]) => [
 
 <style>
   .gp-library {
-    min-height: 100vh;
+    min-height: 100dvh;
     background: transparent;
   }
 
@@ -706,7 +706,7 @@ const resourceMeta = (resource: typeof resources[number]) => [
     text-transform: uppercase;
   }
 
-  @media (max-width: 980px) {
+  @container (max-width: 980px) {
     .gp-library-books-grid {
       grid-template-columns: repeat(4, minmax(0, 1fr));
     }
@@ -729,14 +729,14 @@ const resourceMeta = (resource: typeof resources[number]) => [
     }
   }
 
-  @media (max-width: 640px) {
+  @container (max-width: 640px) {
     .gp-library-books-grid {
       display: flex;
       gap: 16px;
-      margin-right: calc(var(--gp-space-lg) * -1);
+      margin-inline-end: calc(var(--gp-space-lg) * -1);
       overflow-x: auto;
       padding-bottom: var(--gp-space-md);
-      padding-right: var(--gp-space-lg);
+      padding-inline-end: var(--gp-space-lg);
       scroll-snap-type: x mandatory;
       scrollbar-width: none;
     }

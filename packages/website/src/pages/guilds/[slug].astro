@@ -253,7 +253,7 @@ const surfaceLabel = data.type === 'guild' ? 'Guild' : 'Pod';
 
 <style>
   .gp-guild {
-    min-height: 100vh;
+    min-height: 100dvh;
     background: transparent;
   }
 
@@ -487,7 +487,7 @@ const surfaceLabel = data.type === 'guild' ? 'Guild' : 'Pod';
     gap: 12px;
   }
 
-  @media (max-width: 980px) {
+  @container (max-width: 980px) {
     .gp-guild-grid,
     .gp-guild-output-grid,
     .gp-guild-project-grid {
