@@ -32,10 +32,11 @@ Ship the first public-facing version of V2 that fixes the most visible broken de
 - homepage rewrite around Greenpill as a living network
 - homepage promise and proof model informed by the steward decision pack
 - real navigation instead of section-only anchors
-- `/join`
+- `/garden`
 - `/chapters`
-- `/guilds`
-- `/learn/onboarding`
+- `/guilds/dev-guild`
+- `/guilds/writers-guild`
+- `/library`
 - removal of public Charmverse links from homepage components and the social link singleton
 - Knowledge Commons Graph Explorer deferred into `.plans/backlog/knowledge-commons-graph-explorer/`
 
@@ -45,10 +46,10 @@ Ship the first public-facing version of V2 that fixes the most visible broken de
   - `packages/website/src/components/ParticipateSection.astro`
   - `packages/website/src/components/ExploreSection.astro`
   - `packages/website/src/content/social-links.json`
-- homepage clearly routes to `/join`, `/chapters`, `/guilds`, and `/learn/onboarding`
-- `/join` explains pathways instead of acting as a generic dump of external links
-- `/guilds` exists as an internal destination
-- `/learn/onboarding` exists as an internal destination
+- homepage clearly routes to Garden, chapters, Dev Guild, Writers Guild, Library, and Stories
+- Garden explains public onboarding pathways instead of a generic dump of external links
+- Dev Guild and Writers Guild exist as direct internal guild destinations
+- the former standalone onboarding, root guild directory, and project route family stay retired
 - the former public explorer route is not shipped until the graph has source lineage, relationship grammar, maturity states, and stewardship review
 
 ### Non-goals
@@ -62,17 +63,17 @@ Ship the first public-facing version of V2 that fixes the most visible broken de
 
 ### Goal
 
-Deepen the public site so it reflects the actual network structure and gives people better pathways into chapters, guilds, projects, learning, and stories.
+Deepen the public site so it reflects the actual network structure and gives people better pathways into chapters, the two active guild pages, learning, stories, and public proof references.
 
 ### In scope
 
 - `/chapters/[slug]`
-- `/guilds/[slug]`
-- `/projects`
-- `/projects/[slug]`
+- `/guilds/dev-guild`
+- `/guilds/writers-guild`
 - `/stories`
 - `/stories/[slug]`
-- `/learn`
+- `/library`
+- `/garden`
 - expanded Keystatic content model
 - replacement of chapter-level external map destinations with internal chapter routes
 - public themes and reusable people/steward profile contracts
@@ -81,9 +82,9 @@ Deepen the public site so it reflects the actual network structure and gives peo
 ### Acceptance criteria
 
 - chapter routes exist and supported map links no longer depend on raw Charmverse URLs
-- guild routes exist and link to current work or projects
-- projects become first-class public proof of network activity
-- the site has a coherent `learn` surface beyond homepage sections
+- guild routes exist and link to current work, Green Goods proof, and external project references where useful
+- project records remain supporting proof/reference data without internal project pages
+- the site has coherent Garden and Library surfaces beyond homepage sections
 - Keystatic can author the new public entities without ad hoc hardcoding
 - the public map reads chapter data from the `chapters` collection rather than a separate hand-maintained JSON file
 - private map-node contracts prove public payloads exclude email, private notes, spam metadata, and pending submissions
@@ -136,18 +137,18 @@ Create the first real Greenpill workspace application and define the boundary be
 - every public Charmverse link should have a website-native replacement or a clear transition page
 - replace homepage entry-point links before deeper workspace parity work
 - group chapter-level Charmverse links behind chapter profile routes instead of leaving them as raw external destinations
-- use `/join` for public onboarding and orientation
+- use Garden for public onboarding and orientation
 - use `https://app.greenpill.network/login` for member-operation entry points
 
 ### Current touchpoints
 
 | Surface | Source | Current destination | Intended replacement | Phase | Notes |
 | --- | --- | --- | --- | --- | --- |
-| Taking the Greenpill onboarding | `packages/website/src/components/ParticipateSection.astro` | `https://app.charmverse.io/greenpill-network/taking-the-greenpill-4871995012783201` | `/learn/onboarding` | P1 | Replace with guided onboarding page and migration note if needed |
-| Charmverse workspace CTA | `packages/website/src/components/ParticipateSection.astro` | `https://app.charmverse.io/greenpill-network/` | `https://app.greenpill.network/login` | P3 | Member-operation CTA should go directly to workspace login instead of an in-site route |
-| Guild directory CTA | `packages/website/src/components/ParticipateSection.astro` | `https://app.charmverse.io/greenpill-network/guilds-29059086676991` | `/guilds` | P1 | Guild index page replaces the single external guild link |
-| Charmverse invite CTA | `packages/website/src/components/ExploreSection.astro` | `https://app.charmverse.io/invite/5e5ee6` | `/join` | P1 | This should become a public routing page, not a workspace dependency |
-| Social singleton Charmverse links | `packages/website/src/content/social-links.json` | workspace and invite URLs | `/join` and `https://app.greenpill.network/login` | P1 / P3 | Use `/join` for public orientation and workspace login for member operations |
+| Taking the Greenpill onboarding | `packages/website/src/components/ParticipateSection.astro` | Retired Charmverse onboarding page | Garden | P1 | Garden is the public onboarding destination; do not restore the retired standalone onboarding route |
+| Charmverse workspace CTA | `packages/website/src/components/ParticipateSection.astro` | Retired Charmverse workspace page | `https://app.greenpill.network/login` | P3 | Member-operation CTA should go directly to workspace login instead of an in-site route |
+| Guild directory CTA | `packages/website/src/components/ParticipateSection.astro` | Legacy Charmverse guild directory page | Dev Guild and Writers Guild direct links | P1 | No root guild directory; route users to the relevant guild detail page |
+| Charmverse invite CTA | `packages/website/src/components/ExploreSection.astro` | Retired Charmverse invite page | Garden | P1 | Garden is the public orientation surface, not a workspace dependency |
+| Social singleton Charmverse links | `packages/website/src/content/social-links.json` | workspace and invite URLs | Garden and `https://app.greenpill.network/login` | P1 / P3 | Use Garden for public orientation and workspace login for member operations |
 | Chapter map links | `packages/website/src/pages/locations.json.ts` + `packages/website/src/content/chapters/*.json` | chapter-specific Charmverse pages | `/chapters/[slug]` | P2 | Generate public map data from chapter content and replace external map links with internal chapter detail routes |
 | Chapter content links | `packages/website/src/content/chapters/*.json` | chapter-specific Charmverse pages | `/chapters/[slug]` | P2 | Chapter profiles should become the canonical destination |
 
@@ -155,6 +156,6 @@ Create the first real Greenpill workspace application and define the boundary be
 
 - Charmverse pages and databases not currently linked from the public site
 - images, files, and attachments that need export
-- onboarding copy that should be migrated into `learn`
+- onboarding copy that should be migrated into Garden or Library
 - guild and workspace structure that still needs a durable home
 - any public links previously shared in Discord, forums, or docs that should redirect cleanly

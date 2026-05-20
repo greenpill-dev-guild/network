@@ -1,55 +1,623 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import Nav from '../../components/Nav.astro';
-import Footer from '../../components/Footer.astro';
+import GpLayout from '../../layouts/GpLayout.astro';
+import Container from '../../components/ui/Container.astro';
+import Button from '../../components/ui/Button.astro';
+import Chip from '../../components/ui/Chip.astro';
+import ArrowLink from '../../components/ui/ArrowLink.astro';
+import Overline from '../../components/ui/Overline.astro';
+import Text from '../../components/ui/Text.astro';
+import Meta from '../../components/ui/Meta.astro';
 import chaptersIndex from '../../content/chapters-index.json';
 import { getOperationalChapters } from '../../lib/operational-content';
-import '../../styles/global.css';
 
-const items = (await getOperationalChapters())
+const all = await getOperationalChapters();
+
+const featuredSlugs: string[] = chaptersIndex.featuredChapterSlugs ?? [];
+const featured = featuredSlugs
+  .map((slug) => all.find((c) => c.id === slug))
+  .filter((c): c is typeof all[number] => Boolean(c));
+
+const featuredIds = new Set(featured.map((c) => c.id));
+const directory = all
+  .filter((c) => !featuredIds.has(c.id))
   .sort((a, b) => a.data.name.localeCompare(b.data.name));
+
+const totals = {
+  total: all.length,
+  active: all.filter((c) => c.data.status === 'active').length,
+  forming: all.filter((c) => c.data.status === 'forming').length,
+  regions: new Set(all.map((c) => c.data.region).filter(Boolean)).size,
+};
+
+const regionOrder = ['americas', 'africa', 'asia', 'europe', 'oceania'];
+const allRegions = Array.from(
+  new Set(all.map((c) => c.data.region || 'global')),
+).sort((a, b) => {
+  const ai = regionOrder.indexOf(a);
+  const bi = regionOrder.indexOf(b);
+  if (ai === -1 && bi === -1) return a.localeCompare(b);
+  if (ai === -1) return 1;
+  if (bi === -1) return -1;
+  return ai - bi;
+});
+
+function regionLabel(slug: string) {
+  if (!slug) return 'Global';
+  return slug.charAt(0).toUpperCase() + slug.slice(1);
+}
+
+const hero = chaptersIndex.hero ?? {};
 ---
 
-<BaseLayout
-  title={chaptersIndex.seo.title || 'Chapters · Greenpill Network'}
-  description={chaptersIndex.seo.description || 'The local chapters of the Greenpill regenerative network.'}
-  ogImage={chaptersIndex.seo.ogImage || undefined}
-  canonicalPath={chaptersIndex.seo.canonicalPath || '/chapters'}
-  noindex={chaptersIndex.seo.noindex}
+<GpLayout
+  title={chaptersIndex.seo?.title || 'Chapters · Greenpill Network'}
+  description={chaptersIndex.seo?.description || 'Local chapters of the Greenpill regenerative network.'}
+  ogImage={chaptersIndex.seo?.ogImage || undefined}
+  canonicalPath={chaptersIndex.seo?.canonicalPath || '/chapters'}
+  noindex={chaptersIndex.seo?.noindex}
+  activeNav="Chapters"
 >
-  <Nav />
-  <main class="pt-32 pb-24 px-4 max-w-6xl mx-auto">
-    <header class="mb-12">
-      <span class="text-xs uppercase font-bold text-green tracking-widest">Chapters</span>
-      <h1 class="font-volkhov text-4xl sm:text-5xl text-yellow mt-2">Greenpill Chapters</h1>
-      <p class="text-white text-base sm:text-lg mt-4 max-w-2xl opacity-80">
-        Local nodes of the Greenpill network — chapters work in their cities and regions to coordinate regenerative impact.
-      </p>
-    </header>
-    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-      {items.map(item => (
-        <a
-          href={`/chapters/${item.id}`}
-          class="block rounded-2xl border border-green bg-black bg-opacity-40 backdrop-blur-md p-6 transition-all hover:bg-opacity-60"
-        >
-          <span class="text-xs uppercase font-bold text-green tracking-wider">
-            Chapter{item.data.region && ` · ${item.data.region}`}
-          </span>
-          <h2 class="font-volkhov text-2xl text-yellow mt-2">{item.data.name}</h2>
-          {item.data.city && (
-            <p class="text-white text-sm mt-1 opacity-70">
-              {item.data.city}{item.data.country && `, ${item.data.country}`}
-            </p>
-          )}
-          {item.data.summary && (
-            <p class="text-white text-sm mt-3 line-clamp-3">{item.data.summary}</p>
-          )}
-        </a>
-      ))}
+  <main class="gp-chapters">
+    <section class="gp-chapters-hero gp-topo">
+      <Container size="2xl">
+        <div class="gp-chapters-hero-inner">
+          <Overline tone="muted">
+            <span>Chapters</span>
+            <span aria-hidden="true">·</span>
+            <span>{totals.total} nodes</span>
+          </Overline>
+
+          <Text variant="display" class="gp-chapters-hero-title">{hero.title || 'The local nodes of the Greenpill network.'}</Text>
+
+          <Text variant="body-lg" class="gp-chapters-hero-dek">
+            {hero.dek || 'Active and forming chapters across multiple regions — local hubs running public-goods work, education, events, and onchain coordination.'}
+          </Text>
+
+          <div class="gp-chapters-stat-strip">
+            <div class="gp-chapters-stat">
+              <span class="gp-chapters-stat-big">{totals.total}</span>
+              <span class="gp-chapters-stat-sub">Chapters</span>
+            </div>
+            <div class="gp-chapters-stat is-accent">
+              <span class="gp-chapters-stat-big">{totals.active}</span>
+              <span class="gp-chapters-stat-sub">Active</span>
+            </div>
+            {totals.forming > 0 && (
+              <div class="gp-chapters-stat">
+                <span class="gp-chapters-stat-big">{totals.forming}</span>
+                <span class="gp-chapters-stat-sub">Forming</span>
+              </div>
+            )}
+            <div class="gp-chapters-stat">
+              <span class="gp-chapters-stat-big">{totals.regions}</span>
+              <span class="gp-chapters-stat-sub">Regions</span>
+            </div>
+          </div>
+        </div>
+      </Container>
+    </section>
+
+    <section class="gp-chapters-filters">
+      <Container size="2xl">
+        <div class="gp-chapters-filter-row" data-gp-filters>
+          <div class="gp-chapters-filter-group" role="radiogroup" aria-label="Filter chapters by region">
+            <button class="gp-chapters-pill is-active" data-region="all" type="button">All</button>
+            {allRegions.map((region) => (
+              <button class="gp-chapters-pill" data-region={region} type="button">{regionLabel(region)}</button>
+            ))}
+          </div>
+          <div class="gp-chapters-filter-group" aria-label="Filter chapters by status">
+            <button class="gp-chapters-pill is-mono is-active" data-status="active" type="button" aria-pressed="true">Active · {totals.active}</button>
+            {totals.forming > 0 && (
+              <button class="gp-chapters-pill is-mono is-active" data-status="forming" type="button" aria-pressed="true">Forming · {totals.forming}</button>
+            )}
+          </div>
+        </div>
+      </Container>
+    </section>
+
+    {featured.length > 0 && (
+      <section class="gp-chapters-section">
+        <Container size="2xl">
+          <div class="gp-chapters-section-head">
+            <Overline>Featured chapters</Overline>
+            <Text variant="caption">Strongest public proof in the network today.</Text>
+          </div>
+
+          <div class="gp-chapters-grid is-featured" data-chapter-grid>
+            {featured.map((chapter) => {
+              const themes = (chapter.data.themeSlugs ?? []).slice(0, 4);
+              const links = (chapter.data.links ?? []).filter((l) => l.url).slice(0, 3);
+              const stewards = chapter.data.stewardSlugs?.length ?? 0;
+              return (
+                <article
+                  class="gp-chapters-card is-featured"
+                  data-region={chapter.data.region || 'global'}
+                  data-status={chapter.data.status || 'active'}
+                >
+                  <a class="gp-chapters-card-link" href={`/chapters/${chapter.id}`}>
+                    <header class="gp-chapters-card-head">
+                      <Meta items={['Chapter', regionLabel(chapter.data.region || 'global'), chapter.data.status || 'active']} accentIndex={2} />
+                    </header>
+                    <Text variant="h3" class="gp-chapters-card-title">{chapter.data.name}</Text>
+                    {chapter.data.city && (
+                      <Text variant="caption">{chapter.data.city}{chapter.data.country && `, ${chapter.data.country}`}</Text>
+                    )}
+                    <Text variant="body-sm" class="gp-chapters-card-summary">{chapter.data.summary}</Text>
+                  </a>
+                  {themes.length > 0 && (
+                    <div class="gp-chapters-card-themes">
+                      {themes.map((t) => (
+                        <Chip tone="soft-lime" size="sm">{t.replace(/-/g, ' ')}</Chip>
+                      ))}
+                    </div>
+                  )}
+                  {links.length > 0 && (
+                    <ul class="gp-chapters-card-links">
+                      {links.map((link) => (
+                        <li>
+                          <a href={link.url} target="_blank" rel="noopener" class="gp-chapters-card-link-row">
+                            <span>{link.label}</span>
+                            <span aria-hidden="true">↗</span>
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <footer class="gp-chapters-card-foot">
+                    {stewards > 0 && <Text variant="mono">{stewards} steward{stewards === 1 ? '' : 's'}</Text>}
+                    <ArrowLink href={`/chapters/${chapter.id}`} size="sm">Open chapter</ArrowLink>
+                  </footer>
+                </article>
+              );
+            })}
+          </div>
+        </Container>
+      </section>
+    )}
+
+    {directory.length > 0 && (
+      <section class="gp-chapters-section">
+        <Container size="2xl">
+          <div class="gp-chapters-section-head">
+            <Overline>Full directory</Overline>
+            <Text variant="caption">{directory.length} chapters · sorted alphabetically.</Text>
+          </div>
+
+          <div class="gp-chapters-grid is-compact" data-chapter-grid>
+            {directory.map((chapter) => (
+              <a
+                class="gp-chapters-card is-compact"
+                href={`/chapters/${chapter.id}`}
+                data-region={chapter.data.region || 'global'}
+                data-status={chapter.data.status || 'active'}
+              >
+                <Meta items={[regionLabel(chapter.data.region || 'global'), chapter.data.status || 'active']} accentIndex={1} />
+                <Text variant="title-lg" class="gp-chapters-card-title">{chapter.data.name}</Text>
+                {chapter.data.city && (
+                  <Text variant="caption">{chapter.data.city}{chapter.data.country && `, ${chapter.data.country}`}</Text>
+                )}
+                {chapter.data.summary && (
+                  <Text variant="body-sm" class="gp-chapters-card-summary">{chapter.data.summary}</Text>
+                )}
+                <span class="gp-chapters-card-arrow" aria-hidden="true">→</span>
+              </a>
+            ))}
+          </div>
+
+          <p class="gp-chapters-empty" data-chapter-empty hidden>
+            {chaptersIndex.filterCopy?.emptyState || 'No chapters match this filter yet.'}
+          </p>
+        </Container>
+      </section>
+    )}
+
+    <section class="gp-chapters-cta">
+      <Container size="2xl">
+        <div class="gp-chapters-cta-inner">
+          <div>
+            <Overline>Start a chapter</Overline>
+            <Text variant="h2">Do not see your city?</Text>
+            <Text variant="body" class="gp-chapters-cta-body">
+              Chapters start with public goods, shared learning, and small in-person gatherings. The Garden is the
+              public ramp to find your people and connect with a steward.
+            </Text>
+          </div>
+          <div class="gp-chapters-cta-actions">
+            <Button href="/garden">Enter the Garden</Button>
+            <Button href="https://hub.regencoordination.xyz/c/updates/chapter-updates/14" variant="ghost">Read chapter updates</Button>
+          </div>
+        </div>
+      </Container>
     </section>
   </main>
-  <Footer />
-  <script>
-    import '../../scripts/mobile-menu';
-  </script>
-</BaseLayout>
+</GpLayout>
+
+<script>
+  const filterRow = document.querySelector('[data-gp-filters]');
+  if (filterRow) {
+    let region = 'all';
+    const status = new Set(['active', 'forming']);
+    const grids = document.querySelectorAll('[data-chapter-grid]');
+    const empty = document.querySelector('[data-chapter-empty]');
+
+    const apply = () => {
+      let shown = 0;
+      grids.forEach((grid) => {
+        grid.querySelectorAll('[data-region]').forEach((card) => {
+          const el = card as HTMLElement;
+          const r = el.dataset.region || 'global';
+          const s = el.dataset.status || 'active';
+          const regionMatch = region === 'all' || r === region;
+          const statusMatch = status.has(s);
+          const visible = regionMatch && statusMatch;
+          el.hidden = !visible;
+          if (visible) shown += 1;
+        });
+      });
+      if (empty) (empty as HTMLElement).hidden = shown > 0;
+    };
+
+    filterRow.querySelectorAll('[data-region]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        region = (btn as HTMLElement).dataset.region || 'all';
+        filterRow.querySelectorAll('[data-region]').forEach((b) => b.classList.toggle('is-active', b === btn));
+        apply();
+      });
+    });
+
+    filterRow.querySelectorAll('[data-status]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const s = (btn as HTMLElement).dataset.status || '';
+        if (status.has(s)) status.delete(s);
+        else status.add(s);
+        btn.classList.toggle('is-active', status.has(s));
+        btn.setAttribute('aria-pressed', String(status.has(s)));
+        apply();
+      });
+    });
+  }
+</script>
+
+<style>
+  .gp-chapters {
+    min-height: 100vh;
+    background: transparent;
+  }
+
+  .gp-chapters-hero {
+    position: relative;
+    overflow: hidden;
+    padding: clamp(var(--gp-space-3xl), 7vw, var(--gp-space-5xl)) 0 var(--gp-space-2xl);
+  }
+
+  .gp-chapters-hero-inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(var(--gp-space-lg), 3vw, var(--gp-space-xl));
+  }
+
+  .gp-chapters-hero-inner :global(.gp-chapters-hero-title) {
+    max-width: 18ch;
+    font-size: clamp(40px, 6vw, 72px);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+  }
+
+  .gp-chapters-hero-inner :global(.gp-chapters-hero-dek) {
+    max-width: 60ch;
+    color: var(--gp-fg-muted);
+  }
+
+  .gp-chapters-stat-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(var(--gp-space-lg), 3vw, var(--gp-space-2xl));
+    padding-top: var(--gp-space-lg);
+    border-top: 1px solid var(--gp-border-soft);
+  }
+
+  .gp-chapters-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .gp-chapters-stat-big {
+    color: var(--gp-secondary);
+    font-family: var(--gp-font-display);
+    font-size: clamp(28px, 3vw, 42px);
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.015em;
+  }
+
+  .gp-chapters-stat.is-accent .gp-chapters-stat-big {
+    color: var(--gp-primary);
+  }
+
+  .gp-chapters-stat-sub {
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .gp-chapters-filters {
+    padding: var(--gp-space-xl) 0;
+    border-top: 1px solid var(--gp-border-soft);
+    border-bottom: 1px solid var(--gp-border-soft);
+    background: rgba(15, 61, 46, 0.4);
+    position: sticky;
+    top: var(--gp-header-height);
+    z-index: 10;
+    backdrop-filter: blur(8px);
+  }
+
+  .gp-chapters-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--gp-space-md);
+  }
+
+  .gp-chapters-filter-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .gp-chapters-pill {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 36px;
+    padding: 0 14px;
+    border: 1px solid var(--gp-border);
+    border-radius: var(--gp-radius-pill);
+    background: transparent;
+    color: var(--gp-fg-muted);
+    font-family: var(--gp-font-body);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 160ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @media (hover: none) and (pointer: coarse) {
+    .gp-chapters-pill { height: 44px; padding: 0 18px; }
+  }
+
+  .gp-chapters-pill.is-mono {
+    font-family: var(--gp-font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 11px;
+  }
+
+  .gp-chapters-pill:hover {
+    color: var(--gp-fg);
+    border-color: rgba(184, 232, 53, 0.42);
+  }
+
+  .gp-chapters-pill.is-active {
+    background: var(--gp-primary);
+    border-color: var(--gp-primary);
+    color: var(--gp-primary-fg);
+  }
+
+  .gp-chapters-section {
+    padding: clamp(var(--gp-space-2xl), 5vw, var(--gp-space-4xl)) 0;
+    border-top: 1px solid var(--gp-border-soft);
+  }
+
+  .gp-chapters-section:first-of-type {
+    border-top: 0;
+  }
+
+  .gp-chapters-section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--gp-space-md);
+    flex-wrap: wrap;
+    margin-bottom: var(--gp-space-lg);
+    padding-bottom: var(--gp-space-md);
+    border-bottom: 1px solid var(--gp-border-soft);
+  }
+
+  .gp-chapters-grid {
+    display: grid;
+    gap: clamp(14px, 1.5vw, 20px);
+  }
+
+  .gp-chapters-grid.is-featured {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gp-chapters-grid.is-compact {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .gp-chapters-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-sm);
+    padding: clamp(var(--gp-space-lg), 2vw, var(--gp-space-xl));
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-lg);
+    background: var(--gp-card);
+    color: var(--gp-fg);
+    text-decoration: none;
+    min-width: 0;
+    transition: border-color 200ms cubic-bezier(0.4, 0, 0.2, 1), background 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+
+  .gp-chapters-card:hover,
+  .gp-chapters-card .gp-chapters-card-link:hover {
+    border-color: rgba(184, 232, 53, 0.32);
+  }
+
+  a.gp-chapters-card:hover {
+    background: var(--gp-card-elev);
+  }
+
+  .gp-chapters-card.is-featured {
+    gap: var(--gp-space-md);
+  }
+
+  .gp-chapters-card-link {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-sm);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .gp-chapters-card-link:hover :global(.gp-chapters-card-title) {
+    color: var(--gp-primary);
+  }
+
+  .gp-chapters-card-title {
+    letter-spacing: -0.01em;
+    transition: color 200ms;
+  }
+
+  .gp-chapters-card-summary {
+    color: var(--gp-fg-muted);
+  }
+
+  .gp-chapters-card-themes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .gp-chapters-card-links {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .gp-chapters-card-link-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-md);
+    color: var(--gp-fg-muted);
+    font-family: var(--gp-font-body);
+    font-size: 13px;
+    text-decoration: none;
+    transition: border-color 200ms, color 200ms;
+  }
+
+  .gp-chapters-card-link-row:hover {
+    border-color: rgba(184, 232, 53, 0.42);
+    color: var(--gp-primary);
+  }
+
+  .gp-chapters-card-foot {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: var(--gp-space-sm);
+    border-top: 1px solid var(--gp-border-soft);
+  }
+
+  .gp-chapters-card.is-compact {
+    padding: var(--gp-space-lg);
+  }
+
+  .gp-chapters-card.is-compact .gp-chapters-card-arrow {
+    position: absolute;
+    top: var(--gp-space-lg);
+    right: var(--gp-space-lg);
+    color: var(--gp-fg-dim);
+    transition: color 200ms, transform 200ms;
+  }
+
+  .gp-chapters-card.is-compact:hover .gp-chapters-card-arrow {
+    color: var(--gp-primary);
+    transform: translateX(3px);
+  }
+
+  .gp-chapters-empty {
+    color: var(--gp-fg-muted);
+    text-align: center;
+    padding: var(--gp-space-2xl) 0;
+  }
+
+  .gp-chapters-cta {
+    padding: clamp(var(--gp-space-2xl), 5vw, var(--gp-space-4xl)) 0;
+    border-top: 1px solid var(--gp-border-soft);
+  }
+
+  .gp-chapters-cta-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--gp-space-2xl);
+    padding: clamp(var(--gp-space-xl), 4vw, var(--gp-space-3xl));
+    border: 1px solid rgba(184, 232, 53, 0.32);
+    border-radius: var(--gp-radius-xl);
+    background: linear-gradient(135deg, rgba(184, 232, 53, 0.06), rgba(15, 61, 46, 0.5));
+  }
+
+  .gp-chapters-cta-inner > div:first-child {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-sm);
+    max-width: 540px;
+  }
+
+  .gp-chapters-cta-body {
+    color: var(--gp-fg-muted);
+  }
+
+  .gp-chapters-cta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  @media (max-width: 980px) {
+    .gp-chapters-grid.is-compact {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .gp-chapters-cta-inner {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .gp-chapters-filters {
+      position: static;
+    }
+
+    .gp-chapters-filter-row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .gp-chapters-grid.is-featured,
+    .gp-chapters-grid.is-compact {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

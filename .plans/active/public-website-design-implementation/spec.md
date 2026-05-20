@@ -30,6 +30,7 @@ Build the next public Greenpill Network website experience in `packages/website`
 - This repo starts with manual plan updates plus validation, not automation claiming.
 - Keep `status.json` taxonomy current enough for future filtering and dependency checks.
 - Preserve public/private boundaries: no private node-intake fields, review notes, pending submissions, raw upstream feedback, or database credentials in the public website.
+- Route guardrail: Garden owns public onboarding; do not restore the retired onboarding route. Do not add a root guild directory. Keep guild pages limited to the Dev Guild and Writers Guild detail surfaces for now. Do not add project index or project detail routes; project records may remain internal source data for guild/library references only.
 - Operational pages and generated public JSON routes must read from the approved operational content snapshot, not directly from Directus or private database credentials.
 - Default node intake remains moderated review. Live Onboarding Mode is manual-off and admin-controlled through Directus/admin data access, not URL flags, query parameters, or public browser state.
 - Public map payloads may expose safe `intakeMode: "moderated" | "live"` metadata, but must not expose pending submissions or any public payload key containing `review`.

@@ -201,7 +201,7 @@
       "actor": "claude",
       "lane": "ui",
       "status": "in_review",
-      "note": "Implemented the public website HiFi surfaces against real seeded content: new GpLayout-backed Home with an Astro-native mycelial map driven by real chapter lat/long and shared-theme threads, podcast + active-chapter proof stats only, library bento, ecosystem grid, and Garden ramp; rebuilt Chapters index + chapter detail with featured tier, region/status filter, proof links, impact cache, related chapters; rebuilt Library, Stories index (empty state for draft-only seeded stories), Story detail, Guilds index, Guild detail; polished Garden hero with hero pill imagery; retired /join with an Astro redirect to /garden and updated SiteFooter to point retired CTAs at Garden / real public URLs; added prerender directive to locations.json and impact-sources.json. bun run build, test:content, test:agent, test:map-nodes, and plans:validate all pass."
+      "note": "Implemented the public website HiFi surfaces against real seeded content: new GpLayout-backed Home with an Astro-native mycelial map driven by real chapter lat/long and shared-theme threads, podcast + active-chapter proof stats only, library bento, ecosystem grid, and Garden ramp; rebuilt Chapters index + chapter detail with featured tier, region/status filter, proof links, impact cache, related chapters; rebuilt Library, Stories index (empty state for draft-only seeded stories), Story detail, initial guild index/detail work, and Garden; polished Garden hero with hero pill imagery; moved retired entry CTAs to Garden and real public URLs; added prerender directive to locations.json and impact-sources.json. bun run build, test:content, test:agent, test:map-nodes, and plans:validate all pass."
     },
     {
       "timestamp": "2026-05-19T08:30:00Z",
@@ -236,14 +236,21 @@
       "actor": "codex",
       "lane": "ui",
       "status": "ready",
-      "note": "Corrected homepage and visible navigation truth: removed over-broad homepage proof stats for continent and steward counts, kept homepage-safe proof to podcast and chapter counts, completed visible /join retirement by routing legacy Nav, Garden fallbacks, and onboarding CTAs to Garden destinations while preserving the /join redirect."
+      "note": "Corrected homepage and visible navigation truth: removed over-broad homepage proof stats for continent and steward counts, kept homepage-safe proof to podcast and chapter counts, completed visible retired-entry cleanup by routing legacy Nav, Garden fallbacks, and onboarding CTAs to Garden destinations while preserving the temporary legacy redirect."
     },
     {
       "timestamp": "2026-05-19T23:32:41Z",
       "actor": "codex",
       "lane": "ui",
       "status": "ready",
-      "note": "Fully retired /join after product signoff: removed the remaining Astro redirect, leaving Garden as the visible entry point and no active /join route in the website source."
+      "note": "Fully retired the former join route after product signoff: removed the remaining Astro redirect, leaving Garden as the visible entry point and no active legacy join route in the website source."
+    },
+    {
+      "timestamp": "2026-05-20T00:02:09Z",
+      "actor": "codex",
+      "lane": "ui",
+      "status": "ready",
+      "note": "Locked the current public website route contract in the active plan: Garden owns onboarding, guild navigation links directly to Dev Guild and Writers Guild, project records remain internal proof/reference data only, and the retired onboarding, root guild directory, and project route families must not be reintroduced."
     }
   ]
 }

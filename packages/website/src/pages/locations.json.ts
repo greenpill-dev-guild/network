@@ -1,5 +1,7 @@
 import { getOperationalLocations } from '../lib/operational-content';
 
+export const prerender = true;
+
 export async function GET() {
   const locations = await getOperationalLocations();
 

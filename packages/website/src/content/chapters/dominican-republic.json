@@ -11,7 +11,7 @@
   "founded": "",
   "lat": 18.54,
   "long": -70.34,
-  "link": "https://app.charmverse.io/greenpill-network/greenpill-dominican-republic-17844979752007517",
+  "link": "",
   "stewards": [],
   "stewardSlugs": [],
   "themeSlugs": [
@@ -29,7 +29,7 @@
       "label": "Legacy record",
       "value": "Needs source review",
       "source": "Existing repo content",
-      "href": "https://app.charmverse.io/greenpill-network/greenpill-dominican-republic-17844979752007517"
+      "href": ""
     }
   ],
   "media": {
@@ -41,7 +41,7 @@
     "title": "Greenpill Dominican Republic · Greenpill Network",
     "description": "Greenpill Dominican Republic is a legacy chapter record that needs steward review before launch feature placement.",
     "ogImage": "",
-    "canonicalPath": "/chapters/dominican-republic",
+    "canonicalPath": "",
     "noindex": true
   }
 }

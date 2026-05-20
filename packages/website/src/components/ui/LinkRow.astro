@@ -1,6 +1,6 @@
 ---
 interface Props {
-  glyph: string;
+  glyph?: string;
   label: string;
   sub?: string;
   handle?: string;
@@ -20,12 +20,56 @@ const {
   last = false,
   class: className,
 } = Astro.props;
+
+// Map well-known surface names to a 2-letter glyph that reads cleanly in the
+// round avatar. Fallback derives initials from the label words; falls back
+// to the first two letters when only one word.
+const SURFACE_GLYPH: Record<string, string> = {
+  x: 'X',
+  twitter: 'TW',
+  warpcast: 'WC',
+  farcaster: 'FC',
+  github: 'GH',
+  discord: 'DC',
+  telegram: 'TG',
+  paragraph: 'PG',
+  podcast: 'PC',
+  youtube: 'YT',
+  luma: 'LM',
+  hackmd: 'HM',
+  gitcoin: 'GT',
+  octant: 'OC',
+  karmagap: 'KG',
+  karma: 'KG',
+  hypercerts: 'HC',
+  workspace: 'WS',
+  website: 'WB',
+};
+
+function pickGlyph(rawLabel: string) {
+  const cleaned = rawLabel.trim();
+  if (!cleaned) return '?';
+  const lower = cleaned.toLowerCase();
+  for (const [needle, mapped] of Object.entries(SURFACE_GLYPH)) {
+    if (lower === needle || lower.includes(needle)) return mapped;
+  }
+  const words = cleaned
+    .split(/[\s/]+/u)
+    .filter((w) => w.length > 0 && !/^[·•|]$/u.test(w));
+  if (words.length >= 2) {
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
+  const single = words[0] ?? cleaned;
+  return single.length === 1 ? single.toUpperCase() : single.slice(0, 2).toUpperCase();
+}
+
+const resolvedGlyph = glyph || pickGlyph(label);
 const classes = ['gp-link-row', `is-${shape}`, last ? 'is-last' : '', className].filter(Boolean).join(' ');
 ---
 
 {href ? (
   <a href={href} class={classes}>
-    <span class="gp-link-row-glyph">{glyph}</span>
+    <span class="gp-link-row-glyph">{resolvedGlyph}</span>
     <span class="gp-link-row-copy">
       <span class="gp-link-row-label">{label}</span>
       {sub && <span class="gp-link-row-sub">{sub}</span>}
@@ -34,7 +78,7 @@ const classes = ['gp-link-row', `is-${shape}`, last ? 'is-last' : '', className]
   </a>
 ) : (
   <div class={`${classes} is-static`}>
-    <span class="gp-link-row-glyph">{glyph}</span>
+    <span class="gp-link-row-glyph">{resolvedGlyph}</span>
     <span class="gp-link-row-copy">
       <span class="gp-link-row-label">{label}</span>
       {sub && <span class="gp-link-row-sub">{sub}</span>}

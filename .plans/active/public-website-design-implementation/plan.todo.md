@@ -53,6 +53,13 @@
 - The homepage must not surface steward count, member count, continent count, member-tier copy, self-node walkthroughs, or `/map/state` polling as proof/stat behavior.
 - Home map polish should retain non-color identity cues, accessible focus behavior, an accessible legend, and mobile/dense-region behavior that reduces mycelial edge noise.
 
+## Public Route Guardrails
+
+- Garden is the public onboarding surface. Do not restore the retired standalone onboarding route or the former join route.
+- There is no root guild directory route. Link directly to the Dev Guild and Writers Guild detail pages where guild pathways are needed.
+- There is no public project route family. Keep project records as internal operational/content references for guild pages and library links only.
+- Green Goods should remain a Dev Guild proof/reference point and Library link, not an internal project page.
+
 ## Live Onboarding Mode Pass
 
 - Live Onboarding Mode is an admin-controlled intake setting for workshops and demos. Default remains moderated. When live mode is on, new submitted member nodes are approved immediately, audited privately as `system:live-onboarding`, and included in the public map state refresh for all viewers.

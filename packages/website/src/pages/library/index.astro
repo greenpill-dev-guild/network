@@ -1,68 +1,499 @@
 ---
 import { getCollection } from 'astro:content';
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import Nav from '../../components/Nav.astro';
-import Footer from '../../components/Footer.astro';
+import GpLayout from '../../layouts/GpLayout.astro';
+import Container from '../../components/ui/Container.astro';
+import Card from '../../components/ui/Card.astro';
+import Button from '../../components/ui/Button.astro';
+import Chip from '../../components/ui/Chip.astro';
+import ArrowLink from '../../components/ui/ArrowLink.astro';
+import Overline from '../../components/ui/Overline.astro';
+import Text from '../../components/ui/Text.astro';
+import Meta from '../../components/ui/Meta.astro';
 import library from '../../content/library.json';
-import '../../styles/global.css';
 
 const books = (await getCollection('books')).sort(
-  (a, b) => a.data.sortOrder - b.data.sortOrder,
+  (a, b) => (a.data.sortOrder ?? 0) - (b.data.sortOrder ?? 0),
 );
+
+const allResources = await getCollection('resources');
+const resources = allResources.filter((r) => r.data.status === 'published');
+
+const podcastResource = resources.find((r) => r.id === 'greenpill-podcast');
+const otherResources = resources.filter((r) => r.id !== 'greenpill-podcast');
+
+const guildResources = otherResources.filter((r) =>
+  (r.data.relatedGuildSlugs ?? []).length > 0 || r.data.kind === 'guide' || r.data.kind === 'tool',
+);
+
+const hero = library.hero ?? {};
+const podcastEpisodes = library.proofSignals?.find((p) => p.label === 'Podcast archive')?.value ?? '293 episodes';
 ---
 
-<BaseLayout
-  title={library.seo.title || 'Library · Greenpill Network'}
-  description={library.seo.description || 'Books, podcasts, tools, and toolkit from the Greenpill regenerative network.'}
-  ogImage={library.seo.ogImage || undefined}
-  canonicalPath={library.seo.canonicalPath || '/library'}
-  noindex={library.seo.noindex}
+<GpLayout
+  title={library.seo?.title || 'Library · Greenpill Network'}
+  description={library.seo?.description || 'Books, podcast episodes, public docs, and Garden onboarding material.'}
+  ogImage={library.seo?.ogImage || undefined}
+  canonicalPath={library.seo?.canonicalPath || '/library'}
+  noindex={library.seo?.noindex}
+  activeNav="Library"
 >
-  <Nav />
-  <main class="pt-32 pb-24 px-4 max-w-6xl mx-auto">
-    <header class="mb-12">
-      <span class="text-xs uppercase font-bold text-green tracking-widest">Library</span>
-      <h1 class="font-volkhov text-4xl sm:text-5xl text-yellow mt-2">The Library</h1>
-      <p class="text-white text-base sm:text-lg mt-4 max-w-2xl opacity-80">
-        Books, podcasts, tools, and toolkit from across the Greenpill network. This page is a stub — the unified Library experience (filters, canvas pages) is part of the V2 redesign.
-      </p>
-    </header>
+  <main class="gp-library">
+    <section class="gp-library-hero gp-topo">
+      <Container size="2xl">
+        <div class="gp-library-hero-inner">
+          <Overline tone="muted">
+            <span>Library</span>
+            <span aria-hidden="true">·</span>
+            <span>Public knowledge commons</span>
+          </Overline>
 
-    <section class="mb-12">
-      <h2 class="font-volkhov text-2xl text-yellow mb-5">Books</h2>
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
-        {books.map(book => (
-          <a href={book.data.ebookLink} class="block rounded-2xl border border-green bg-black bg-opacity-40 backdrop-blur-md p-5 transition-all hover:bg-opacity-60">
-            {book.data.image && (
-              <img
-                src={book.data.image}
-                alt={book.data.imageAlt}
-                width={book.data.imageWidth}
-                height={book.data.imageHeight}
-                class="w-full h-auto rounded mb-3"
-                style={book.data.imageStyle}
-              />
-            )}
-            <h3 class="font-volkhov text-lg text-yellow">{book.data.title}</h3>
-            {book.data.translations.length > 0 && (
-              <span class="text-xs text-green mt-1 inline-block">
-                {book.data.translations.length} translation{book.data.translations.length === 1 ? '' : 's'}
-              </span>
-            )}
-          </a>
-        ))}
-      </div>
+          <Text variant="display" class="gp-library-hero-title">{hero.title || 'Everything we have made public.'}</Text>
+
+          <Text variant="body-lg" class="gp-library-hero-dek">
+            {hero.dek || 'Books, podcast conversations, Hub threads, project docs, and Garden resources from across the Greenpill network.'}
+          </Text>
+
+          <div class="gp-library-hero-actions">
+            <Button href="#books">{hero.primaryCta?.label || 'Browse books'}</Button>
+            <Button
+              href={hero.secondaryCta?.href || 'https://podcasts.apple.com/us/podcast/greenpill/id1609313639'}
+              variant="ghost"
+            >
+              {hero.secondaryCta?.label || 'Listen to the podcast'}
+            </Button>
+          </div>
+
+          <div class="gp-library-stat-strip">
+            <div class="gp-library-stat">
+              <span class="gp-library-stat-big">{books.length}</span>
+              <span class="gp-library-stat-sub">Books</span>
+            </div>
+            <div class="gp-library-stat is-accent">
+              <span class="gp-library-stat-big">{podcastEpisodes}</span>
+              <span class="gp-library-stat-sub">Podcast archive</span>
+            </div>
+            <div class="gp-library-stat">
+              <span class="gp-library-stat-big">{resources.length}</span>
+              <span class="gp-library-stat-sub">Public resources</span>
+            </div>
+          </div>
+        </div>
+      </Container>
     </section>
 
-    <section>
-      <h2 class="font-volkhov text-2xl text-yellow mb-5">Podcast & Tools</h2>
-      <p class="text-white opacity-80">
-        Podcast episodes and network tooling are also part of the library — see the homepage podcast section and the <a href="/projects" class="text-green hover:text-[var(--mid-green)]">Projects</a> page until the unified Library lands.
-      </p>
+    <section class="gp-library-section" id="books">
+      <Container size="2xl">
+        <div class="gp-library-section-head">
+          <div class="gp-library-section-head-copy">
+            <Overline>Books · {books.length} titles</Overline>
+            <Text variant="h2">The foundation shelf.</Text>
+            <Text variant="body" class="gp-library-section-dek">
+              Open-source books on regenerative crypto, public goods, capital allocation, local regeneration,
+              and onchain impact networks.
+            </Text>
+          </div>
+          <Text variant="mono">All free · multiple languages</Text>
+        </div>
+
+        <div class="gp-library-books-grid">
+          {books.map((book) => (
+            <a class="gp-library-book" href={book.data.ebookLink || '#'} target={book.data.ebookLink?.startsWith('http') ? '_blank' : undefined} rel="noopener">
+              {book.data.image && (
+                <img
+                  src={book.data.image}
+                  alt={book.data.imageAlt}
+                  width={book.data.imageWidth ?? 200}
+                  height={book.data.imageHeight ?? 300}
+                  loading="lazy"
+                  decoding="async"
+                />
+              )}
+              <div class="gp-library-book-meta">
+                <Text variant="title-md" class="gp-library-book-title">{book.data.title}</Text>
+                {book.data.author && <Text variant="caption">{book.data.author}{book.data.publishYear && ` · ${book.data.publishYear}`}</Text>}
+                {book.data.translations.length > 0 && (
+                  <Text variant="mono">{book.data.translations.length} translations</Text>
+                )}
+              </div>
+            </a>
+          ))}
+        </div>
+      </Container>
+    </section>
+
+    {podcastResource && (
+      <section class="gp-library-section">
+        <Container size="2xl">
+          <div class="gp-library-section-head">
+            <div class="gp-library-section-head-copy">
+              <Overline>Podcast · {podcastEpisodes}</Overline>
+              <Text variant="h2">A long-running public conversation.</Text>
+              <Text variant="body" class="gp-library-section-dek">
+                The Greenpill podcast archive on Apple Podcasts. {podcastResource.data.description}
+              </Text>
+            </div>
+            <ArrowLink href={podcastResource.data.primaryUrl}>Open archive</ArrowLink>
+          </div>
+
+          <Card variant="elevated" padded="lg" class="gp-library-podcast">
+            <div class="gp-library-podcast-body">
+              <div class="gp-library-podcast-cover">
+                <img
+                  src="/images/podcast-cover.png"
+                  alt="Greenpill Podcast cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+              <div class="gp-library-podcast-copy">
+                <Meta items={['Podcast', podcastResource.data.host || 'Kevin Owocki', podcastResource.data.publishDate || '2022']} accentIndex={1} />
+                <Text variant="h3" class="gp-library-podcast-title">{podcastResource.data.title}</Text>
+                <Text variant="body-sm">{podcastResource.data.summary || podcastResource.data.description}</Text>
+                <div class="gp-library-podcast-actions">
+                  <Button href={podcastResource.data.primaryUrl}>Listen on Apple Podcasts</Button>
+                  <Button href="https://www.youtube.com/@Green_Pill_Podcast" variant="ghost">Watch on YouTube</Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </Container>
+      </section>
+    )}
+
+    {guildResources.length > 0 && (
+      <section class="gp-library-section" id="tools-guides">
+        <Container size="2xl">
+          <div class="gp-library-section-head">
+            <div class="gp-library-section-head-copy">
+              <Overline>Tools and guides · {guildResources.length}</Overline>
+              <Text variant="h2">Public docs for work that is already visible.</Text>
+              <Text variant="body" class="gp-library-section-dek">
+                Green Goods docs, Regen Coordination Hub threads, and Dev Guild writing. Drafts still in private review stay private.
+              </Text>
+            </div>
+          </div>
+
+          <div class="gp-library-resource-grid">
+            {guildResources.map((res) => (
+              <a class="gp-library-resource" href={res.data.primaryUrl || '#'} target={res.data.primaryUrl?.startsWith('http') ? '_blank' : undefined} rel="noopener">
+                <Meta items={[res.data.kind || 'resource', res.data.author || 'Public']} accentIndex={0} />
+                <Text variant="title-lg" class="gp-library-resource-title">{res.data.title}</Text>
+                <Text variant="body-sm">{res.data.summary || res.data.description}</Text>
+                {(res.data.themeSlugs ?? []).length > 0 && (
+                  <div class="gp-library-resource-themes">
+                    {(res.data.themeSlugs ?? []).slice(0, 3).map((t: string) => (
+                      <Chip tone="soft-lime" size="sm">{t.replace(/-/g, ' ')}</Chip>
+                    ))}
+                  </div>
+                )}
+                <span class="gp-library-resource-arrow" aria-hidden="true">↗</span>
+              </a>
+            ))}
+          </div>
+        </Container>
+      </section>
+    )}
+
+    <section class="gp-library-section">
+      <Container size="2xl">
+        <Card padded="lg" class="gp-library-garden">
+          <div class="gp-library-garden-copy">
+            <Overline>Garden · Public onboarding</Overline>
+            <Text variant="h2">Enter the Garden.</Text>
+            <Text variant="body" class="gp-library-section-dek">
+              A public onboarding ramp from a light newsletter subscription to a high-intent steward call.
+              Pick the friction level that matches the moment you are in.
+            </Text>
+            <div class="gp-library-garden-actions">
+              <Button href="/garden">Open the Garden</Button>
+              <Button href="https://hub.regencoordination.xyz" variant="ghost">Read the Hub</Button>
+            </div>
+          </div>
+        </Card>
+      </Container>
     </section>
   </main>
-  <Footer />
-  <script>
-    import '../../scripts/mobile-menu';
-  </script>
-</BaseLayout>
+</GpLayout>
+
+<style>
+  .gp-library {
+    min-height: 100vh;
+    background: transparent;
+  }
+
+  .gp-library-hero {
+    position: relative;
+    overflow: hidden;
+    padding: clamp(var(--gp-space-3xl), 7vw, var(--gp-space-5xl)) 0 var(--gp-space-2xl);
+  }
+
+  .gp-library-hero-inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-lg);
+  }
+
+  .gp-library-hero-inner :global(.gp-library-hero-title) {
+    max-width: 18ch;
+    font-size: clamp(40px, 6vw, 72px);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+  }
+
+  .gp-library-hero-inner :global(.gp-library-hero-dek) {
+    max-width: 60ch;
+    color: var(--gp-fg-muted);
+  }
+
+  .gp-library-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .gp-library-stat-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(var(--gp-space-lg), 3vw, var(--gp-space-2xl));
+    padding-top: var(--gp-space-lg);
+    border-top: 1px solid var(--gp-border-soft);
+  }
+
+  .gp-library-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .gp-library-stat-big {
+    color: var(--gp-secondary);
+    font-family: var(--gp-font-display);
+    font-size: clamp(28px, 3vw, 42px);
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.015em;
+  }
+
+  .gp-library-stat.is-accent .gp-library-stat-big {
+    color: var(--gp-primary);
+  }
+
+  .gp-library-stat-sub {
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .gp-library-section {
+    padding: clamp(var(--gp-space-2xl), 5vw, var(--gp-space-4xl)) 0;
+    border-top: 1px solid var(--gp-border-soft);
+  }
+
+  .gp-library-section-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--gp-space-xl);
+    flex-wrap: wrap;
+    margin-bottom: var(--gp-space-xl);
+  }
+
+  .gp-library-section-head-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-md);
+    max-width: 720px;
+  }
+
+  .gp-library-section-head-copy :global(.gp-library-section-dek) {
+    color: var(--gp-fg-muted);
+  }
+
+  .gp-library-books-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(14px, 1.5vw, 20px);
+  }
+
+  .gp-library-book {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-md);
+    padding: var(--gp-space-lg);
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-lg);
+    background: var(--gp-card);
+    text-decoration: none;
+    color: var(--gp-fg);
+    transition: border-color 200ms, background 200ms, transform 200ms;
+  }
+
+  .gp-library-book:hover {
+    border-color: rgba(184, 232, 53, 0.32);
+    background: var(--gp-card-elev);
+    transform: translateY(-3px);
+  }
+
+  .gp-library-book img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2 / 3;
+    object-fit: cover;
+    border-radius: var(--gp-radius-sm);
+    background: var(--gp-green-800);
+    box-shadow: var(--gp-shadow-card);
+  }
+
+  .gp-library-book-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .gp-library-book-meta :global(.gp-library-book-title) {
+    color: var(--gp-secondary);
+    font-family: var(--gp-font-display);
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  .gp-library-podcast {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .gp-library-podcast-body {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: var(--gp-space-xl);
+    align-items: start;
+  }
+
+  .gp-library-podcast-cover img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: var(--gp-radius-md);
+    box-shadow: var(--gp-shadow-card-lg);
+  }
+
+  .gp-library-podcast-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-md);
+    min-width: 0;
+  }
+
+  .gp-library-podcast-title {
+    letter-spacing: -0.01em;
+  }
+
+  .gp-library-podcast-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: var(--gp-space-sm);
+  }
+
+  .gp-library-resource-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(14px, 1.5vw, 20px);
+  }
+
+  .gp-library-resource {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-sm);
+    padding: var(--gp-space-lg);
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-lg);
+    background: var(--gp-card);
+    color: var(--gp-fg);
+    text-decoration: none;
+    transition: border-color 200ms, background 200ms;
+  }
+
+  .gp-library-resource:hover {
+    border-color: rgba(184, 232, 53, 0.32);
+    background: var(--gp-card-elev);
+  }
+
+  .gp-library-resource :global(.gp-library-resource-title) {
+    letter-spacing: -0.01em;
+  }
+
+  .gp-library-resource-themes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .gp-library-resource-arrow {
+    position: absolute;
+    top: var(--gp-space-lg);
+    right: var(--gp-space-lg);
+    color: var(--gp-fg-dim);
+    transition: color 200ms;
+  }
+
+  .gp-library-resource:hover .gp-library-resource-arrow {
+    color: var(--gp-primary);
+  }
+
+  .gp-library-garden {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-lg);
+    background: linear-gradient(135deg, rgba(184, 232, 53, 0.06), rgba(15, 61, 46, 0.5));
+    border: 1px solid rgba(184, 232, 53, 0.32);
+  }
+
+  .gp-library-garden-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-md);
+    max-width: 720px;
+  }
+
+  .gp-library-garden-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: var(--gp-space-sm);
+  }
+
+  @media (max-width: 980px) {
+    .gp-library-books-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .gp-library-resource-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .gp-library-podcast-body {
+      grid-template-columns: 1fr;
+    }
+
+    .gp-library-podcast-cover {
+      max-width: 240px;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .gp-library-books-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .gp-library-resource-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

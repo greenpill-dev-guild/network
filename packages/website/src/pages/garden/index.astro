@@ -6,7 +6,6 @@ import Card from '../../components/ui/Card.astro';
 import Chip from '../../components/ui/Chip.astro';
 import Container from '../../components/ui/Container.astro';
 import CtaStrip from '../../components/ui/CtaStrip.astro';
-import ImagePlaceholder from '../../components/ui/ImagePlaceholder.astro';
 import Meta from '../../components/ui/Meta.astro';
 import Overline from '../../components/ui/Overline.astro';
 import SectionHeader from '../../components/ui/SectionHeader.astro';
@@ -26,8 +25,8 @@ const fallbackSteps = [
     level: 2,
     kicker: 'Meet',
     title: 'Find your local node',
-    body: 'Browse chapters and guilds to see where the network is active and which working groups match your context.',
-    meta: 'Chapters and guilds',
+    body: 'Browse chapters, then use the Dev Guild and Writers Guild pages when you are ready to contribute through builder or editorial work.',
+    meta: 'Chapters and guild pages',
     cta: { label: 'Browse chapters', href: '/chapters' },
   },
   {
@@ -106,8 +105,14 @@ const seoDescription = garden.seo.description || summary;
               <Button href="/library" variant="ghost">Read first</Button>
             </div>
           </div>
-          <div class="gp-garden-hero-media">
-            <ImagePlaceholder label="participation path" ratio="4/3" />
+          <div class="gp-garden-hero-media" aria-hidden="true">
+            <img
+              src="/images/hero-pill.png"
+              alt=""
+              loading="eager"
+              decoding="async"
+            />
+            <div class="gp-garden-hero-glow"></div>
           </div>
         </div>
       </Container>
@@ -235,7 +240,48 @@ const seoDescription = garden.seo.description || summary;
   }
 
   .gp-garden-hero-media {
+    position: relative;
     min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .gp-garden-hero-media img {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 360px;
+    height: auto;
+    filter: drop-shadow(0 24px 64px rgba(184, 232, 53, 0.25));
+    animation: gpGardenFloat 6s ease-in-out infinite;
+  }
+
+  .gp-garden-hero-glow {
+    position: absolute;
+    inset: 12%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(184, 232, 53, 0.32), transparent 65%);
+    filter: blur(20px);
+    z-index: 0;
+    animation: gpGardenPulse 5s ease-in-out infinite;
+  }
+
+  @keyframes gpGardenFloat {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-12px); }
+  }
+
+  @keyframes gpGardenPulse {
+    0%, 100% { opacity: 0.45; transform: scale(0.95); }
+    50%      { opacity: 0.7;  transform: scale(1.05); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .gp-garden-hero-media img,
+    .gp-garden-hero-glow {
+      animation: none !important;
+    }
   }
 
   .gp-garden-stack {

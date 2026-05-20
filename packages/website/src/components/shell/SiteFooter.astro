@@ -10,18 +10,18 @@ const columns = [
     heading: 'Network',
     items: [
       { label: 'Chapters', href: '/chapters' },
-      { label: 'Guilds', href: '/guilds' },
-      { label: 'Projects', href: '/projects' },
+      { label: 'Dev Guild', href: '/guilds/dev-guild' },
+      { label: 'Writers Guild', href: '/guilds/writers-guild' },
       { label: 'Garden', href: '/garden' },
     ],
   },
   {
     heading: 'Get involved',
     items: [
-      { label: 'Start a chapter', href: '/join' },
+      { label: 'Start in the Garden', href: '/garden' },
       { label: 'Attend an event', href: '/chapters' },
-      { label: 'Add yourself to the map', href: '/join' },
-      { label: 'Become a steward', href: '/join' },
+      { label: 'Add yourself to the map', href: '/garden#assessment' },
+      { label: 'Talk to a steward', href: '/garden#steward-call' },
     ],
   },
   {
@@ -29,17 +29,16 @@ const columns = [
     items: [
       { label: 'Library', href: '/library' },
       { label: 'Stories', href: '/stories' },
-      { label: 'Onboarding', href: '/learn/onboarding' },
-      { label: 'Podcast', href: '/library' },
+      { label: 'Podcast', href: 'https://podcasts.apple.com/us/podcast/greenpill/id1609313639' },
     ],
   },
   {
     heading: 'Connect',
     items: [
-      { label: 'Twitter', href: 'https://twitter.com/greenpillnet' },
-      { label: 'Discord', href: '/join' },
-      { label: 'Telegram', href: '/join' },
-      { label: 'Hub', href: '/join' },
+      { label: 'Twitter / X', href: 'https://twitter.com/greenpillnet' },
+      { label: 'Warpcast', href: 'https://warpcast.com/~/channel/green-pill' },
+      { label: 'Telegram', href: 'https://t.me/+g9TM8i7GpxAzMGUx' },
+      { label: 'Regen Hub', href: 'https://hub.regencoordination.xyz' },
     ],
   },
 ];
@@ -48,7 +47,7 @@ const columns = [
 <footer class="gp-site-footer">
   {showWordmark && (
     <div class="gp-footer-wordmark is-centered">
-      <img src="/images/hifi/green-pill-wordmark.svg" alt="GREEN PILL" />
+      <img src="/images/hifi/green-pill-wordmark.svg" alt="Greenpill Network" />
     </div>
   )}
 
@@ -66,7 +65,7 @@ const columns = [
 
     {!showWordmark && (
       <div class="gp-footer-wordmark">
-        <img src="/images/hifi/green-pill-wordmark.svg" alt="GREEN PILL" />
+        <img src="/images/hifi/green-pill-wordmark.svg" alt="Greenpill Network" />
         <p>A CoordiNation across<br />Nations and Cultures.</p>
       </div>
     )}

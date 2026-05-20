@@ -7,6 +7,7 @@
 - Public website implementation work references this hub for design/research context.
 - Runtime SQL and package contracts live under `packages/`.
 - `status.json` matches the intended stage and lane state.
+- Stale route scan confirms the retired public onboarding, guild-index, and project route families are not listed as future implementation targets.
 - The map-state public contract includes only safe `intakeMode` metadata and approved nodes; no pending submissions or review/private fields leak.
 - `POST /map-nodes` keeps submissions pending by default and auto-approves only when the admin-owned intake settings singleton has Live Onboarding Mode enabled.
 - Live auto-approval writes a private audit/review row marked `system:live-onboarding`.

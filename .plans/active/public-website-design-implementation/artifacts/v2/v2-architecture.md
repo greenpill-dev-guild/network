@@ -39,17 +39,18 @@ Current package shape:
 ### Public routes
 
 - `/`
-- `/join`
 - `/chapters`
 - `/chapters/[slug]`
-- `/guilds`
-- `/guilds/[slug]`
-- `/projects`
-- `/projects/[slug]`
-- `/learn`
-- `/learn/onboarding`
+- `/guilds/dev-guild`
+- `/guilds/writers-guild`
+- `/garden`
+- `/library`
 - `/stories`
 - `/stories/[slug]`
+
+Garden is the public onboarding surface. The former standalone onboarding route,
+root guild directory, and project route family are intentionally retired and
+must not be reintroduced by future implementation passes.
 
 The former graph explorer is not a public route in the current architecture. Future graph work is tracked in `.plans/backlog/knowledge-commons-graph-explorer/`.
 
@@ -69,7 +70,7 @@ New public entities to support:
 
 - guilds
 - pods
-- projects
+- project references for guild/library proof, without public project pages
 - stories
 - programs
 - resources

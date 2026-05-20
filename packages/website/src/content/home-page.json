@@ -101,11 +101,11 @@
       "key": "guilds-projects",
       "overline": "Guilds",
       "title": "Builders, writers, and stewards ship the network.",
-      "dek": "The Dev Guild and Writers Guild should be visible pathways, with Green Goods, GreenWill, Cookie Jar, Grant Ships, and Impact Reef as public builder proof.",
+      "dek": "The Dev Guild and Writers Guild should be visible pathways, with Green Goods linked through public proof and Dev Guild context for now.",
       "body": "Use source-backed project pages and public links. Do not surface private member rosters or application state in the logged-out public site.",
       "cta": {
-        "label": "Visit guilds",
-        "href": "/guilds",
+        "label": "Visit Dev Guild",
+        "href": "/guilds/dev-guild",
         "kind": "internal"
       },
       "featuredRefs": [

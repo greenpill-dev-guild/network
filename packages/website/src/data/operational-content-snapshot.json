@@ -635,7 +635,7 @@
           "label": "Legacy record",
           "value": "Needs source review",
           "source": "Existing repo content",
-          "href": "https://app.charmverse.io/greenpill-network/greenpill-dominican-republic-17844979752007517"
+          "href": ""
         }
       ],
       "media": {
@@ -647,7 +647,7 @@
         "title": "Greenpill Dominican Republic · Greenpill Network",
         "description": "Greenpill Dominican Republic is a legacy chapter record that needs steward review before launch feature placement.",
         "ogImage": "",
-        "canonicalPath": "/chapters/dominican-republic",
+        "canonicalPath": "",
         "noindex": true
       },
       "name": "Greenpill Dominican Republic",
@@ -661,7 +661,7 @@
       "founded": "",
       "lat": 18.54,
       "long": -70.34,
-      "link": "https://app.charmverse.io/greenpill-network/greenpill-dominican-republic-17844979752007517",
+      "link": "",
       "featuredWeight": 0,
       "slug": "dominican-republic",
       "id": "dominican-republic"
@@ -2184,7 +2184,7 @@
         "title": "Impact Reef · Greenpill Network",
         "description": "Impact Reef is an experimental Greenpill Dev Guild project for qualitative public-good impact capture.",
         "ogImage": "",
-        "canonicalPath": "/projects/impact-reef",
+        "canonicalPath": "",
         "noindex": false
       },
       "name": "Impact Reef",
@@ -2233,7 +2233,7 @@
         "title": "Greenpill Network V2 Website · Greenpill Network",
         "description": "The Greenpill Network V2 website rebuild grounds chapters, stories, library, guilds, Garden, map, and impact surfaces in real content.",
         "ogImage": "",
-        "canonicalPath": "/projects/greenpill-v2-website",
+        "canonicalPath": "",
         "noindex": false
       },
       "name": "Greenpill Network V2 Website",
@@ -2277,7 +2277,7 @@
         "title": "Grant Ships · Greenpill Network",
         "description": "Grant Ships is a Greenpill Dev Guild public-goods funding experiment.",
         "ogImage": "",
-        "canonicalPath": "/projects/grant-ships",
+        "canonicalPath": "",
         "noindex": false
       },
       "name": "Grant Ships",
@@ -2321,7 +2321,7 @@
         "title": "Cookie Jar · Greenpill Network",
         "description": "Cookie Jar is a Greenpill Dev Guild funding-pool project for DAOs and communities.",
         "ogImage": "",
-        "canonicalPath": "/projects/cookie-jar",
+        "canonicalPath": "",
         "noindex": false
       },
       "name": "Cookie Jar",
@@ -2366,7 +2366,7 @@
         "title": "Regen Coordination Hub · Greenpill Network",
         "description": "The Regen Coordination Hub is Greenpill's public forum for chapter updates, proposals, and program coordination.",
         "ogImage": "",
-        "canonicalPath": "/projects/regen-coordination-hub",
+        "canonicalPath": "",
         "noindex": false
       },
       "name": "Regen Coordination Hub",
@@ -2415,7 +2415,7 @@
         "title": "Greenpill Impact Framework · Greenpill Network",
         "description": "The Greenpill Impact Framework connects public impact verification, Green Goods, and regenerative capital coordination.",
         "ogImage": "",
-        "canonicalPath": "/projects/greenpill-impact-framework",
+        "canonicalPath": "",
         "noindex": false
       },
       "name": "Greenpill Impact Framework",
@@ -2461,7 +2461,7 @@
         "title": "Greenpill Garden · Greenpill Network",
         "description": "Greenpill Garden is a public onboarding and stewardship program connecting chapters, tools, and impact reporting.",
         "ogImage": "",
-        "canonicalPath": "/projects/greenpill-garden",
+        "canonicalPath": "",
         "noindex": false
       },
       "name": "Greenpill Garden",
@@ -2508,7 +2508,7 @@
         "title": "Greenpill Podcast · Greenpill Network",
         "description": "The Greenpill Podcast is a long-running public media surface for regenerative crypto and public-goods coordination.",
         "ogImage": "",
-        "canonicalPath": "/projects/greenpill-podcast",
+        "canonicalPath": "",
         "noindex": false
       },
       "name": "Greenpill Podcast",
@@ -2552,7 +2552,7 @@
         "title": "GreenWill · Greenpill Network",
         "description": "GreenWill is a Greenpill Dev Guild reputation and pay-it-forward tooling project.",
         "ogImage": "",
-        "canonicalPath": "/projects/greenwill",
+        "canonicalPath": "",
         "noindex": false
       },
       "name": "GreenWill",
@@ -2615,7 +2615,7 @@
         "title": "Green Goods · Greenpill Network",
         "description": "Green Goods is a Greenpill Dev Guild PWA for source-backed regenerative impact verification and public proof.",
         "ogImage": "",
-        "canonicalPath": "/projects/green-goods",
+        "canonicalPath": "",
         "noindex": false
       },
       "name": "Green Goods",

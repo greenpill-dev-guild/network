@@ -1,55 +1,364 @@
 ---
 import { getCollection } from 'astro:content';
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import Nav from '../../components/Nav.astro';
-import Footer from '../../components/Footer.astro';
+import GpLayout from '../../layouts/GpLayout.astro';
+import Container from '../../components/ui/Container.astro';
+import Card from '../../components/ui/Card.astro';
+import Button from '../../components/ui/Button.astro';
+import Chip from '../../components/ui/Chip.astro';
+import ArrowLink from '../../components/ui/ArrowLink.astro';
+import Overline from '../../components/ui/Overline.astro';
+import Text from '../../components/ui/Text.astro';
+import Meta from '../../components/ui/Meta.astro';
 import storiesIndex from '../../content/stories-index.json';
-import '../../styles/global.css';
 
-const items = (await getCollection('stories'))
-  .filter(item => item.data.status === 'published' && !item.data.seo?.noindex)
+const allStories = await getCollection('stories');
+const published = allStories
+  .filter((s) => s.data.status === 'published' && !s.data.seo?.noindex)
   .sort((a, b) => (b.data.publishDate || '').localeCompare(a.data.publishDate || ''));
+
+const draftCount = allStories.filter((s) => s.data.status === 'draft').length;
+
+const featured = published[0];
+const rest = published.slice(1);
+
+const hero = storiesIndex.hero ?? {};
+const topicSpotlight = storiesIndex.topicSpotlight;
 ---
 
-<BaseLayout
-  title={storiesIndex.seo.title || 'Stories · Greenpill Network'}
-  description={storiesIndex.seo.description || 'Field reports, essays, and updates from across the Greenpill network.'}
-  ogImage={storiesIndex.seo.ogImage || undefined}
-  canonicalPath={storiesIndex.seo.canonicalPath || '/stories'}
-  noindex={storiesIndex.seo.noindex}
+<GpLayout
+  title={storiesIndex.seo?.title || 'Stories · Greenpill Network'}
+  description={storiesIndex.seo?.description || 'Field reports, essays, and updates from across the Greenpill network.'}
+  ogImage={storiesIndex.seo?.ogImage || undefined}
+  canonicalPath={storiesIndex.seo?.canonicalPath || '/stories'}
+  noindex={storiesIndex.seo?.noindex}
+  activeNav="Stories"
 >
-  <Nav />
-  <main class="pt-32 pb-24 px-4 max-w-5xl mx-auto">
-    <header class="mb-12">
-      <span class="text-xs uppercase font-bold text-green tracking-widest">Stories</span>
-      <h1 class="font-volkhov text-4xl sm:text-5xl text-yellow mt-2">Stories & Updates</h1>
-      <p class="text-white text-base sm:text-lg mt-4 max-w-2xl opacity-80">
-        Field reports, essays, and dispatches from across the Greenpill network.
-      </p>
-    </header>
-    {items.length > 0 ? (
-      <section class="flex flex-col gap-5">
-        {items.map(item => (
-          <a href={`/stories/${item.id}`} class="block rounded-2xl border border-green bg-black bg-opacity-40 backdrop-blur-md p-6 transition-all hover:bg-opacity-60">
-            <div class="flex items-center gap-3 mb-2">
-              <span class="text-xs uppercase font-bold text-green tracking-wider">{item.data.category}</span>
-              {item.data.publishDate && <span class="text-xs text-white opacity-60">· {item.data.publishDate}</span>}
+  <main class="gp-stories">
+    <section class="gp-stories-hero gp-topo">
+      <Container size="2xl">
+        <div class="gp-stories-hero-inner">
+          <Overline tone="muted">
+            <span>Stories</span>
+            <span aria-hidden="true">·</span>
+            <span>Field notes from the network</span>
+          </Overline>
+
+          <Text variant="display" class="gp-stories-hero-title">{hero.title || 'Field notes from the network.'}</Text>
+
+          <Text variant="body-lg" class="gp-stories-hero-dek">
+            {hero.dek || 'Source-backed chapter updates, guild reports, event recaps, and public program notes.'}
+          </Text>
+
+          <div class="gp-stories-hero-actions">
+            <Button href="https://paragraph.com/@greenpill" variant="ghost">Follow on Paragraph</Button>
+            <Button href="#submit" variant="ghost">Submit a story</Button>
+          </div>
+        </div>
+      </Container>
+    </section>
+
+    {published.length === 0 ? (
+      <section class="gp-stories-section">
+        <Container size="2xl">
+          <Card padded="lg" class="gp-stories-empty-card">
+            <div class="gp-stories-empty-copy">
+              <Meta items={['Coming soon', 'Editorial review']} accentIndex={0} />
+              <Text variant="h2">Field stories ship after steward review.</Text>
+              <Text variant="body" class="gp-stories-section-dek">
+                {draftCount > 0 ? `${draftCount} draft ${draftCount === 1 ? 'story is' : 'stories are'} in the editorial queue. ` : ''}
+                Each story cites a public source and links to the chapter or guild behind it. While the first wave clears review, the public Paragraph feed and the Regen Coordination Hub carry the live conversations.
+              </Text>
+              <div class="gp-stories-empty-actions">
+                <Button href="https://paragraph.com/@greenpill">Follow on Paragraph</Button>
+                <Button href="https://hub.regencoordination.xyz" variant="ghost">Read the Hub</Button>
+              </div>
             </div>
-            <h2 class="font-volkhov text-2xl text-yellow">{item.data.title}</h2>
-            {item.data.excerpt && <p class="text-white text-sm mt-2 opacity-80">{item.data.excerpt}</p>}
-          </a>
-        ))}
+          </Card>
+        </Container>
       </section>
     ) : (
-      <section class="rounded-2xl border border-green bg-black bg-opacity-40 backdrop-blur-md p-6">
-        <p class="text-white text-base opacity-80">
-          Field reports and updates will appear here as chapters and guilds publish them.
-        </p>
+      <>
+        {featured && (
+          <section class="gp-stories-section">
+            <Container size="2xl">
+              <div class="gp-stories-section-head">
+                <Overline>Featured</Overline>
+                <Text variant="caption">Latest source-backed story.</Text>
+              </div>
+              <a class="gp-stories-feature" href={`/stories/${featured.id}`}>
+                <Meta items={[featured.data.category || 'story', featured.data.region || 'global', featured.data.publishDate || '']} accentIndex={0} />
+                <Text variant="h2" class="gp-stories-feature-title">{featured.data.title}</Text>
+                {featured.data.dek && <Text variant="body-lg">{featured.data.dek}</Text>}
+                {featured.data.excerpt && !featured.data.dek && <Text variant="body-lg">{featured.data.excerpt}</Text>}
+                <footer class="gp-stories-feature-foot">
+                  {featured.data.author && <Text variant="mono">{featured.data.author}{featured.data.authorRole && ` · ${featured.data.authorRole}`}</Text>}
+                  <ArrowLink size="md">Read the story</ArrowLink>
+                </footer>
+              </a>
+            </Container>
+          </section>
+        )}
+
+        {rest.length > 0 && (
+          <section class="gp-stories-section">
+            <Container size="2xl">
+              <div class="gp-stories-section-head">
+                <Overline>All stories</Overline>
+                <Text variant="caption">{rest.length} story{rest.length === 1 ? '' : 'ies'}</Text>
+              </div>
+              <div class="gp-stories-grid">
+                {rest.map((story) => (
+                  <a class="gp-stories-card" href={`/stories/${story.id}`}>
+                    <Meta items={[story.data.category || 'story', story.data.region || 'global', story.data.publishDate || '']} accentIndex={0} />
+                    <Text variant="h3" class="gp-stories-card-title">{story.data.title}</Text>
+                    {story.data.excerpt && <Text variant="body-sm">{story.data.excerpt}</Text>}
+                    <footer class="gp-stories-card-foot">
+                      {story.data.author && <Text variant="mono">{story.data.author}</Text>}
+                      <ArrowLink size="sm">Read</ArrowLink>
+                    </footer>
+                  </a>
+                ))}
+              </div>
+            </Container>
+          </section>
+        )}
+      </>
+    )}
+
+    {topicSpotlight?.topic && (
+      <section class="gp-stories-section">
+        <Container size="2xl">
+          <Card padded="lg" class="gp-stories-spotlight">
+            <Overline tone="muted">Topic spotlight</Overline>
+            <Text variant="h2">{topicSpotlight.topic}</Text>
+            <Text variant="body">{topicSpotlight.blurb}</Text>
+            {topicSpotlight.proofSignals?.length > 0 && (
+              <div class="gp-stories-spotlight-proof">
+                {topicSpotlight.proofSignals.map((signal: any) => (
+                  <a class="gp-stories-spotlight-proof-row" href={signal.href || '#'} target="_blank" rel="noopener">
+                    <Text variant="mono">{signal.source || 'Source'}</Text>
+                    <Text variant="title-md">{signal.value}</Text>
+                    <Text variant="body-sm">{signal.label}</Text>
+                  </a>
+                ))}
+              </div>
+            )}
+          </Card>
+        </Container>
       </section>
     )}
+
+    <section class="gp-stories-section" id="submit">
+      <Container size="2xl">
+        <Card padded="lg" class="gp-stories-submit">
+          <div class="gp-stories-submit-copy">
+            <Overline>Contribute</Overline>
+            <Text variant="h2">Publish a chapter or guild update.</Text>
+            <Text variant="body" class="gp-stories-section-dek">
+              Submission data flows into a private moderation queue. Keystatic only stores approved public stories,
+              and stewards review each draft for source-backed claims before it goes live.
+            </Text>
+            <div class="gp-stories-submit-actions">
+              <Button href="https://hub.regencoordination.xyz">Open the Hub</Button>
+              <Button href="https://paragraph.com/@greenpill" variant="ghost">Follow on Paragraph</Button>
+            </div>
+          </div>
+        </Card>
+      </Container>
+    </section>
   </main>
-  <Footer />
-  <script>
-    import '../../scripts/mobile-menu';
-  </script>
-</BaseLayout>
+</GpLayout>
+
+<style>
+  .gp-stories {
+    min-height: 100vh;
+    background: transparent;
+  }
+
+  .gp-stories-hero {
+    position: relative;
+    overflow: hidden;
+    padding: clamp(var(--gp-space-3xl), 7vw, var(--gp-space-5xl)) 0 var(--gp-space-2xl);
+  }
+
+  .gp-stories-hero-inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-lg);
+  }
+
+  .gp-stories-hero-inner :global(.gp-stories-hero-title) {
+    max-width: 18ch;
+    font-size: clamp(40px, 6vw, 72px);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+  }
+
+  .gp-stories-hero-inner :global(.gp-stories-hero-dek) {
+    max-width: 60ch;
+    color: var(--gp-fg-muted);
+  }
+
+  .gp-stories-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .gp-stories-section {
+    padding: clamp(var(--gp-space-2xl), 5vw, var(--gp-space-4xl)) 0;
+    border-top: 1px solid var(--gp-border-soft);
+  }
+
+  .gp-stories-section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--gp-space-md);
+    flex-wrap: wrap;
+    margin-bottom: var(--gp-space-lg);
+    padding-bottom: var(--gp-space-md);
+    border-bottom: 1px solid var(--gp-border-soft);
+  }
+
+  .gp-stories-section-dek {
+    color: var(--gp-fg-muted);
+    max-width: 60ch;
+  }
+
+  .gp-stories-empty-card,
+  .gp-stories-submit,
+  .gp-stories-spotlight {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-md);
+  }
+
+  .gp-stories-empty-card {
+    background: linear-gradient(135deg, rgba(240, 220, 160, 0.06), rgba(15, 61, 46, 0.5));
+    border-color: rgba(240, 220, 160, 0.18);
+  }
+
+  .gp-stories-empty-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-md);
+    max-width: 720px;
+  }
+
+  .gp-stories-empty-actions,
+  .gp-stories-submit-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .gp-stories-feature {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-md);
+    padding: clamp(var(--gp-space-xl), 3vw, var(--gp-space-3xl));
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-xl);
+    background: var(--gp-card);
+    color: var(--gp-fg);
+    text-decoration: none;
+    transition: border-color 200ms, background 200ms;
+  }
+
+  .gp-stories-feature:hover {
+    border-color: rgba(184, 232, 53, 0.32);
+    background: var(--gp-card-elev);
+  }
+
+  .gp-stories-feature :global(.gp-stories-feature-title) {
+    letter-spacing: -0.01em;
+  }
+
+  .gp-stories-feature-foot {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .gp-stories-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(14px, 1.5vw, 20px);
+  }
+
+  .gp-stories-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-md);
+    padding: clamp(var(--gp-space-lg), 2vw, var(--gp-space-xl));
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-lg);
+    background: var(--gp-card);
+    color: var(--gp-fg);
+    text-decoration: none;
+    transition: border-color 200ms, background 200ms;
+  }
+
+  .gp-stories-card:hover {
+    border-color: rgba(184, 232, 53, 0.32);
+    background: var(--gp-card-elev);
+  }
+
+  .gp-stories-card :global(.gp-stories-card-title) {
+    letter-spacing: -0.01em;
+  }
+
+  .gp-stories-card-foot {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .gp-stories-spotlight {
+    background: linear-gradient(135deg, rgba(184, 232, 53, 0.06), rgba(15, 61, 46, 0.5));
+    border-color: rgba(184, 232, 53, 0.18);
+  }
+
+  .gp-stories-spotlight-proof {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--gp-space-md);
+    margin-top: var(--gp-space-sm);
+  }
+
+  .gp-stories-spotlight-proof-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: var(--gp-space-md);
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-md);
+    color: var(--gp-fg);
+    text-decoration: none;
+    transition: border-color 200ms;
+  }
+
+  .gp-stories-spotlight-proof-row:hover {
+    border-color: rgba(184, 232, 53, 0.42);
+  }
+
+  .gp-stories-submit-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-md);
+    max-width: 720px;
+  }
+
+  @media (max-width: 720px) {
+    .gp-stories-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

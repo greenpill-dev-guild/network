@@ -92,20 +92,20 @@ principles:
   - Keep public content canonical in Keystatic and publish workspace content manually first.
   - Keep submitted node emails, raw notes, review notes, spam metadata, IP addresses, and rate-limit keys out of public content and map payloads.
   - Let visitors see their own pending node locally, but publish submitted nodes to everyone only after steward approval.
+  - Garden is the public onboarding surface; do not restore the retired standalone onboarding or former join route.
+  - Do not create a root guild directory route; route directly to Dev Guild and Writers Guild.
+  - Do not create project index or project detail routes; project records remain supporting proof/reference data only.
 
 routes:
   phase_1:
     - /
-    - /join
+    - /garden
     - /chapters
-    - /guilds
-    - /learn/onboarding
+    - /guilds/dev-guild
+    - /guilds/writers-guild
+    - /library
   phase_2:
     - /chapters/[slug]
-    - /guilds/[slug]
-    - /projects
-    - /projects/[slug]
-    - /learn
     - /stories
     - /stories/[slug]
 
@@ -123,7 +123,7 @@ content_entities:
   target:
     - guilds
     - pods
-    - projects
+    - projectReferences
     - stories
     - programs
     - resources
@@ -182,28 +182,29 @@ phase_order:
     goal: Ship the public foundation and remove visible public Charmverse dependency.
     routes:
       - /
-      - /join
+      - /garden
       - /chapters
-      - /guilds
-      - /learn/onboarding
+      - /guilds/dev-guild
+      - /guilds/writers-guild
+      - /library
     acceptance_criteria:
       - No public Charmverse CTA remains in homepage components or social links.
-      - New visitors can route into join, chapters, guilds, or onboarding from the homepage.
-      - Guilds and onboarding have website-native destinations.
+      - New visitors can route into Garden, chapters, Dev Guild, Writers Guild, Library, and Stories from the homepage.
+      - Garden and direct guild detail pages have website-native destinations.
+      - The retired standalone onboarding, former join route, root guild directory, and project route family remain absent.
       - The public graph explorer is removed and tracked as future knowledge commons work.
   - id: P2
     goal: Add deeper entity pages and a real knowledge commons structure.
     routes:
       - /chapters/[slug]
-      - /guilds/[slug]
-      - /projects
-      - /projects/[slug]
-      - /learn
+      - /guilds/dev-guild
+      - /guilds/writers-guild
+      - /library
       - /stories
       - /stories/[slug]
     acceptance_criteria:
       - Chapter links resolve to internal routes for supported chapters.
-      - Projects and stories become first-class public entities.
+      - Stories become first-class public entities and project records remain supporting proof/reference data.
       - The public content model supports all new public entity types.
       - Chapter map locations are generated from the chapters collection.
       - Private node-intake contracts prove public map payloads exclude private fields and pending submissions.
@@ -220,32 +221,34 @@ phase_order:
 migration_targets:
   - key: onboarding_charmverse
     source: packages/website/src/components/ParticipateSection.astro
-    current_url: https://app.charmverse.io/greenpill-network/taking-the-greenpill-4871995012783201
-    target_route: /learn/onboarding
+    current_url: retired Charmverse onboarding page
+    target_route: /garden
     phase: P1
   - key: workspace_cta
     source: packages/website/src/components/ParticipateSection.astro
-    current_url: https://app.charmverse.io/greenpill-network/
+    current_url: retired Charmverse workspace page
     target_url: https://app.greenpill.network/login
-    fallback_route: /join
+    fallback_route: /garden
     phase: P3
   - key: guild_directory
     source: packages/website/src/components/ParticipateSection.astro
-    current_url: https://app.charmverse.io/greenpill-network/guilds-29059086676991
-    target_route: /guilds
+    current_url: legacy Charmverse guild directory page
+    target_routes:
+      - /guilds/dev-guild
+      - /guilds/writers-guild
     phase: P1
   - key: charmverse_invite
     source: packages/website/src/components/ExploreSection.astro
-    current_url: https://app.charmverse.io/invite/5e5ee6
-    target_route: /join
+    current_url: retired Charmverse invite page
+    target_route: /garden
     phase: P1
   - key: social_links_charmverse
     source: packages/website/src/content/social-links.json
     current_fields:
-      - charmverse
-      - charmverseInvite
+      - workspaceLogin
+      - garden
     target_routes:
-      - /join
+      - /garden
     target_urls:
       - https://app.greenpill.network/login
     phase: P1
@@ -253,7 +256,7 @@ migration_targets:
     source:
       - packages/website/src/pages/locations.json.ts
       - packages/website/src/content/chapters/*.json
-    current_url_pattern: legacy chapter content may still include https://app.charmverse.io/greenpill-network/*
+    current_url_pattern: legacy chapter content may still include retired Charmverse chapter pages
     target_route_pattern: /chapters/[slug]
     phase: P2
 

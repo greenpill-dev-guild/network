@@ -144,7 +144,7 @@ const featuredRefsField = fields.array(
       options: [
         { label: 'Chapters', value: 'chapters' },
         { label: 'Guilds', value: 'guilds' },
-        { label: 'Projects', value: 'projects' },
+        { label: 'Project References', value: 'projects' },
         { label: 'Stories', value: 'stories' },
         { label: 'Resources', value: 'resources' },
         { label: 'Books', value: 'books' },
@@ -405,7 +405,7 @@ export default config({
     }),
 
     projects: collection({
-      label: 'Projects & Protocols',
+      label: 'Project References',
       slugField: 'name',
       path: 'src/content/projects/*',
       format: { data: 'json' },
@@ -766,8 +766,8 @@ export default config({
       format: { data: 'json' },
       schema: {
         discord: fields.url({ label: 'Discord' }),
-        charmverse: fields.url({ label: 'Charmverse' }),
-        charmverseInvite: fields.url({ label: 'Charmverse Invite' }),
+        workspaceLogin: fields.url({ label: 'Workspace Login' }),
+        garden: fields.text({ label: 'Garden Path' }),
         twitter: fields.url({ label: 'Twitter/X' }),
         twitterList: fields.url({ label: 'Twitter Chapter List' }),
         telegram: fields.url({ label: 'Telegram' }),

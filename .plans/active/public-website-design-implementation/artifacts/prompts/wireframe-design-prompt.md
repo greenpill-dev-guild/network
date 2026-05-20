@@ -106,7 +106,7 @@ The participation entry. The metaphor is a doorway into a living, growing space 
   - Step 1: "Where are you on the Greenpill journey?" 5–7 multi-choice questions covering current involvement (none / reader / participant / contributor / steward), interests (local action / building / writing / funding), and motivation.
   - Step 2: Result screen — "Based on your answers, here's where to start" — recommends 1–3 next steps (e.g. "Start with the Green Pill book", "Visit Greenpill Brasil", "Join the Dev Guild builder space").
   - Optional poll variant: a single-question version — "Where are you on the journey?" with 5 options that aggregate publicly (show a small bar chart of how others answered).
-- Section footer: small "What is Greenpill Garden?" link → routes to /learn or a program page (to disambiguate from the entry metaphor).
+- Section footer: small "What is Greenpill Garden?" link → routes to Library context or a program page (to disambiguate from the entry metaphor).
 
 Wireframe states to deliver: (a) section default with 4 entry cards, (b) Regen Assessment Step 1 (a question), (c) Regen Assessment result screen.
 
@@ -121,7 +121,7 @@ Wireframe states to deliver: (a) section default with 4 entry cards, (b) Regen A
 
 For each, deliver desktop (1440px) + mobile (375px), with section breakdowns and key states.
 
-1. Chapter detail (/chapters/[slug]) — chapter hero (photo + name + city + status badge), about, stewards (avatars + roles), recent activity feed, impact metrics (3 stat cells), connected guilds/projects/region chips, join CTAs (Telegram / Discord / view workspace). Breadcrumb back to /chapters.
+1. Chapter detail (/chapters/[slug]) — chapter hero (photo + name + city + status badge), about, stewards (avatars + roles), recent activity feed, impact metrics (3 stat cells), connected guild, project-reference, and region chips, join CTAs (Telegram / Discord / view workspace). Breadcrumb back to /chapters.
 
 2. Library canvas page (/library/[slug]) — full-bleed cover hero, sticky TOC sidebar (desktop) or accordion (mobile), scrollable sections (description, contents, translations, related media, "What to read next"), fixed bottom CTA bar with "Get the book" / "Listen on..." / "Download PDF" depending on item type.
 

@@ -375,11 +375,10 @@ Deliverables:
 
 - create first-class routes for:
   - `/chapters`
-  - `/guilds`
-  - `/pods`
-  - `/projects`
+  - Dev Guild and Writers Guild detail pages
   - `/stories`
-  - `/learn`
+  - `/library`
+  - `/garden`
   - `/workspace`
 - migrate chapter and guild landing content out of Charmverse
 - replace all homepage Charmverse CTAs with website-native destinations

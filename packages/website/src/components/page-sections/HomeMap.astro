@@ -1,0 +1,864 @@
+---
+import { getOperationalChapters } from '../../lib/operational-content';
+
+// Mirrors artifacts/hifi/hifi/map-themes.jsx labels and hues. Slugs match the
+// content/themes/*.json files. Edge color carries theme meaning; node fill
+// carries node identity (chapter / steward / member).
+const THEME_INFO: Record<string, { label: string; color: string }> = {
+  trees: { label: 'Trees & Biodiversity', color: '#7BC74D' },
+  food: { label: 'Food & Farms', color: '#A8D24A' },
+  water: { label: 'Water & Waste', color: '#3FB6A8' },
+  energy: { label: 'Clean Energy', color: '#F5CB45' },
+  gov: { label: 'Local Governance', color: '#E8B14B' },
+  events: { label: 'Local Events', color: '#E89455' },
+  funding: { label: 'Grants & Funding', color: '#E07856' },
+  currency: { label: 'Community Currency', color: '#D86A4A' },
+  mutual: { label: 'Mutual Aid', color: '#D87B97' },
+  stories: { label: 'Storytelling', color: '#E0A6B8' },
+  education: { label: 'Education', color: '#F0DCA0' },
+  opensrc: { label: 'Open Source', color: '#5CC2D9' },
+  desci: { label: 'DeSci', color: '#7DAEE0' },
+  ai: { label: 'AI & Automation', color: '#9B8FD9' },
+  impact: { label: 'Impact Tracking', color: '#86E0B5' },
+  public: { label: 'Public Goods', color: '#C9A4E0' },
+  'public-goods': { label: 'Public Goods', color: '#C9A4E0' },
+  'local-regeneration': { label: 'Local Regeneration', color: '#7BC74D' },
+  'knowledge-commons': { label: 'Knowledge Commons', color: '#F0DCA0' },
+  'coordination-tools': { label: 'Coordination Tools', color: '#86E0B5' },
+};
+
+// Equirectangular projection. viewBox = 0..200 (x) × 0..100 (y).
+const VIEW_W = 200;
+const VIEW_H = 100;
+const lonToX = (lon: number) => ((lon + 180) / 360) * VIEW_W;
+const latToY = (lat: number) => ((90 - lat) / 180) * VIEW_H;
+
+// Hand-simplified continent silhouettes, copied from
+// artifacts/hifi/hifi/map-world.jsx. Aimed at instantly-recognizable shapes,
+// not geodetic accuracy.
+const CONTINENTS: Array<Array<[number, number]>> = [
+  [[-167,66],[-160,71],[-148,71],[-133,69],[-110,73],[-95,79],[-83,75],[-75,78],[-70,73],[-62,60],[-65,52],[-66,46],[-71,45],[-77,38],[-82,30],[-92,29],[-97,27],[-104,21],[-110,23],[-117,32],[-124,40],[-124,48],[-130,55],[-138,58],[-148,60],[-160,57],[-167,60],[-167,66]],
+  [[-50,82],[-25,82],[-22,78],[-32,68],[-42,60],[-52,62],[-55,72],[-50,82]],
+  [[-24,66.5],[-18,66.5],[-15,64],[-22,63.5],[-24,66.5]],
+  [[-100,18],[-87,21],[-83,16],[-77,9],[-83,8],[-92,14],[-100,18]],
+  [[-77,12],[-66,11],[-58,9],[-50,5],[-35,-6],[-34,-15],[-40,-25],[-50,-30],[-58,-36],[-65,-40],[-68,-50],[-72,-54],[-74,-50],[-73,-42],[-75,-33],[-72,-20],[-77,-8],[-80,-2],[-78,5],[-77,12]],
+  [[-8,55],[-3,58],[2,55],[1,51],[-5,50],[-8,52],[-8,55]],
+  [[-10,54],[-6,55],[-6,52],[-10,52],[-10,54]],
+  [[-10,36],[-5,36],[3,43],[9,44],[12,38],[18,40],[25,35],[28,36],[27,40],[30,46],[35,46],[40,49],[43,55],[35,58],[28,60],[24,65],[22,69],[15,68],[10,63],[5,58],[3,52],[-3,48],[-5,43],[-10,42],[-10,36]],
+  [[20,62],[35,60],[45,58],[60,57],[75,57],[95,57],[115,57],[135,57],[155,60],[170,67],[178,68],[178,78],[160,80],[120,80],[80,82],[50,82],[30,78],[22,70],[20,62]],
+  [[-17,15],[-14,22],[-10,30],[-2,36],[10,33],[20,32],[32,32],[37,31],[40,22],[46,17],[52,12],[51,4],[44,-2],[42,-10],[40,-15],[38,-22],[33,-30],[24,-34],[18,-34],[14,-25],[10,-12],[8,-2],[7,5],[0,5],[-7,5],[-11,7],[-17,15]],
+  [[43,-12],[51,-15],[51,-25],[44,-25],[43,-12]],
+  [[35,30],[38,24],[44,18],[53,18],[56,24],[52,28],[44,30],[35,30]],
+  [[66,24],[72,28],[78,32],[85,28],[90,25],[92,21],[87,15],[80,8],[76,9],[72,18],[68,22],[66,24]],
+  [[75,40],[85,45],[100,50],[120,52],[135,49],[135,42],[130,38],[126,34],[120,30],[118,24],[110,21],[100,22],[95,27],[90,30],[80,32],[75,40]],
+  [[95,22],[100,22],[107,18],[110,12],[108,8],[100,8],[97,12],[97,18],[95,22]],
+  [[95,5],[102,5],[108,1],[120,-1],[133,-3],[140,-3],[140,-8],[125,-9],[110,-7],[100,-3],[97,2],[95,5]],
+  [[109,4],[118,4],[119,-3],[110,-4],[109,4]],
+  [[131,-1],[141,-3],[150,-6],[151,-10],[140,-10],[133,-8],[131,-1]],
+  [[119,18],[123,18],[126,9],[124,5],[120,6],[119,12],[119,18]],
+  [[130,30],[135,33],[141,40],[145,45],[144,44],[140,40],[134,33],[130,30]],
+  [[113,-22],[122,-17],[130,-12],[137,-13],[143,-13],[148,-19],[153,-26],[152,-32],[148,-37],[140,-39],[125,-34],[115,-32],[113,-22]],
+  [[145,-40],[148,-40],[148,-43],[145,-43],[145,-40]],
+  [[166,-37],[175,-39],[178,-46],[170,-47],[166,-44],[166,-37]],
+];
+
+function pointInPolygon(lon: number, lat: number, poly: Array<[number, number]>) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i];
+    const [xj, yj] = poly[j];
+    const intersect =
+      yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi + 1e-9) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+// Build landmass dot grid once at build time. 120×60 cells → ~7200 candidates,
+// ~25% pass the in-continent test, so ~1700 dots in the final SVG.
+const COLS = 120;
+const ROWS = 60;
+const cellW = VIEW_W / COLS;
+const cellH = VIEW_H / ROWS;
+type LandDot = { cx: number; cy: number };
+const landDots: LandDot[] = [];
+for (let row = 0; row < ROWS; row++) {
+  const lat = 90 - (row + 0.5) * (180 / ROWS);
+  for (let col = 0; col < COLS; col++) {
+    const lon = -180 + (col + 0.5) * (360 / COLS);
+    let inside = false;
+    for (const poly of CONTINENTS) {
+      if (pointInPolygon(lon, lat, poly)) {
+        inside = true;
+        break;
+      }
+    }
+    if (inside) {
+      landDots.push({
+        cx: col * cellW + cellW / 2,
+        cy: row * cellH + cellH / 2,
+      });
+    }
+  }
+}
+
+type ChapterNode = {
+  id: string;
+  type: 'chapter';
+  name: string;
+  city: string;
+  region: string;
+  themes: string[];
+  x: number;
+  y: number;
+  href: string;
+  size: number;
+};
+
+type StewardNode = {
+  id: string;
+  type: 'steward';
+  name: string;
+  role: string;
+  chapterId: string;
+  chapterName: string;
+  themes: string[];
+  x: number;
+  y: number;
+};
+
+type AnyNode = ChapterNode | StewardNode;
+
+const chapters = await getOperationalChapters();
+
+const chapterNodes: ChapterNode[] = chapters
+  .filter((c) => typeof c.data.lat === 'number' && typeof c.data.long === 'number')
+  .map((c) => {
+    const themes = (c.data.themeSlugs || []) as string[];
+    const weight = c.data.featuredWeight ?? 0;
+    const status = c.data.status || 'active';
+    const size = status !== 'active' ? 1.8 : weight >= 70 ? 2.4 : 2.1;
+    return {
+      id: c.id,
+      type: 'chapter' as const,
+      name: c.data.name,
+      city: c.data.city || '',
+      region: c.data.region || '',
+      themes,
+      x: lonToX(c.data.long),
+      y: latToY(c.data.lat),
+      href: `/chapters/${c.id}`,
+      size,
+    };
+  });
+
+const stewardNodes: StewardNode[] = [];
+for (const c of chapters) {
+  if (typeof c.data.lat !== 'number' || typeof c.data.long !== 'number') continue;
+  const stewards = (c.data.stewards || []) as Array<Record<string, any>>;
+  stewards.forEach((s, i) => {
+    if (!s?.name) return;
+    // Deterministic small offset so stewards visually sit beside the chapter
+    // without overlapping; honest to the real source association.
+    const angle = (i + 1) * 1.7;
+    const radius = 2.4;
+    stewardNodes.push({
+      id: `steward-${c.id}-${i}`,
+      type: 'steward' as const,
+      name: s.name,
+      role: s.role || 'Steward',
+      chapterId: c.id,
+      chapterName: c.data.name,
+      themes: (c.data.themeSlugs || []) as string[],
+      x: lonToX(c.data.long) + Math.cos(angle) * radius,
+      y: latToY(c.data.lat) + Math.sin(angle) * radius,
+    });
+  });
+}
+
+const allNodes: AnyNode[] = [...chapterNodes, ...stewardNodes];
+
+// Mycelial threads: between chapters that share at least one theme. Each pair
+// gets a single edge tinted by the shared theme; we bias toward shorter spans
+// so the network reads as place-based.
+type Edge = {
+  fromId: string;
+  toId: string;
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  theme: string;
+  d: string;
+  delay: number;
+};
+const edges: Edge[] = [];
+const seen = new Set<string>();
+for (let i = 0; i < chapterNodes.length; i++) {
+  for (let j = i + 1; j < chapterNodes.length; j++) {
+    const a = chapterNodes[i];
+    const b = chapterNodes[j];
+    const shared = a.themes.find((t) => b.themes.includes(t));
+    if (!shared) continue;
+    const dx = a.x - b.x;
+    const dy = a.y - b.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > 88) continue;
+
+    const key = `${a.id}-${b.id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    // Bow the path perpendicular to the segment so threads read as organic.
+    const mx = (a.x + b.x) / 2;
+    const my = (a.y + b.y) / 2;
+    const len = Math.max(0.1, dist);
+    const nx = -dy / len;
+    const ny = dx / len;
+    const offset = Math.min(6, len * 0.18);
+    const cx = mx + nx * offset;
+    const cy = my + ny * offset;
+
+    edges.push({
+      fromId: a.id,
+      toId: b.id,
+      fromX: a.x,
+      fromY: a.y,
+      toX: b.x,
+      toY: b.y,
+      theme: shared,
+      d: `M ${a.x.toFixed(2)} ${a.y.toFixed(2)} Q ${cx.toFixed(2)} ${cy.toFixed(2)} ${b.x.toFixed(2)} ${b.y.toFixed(2)}`,
+      delay: (edges.length % 9) * 0.45,
+    });
+  }
+}
+
+const themeColor = (slug: string) => THEME_INFO[slug]?.color ?? '#B8E835';
+const themeLabel = (slug: string) => THEME_INFO[slug]?.label ?? slug.replace(/-/g, ' ');
+
+// Legend: themes used by visible chapters, sorted by count, plain-language labels.
+const themeUsage = new Map<string, number>();
+for (const node of chapterNodes) {
+  for (const slug of node.themes) {
+    if (!THEME_INFO[slug]) continue;
+    themeUsage.set(slug, (themeUsage.get(slug) ?? 0) + 1);
+  }
+}
+const legendThemes = Array.from(themeUsage.entries())
+  .sort((a, b) => b[1] - a[1])
+  .slice(0, 6)
+  .map(([slug, count]) => ({
+    slug,
+    label: themeLabel(slug),
+    color: themeColor(slug),
+    count,
+  }));
+
+const chapterCount = chapterNodes.length;
+const statsA11y = `World map of ${chapterCount} active chapters connected by shared themes.`;
+---
+
+<figure class="gp-home-map" aria-labelledby="gp-home-map-title">
+  <figcaption id="gp-home-map-title" class="gp-home-map-sr">{statsA11y}</figcaption>
+
+  <div class="gp-home-map-canvas" data-home-map>
+    <div class="gp-home-map-topo" aria-hidden="true"></div>
+
+    <svg
+      class="gp-home-map-svg"
+      viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
+      preserveAspectRatio="xMidYMid meet"
+      role="img"
+      aria-label={statsA11y}
+    >
+      {/* graticule — subtle lat/long grid */}
+      <g class="gp-home-map-graticule" aria-hidden="true">
+        {[15, 30, 45, 60, 75, 85].map((y) => (
+          <line x1="0" x2={VIEW_W} y1={y} y2={y} />
+        ))}
+        {[30, 60, 90, 120, 150, 180].map((x) => (
+          <line x1={x} x2={x} y1="0" y2={VIEW_H} />
+        ))}
+      </g>
+
+      {/* world dot landmass */}
+      <g class="gp-home-map-world" aria-hidden="true">
+        {landDots.map((d) => (
+          <circle cx={d.cx} cy={d.cy} r="0.42" />
+        ))}
+      </g>
+
+      {/* mycelial threads — theme-tinted relationship edges. pathLength
+          normalizes every path so the stroke-dash grow-in lands the same
+          duration regardless of arc length. */}
+      <g class="gp-home-map-threads" aria-hidden="true">
+        {edges.map((edge, idx) => {
+          const growDelay = (idx % 12) * 0.12;
+          return (
+            <path
+              class="gp-home-map-thread"
+              data-from={edge.fromId}
+              data-to={edge.toId}
+              d={edge.d}
+              pathLength="1"
+              stroke={themeColor(edge.theme)}
+              style={`--thread-color: ${themeColor(edge.theme)}; --thread-grow-delay: ${growDelay}s; --thread-pulse-delay: ${edge.delay}s; animation-delay: ${growDelay}s, ${edge.delay + 1.6}s;`}
+            />
+          );
+        })}
+      </g>
+
+      {/* steward nodes — gold, smaller, sit beside their chapter. Two
+          ripple circles render in front and only animate on focus, giving
+          the active node a subtle nutrient pulse without idle noise. */}
+      <g class="gp-home-map-stewards">
+        {stewardNodes.map((s) => (
+          <g class="gp-home-map-node-link is-steward" tabindex="0" data-node-id={s.id} data-node-type="steward">
+            <title>{`${s.name} · Steward · ${s.chapterName}`}</title>
+            <circle class="gp-home-map-node-halo" cx={s.x} cy={s.y} r="2.6" />
+            <circle class="gp-home-map-node-dot" cx={s.x} cy={s.y} r="1.2" />
+            <circle class="gp-home-map-node-ripple is-ripple-a" cx={s.x} cy={s.y} r="0" />
+            <circle class="gp-home-map-node-ripple is-ripple-b" cx={s.x} cy={s.y} r="0" />
+          </g>
+        ))}
+      </g>
+
+      {/* chapter nodes — lime fill + dark ring, anchored */}
+      <g class="gp-home-map-chapters">
+        {chapterNodes.map((c) => (
+          <a
+            class="gp-home-map-node-link is-chapter"
+            href={c.href}
+            data-node-id={c.id}
+            data-node-type="chapter"
+          >
+            <title>{`${c.name}${c.city ? ` · ${c.city}` : ''}`}</title>
+            <circle class="gp-home-map-node-halo" cx={c.x} cy={c.y} r={c.size + 2.6} />
+            <circle class="gp-home-map-node-ring" cx={c.x} cy={c.y} r={c.size + 0.6} />
+            <circle class="gp-home-map-node-dot" cx={c.x} cy={c.y} r={c.size} />
+            <circle class="gp-home-map-node-ripple is-ripple-a" cx={c.x} cy={c.y} r="0" />
+            <circle class="gp-home-map-node-ripple is-ripple-b" cx={c.x} cy={c.y} r="0" />
+          </a>
+        ))}
+      </g>
+    </svg>
+
+    {/* Integrated stats overlay - top-right inside the map */}
+    <div class="gp-home-map-stats" aria-hidden="true">
+      <span class="gp-home-map-stat">
+        <span class="gp-home-map-stat-mark is-chapter" aria-hidden="true"></span>
+        <span class="gp-home-map-stat-value">{chapterCount}</span>
+        <span class="gp-home-map-stat-label">chapters</span>
+      </span>
+    </div>
+
+    {/* Focus card — populated by inline script on hover/focus */}
+    <div class="gp-home-map-focus" data-home-map-focus role="status" aria-live="polite" aria-hidden="true">
+      <span class="gp-home-map-focus-role" data-focus-role></span>
+      <span class="gp-home-map-focus-name" data-focus-name></span>
+      <span class="gp-home-map-focus-meta" data-focus-meta></span>
+    </div>
+  </div>
+
+  {legendThemes.length > 0 && (
+    <div class="gp-home-map-legend" role="list" aria-label="Theme legend">
+      {legendThemes.map((t) => (
+        <span class="gp-home-map-legend-item" role="listitem">
+          <span class="gp-home-map-legend-swatch" style={`background: ${t.color};`} aria-hidden="true"></span>
+          <span class="gp-home-map-legend-label">{t.label}</span>
+        </span>
+      ))}
+    </div>
+  )}
+</figure>
+
+<script>
+  // Modest hover/focus behavior: when a chapter or steward node is active,
+  // highlight its adjacent mycelial threads and surface a small focus card.
+  (() => {
+    const root = document.querySelector('[data-home-map]') as HTMLElement | null;
+    if (!root) return;
+
+    const focusEl = root.querySelector('[data-home-map-focus]') as HTMLElement | null;
+    const focusRole = root.querySelector('[data-focus-role]') as HTMLElement | null;
+    const focusName = root.querySelector('[data-focus-name]') as HTMLElement | null;
+    const focusMeta = root.querySelector('[data-focus-meta]') as HTMLElement | null;
+    const threads = Array.from(root.querySelectorAll<SVGPathElement>('.gp-home-map-thread'));
+    const links = Array.from(
+      root.querySelectorAll<SVGGElement | SVGAElement>('.gp-home-map-node-link'),
+    );
+
+    const clearFocus = () => {
+      root.classList.remove('is-focused');
+      threads.forEach((t) => {
+        t.classList.remove('is-adj');
+        t.classList.remove('is-dim');
+      });
+      links.forEach((l) => l.classList.remove('is-adj', 'is-dim'));
+      if (focusEl) focusEl.setAttribute('aria-hidden', 'true');
+    };
+
+    const setFocus = (target: Element) => {
+      const id = target.getAttribute('data-node-id');
+      const type = target.getAttribute('data-node-type');
+      if (!id || !type) return;
+
+      root.classList.add('is-focused');
+
+      const adjacentIds = new Set<string>([id]);
+      threads.forEach((t) => {
+        const from = t.getAttribute('data-from');
+        const to = t.getAttribute('data-to');
+        if (from === id || to === id) {
+          t.classList.add('is-adj');
+          t.classList.remove('is-dim');
+          if (from && from !== id) adjacentIds.add(from);
+          if (to && to !== id) adjacentIds.add(to);
+        } else {
+          t.classList.remove('is-adj');
+          t.classList.add('is-dim');
+        }
+      });
+
+      links.forEach((l) => {
+        const lid = l.getAttribute('data-node-id');
+        if (!lid) return;
+        if (adjacentIds.has(lid)) {
+          l.classList.add('is-adj');
+          l.classList.remove('is-dim');
+        } else {
+          l.classList.add('is-dim');
+          l.classList.remove('is-adj');
+        }
+      });
+
+      if (focusEl && focusRole && focusName && focusMeta) {
+        const title = target.querySelector('title');
+        const raw = title ? title.textContent || '' : '';
+        const parts = raw.split('·').map((s) => s.trim());
+        focusName.textContent = parts[0] || '';
+        focusRole.textContent = type === 'chapter' ? 'Chapter' : 'Steward';
+        focusMeta.textContent = parts.slice(1).join(' · ');
+        focusEl.setAttribute('aria-hidden', 'false');
+      }
+    };
+
+    links.forEach((link) => {
+      link.addEventListener('mouseenter', () => setFocus(link));
+      link.addEventListener('focus', () => setFocus(link));
+      link.addEventListener('mouseleave', clearFocus);
+      link.addEventListener('blur', clearFocus);
+    });
+
+    root.addEventListener('mouseleave', clearFocus);
+  })();
+</script>
+
+<style>
+  .gp-home-map {
+    margin: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-md);
+  }
+
+  .gp-home-map-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .gp-home-map-canvas {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-xl);
+    background:
+      radial-gradient(ellipse at center, rgba(20, 68, 52, 0.65) 0%, rgba(11, 46, 35, 0.95) 100%);
+    overflow: hidden;
+    box-shadow: var(--gp-shadow-deep);
+  }
+
+  .gp-home-map-topo {
+    position: absolute;
+    inset: 0;
+    background-image: url('/images/hifi/topo-bg.png');
+    background-size: cover;
+    background-position: center;
+    opacity: 0.18;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+  }
+
+  .gp-home-map-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .gp-home-map-graticule line {
+    stroke: var(--gp-green-600);
+    stroke-width: 0.04;
+    opacity: 0.32;
+    stroke-dasharray: 1 1.4;
+  }
+
+  .gp-home-map-world circle {
+    fill: var(--gp-green-500);
+    opacity: 0.5;
+    transition: opacity 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .gp-home-map-canvas.is-focused .gp-home-map-world circle {
+    opacity: 0.3;
+  }
+
+  .gp-home-map-thread {
+    fill: none;
+    stroke-width: 0.22;
+    stroke-linecap: round;
+    opacity: 0.55;
+    mix-blend-mode: screen;
+    filter: drop-shadow(0 0 0.5px var(--thread-color));
+    transition: stroke-width 240ms cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 240ms cubic-bezier(0.4, 0, 0.2, 1);
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation:
+      gpMapThreadGrow 1.6s cubic-bezier(0.22, 1, 0.36, 1) forwards,
+      gpMapThread 5.6s ease-in-out infinite;
+  }
+
+  .gp-home-map-thread.is-dim {
+    opacity: 0.08;
+  }
+
+  /* Node links */
+  .gp-home-map-node-link {
+    cursor: pointer;
+    outline: none;
+    transition: opacity 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .gp-home-map-node-link.is-dim {
+    opacity: 0.22;
+  }
+
+  .gp-home-map-node-link.is-adj {
+    opacity: 1;
+  }
+
+  /* Chapter node treatment — lime fill, dark ring, glow halo */
+  .gp-home-map-node-link.is-chapter .gp-home-map-node-dot {
+    fill: var(--gp-primary);
+    stroke: var(--gp-green-950);
+    stroke-width: 0.6;
+    transition: r 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .gp-home-map-node-link.is-chapter .gp-home-map-node-ring {
+    fill: none;
+    stroke: var(--gp-green-950);
+    stroke-width: 0.4;
+    opacity: 0.65;
+  }
+  .gp-home-map-node-link.is-chapter .gp-home-map-node-halo {
+    fill: var(--gp-primary);
+    opacity: 0.12;
+    transition: opacity 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .gp-home-map-node-link.is-chapter:hover .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-chapter:focus-visible .gp-home-map-node-halo {
+    opacity: 0.42;
+  }
+  .gp-home-map-node-link.is-chapter:focus-visible .gp-home-map-node-dot {
+    stroke: var(--gp-lime-400);
+    stroke-width: 0.9;
+  }
+
+  /* Steward node treatment — warm gold, smaller, no ring */
+  .gp-home-map-node-link.is-steward .gp-home-map-node-dot {
+    fill: var(--gp-secondary);
+  }
+  .gp-home-map-node-link.is-steward .gp-home-map-node-halo {
+    fill: var(--gp-secondary);
+    opacity: 0.15;
+    transition: opacity 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .gp-home-map-node-link.is-steward:hover .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-steward:focus-visible .gp-home-map-node-halo {
+    opacity: 0.5;
+  }
+
+  /* Focus ripples — only visible while the node is actively focused. We
+     animate a CSS variable through stops so each ripple breathes
+     outward and fades, then resets. r is CSS-animatable in modern
+     browsers; we attribute it via custom properties. */
+  .gp-home-map-node-ripple {
+    fill: none;
+    stroke-width: 0.18;
+    opacity: 0;
+    pointer-events: none;
+    transform-box: fill-box;
+  }
+  .gp-home-map-node-link.is-chapter .gp-home-map-node-ripple {
+    stroke: var(--gp-primary);
+  }
+  .gp-home-map-node-link.is-steward .gp-home-map-node-ripple {
+    stroke: var(--gp-secondary);
+    stroke-width: 0.14;
+  }
+  .gp-home-map-node-link:hover .gp-home-map-node-ripple,
+  .gp-home-map-node-link:focus-visible .gp-home-map-node-ripple {
+    animation: gpMapNodeRipple 2.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  }
+  .gp-home-map-node-link:hover .gp-home-map-node-ripple.is-ripple-b,
+  .gp-home-map-node-link:focus-visible .gp-home-map-node-ripple.is-ripple-b {
+    animation-delay: 0.9s;
+  }
+
+  /* Nutrient blips on adjacent threads when a node is focused. The dash
+     pattern is 0.04 / 0.96 so a single short stroke segment chases along
+     each adjacent path, riding the active thread color. Subtle, only on
+     focus, and respects reduced motion. */
+  .gp-home-map-thread.is-adj {
+    opacity: 0.95;
+    stroke-width: 0.34;
+    stroke: var(--gp-lime-400);
+    /* Override the dasharray set by the grow-in animation so the blip
+       gets a tight pattern to chase along the path. */
+    stroke-dasharray: 0.04 0.96;
+    stroke-dashoffset: 0;
+    animation:
+      gpMapThread 5.6s ease-in-out infinite,
+      gpMapNutrientBlip 2.6s linear infinite;
+  }
+
+  /* Stats overlay inside the map */
+  .gp-home-map-stats {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 14px;
+    background: rgba(11, 38, 28, 0.78);
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-pill);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 3;
+    max-width: calc(100% - 24px);
+    pointer-events: none;
+  }
+
+  .gp-home-map-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+
+  .gp-home-map-stat-mark {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+  }
+
+  .gp-home-map-stat-mark.is-chapter {
+    background: var(--gp-primary);
+    box-shadow: 0 0 0 1.5px var(--gp-green-950);
+  }
+
+  .gp-home-map-stat-value {
+    font-family: var(--gp-font-display);
+    color: var(--gp-secondary);
+    font-size: 18px;
+    line-height: 1;
+    font-weight: 500;
+  }
+
+  .gp-home-map-stat-label {
+    font-family: var(--gp-font-mono);
+    color: var(--gp-fg-dim);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  /* Focus card */
+  .gp-home-map-focus {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 14px;
+    border: 1px solid rgba(184, 232, 53, 0.32);
+    border-radius: var(--gp-radius-md);
+    background: rgba(15, 50, 38, 0.95);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--gp-fg);
+    max-width: 60%;
+    z-index: 4;
+    pointer-events: none;
+  }
+
+  .gp-home-map-focus[aria-hidden='false'] {
+    display: inline-flex;
+  }
+
+  .gp-home-map-focus-role {
+    font-family: var(--gp-font-mono);
+    color: var(--gp-primary);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  .gp-home-map-focus-name {
+    font-family: var(--gp-font-display);
+    color: var(--gp-secondary);
+    font-size: 18px;
+    line-height: 1.1;
+  }
+
+  .gp-home-map-focus-meta {
+    font-family: var(--gp-font-body);
+    color: var(--gp-fg-muted);
+    font-size: 12px;
+    line-height: 1.3;
+  }
+
+  .gp-home-map-focus-meta:empty {
+    display: none;
+  }
+
+  /* Plain-language theme legend underneath the map */
+  .gp-home-map-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 14px;
+  }
+
+  .gp-home-map-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-pill);
+    background: rgba(15, 61, 46, 0.5);
+    color: var(--gp-fg-muted);
+    font-family: var(--gp-font-body);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .gp-home-map-legend-swatch {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+  }
+
+  @keyframes gpMapThread {
+    0%, 100% { opacity: 0.4; }
+    50%      { opacity: 0.75; }
+  }
+
+  @keyframes gpMapThreadGrow {
+    from { stroke-dashoffset: 1; }
+    to   { stroke-dashoffset: 0; }
+  }
+
+  @keyframes gpMapNodeRipple {
+    0%   { r: 1; opacity: 0.55; }
+    80%  { r: 6; opacity: 0; }
+    100% { r: 6; opacity: 0; }
+  }
+
+  @keyframes gpMapNutrientBlip {
+    from { stroke-dashoffset: 1; }
+    to   { stroke-dashoffset: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /* Drop motion but keep threads visible — without this the dasharray
+       leaves them invisible at offset:1 when the global rule clamps the
+       grow-in animation to ~0ms before any keyframe interpolation runs. */
+    .gp-home-map-thread {
+      animation: none !important;
+      stroke-dasharray: none;
+      stroke-dashoffset: 0;
+    }
+    .gp-home-map-thread.is-adj {
+      stroke-dasharray: none;
+      stroke-dashoffset: 0;
+    }
+    .gp-home-map-node-ripple {
+      animation: none !important;
+      opacity: 0 !important;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .gp-home-map-canvas {
+      aspect-ratio: 4 / 3;
+      border-radius: var(--gp-radius-lg);
+    }
+
+    .gp-home-map-stats {
+      top: 8px;
+      right: 8px;
+      padding: 6px 10px;
+      gap: 10px;
+    }
+
+    .gp-home-map-stat-label {
+      display: none;
+    }
+
+    .gp-home-map-stat-value {
+      font-size: 14px;
+    }
+
+    .gp-home-map-focus {
+      left: 8px;
+      bottom: 8px;
+      padding: 8px 10px;
+      max-width: 70%;
+    }
+
+    .gp-home-map-focus-name {
+      font-size: 14px;
+    }
+
+    .gp-home-map-legend-item {
+      font-size: 11px;
+      padding: 5px 10px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .gp-home-map-legend-item:nth-child(n + 5) {
+      display: none;
+    }
+  }
+</style>

@@ -81,11 +81,11 @@
     },
     {
       "kicker": "If you want to build",
-      "title": "Join a guild or project",
-      "body": "Start with the Dev Guild, Writers Guild, Green Goods, GreenWill, Cookie Jar, Grant Ships, or Impact Reef.",
+      "title": "Find a contribution path",
+      "body": "Start with the Dev Guild, Writers Guild, or the Green Goods public docs when your next step is building, writing, or impact verification.",
       "cta": {
-        "label": "Visit guilds",
-        "href": "/guilds",
+        "label": "Visit Dev Guild",
+        "href": "/guilds/dev-guild",
         "kind": "internal"
       }
     },

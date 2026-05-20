@@ -116,6 +116,8 @@
   --gp-container-lg: 1024px;
   --gp-container-xl: 1280px;
   --gp-container-2xl: 1440px;
+
+  --gp-header-height: 72px;
 }
 
 /* ──────────────────────────────────────────────────────────────────

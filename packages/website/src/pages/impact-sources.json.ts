@@ -1,5 +1,7 @@
 import { getOperationalImpactSourceBindings } from '../lib/operational-content';
 
+export const prerender = true;
+
 export async function GET() {
   const impactSources = await getOperationalImpactSourceBindings();
 

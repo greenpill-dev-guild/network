@@ -13,6 +13,7 @@ interface Props {
   showFooterWordmark?: boolean;
   hideShell?: boolean;
   background?: 'graphic' | 'plain';
+  ogType?: 'website' | 'article' | 'profile';
 }
 
 const {
@@ -25,6 +26,7 @@ const {
   showFooterWordmark = false,
   hideShell = false,
   background = 'graphic',
+  ogType = 'website',
 } = Astro.props;
 const canonicalUrl = canonicalPath ? `https://greenpill.network${canonicalPath}` : 'https://greenpill.network';
 
@@ -48,7 +50,7 @@ const bodyClasses = [
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
     <meta property="og:title" content={title} />
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={ogType} />
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:image" content={ogImage} />
     <meta property="og:description" content={description} />

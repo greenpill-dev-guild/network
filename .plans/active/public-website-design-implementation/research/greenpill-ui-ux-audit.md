@@ -53,7 +53,7 @@ The ExploreSection (`packages/website/src/components/ExploreSection.astro`) is n
 Hard Charmverse links appear in:
 - `ParticipateSection.astro` (beginner onboarding, guild entry)
 - `ExploreSection.astro` (Charmverse workspace link with invite code)
-- `packages/website/src/content/social-links.json` (charmverse and charmverseInvite fields)
+- `packages/website/src/content/social-links.json` (now `workspaceLogin` and `garden`; old Charmverse field names are retired)
 - Several chapter JSON files may link to Charmverse spaces
 
 These are P0 migration targets. Every one needs a website-native destination before Charmverse goes dark.
@@ -155,17 +155,13 @@ greenpill.network/
 |-- /chapters (Chapters Index)
 |   |-- /chapters/[slug] (Chapter Detail)
 |
-|-- /guilds (Guilds & Pods Index)
-|   |-- /guilds/[slug] (Guild/Pod Detail)
+|-- /guilds/dev-guild (Dev Guild Detail)
+|-- /guilds/writers-guild (Writers Guild Detail)
 |
-|-- /projects (Projects & Protocols)
-|   |-- /projects/[slug] (Project Detail)
+|-- /library (Knowledge Commons)
+|   |-- books, podcast, resources, Green Goods docs
 |
-|-- /learn (Knowledge Commons)
-|   |-- /learn/books (Book Library - current BookSection, promoted)
-|   |-- /learn/podcast (Podcast - current PodcastSection, promoted)
-|   |-- /learn/onboarding (Taking the Greenpill - replaces Charmverse onboarding)
-|   |-- /learn/resources (Guides, playbooks, kits)
+|-- /garden (Public onboarding and contribution paths)
 |
 |-- /stories (Stories & Updates)
 |   |-- /stories/[slug] (Story Detail)
@@ -178,8 +174,6 @@ greenpill.network/
 |
 |-- /workspace (Member Workspace Landing)
 |   |-- /workspace/[chapter-or-guild] (Gated spaces - Phase 2+)
-|
-|-- /join (Onboarding Hub - role-based entry)
 ```
 
 ### Purpose of each section
@@ -190,14 +184,14 @@ The network narrative. Not a content shelf. Answers: "What is Greenpill, what is
 **Chapters** (`/chapters`)
 The local network. Map + stories + regional context. Each chapter gets a profile page with stewards, recent activity, links, and a join path. Replaces the current canvas-only map.
 
-**Guilds & Pods** (`/guilds`)
-The skill and topic layer. Shows Dev Guild, Writers Guild, and topic pods (DeSci, Education, Environment, DePin). Each guild gets a profile with current projects, members, and join flow. Replaces the invisible Charmverse guild link.
+**Guild detail pages**
+The skill and topic layer. Route directly to Dev Guild and Writers Guild. Green Goods remains a Dev Guild proof/reference and Library link; do not add a root guild directory.
 
-**Projects & Protocols** (`/projects`)
-What the network is building. Green Goods, GreenWill, Impact Reef, Cookie Jar, Gardens, Allo experiments. Proof that Greenpill ships. Critical for builders and partners.
+**Project references**
+What the network is building can appear as proof inside guild and Library contexts. Do not add a public project index or detail page family.
 
-**Learn** (`/learn`)
-The knowledge commons. Books, podcast, onboarding courses, resource kits, workshops. Repositions books and podcast as parts of a larger learning stack instead of the whole identity.
+**Library** (`/library`)
+The knowledge commons. Books, podcast, resources, Green Goods docs, and workshops. Repositions books and podcast as parts of a larger learning stack instead of the whole identity.
 
 **Stories** (`/stories`)
 Chapter updates, field reports, essays, case studies, Greenpill Garden dispatches. A living editorial layer that shows the network is active. Bridges to Paragraph, YouTube, and social.
@@ -214,12 +208,12 @@ The existing graph explorer, elevated to primary nav. Add overlays for chapters,
 **Workspace** (`/workspace`)
 Member-facing operational surface. Gated. Phase 2+. Chapter spaces, guild spaces, docs, proposals, credentials. The Charmverse replacement, built incrementally.
 
-**Join** (`/join`)
-Role-based onboarding hub. Not a single "participate" page. Routes newcomers, organizers, builders, writers, and partners to their best entry point.
+**Garden** (`/garden`)
+Role-based onboarding and contribution paths. Not a single "participate" page. Routes newcomers, organizers, builders, writers, and partners to their best entry point.
 
 ### Sections that should NOT exist
 
-- **A generic "Participate" page.** The current Beginner/Intermediate/Advanced model should be retired. Replace with role-based pathways integrated into `/join` and distributed across relevant section pages.
+- **A generic "Participate" page.** The current Beginner/Intermediate/Advanced model should be retired. Replace with role-based pathways integrated into Garden and distributed across relevant section pages.
 - **A separate "Explore" section on the homepage that is just social links.** Social links belong in the footer. The "Explore" label should be freed for the Graph Explorer.
 - **A "Community" page.** Too vague. The actual community structures (chapters, guilds, pods) each deserve their own section.
 
@@ -241,7 +235,7 @@ What Greenpill is, why it matters, and that it is real (not just a book or a Dis
 4. See 2-3 featured chapter stories as proof.
 5. Reach role-based CTA: "I want to learn" / "I want to join a chapter" / "I want to build."
 
-**Primary CTA:** "Take the Greenpill" (routes to `/learn/onboarding`)
+**Primary CTA:** "Enter the Garden" (routes to Garden)
 
 **Proof they need:** Real chapter stories, active programs, recent dates, recognizable partner logos.
 
@@ -268,13 +262,13 @@ How chapters work, what support exists, how to start or grow one, what other cha
 **What they need to understand quickly:**
 That there is real technical work happening, that the Dev Guild is active, and that contributions are visible and valued.
 
-**Best entry page:** `/projects` or `/guilds/dev-guild`
+**Best entry page:** `/guilds/dev-guild`
 
 **Journey:**
-1. See the project portfolio: Green Goods, GreenWill, Impact Reef, etc.
-2. Click into a project to see its status, stack, contributors, and repo.
-3. Navigate to Dev Guild profile to see builder spaces, events, and open issues.
-4. Find join flow for the Dev Guild.
+1. See the Dev Guild profile with Green Goods and related proof references.
+2. Follow external proof links to repositories, docs, or public project surfaces.
+3. Find builder spaces, events, and open issues from the Dev Guild context.
+4. Find the contribution path for the Dev Guild.
 5. See credentials and contribution trails.
 
 **Primary CTA:** "Join the Dev Guild" or "Contribute to [project]"
@@ -286,7 +280,7 @@ That there is real technical work happening, that the Dev Guild is active, and t
 **What they need to understand quickly:**
 That Greenpill has a real publishing and research function, and that there is a place for their work.
 
-**Best entry page:** `/learn` or `/guilds/writers-guild`
+**Best entry page:** `/library` or `/guilds/writers-guild`
 
 **Journey:**
 1. See the knowledge commons: books, podcast themes, published essays.
@@ -341,20 +335,20 @@ What is active now, what changed, where to go next.
 
 | Charmverse Function | Current UX | Website-Native Surface | Design Pattern |
 | --- | --- | --- | --- |
-| **Beginner onboarding** ("Taking the Greenpill") | Link in ParticipateSection to Charmverse page | `/learn/onboarding` — a guided, multi-step onboarding course page | Step-by-step pathway with progress indicators, expandable sections, embedded media. Not a wall of text. |
-| **Guild directory and landing pages** | Single Charmverse link in Intermediate section | `/guilds` index + `/guilds/[slug]` detail pages | Card grid index with guild cards (name, description, member count, status). Detail page with projects, members, join flow. |
+| **Beginner onboarding** ("Taking the Greenpill") | Link in ParticipateSection to Charmverse page | Garden — guided public onboarding and contribution paths | Step-by-step pathway with progress indicators, expandable sections, embedded media. Not a wall of text. |
+| **Guild landing pages** | Single Charmverse link in Intermediate section | Direct Dev Guild and Writers Guild detail pages | Detail pages with proof references, members where public-safe, and contribution flow. |
 | **Chapter workspace pages** | External links from map dots (Charmverse, Telegram) | `/chapters/[slug]` detail pages | Chapter profile card with stewards, location, activity feed, resources, join link. |
 | **Workspace home / navigation** | Charmverse workspace link in ExploreSection and ParticipateSection | `/workspace` landing page | Access tier cards showing what is available at each level (public, member, chapter, guild, steward). Login/connect CTA. |
 | **Gated resources and docs** | Charmverse token-gated spaces | `/workspace/[space]` gated pages (Phase 2) | Lock icon overlay on cards. "Connect wallet to access" state. Graceful degradation showing what you would see if you had access. |
 | **Member identity** | Charmverse wallet-native sign-in | Wallet connect button in nav + `/workspace` profile | Subtle wallet indicator in nav bar. Profile page with wallet, roles, credentials, activity. |
 | **Proposal and allocation flows** | Charmverse proposals | `/workspace` proposal drafts + Snapshot bridge (Phase 3) | Proposal card with status badge (Draft, Review, Voting, Executed). Inline voting widget. |
 | **Credentials and attestations** | Charmverse credentials | `/impact` public view + profile credential chips (Phase 4) | Credential chip components (Chapter Steward, Guild Contributor, Program Participant). Attestation detail modals. |
-| **Community navigation** | Charmverse sidebar navigation | Website nav + `/join` role routing + explorer graph | Primary nav with section links. Role-based onboarding hub. Explorer with people/project overlays. |
+| **Community navigation** | Charmverse sidebar navigation | Website nav + Garden role routing + future graph work | Primary nav with section links. Role-based onboarding through Garden. Future explorer work stays deferred. |
 | **Docs and collaboration** | Charmverse notion-like pages | `/workspace` block editor pages (Phase 3) | Glass-morphism document cards. Inline editor with comments. Chapter/guild scoping. |
 
 ### Design patterns for replacement surfaces
 
-**Onboarding Course Page** (`/learn/onboarding`)
+**Garden Onboarding Surface**
 ```
 +--------------------------------------------------+
 | TAKING THE GREENPILL                              |
@@ -409,8 +403,8 @@ What is active now, what changed, where to go next.
 | PUBLIC                    | MEMBER               |
 | - Chapter profiles        | - Chapter spaces     |
 | - Guild profiles          | - Guild docs         |
-| - Project pages           | - Proposals          |
-| - Learn resources         | - Gated resources    |
+| - Project references      | - Proposals          |
+| - Library/Garden resources| - Gated resources    |
 |                           | - Credentials        |
 +--------------------------------------------------+
 | COMING SOON                                       |
@@ -696,7 +690,7 @@ What is active now, what changed, where to go next.
 +------------------------------------------------------------+
 ```
 
-### F4. Guilds & Pods Index
+### F4. Direct Guild Detail Entry Points
 
 ```
 +============================================================+
@@ -704,37 +698,28 @@ What is active now, what changed, where to go next.
 +============================================================+
 
 +------------------------------------------------------------+
-| GUILDS & PODS                                               |
-| Guilds organize around skills. Pods organize around topics. |
+| DIRECT GUILD ENTRY POINTS                                   |
+| Do not implement a root guild directory. Link directly to   |
+| the public Dev Guild and Writers Guild detail pages.        |
 +------------------------------------------------------------+
 
 +------------------------------------------------------------+
-| GUILDS                                                      |
+| PUBLIC GUILD PAGES                                          |
 |                                                             |
 | +---------------------------+ +---------------------------+ |
 | | [icon] DEV GUILD          | | [icon] WRITERS GUILD      | |
 | | Building coordination     | | Publishing, storytelling, | |
 | | tools and protocols       | | and knowledge work        | |
 | | [Active] 24 members       | | [Active] 15 members       | |
-| | 7 projects                | | Paragraph publication     | |
+| | Project references        | | Paragraph publication     | |
 | | [View Guild ->]           | | [View Guild ->]           | |
 | +---------------------------+ +---------------------------+ |
 +------------------------------------------------------------+
 
 +------------------------------------------------------------+
-| PODS                                                        |
-|                                                             |
-| +-------------+ +-------------+ +-------------+ +--------+ |
-| | Education   | | Environment | | DeSci       | | DePin  | |
-| | [Forming]   | | [Active]    | | [Forming]   | | [New]  | |
-| | [View ->]   | | [View ->]   | | [View ->]   | |[View]  | |
-| +-------------+ +-------------+ +-------------+ +--------+ |
-+------------------------------------------------------------+
-
-+------------------------------------------------------------+
-| START A GUILD OR POD                                        |
-| Have an idea for a new guild or topic pod?                  |
-| [Propose a Guild ->]                                        |
+| OTHER GUILD-LIKE REFERENCES                                 |
+| Link Green Side externally from Library until a source-     |
+| backed page is intentionally added.                         |
 +------------------------------------------------------------+
 ```
 
@@ -796,7 +781,7 @@ What is active now, what changed, where to go next.
 +------------------------------------------------------------+
 ```
 
-### F6. Projects & Protocols
+### F6. Project References
 
 ```
 +============================================================+
@@ -804,12 +789,14 @@ What is active now, what changed, where to go next.
 +============================================================+
 
 +------------------------------------------------------------+
-| PROJECTS & PROTOCOLS                                        |
-| Tools and experiments built by the Greenpill network.       |
+| PROJECT REFERENCES                                          |
+| Project records are supporting proof for guild and Library  |
+| contexts. Do not implement public project index or detail   |
+| pages.                                                      |
 +------------------------------------------------------------+
 
 +------------------------------------------------------------+
-| FILTER: [All] [Active] [Beta] [Completed] [Experimental]   |
+| DEV GUILD PROOF                                             |
 +------------------------------------------------------------+
 
 +------------------------------------------------------------+
@@ -819,21 +806,21 @@ What is active now, what changed, where to go next.
 | | verification              | | toolkit                   | |
 | | Guild: Dev Guild          | | Guild: Dev Guild          | |
 | | [Active] [Solidity,React] | | [Active] [React, Node]   | |
-| | [View Project ->]         | | [View Project ->]         | |
+| | [Open Proof ->]           | | [Open Proof ->]           | |
 | +---------------------------+ +---------------------------+ |
 | +---------------------------+ +---------------------------+ |
 | | IMPACT REEF               | | COOKIE JAR                | |
 | | Reputation and impact     | | Micro-grants and          | |
 | | tracking                  | | community funding         | |
 | | [Beta]                    | | [Active]                  | |
-| | [View Project ->]         | | [View Project ->]         | |
+| | [Open Proof ->]           | | [Open Proof ->]           | |
 | +---------------------------+ +---------------------------+ |
 | +---------------------------+ +---------------------------+ |
 | | GARDENS                   | | ALLO EXPERIMENTS          | |
 | | Conviction funding        | | Capital allocation        | |
 | | mechanisms                | | strategies                | |
 | | [Active]                  | | [Experimental]            | |
-| | [View Project ->]         | | [View Project ->]         | |
+| | [Open Proof ->]           | | [Open Proof ->]           | |
 | +---------------------------+ +---------------------------+ |
 +------------------------------------------------------------+
 
@@ -845,7 +832,7 @@ What is active now, what changed, where to go next.
 +------------------------------------------------------------+
 ```
 
-### F7. Learn / Knowledge Commons
+### F7. Library / Garden Knowledge Commons
 
 ```
 +============================================================+
@@ -853,18 +840,18 @@ What is active now, what changed, where to go next.
 +============================================================+
 
 +------------------------------------------------------------+
-| LEARN                                                       |
+| LIBRARY                                                     |
 | The Greenpill knowledge commons: books, podcast,            |
-| onboarding, and resources for regenerative coordination.    |
+| Garden onboarding, and resources for regenerative work.     |
 +------------------------------------------------------------+
 
 +------------------------------------------------------------+
 | START HERE                                                  |
 | +------------------------------------------------------+   |
 | | TAKING THE GREENPILL                                  |   |
-| | A guided introduction to the network.                 |   |
+| | A guided introduction through the Garden route.       |   |
 | | 5 steps — 30 minutes — no prerequisites               |   |
-| | [Start the Course ->]                                 |   |
+| | [Enter the Garden ->]                                 |   |
 | +------------------------------------------------------+   |
 +------------------------------------------------------------+
 
@@ -957,7 +944,7 @@ What is active now, what changed, where to go next.
 |                                                             |
 | PUBLIC RESOURCES (available without login):                 |
 | - Chapter and guild profiles                                |
-| - Project pages                                             |
+| - Project references inside guild and Library contexts      |
 | - Books and podcast                                         |
 | - Stories and updates                                       |
 |                                                             |
@@ -1065,7 +1052,7 @@ These components should be added to the existing component library, using the cu
 - Status badge (Active, Forming, Inactive)
 - 2-3 metadata chips (member count, project count, location)
 - Hover: subtle border glow, slight translate
-- Used on: `/chapters`, `/guilds`, homepage sections
+- Used on: `/chapters`, direct guild detail pages, homepage sections
 
 **Project Card**
 - Similar glass panel
@@ -1074,7 +1061,7 @@ These components should be added to the existing component library, using the cu
 - Tech stack chips (Solidity, React, etc.)
 - Status badge (Active, Beta, Experimental, Completed)
 - Guild attribution chip
-- Used on: `/projects`, guild detail pages, homepage
+- Used as supporting proof/reference cards inside guild detail pages, Library, and homepage sections. Do not create public project pages.
 
 **Story Card**
 - Glass panel with optional header image area
@@ -1087,7 +1074,7 @@ These components should be added to the existing component library, using the cu
 **Book Card** (existing, minimal changes)
 - Keep current BookCard.astro pattern
 - Add "Recommended starting point" highlight variant
-- Used on: `/learn/books`
+- Used on: Library book sections
 
 **Workspace Access Card**
 - Glass panel with lock/unlock icon
@@ -1102,7 +1089,7 @@ These components should be added to the existing component library, using the cu
 - Horizontal row of pill buttons
 - Active state: lime green background, dark text
 - Inactive state: transparent with subtle border
-- Used on: chapters (by region), guilds (by type), projects (by status), stories (by category)
+- Used on chapters by region, guild detail contexts, project-reference groups, and stories by category
 
 **Region Filter** (for chapters)
 - Pill row variant with region labels: All, Americas, Africa, Asia, Europe
@@ -1122,7 +1109,7 @@ These components should be added to the existing component library, using the cu
 **Impact Metric Block**
 - Small glass cell (like `detail-cell` in explorer.css)
 - Numeric value (large) + label (small, muted, uppercase)
-- Used on chapter details, impact page, project details
+- Used on chapter details, impact sections, and project-reference proof blocks
 
 **Member Count Chip**
 - Inline: icon + number + "members"
@@ -1135,14 +1122,14 @@ These components should be added to the existing component library, using the cu
 - Role name (Curious, Organizer, Builder, Writer, Partner, Member)
 - 2-line description
 - Single CTA button
-- Used on: homepage "Get Involved" section, `/join`
+- Used on: homepage "Get Involved" section and Garden
 
 **Onboarding Step**
 - Numbered step indicator with completion state
 - Title + description
 - Expandable content area (text, video, book embed)
 - Progress bar
-- Used on: `/learn/onboarding`
+- Used on: Garden
 
 ### Migration and Transition Components
 
@@ -1252,7 +1239,7 @@ Example redirect landing:
 | The Greenpill guild directory has moved from Charmverse     |
 | to our new website.                                         |
 |                                                             |
-| [Go to Guilds & Pods ->]                                    |
+| [Go to Dev Guild ->] [Go to Writers Guild ->]               |
 |                                                             |
 | Looking for something else? [See the full site map]         |
 | Questions? [Join Discord]                                   |
@@ -1265,7 +1252,7 @@ Example redirect landing:
 | --- | --- | --- |
 | Chapter profiles | Public | Discovery and onboarding. Anyone should be able to find their local chapter. |
 | Guild profiles | Public | Same. Must be visible to attract new members. |
-| Project pages | Public | Builders and partners need to see what exists. |
+| Project references | Public | Builders and partners need to see what exists, but references live inside guild and Library contexts rather than standalone pages. |
 | Stories and updates | Public | The editorial layer is a marketing and trust surface. |
 | Impact and reputation summaries | Public | Partners and funders evaluate credibility here. |
 | Books, podcast, onboarding | Public | The knowledge commons is the network's main entry funnel. |
@@ -1319,17 +1306,17 @@ This is a UI/UX-first priority order. It assumes the content model and routes ca
 
 1. **New homepage structure** — Rewrite `index.astro` with the section order from the wireframe above. Replace the current Hero, ParticipateSection, and ExploreSection. Keep ChapterMap (with minor upgrades), condense BookSection and PodcastSection into a combined Learn preview.
 
-2. **New navigation** — Replace the current 4-item anchor nav with a real site navigation: Chapters, Guilds, Projects, Learn, Stories, Explorer, Join. Mobile: hamburger with full section list.
+2. **New navigation** — Replace the current 4-item anchor nav with a real site navigation: Chapters, Library, Stories, Garden, Dev Guild, and Writers Guild where appropriate. Mobile: hamburger with the same focused section list.
 
 3. **New footer** — Add site navigation links, social links (moved from ExploreSection), and newsletter/contact. Keep Supermodular attribution.
 
 4. **`/chapters` index page** — Chapter cards grid with upgraded map. Replace external links with internal chapter card click targets.
 
-5. **`/guilds` index page** — Guild and pod cards. Replace the single Charmverse guild link.
+5. **Direct guild detail pages** — Dev Guild and Writers Guild pages. Replace the single Charmverse guild link without adding a root guild directory.
 
-6. **`/join` page** — Role-based onboarding hub replacing the Beginner/Intermediate/Advanced ladder.
+6. **Garden page** — Role-based onboarding hub replacing the Beginner/Intermediate/Advanced ladder.
 
-7. **`/learn/onboarding` page** — "Taking the Greenpill" content migrated from Charmverse into a guided course layout.
+7. **Garden onboarding sections** — "Taking the Greenpill" content migrated from Charmverse into guided Garden sections.
 
 8. **Remove all Charmverse links** from ParticipateSection, ExploreSection, and social-links.json. Replace with internal routes.
 
@@ -1339,13 +1326,13 @@ This is a UI/UX-first priority order. It assumes the content model and routes ca
 
 9. **`/chapters/[slug]` detail pages** — Chapter profiles with stewards, activity, impact, and join links.
 
-10. **`/guilds/[slug]` detail pages** — Guild profiles with projects, members, events, and join flow.
+10. **Dev Guild and Writers Guild detail pages** — Guild profiles with public-safe members, proof references, events, and contribution flow.
 
-11. **`/projects` index page** — Project cards with status, guild attribution, and tech stack.
+11. **Project-reference proof blocks** — Project cards with status, guild attribution, and tech stack inside guild and Library contexts only.
 
-12. **`/projects/[slug]` detail pages** — Project profiles with description, contributors, repos, and status.
+12. **External project proof links** — Project records link to external docs, repos, or public proof instead of internal project profile pages.
 
-13. **`/learn` hub page** — Reorganized Learn section with books, podcast, onboarding, and resources as sub-sections.
+13. **Library hub page** — Reorganized Library section with books, podcast, resources, and Green Goods docs as sub-sections.
 
 14. **`/stories` index page** — Story cards with category filters. Requires story content type in Keystatic.
 

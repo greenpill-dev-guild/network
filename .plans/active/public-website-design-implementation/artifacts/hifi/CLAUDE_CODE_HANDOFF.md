@@ -254,8 +254,7 @@ packages/website/src/
 │   ├── stories/[slug].astro
 │   ├── guilds/[slug].astro
 │   ├── garden.astro         ← Garden
-│   ├── join.astro
-│   └── learn/onboarding.astro ← existing onboarding route
+│   └── map/edit.astro       ← Submitted-node edit flow
 ├── lib/
 │   ├── api.ts               ← typed API client (Stage 5)
 │   └── content.ts           ← Keystatic helpers
@@ -263,7 +262,7 @@ packages/website/src/
     └── tokens.css           ← ported from artifacts/hifi/hifi/gp-tokens.css
 ```
 
-`/garden` is the target public route for the Garden HiFi page. Keep `/join` and `/learn/onboarding` only where they remain useful as related or legacy public entry points.
+`/garden` is the public onboarding route for the Garden HiFi page. Do not restore the retired standalone onboarding route, the former join route, a root guild directory, or project index/detail pages. Guild navigation should link directly to Dev Guild and Writers Guild detail pages, and Green Goods should stay a Dev Guild proof/reference plus Library link.
 
 ### Prop conventions
 

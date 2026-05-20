@@ -1,57 +1,932 @@
 ---
 import { getCollection } from 'astro:content';
-import BaseLayout from '../layouts/BaseLayout.astro';
-import Nav from '../components/Nav.astro';
-import Hero from '../components/Hero.astro';
-import ChapterMap from '../components/ChapterMap.astro';
-import BookSection from '../components/BookSection.astro';
-import PodcastSection from '../components/PodcastSection.astro';
-import ParticipateSection from '../components/ParticipateSection.astro';
-import ExploreSection from '../components/ExploreSection.astro';
-import Footer from '../components/Footer.astro';
-import TranslationModal from '../components/TranslationModal.astro';
+import GpLayout from '../layouts/GpLayout.astro';
+import Container from '../components/ui/Container.astro';
+import Button from '../components/ui/Button.astro';
+import Card from '../components/ui/Card.astro';
+import ArrowLink from '../components/ui/ArrowLink.astro';
+import Overline from '../components/ui/Overline.astro';
+import Text from '../components/ui/Text.astro';
+import Meta from '../components/ui/Meta.astro';
+import HomeMap from '../components/page-sections/HomeMap.astro';
 import homePage from '../content/home-page.json';
-import '../styles/global.css';
+import garden from '../content/garden.json';
+import podcast from '../content/podcast.json';
+import { getOperationalChapters, getOperationalGuilds } from '../lib/operational-content';
+import { publicGuildPath } from '../lib/public-routes';
 
-// Read translations from book collection
-const allBooks = await getCollection('books');
-const booksWithTranslations = allBooks.filter(b => b.data.translations && b.data.translations.length > 0);
+const chapters = await getOperationalChapters();
+const guilds = await getOperationalGuilds();
+const books = (await getCollection('books')).sort(
+  (a, b) => (a.data.sortOrder ?? 0) - (b.data.sortOrder ?? 0),
+);
+
+const allStories = await getCollection('stories');
+const publishedStories = allStories
+  .filter((s) => s.data.status === 'published')
+  .sort((a, b) => (b.data.featuredWeight ?? 0) - (a.data.featuredWeight ?? 0));
+
+const featuredBooks = books.slice(0, 8);
+
+const devGuild = guilds.find((g) => g.id === 'dev-guild');
+const writersGuild = guilds.find((g) => g.id === 'writers-guild');
+const devGuildPath = publicGuildPath(devGuild?.id);
+const writersGuildPath = publicGuildPath(writersGuild?.id);
+
+const proofSignal = homePage.proofSignals?.find((s) => s.label === 'Podcast archive');
+const podcastEpisodeCount = proofSignal?.value ?? '293 episodes';
+const podcastHref = proofSignal?.href ?? 'https://podcasts.apple.com/us/podcast/greenpill/id1609313639';
+
+const activeChapterCount = chapters.length;
+
+const ecosystem = [
+  { name: 'Gitcoin', blurb: 'Public goods funding rounds', href: 'https://www.gitcoin.co/' },
+  { name: 'Octant', blurb: 'Epoch-based public goods', href: 'https://octant.app/' },
+  { name: 'Allo Protocol', blurb: 'Capital allocation infra', href: 'https://allo.gitcoin.co/' },
+  { name: 'KarmaGAP', blurb: 'Grants, milestones, evidence', href: 'https://gap.karmahq.xyz/' },
+  { name: 'Regen Coordination', blurb: 'The Hub for chapter updates', href: 'https://hub.regencoordination.xyz/' },
+  { name: 'Green Goods', blurb: 'Public-goods impact tooling', href: 'https://docs.greengoods.app/' },
+  { name: 'Hypercerts', blurb: 'Onchain impact certificates', href: 'https://hypercerts.org/' },
+  { name: 'EAS', blurb: 'Open attestation primitive', href: 'https://attest.sh/' },
+];
+
+const gardenSteps = (garden.steps ?? []).slice(0, 4);
+
+const heroTitle = homePage.hero?.title || homePage.title || 'A global regenerative network.';
+const heroDek = homePage.hero?.body || homePage.hero?.dek ||
+  `Drop in to see who you connect with - by theme, role, and what you bring or seek. ${activeChapterCount} chapters and counting.`;
+
+const primaryCta = homePage.hero?.primaryCta ?? { label: 'Enter the Garden', href: '/garden' };
+const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', href: '/chapters' };
 ---
 
-<BaseLayout
-  title={homePage.seo.title || 'greenpill.network'}
-  description={homePage.seo.description || 'Turning Degens to Regens (one green pill at a time)'}
-  ogImage={homePage.seo.ogImage || undefined}
-  canonicalPath={homePage.seo.canonicalPath || '/'}
-  noindex={homePage.seo.noindex}
+<GpLayout
+  title={homePage.seo?.title || 'Greenpill Network'}
+  description={homePage.seo?.description || heroDek}
+  ogImage={homePage.seo?.ogImage || undefined}
+  canonicalPath={homePage.seo?.canonicalPath || '/'}
+  noindex={homePage.seo?.noindex}
+  activeNav="Home"
+  showFooterWordmark
 >
-  <Nav />
+  <main class="gp-home" id="home-top">
+    <section class="gp-home-hero">
+      <div class="gp-home-hero-topo" aria-hidden="true"></div>
+      <Container size="2xl">
+        <div class="gp-home-hero-inner">
+          <Text variant="display" class="gp-home-hero-title">{heroTitle}</Text>
 
-  <div class="transition-opacity duration-500 sm:min-h-[100vh] flex items-center justify-center">
-    <Hero />
-  </div>
+          <div class="gp-home-hero-map">
+            <HomeMap />
+          </div>
 
-  <ChapterMap />
-  <BookSection />
-  <PodcastSection />
-  <ParticipateSection />
-  <ExploreSection />
-  <Footer />
+          <Text variant="body-lg" class="gp-home-hero-dek">{heroDek}</Text>
 
-  {booksWithTranslations.map(book => (
-    <TranslationModal
-      id={book.id}
-      title={book.data.title}
-      translations={book.data.translations}
-    />
-  ))}
+          <div class="gp-home-hero-actions">
+            <Button href={primaryCta.href}>{primaryCta.label}</Button>
+            <Button href={secondaryCta.href} variant="ghost">{secondaryCta.label}</Button>
+          </div>
+        </div>
+      </Container>
+    </section>
 
-  <script>
-    import '../scripts/map';
-    import '../scripts/image-sequence';
-    import '../scripts/mobile-menu';
-    import '../scripts/dropdown';
-    import '../scripts/modal';
-    import '../scripts/parallax';
-  </script>
-</BaseLayout>
+    <section class="gp-home-section gp-home-stories">
+      <Container size="2xl">
+        <div class="gp-home-section-head">
+          <div class="gp-home-section-head-copy">
+            <Overline>Chapters · From the field</Overline>
+            <Text variant="h2">Stories from the network.</Text>
+          </div>
+          <ArrowLink href="/stories">See all stories</ArrowLink>
+        </div>
+
+        {publishedStories.length > 0 ? (
+          <div class={`gp-home-stories-grid count-${Math.min(publishedStories.length, 4)}`}>
+            {publishedStories.slice(0, 4).map((story, idx) => {
+              const region = (story.data.region || 'global').replace(/-/g, ' ');
+              return (
+                <a class={`gp-home-story is-row-${idx + 1}`} href={`/stories/${story.id}`}>
+                  <div class="gp-home-story-art" aria-hidden="true">
+                    {story.data.image ? (
+                      <img src={story.data.image} alt={story.data.media?.imageAlt || ''} loading="lazy" decoding="async" />
+                    ) : (
+                      <span class="gp-home-story-art-fallback"></span>
+                    )}
+                  </div>
+                  <div class="gp-home-story-copy">
+                    <Meta items={['Chapter', region]} accentIndex={0} />
+                    <Text variant="h3" class="gp-home-story-title">{story.data.title}</Text>
+                    <Text variant="body-sm" class="gp-home-story-blurb">
+                      {story.data.excerpt || story.data.dek}
+                    </Text>
+                    <ArrowLink size="sm">Read the story</ArrowLink>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        ) : (
+          <Card variant="elevated" padded="lg" class="gp-home-stories-empty">
+            <div class="gp-home-stories-empty-visual" aria-hidden="true"></div>
+            <div class="gp-home-stories-empty-copy">
+              <Meta items={['Field notes', 'Steward review']} accentIndex={0} />
+              <Text variant="h3">First wave of chapter stories is in steward review.</Text>
+              <Text variant="body" class="gp-home-stories-empty-body">
+                Each story will cite a public source. Until they land, the public drafts live on Paragraph.
+              </Text>
+              <div class="gp-home-stories-actions">
+                <Button href="https://paragraph.com/@greenpill" variant="ghost">Read drafts on Paragraph</Button>
+              </div>
+            </div>
+          </Card>
+        )}
+      </Container>
+    </section>
+
+    <section class="gp-home-section">
+      <Container size="2xl">
+        <div class="gp-home-section-head">
+          <div class="gp-home-section-head-copy">
+            <Overline>Library · Knowledge commons</Overline>
+            <Text variant="h2">The Greenpill commons.</Text>
+            <Text variant="body" class="gp-home-section-dek">
+              Books, podcast conversations, public guild writing, and field guides — open and made by the network.
+            </Text>
+          </div>
+          <ArrowLink href="/library">Browse the library</ArrowLink>
+        </div>
+
+        <div class="gp-home-lib-grid">
+          <Card variant="elevated" padded="lg" class="gp-home-lib-books">
+            <header class="gp-home-lib-head">
+              <Overline>Books · {books.length} titles</Overline>
+              <Text variant="mono">All free</Text>
+            </header>
+            <Text variant="h3">Read the books.</Text>
+            <div class="gp-home-book-grid">
+              {featuredBooks.map((book) => {
+                const href = book.data.ebookLink || '/library';
+                const external = href.startsWith('http');
+                return (
+                  <a
+                    class="gp-home-book"
+                    href={href}
+                    target={external ? '_blank' : undefined}
+                    rel={external ? 'noopener' : undefined}
+                  >
+                    {book.data.image && (
+                      <img
+                        src={book.data.image}
+                        alt={book.data.imageAlt}
+                        width={book.data.imageWidth ?? 200}
+                        height={book.data.imageHeight ?? 300}
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    )}
+                    <span class="gp-home-book-meta">{book.data.title}</span>
+                  </a>
+                );
+              })}
+            </div>
+            <footer class="gp-home-lib-foot">
+              <Text variant="caption">Multiple translations · field-tested</Text>
+              <ArrowLink href="/library#books" size="sm">Browse all</ArrowLink>
+            </footer>
+          </Card>
+
+          <Card variant="elevated" padded="lg" class="gp-home-lib-podcast">
+            <header class="gp-home-lib-head">
+              <Overline>Podcast · {podcastEpisodeCount}</Overline>
+              <Text variant="mono">Public archive</Text>
+            </header>
+            <div class="gp-home-podcast-body">
+              <div class="gp-home-podcast-cover">
+                <img
+                  src="/images/podcast-cover.png"
+                  alt="Greenpill Podcast cover artwork"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+              <div class="gp-home-podcast-copy">
+                <Text variant="mono">Hosted by Kevin Owocki and guests</Text>
+                <Text variant="h3">{podcast.title || 'The Greenpill Podcast'}</Text>
+                <Text variant="body-sm">{podcast.description}</Text>
+                <div class="gp-home-podcast-cta">
+                  <Button href={podcastHref} variant="ghost">Listen on Apple Podcasts</Button>
+                  <ArrowLink href={podcast.youtubeLink || 'https://www.youtube.com/@Green_Pill_Podcast'} size="sm">Watch on YouTube</ArrowLink>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {devGuild && devGuildPath && (
+            <a class="gp-home-lib-tile gp-home-lib-dev" href={devGuildPath}>
+              <Overline>Guild · {devGuild.data.status}</Overline>
+              <Text variant="h3">{devGuild.data.name}</Text>
+              <Text variant="body-sm">{devGuild.data.summary}</Text>
+              <div class="gp-home-lib-guild-foot">
+                <Text variant="mono">
+                  {(devGuild.data.outputs?.length ?? 0)} public outputs
+                </Text>
+                <ArrowLink size="sm">Visit guild</ArrowLink>
+              </div>
+            </a>
+          )}
+
+          {writersGuild && writersGuildPath && (
+            <a class="gp-home-lib-tile gp-home-lib-writers" href={writersGuildPath}>
+              <Overline tone="muted">Guild · {writersGuild.data.status}</Overline>
+              <Text variant="h3">{writersGuild.data.name}</Text>
+              <Text variant="body-sm">{writersGuild.data.summary}</Text>
+              <div class="gp-home-lib-guild-foot">
+                <Text variant="mono">Stories, translations, longform</Text>
+                <ArrowLink size="sm">Visit guild</ArrowLink>
+              </div>
+            </a>
+          )}
+
+          <a class="gp-home-lib-tile gp-home-lib-toolkit" href="/library#tools-guides">
+            <Overline>Regen toolkit</Overline>
+            <Text variant="h3">Field-tested guides for local action.</Text>
+            <Text variant="body-sm">Green Goods docs · Regen Coordination Hub threads · Dev Guild writing.</Text>
+            <ArrowLink>Open the toolkit</ArrowLink>
+          </a>
+
+          <div class="gp-home-lib-tile gp-home-lib-soon">
+            <header class="gp-home-lib-head">
+              <Overline tone="muted">Knowledge map</Overline>
+              <span class="gp-home-soon-pill">In design</span>
+            </header>
+            <Text variant="h3">A living atlas of regenerative practice.</Text>
+            <Text variant="body-sm">Cross-link every book, episode, and field guide into one navigable terrain.</Text>
+          </div>
+        </div>
+      </Container>
+    </section>
+
+    <section class="gp-home-section gp-home-eco">
+      <Container size="2xl">
+        <div class="gp-home-eco-intro">
+          <Overline>Ecosystem · Communities we coordinate with</Overline>
+          <Text variant="h2" class="gp-home-eco-title">Stronger together.</Text>
+          <Text variant="body" class="gp-home-eco-dek">
+            Greenpill sits inside a wider regenerative web3 ecosystem — funders, builders, storytellers, scientists.
+            A few of the communities we coordinate with.
+          </Text>
+        </div>
+
+        <div class="gp-home-eco-grid">
+          {ecosystem.map((org) => (
+            <a class="gp-home-eco-tile" href={org.href} target="_blank" rel="noopener">
+              <span class="gp-home-eco-mark" aria-hidden="true"></span>
+              <span class="gp-home-eco-name">{org.name}</span>
+              <span class="gp-home-eco-blurb">{org.blurb}</span>
+            </a>
+          ))}
+        </div>
+      </Container>
+    </section>
+
+    <section class="gp-home-section gp-home-garden" id="garden-ramp">
+      <Container size="2xl">
+        <div class="gp-home-section-head">
+          <div class="gp-home-section-head-copy">
+            <Overline>Participate · Enter the Garden</Overline>
+            <Text variant="h2">Meet the network where you are.</Text>
+            <Text variant="body" class="gp-home-section-dek">
+              Four public, low-pressure ways into Greenpill. Pick whichever matches the moment you are in.
+            </Text>
+          </div>
+          <ArrowLink href="/garden">Open the Garden</ArrowLink>
+        </div>
+
+        <div class="gp-home-garden-grid">
+          {gardenSteps.map((step, index) => (
+            <article class="gp-home-garden-card">
+              <header class="gp-home-garden-head">
+                <span class="gp-home-garden-num">{String(step.level ?? index + 1).padStart(2, '0')}</span>
+                {step.friction && <Text variant="mono">{step.friction}</Text>}
+              </header>
+              <Text variant="h3" class="gp-home-garden-title">{step.title}</Text>
+              <Text variant="body-sm" class="gp-home-garden-body">{step.body}</Text>
+              <footer class="gp-home-garden-foot">
+                {step.cta?.href && step.cta?.label && (
+                  step.cta.kind === 'external'
+                    ? <Button href={step.cta.href} variant="ghost">{step.cta.label}</Button>
+                    : <Button href={step.cta.href}>{step.cta.label}</Button>
+                )}
+              </footer>
+            </article>
+          ))}
+        </div>
+      </Container>
+    </section>
+  </main>
+</GpLayout>
+
+<style>
+  .gp-home {
+    min-height: 100vh;
+    background: transparent;
+  }
+
+  /* Hero composition: stacked centered — H1 → map → dek → CTAs */
+  .gp-home-hero {
+    position: relative;
+    overflow: hidden;
+    padding: var(--gp-space-3xl) 0 var(--gp-space-4xl);
+  }
+
+  .gp-home-hero-topo {
+    position: absolute;
+    inset: 0;
+    background-image: url('/images/hifi/topo-bg.png');
+    background-size: cover;
+    background-position: center;
+    opacity: 0.1;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+  }
+
+  .gp-home-hero-inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--gp-space-xl);
+    text-align: center;
+  }
+
+  .gp-home-hero-inner :global(.gp-home-hero-title) {
+    max-width: 20ch;
+    text-wrap: balance;
+  }
+
+  .gp-home-hero-map {
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+
+  .gp-home-hero-inner :global(.gp-home-hero-dek) {
+    max-width: 60ch;
+    color: var(--gp-fg-muted);
+  }
+
+  .gp-home-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  /* Section frame */
+  .gp-home-section {
+    padding: clamp(var(--gp-space-3xl), 7vw, var(--gp-space-4xl)) 0;
+    border-top: 1px solid var(--gp-border-soft);
+  }
+
+  .gp-home-section-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--gp-space-xl);
+    flex-wrap: wrap;
+    margin-bottom: clamp(var(--gp-space-xl), 3vw, var(--gp-space-2xl));
+  }
+
+  .gp-home-section-head-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-md);
+    max-width: 640px;
+  }
+
+  .gp-home-section-head-copy :global(.gp-home-section-dek) {
+    color: var(--gp-fg-muted);
+    max-width: 60ch;
+  }
+
+  /* Stories grid — HiFi bento: one large story + three smaller. */
+  .gp-home-stories-grid {
+    display: grid;
+    gap: clamp(14px, 1.5vw, 20px);
+  }
+
+  .gp-home-stories-grid.count-4 {
+    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-rows: auto auto;
+  }
+  .gp-home-stories-grid.count-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .gp-home-stories-grid.count-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gp-home-stories-grid.count-1 { grid-template-columns: minmax(0, 1fr); }
+
+  .gp-home-story {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-md);
+    padding: clamp(var(--gp-space-lg), 2vw, var(--gp-space-xl));
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-lg);
+    background: var(--gp-card);
+    color: var(--gp-fg);
+    text-decoration: none;
+    min-width: 0;
+    transition: border-color 200ms cubic-bezier(0.22, 1, 0.36, 1), background 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .gp-home-story:hover {
+    border-color: rgba(184, 232, 53, 0.32);
+    background: var(--gp-card-elev);
+  }
+
+  .gp-home-stories-grid.count-4 .gp-home-story.is-row-1 {
+    grid-column: 1 / 2;
+    grid-row: 1 / 3;
+  }
+  .gp-home-stories-grid.count-4 .gp-home-story.is-row-2 { grid-column: 2 / 3; grid-row: 1 / 2; }
+  .gp-home-stories-grid.count-4 .gp-home-story.is-row-3 { grid-column: 3 / 4; grid-row: 1 / 2; }
+  .gp-home-stories-grid.count-4 .gp-home-story.is-row-4 { grid-column: 2 / 4; grid-row: 2 / 3; }
+
+  .gp-home-story-art {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    border-radius: var(--gp-radius-md);
+    overflow: hidden;
+    background: var(--gp-green-800);
+    position: relative;
+  }
+
+  .gp-home-story-art img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .gp-home-story-art-fallback {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(240, 220, 160, 0.18), transparent 60%),
+      url('/images/hifi/topo-bg.png');
+    background-size: auto, cover;
+    background-position: center;
+    opacity: 0.6;
+    mix-blend-mode: overlay;
+  }
+
+  .gp-home-story-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-sm);
+  }
+
+  .gp-home-story-copy :global(.gp-home-story-title) {
+    text-wrap: pretty;
+  }
+
+  .gp-home-story-copy :global(.gp-home-story-blurb) {
+    color: var(--gp-fg-muted);
+  }
+
+  /* Stories empty state — matches DESIGN.md State Patterns spec: small
+     placeholder visual + headline + body + single ghost CTA, sitting on
+     a card-elevated surface. Lays out as a two-column composition that
+     gestures at the bento rhythm without pretending to be one. The
+     outer card is rendered by the Card component, so :global() lifts
+     the scope id from this selector while the visual/copy children
+     inside the page template stay scoped. */
+  :global(.gp-home-stories-empty) {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: clamp(var(--gp-space-lg), 3vw, var(--gp-space-2xl));
+    align-items: center;
+  }
+
+  .gp-home-stories-empty-visual {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    max-width: 220px;
+    border-radius: var(--gp-radius-lg);
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(240, 220, 160, 0.22), transparent 60%),
+      radial-gradient(circle at 70% 70%, rgba(184, 232, 53, 0.12), transparent 65%),
+      var(--gp-green-800);
+  }
+
+  .gp-home-stories-empty-visual::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('/images/hifi/topo-bg.png');
+    background-size: cover;
+    background-position: center;
+    opacity: 0.45;
+    mix-blend-mode: overlay;
+  }
+
+  .gp-home-stories-empty-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-md);
+    min-width: 0;
+  }
+
+  .gp-home-stories-empty-copy :global(.gp-home-stories-empty-body) {
+    color: var(--gp-fg-muted);
+    max-width: 60ch;
+  }
+
+  .gp-home-stories-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: var(--gp-space-xs);
+  }
+
+  /* Library bento */
+  .gp-home-lib-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-template-rows: auto auto auto;
+    gap: clamp(14px, 1.5vw, 20px);
+  }
+
+  .gp-home-lib-grid :global(.gp-home-lib-books) {
+    grid-column: 1 / 6;
+    grid-row: 1 / 3;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-md);
+  }
+
+  .gp-home-lib-grid :global(.gp-home-lib-podcast) {
+    grid-column: 6 / 13;
+    grid-row: 1 / 2;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-md);
+  }
+
+  .gp-home-lib-tile {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-sm);
+    padding: clamp(var(--gp-space-lg), 2vw, var(--gp-space-xl));
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-lg);
+    background: var(--gp-card);
+    text-decoration: none;
+    color: var(--gp-fg);
+    min-width: 0;
+    transition: border-color 200ms cubic-bezier(0.22, 1, 0.36, 1), background 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .gp-home-lib-grid .gp-home-lib-dev     { grid-column: 6 / 10; grid-row: 2 / 3; }
+  .gp-home-lib-grid .gp-home-lib-writers { grid-column: 10 / 13; grid-row: 2 / 3; }
+  .gp-home-lib-grid .gp-home-lib-toolkit { grid-column: 1 / 7; grid-row: 3 / 4; }
+  .gp-home-lib-grid .gp-home-lib-soon    { grid-column: 7 / 13; grid-row: 3 / 4; }
+
+  .gp-home-lib-soon {
+    background: linear-gradient(135deg, rgba(240, 220, 160, 0.08), rgba(20, 63, 48, 0.4));
+    border-color: rgba(240, 220, 160, 0.18);
+  }
+
+  a.gp-home-lib-tile:hover {
+    border-color: rgba(184, 232, 53, 0.32);
+    background: var(--gp-card-elev);
+  }
+
+  .gp-home-lib-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .gp-home-lib-guild-foot {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .gp-home-book-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  .gp-home-book {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-decoration: none;
+    color: var(--gp-fg-muted);
+    font-family: var(--gp-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1.2;
+  }
+
+  .gp-home-book img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2 / 3;
+    object-fit: cover;
+    border-radius: var(--gp-radius-sm);
+    background: var(--gp-green-800);
+    transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .gp-home-book:hover img {
+    transform: translateY(-3px);
+  }
+
+  .gp-home-book-meta {
+    color: var(--gp-fg-dim);
+    text-transform: none;
+    letter-spacing: 0;
+    font-family: var(--gp-font-body);
+    font-size: 11px;
+    line-height: 1.3;
+  }
+
+  .gp-home-lib-foot {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .gp-home-podcast-body {
+    display: grid;
+    grid-template-columns: 140px minmax(0, 1fr);
+    gap: var(--gp-space-lg);
+    align-items: start;
+    min-width: 0;
+  }
+
+  .gp-home-podcast-cover img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: var(--gp-radius-md);
+    box-shadow: var(--gp-shadow-card);
+  }
+
+  .gp-home-podcast-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-sm);
+    min-width: 0;
+  }
+
+  .gp-home-podcast-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: var(--gp-space-sm);
+  }
+
+  .gp-home-soon-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border: 1px solid rgba(240, 220, 160, 0.42);
+    border-radius: var(--gp-radius-pill);
+    color: var(--gp-secondary);
+    font-family: var(--gp-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .gp-home-soon-pill::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--gp-secondary);
+  }
+
+  /* Ecosystem */
+  .gp-home-eco-intro {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--gp-space-md);
+    text-align: center;
+    margin-bottom: clamp(var(--gp-space-xl), 3vw, var(--gp-space-2xl));
+  }
+
+  .gp-home-eco-intro :global(.gp-home-eco-dek) {
+    color: var(--gp-fg-muted);
+    max-width: 60ch;
+  }
+
+  .gp-home-eco-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(12px, 1.4vw, 18px);
+  }
+
+  .gp-home-eco-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: clamp(var(--gp-space-lg), 2vw, var(--gp-space-xl));
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-lg);
+    background: var(--gp-card);
+    text-decoration: none;
+    color: var(--gp-fg);
+    transition: border-color 200ms cubic-bezier(0.22, 1, 0.36, 1), background 200ms cubic-bezier(0.22, 1, 0.36, 1);
+    min-width: 0;
+  }
+
+  .gp-home-eco-tile:hover {
+    border-color: rgba(184, 232, 53, 0.42);
+    background: var(--gp-card-elev);
+  }
+
+  .gp-home-eco-mark {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--gp-primary);
+    box-shadow: 0 0 12px rgba(184, 232, 53, 0.5);
+    flex: none;
+  }
+
+  .gp-home-eco-tile:hover .gp-home-eco-mark {
+    box-shadow: 0 0 18px rgba(184, 232, 53, 0.85);
+  }
+
+  .gp-home-eco-name {
+    color: var(--gp-secondary);
+    font-family: var(--gp-font-display);
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 1.15;
+  }
+
+  .gp-home-eco-blurb {
+    color: var(--gp-fg-muted);
+    font-family: var(--gp-font-body);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  /* Garden ramp */
+  .gp-home-garden-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(14px, 1.5vw, 20px);
+  }
+
+  .gp-home-garden-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-md);
+    padding: clamp(var(--gp-space-lg), 2vw, var(--gp-space-xl));
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-lg);
+    background: var(--gp-card);
+    min-height: 260px;
+  }
+
+  .gp-home-garden-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .gp-home-garden-num {
+    color: var(--gp-primary);
+    font-family: var(--gp-font-display);
+    font-size: 36px;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .gp-home-garden-card :global(.gp-home-garden-title) {
+    color: var(--gp-fg);
+  }
+
+  .gp-home-garden-card :global(.gp-home-garden-body) {
+    color: var(--gp-fg-muted);
+  }
+
+  .gp-home-garden-foot {
+    margin-top: auto;
+  }
+
+  /* Responsive breakpoints */
+  @media (max-width: 1100px) {
+    .gp-home-stories-grid.count-4 {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto auto;
+    }
+    .gp-home-stories-grid.count-4 .gp-home-story.is-row-1 { grid-column: 1 / 3; grid-row: auto; }
+    .gp-home-stories-grid.count-4 .gp-home-story.is-row-2 { grid-column: 1 / 2; grid-row: auto; }
+    .gp-home-stories-grid.count-4 .gp-home-story.is-row-3 { grid-column: 2 / 3; grid-row: auto; }
+    .gp-home-stories-grid.count-4 .gp-home-story.is-row-4 { grid-column: 1 / 3; grid-row: auto; }
+    .gp-home-stories-grid.count-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    .gp-home-lib-grid {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto;
+    }
+    .gp-home-lib-grid :global(.gp-home-lib-books),
+    .gp-home-lib-grid :global(.gp-home-lib-podcast) {
+      grid-column: 1 / 3;
+      grid-row: auto;
+    }
+    .gp-home-lib-grid .gp-home-lib-dev     { grid-column: 1 / 2; grid-row: auto; }
+    .gp-home-lib-grid .gp-home-lib-writers { grid-column: 2 / 3; grid-row: auto; }
+    .gp-home-lib-grid .gp-home-lib-toolkit { grid-column: 1 / 2; grid-row: auto; }
+    .gp-home-lib-grid .gp-home-lib-soon    { grid-column: 2 / 3; grid-row: auto; }
+
+    .gp-home-garden-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 720px) {
+    .gp-home-hero {
+      padding-block: var(--gp-space-2xl) var(--gp-space-3xl);
+    }
+
+    .gp-home-section-head {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .gp-home-stories-grid.count-1,
+    .gp-home-stories-grid.count-2,
+    .gp-home-stories-grid.count-3,
+    .gp-home-stories-grid.count-4 {
+      grid-template-columns: 1fr;
+    }
+    .gp-home-stories-grid .gp-home-story {
+      grid-column: 1 / -1;
+      grid-row: auto;
+    }
+
+    :global(.gp-home-stories-empty) {
+      grid-template-columns: 1fr;
+      justify-items: start;
+    }
+    .gp-home-stories-empty-visual {
+      max-width: 140px;
+    }
+
+    .gp-home-lib-grid {
+      grid-template-columns: 1fr;
+    }
+    .gp-home-lib-grid :global(.gp-home-lib-books),
+    .gp-home-lib-grid :global(.gp-home-lib-podcast),
+    .gp-home-lib-grid .gp-home-lib-dev,
+    .gp-home-lib-grid .gp-home-lib-writers,
+    .gp-home-lib-grid .gp-home-lib-toolkit,
+    .gp-home-lib-grid .gp-home-lib-soon {
+      grid-column: 1 / -1;
+    }
+
+    .gp-home-book-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .gp-home-podcast-body {
+      grid-template-columns: 1fr;
+      gap: var(--gp-space-md);
+    }
+
+    .gp-home-podcast-cover img {
+      max-width: 200px;
+    }
+
+    .gp-home-eco-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .gp-home-garden-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .gp-home-garden-card {
+      min-height: 0;
+    }
+  }
+</style>
