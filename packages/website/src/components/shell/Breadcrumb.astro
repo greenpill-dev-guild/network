@@ -73,6 +73,7 @@ const { back, crumbs = [] } = Astro.props;
     align-items: center;
     gap: 6px;
     flex: none;
+    min-height: 44px;
   }
 
   .gp-breadcrumb-back.is-static {
@@ -107,7 +108,7 @@ const { back, crumbs = [] } = Astro.props;
     flex: none;
   }
 
-  @media (max-width: 520px) {
+  @container (max-width: 520px) {
     .gp-breadcrumb li:not(:last-child):not(:first-child) {
       display: none;
     }

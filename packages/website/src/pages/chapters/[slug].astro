@@ -15,7 +15,10 @@ import {
   buildChapterImpactEndpoint,
   shouldRenderChapterImpactUi,
 } from '@greenpill-network/shared/chapter-impact';
-import { getOperationalChapters } from '../../lib/operational-content';
+import {
+  getOperationalChapterInitiatives,
+  getOperationalChapters,
+} from '../../lib/operational-content';
 
 export async function getStaticPaths() {
   const items = await getOperationalChapters();
@@ -46,6 +49,7 @@ const allChapters = await getOperationalChapters();
 const relatedChapters = relatedSlugs
   .map((slug) => allChapters.find((c) => c.id === slug))
   .filter((c): c is typeof allChapters[number] => Boolean(c));
+const initiatives = await getOperationalChapterInitiatives(item.id);
 
 const showImpact = shouldRenderChapterImpactUi(data.impactSources ?? {});
 const impactEndpoint = showImpact ? buildChapterImpactEndpoint(item.id) : '';
@@ -53,6 +57,10 @@ const impactEndpoint = showImpact ? buildChapterImpactEndpoint(item.id) : '';
 function regionLabel(slug: string) {
   if (!slug) return 'Global';
   return slug.charAt(0).toUpperCase() + slug.slice(1);
+}
+
+function primaryInitiativeHref(initiative: any) {
+  return (initiative.data.links ?? []).find((link: any) => link.url)?.url || '';
 }
 ---
 
@@ -125,6 +133,62 @@ function regionLabel(slug: string) {
                 <Text variant="body-sm">{signal.label}</Text>
               </a>
             ))}
+          </div>
+        </Container>
+      </section>
+    )}
+
+    {initiatives.length > 0 && (
+      <section class="gp-chapter-section">
+        <Container size="2xl">
+          <div class="gp-chapter-section-head">
+            <Overline>Initiatives</Overline>
+            <Text variant="caption">{initiatives.length} chapter-owned effort{initiatives.length === 1 ? '' : 's'}</Text>
+          </div>
+          <div class="gp-chapter-initiative-grid">
+            {initiatives.map((initiative) => {
+              const href = primaryInitiativeHref(initiative);
+              const initiativeThemes = (initiative.data.themeSlugs ?? []).slice(0, 4);
+              const initiativeProof = initiative.data.proofSignals ?? [];
+              const initiativeContent = (
+                <>
+                  <Meta items={['Initiative', initiative.data.status || 'active']} accentIndex={1} />
+                  <Text variant="title-lg" class="gp-chapter-initiative-title">{initiative.data.title}</Text>
+                  {initiative.data.summary && <Text variant="body-sm">{initiative.data.summary}</Text>}
+                  {initiativeThemes.length > 0 && (
+                    <div class="gp-chapter-initiative-themes">
+                      {initiativeThemes.map((theme: string) => (
+                        <Chip tone="soft-lime" size="sm">{theme.replace(/-/g, ' ')}</Chip>
+                      ))}
+                    </div>
+                  )}
+                  {initiativeProof.length > 0 && (
+                    <div class="gp-chapter-initiative-proof">
+                      {initiativeProof.slice(0, 2).map((signal: any) => (
+                        <span>{signal.label}{signal.value ? ` · ${signal.value}` : ''}</span>
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
+              if (!href) {
+                return (
+                  <article class="gp-chapter-initiative">
+                    {initiativeContent}
+                  </article>
+                );
+              }
+              return (
+                <a
+                  class="gp-chapter-initiative"
+                  href={href}
+                  target={href?.startsWith('http') ? '_blank' : undefined}
+                  rel={href?.startsWith('http') ? 'noopener' : undefined}
+                >
+                  {initiativeContent}
+                </a>
+              );
+            })}
           </div>
         </Container>
       </section>
@@ -370,7 +434,7 @@ function regionLabel(slug: string) {
 
 <style>
   .gp-chapter {
-    min-height: 100vh;
+    min-height: 100dvh;
     background: transparent;
   }
 
@@ -465,6 +529,57 @@ function regionLabel(slug: string) {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+  }
+
+  .gp-chapter-initiative-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--gp-space-md);
+  }
+
+  .gp-chapter-initiative {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-sm);
+    padding: var(--gp-space-lg);
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-lg);
+    background: var(--gp-card);
+    color: var(--gp-fg);
+    text-decoration: none;
+    transition: border-color 200ms, background 200ms;
+  }
+
+  .gp-chapter-initiative:hover {
+    border-color: rgba(184, 232, 53, 0.32);
+    background: var(--gp-card-elev);
+  }
+
+  article.gp-chapter-initiative:hover {
+    border-color: var(--gp-border-soft);
+    background: var(--gp-card);
+  }
+
+  .gp-chapter-initiative :global(.gp-chapter-initiative-title) {
+    letter-spacing: 0;
+  }
+
+  .gp-chapter-initiative-themes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .gp-chapter-initiative-proof {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: auto;
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-mono);
+    font-size: 11px;
+    line-height: 1.5;
+    text-transform: uppercase;
   }
 
   .gp-chapter-impact .is-hidden {
@@ -590,7 +705,7 @@ function regionLabel(slug: string) {
     gap: 12px;
   }
 
-  @media (max-width: 720px) {
+  @container (max-width: 720px) {
     .gp-chapter-cta-inner {
       flex-direction: column;
       align-items: flex-start;

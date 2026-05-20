@@ -12,9 +12,18 @@ import Meta from '../../components/ui/Meta.astro';
 import storiesIndex from '../../content/stories-index.json';
 
 const allStories = await getCollection('stories');
+const featuredStoryRank = new Map((storiesIndex.featuredStorySlugs ?? []).map((slug, index) => [slug, index]));
 const published = allStories
   .filter((s) => s.data.status === 'published' && !s.data.seo?.noindex)
-  .sort((a, b) => (b.data.publishDate || '').localeCompare(a.data.publishDate || ''));
+  .sort((a, b) => {
+    const aRank = featuredStoryRank.get(a.id) ?? Number.POSITIVE_INFINITY;
+    const bRank = featuredStoryRank.get(b.id) ?? Number.POSITIVE_INFINITY;
+    return (
+      aRank - bRank ||
+      (b.data.publishDate || '').localeCompare(a.data.publishDate || '') ||
+      (b.data.featuredWeight ?? 0) - (a.data.featuredWeight ?? 0)
+    );
+  });
 
 const draftCount = allStories.filter((s) => s.data.status === 'draft').length;
 
@@ -66,7 +75,7 @@ const topicSpotlight = storiesIndex.topicSpotlight;
               <Text variant="h2">Field stories ship after steward review.</Text>
               <Text variant="body" class="gp-stories-section-dek">
                 {draftCount > 0 ? `${draftCount} draft ${draftCount === 1 ? 'story is' : 'stories are'} in the editorial queue. ` : ''}
-                Each story cites a public source and links to the chapter or guild behind it. While the first wave clears review, the public Paragraph feed and the Regen Coordination Hub carry the live conversations.
+                Each story cites a public source and links to the chapter or guild behind it. When the public story list is empty, Paragraph and the Regen Coordination Hub carry the live conversations.
               </Text>
               <div class="gp-stories-empty-actions">
                 <Button href="https://paragraph.com/@greenpill">Follow on Paragraph</Button>
@@ -83,7 +92,7 @@ const topicSpotlight = storiesIndex.topicSpotlight;
             <Container size="2xl">
               <div class="gp-stories-section-head">
                 <Overline>Featured</Overline>
-                <Text variant="caption">Latest source-backed story.</Text>
+                <Text variant="caption">Featured source-backed story.</Text>
               </div>
               <a class="gp-stories-feature" href={`/stories/${featured.id}`}>
                 <Meta items={[featured.data.category || 'story', featured.data.region || 'global', featured.data.publishDate || '']} accentIndex={0} />
@@ -171,7 +180,7 @@ const topicSpotlight = storiesIndex.topicSpotlight;
 
 <style>
   .gp-stories {
-    min-height: 100vh;
+    min-height: 100dvh;
     background: transparent;
   }
 
@@ -356,7 +365,7 @@ const topicSpotlight = storiesIndex.topicSpotlight;
     max-width: 720px;
   }
 
-  @media (max-width: 720px) {
+  @container (max-width: 720px) {
     .gp-stories-grid {
       grid-template-columns: 1fr;
     }
