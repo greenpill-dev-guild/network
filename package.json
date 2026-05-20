@@ -32,7 +32,11 @@
     "impact:sync": "bun run build:packages && bun --no-env-file --env-file-if-exists=.env.local scripts/agent-impact-sync.ts",
     "content:snapshot": "bun run build:packages && bun --no-env-file scripts/operational-content.ts --write-snapshot",
     "content:migrate": "bun run build:packages && bun --no-env-file --env-file-if-exists=.env.local scripts/operational-content.ts --migrate",
-    "directus:content:setup": "bun --no-env-file --env-file-if-exists=.env.local scripts/directus-operational-content-setup.ts",
+    "directus:content:setup": "bun --env-file-if-exists=.env.local scripts/directus-operational-content-setup.ts",
+    "directus:content-access": "bun --env-file-if-exists=.env.local scripts/directus-content-access.ts",
+    "directus:studio:setup": "bun --env-file-if-exists=.env.local scripts/directus-studio-setup.ts",
+    "directus:steward:smoke": "bun --env-file-if-exists=.env.local scripts/directus-steward-smoke.ts",
+    "directus:users:invite": "bun --env-file-if-exists=.env.local scripts/directus-users.ts invite",
     "plans:scaffold": "bun --no-env-file scripts/plan-hub.ts scaffold",
     "plans:validate": "bun --no-env-file scripts/plan-hub.ts validate",
     "test:agent": "bun run build:packages && bun test scripts/agent-contract.test.ts",
@@ -42,7 +46,9 @@
     "test:map-edit:browser": "bun run build:website && bun --no-env-file scripts/map-edit-browser-smoke.ts",
     "test:map-edit:browser:required": "MAP_EDIT_BROWSER_SMOKE_REQUIRED=1 bun run test:map-edit:browser",
     "test:map-nodes": "bun run build:packages && bun test scripts/map-node-contract.test.ts",
-    "test:plans": "bun test scripts/plan-hub.test.ts"
+    "test:plans": "bun test scripts/plan-hub.test.ts",
+    "ui:verify": "bun run build:website && bun --no-env-file scripts/ui-verify.ts",
+    "ui:verify:required": "UI_VERIFY_REQUIRED=1 bun run ui:verify"
   },
   "author": "",
   "license": "ISC",
@@ -50,6 +56,7 @@
     "@greenpill-network/agent": "workspace:*",
     "@greenpill-network/shared": "workspace:*",
     "@types/node": "^22",
+    "axe-core": "^4.11.4",
     "typescript": "^6.0.3"
   }
 }

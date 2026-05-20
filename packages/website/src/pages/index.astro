@@ -22,9 +22,18 @@ const books = (await getCollection('books')).sort(
 );
 
 const allStories = await getCollection('stories');
+const homeStoryRank = new Map((homePage.featuredStorySlugs ?? []).map((slug, index) => [slug, index]));
 const publishedStories = allStories
-  .filter((s) => s.data.status === 'published')
-  .sort((a, b) => (b.data.featuredWeight ?? 0) - (a.data.featuredWeight ?? 0));
+  .filter((s) => s.data.status === 'published' && !s.data.seo?.noindex)
+  .sort((a, b) => {
+    const aRank = homeStoryRank.get(a.id) ?? Number.POSITIVE_INFINITY;
+    const bRank = homeStoryRank.get(b.id) ?? Number.POSITIVE_INFINITY;
+    return (
+      aRank - bRank ||
+      (b.data.featuredWeight ?? 0) - (a.data.featuredWeight ?? 0) ||
+      (b.data.publishDate || '').localeCompare(a.data.publishDate || '')
+    );
+  });
 
 const featuredBooks = books.slice(0, 8);
 
@@ -94,7 +103,7 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
       <Container size="2xl">
         <div class="gp-home-section-head">
           <div class="gp-home-section-head-copy">
-            <Overline>Chapters · From the field</Overline>
+            <Overline>Stories · From the field</Overline>
             <Text variant="h2">Stories from the network.</Text>
           </div>
           <ArrowLink href="/stories">See all stories</ArrowLink>
@@ -114,7 +123,7 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
                     )}
                   </div>
                   <div class="gp-home-story-copy">
-                    <Meta items={['Chapter', region]} accentIndex={0} />
+                    <Meta items={[story.data.category || 'story', region]} accentIndex={0} />
                     <Text variant="h3" class="gp-home-story-title">{story.data.title}</Text>
                     <Text variant="body-sm" class="gp-home-story-blurb">
                       {story.data.excerpt || story.data.dek}
@@ -130,9 +139,9 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
             <div class="gp-home-stories-empty-visual" aria-hidden="true"></div>
             <div class="gp-home-stories-empty-copy">
               <Meta items={['Field notes', 'Steward review']} accentIndex={0} />
-              <Text variant="h3">First wave of chapter stories is in steward review.</Text>
+              <Text variant="h3">Published chapter stories are being prepared.</Text>
               <Text variant="body" class="gp-home-stories-empty-body">
-                Each story will cite a public source. Until they land, the public drafts live on Paragraph.
+                Each story will cite a public source. Until more land here, the live conversations continue on Paragraph and the Regen Coordination Hub.
               </Text>
               <div class="gp-home-stories-actions">
                 <Button href="https://paragraph.com/@greenpill" variant="ghost">Read drafts on Paragraph</Button>
@@ -652,7 +661,7 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
   }
 
   .gp-home-book-meta {
-    color: var(--gp-fg-dim);
+    color: var(--gp-fg-muted);
     text-transform: none;
     letter-spacing: 0;
     font-family: var(--gp-font-body);
