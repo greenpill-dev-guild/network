@@ -415,12 +415,19 @@ async function verifyRouteAtWidth(client: CdpClient, origin: string, route: stri
     }, sessionId);
     await client.send('Page.addScriptToEvaluateOnNewDocument', { source: CLS_OBSERVER }, sessionId);
     await client.send('Page.navigate', { url: `${origin}${route}` }, sessionId);
-    await waitForExpression(client, sessionId, "document.readyState === 'complete'");
+    // Wait for the navigation to actually commit — about:blank already reports
+    // readyState 'complete', so without the location guard axe can run on the
+    // pre-navigation blank page (false document-title / html-has-lang).
+    await waitForExpression(client, sessionId, "location.href !== 'about:blank' && document.readyState === 'complete'", 12000);
     await waitForExpression(client, sessionId, 'document.fonts ? document.fonts.status === "loaded" : true', 6000);
     await evaluate(client, sessionId, `
       (async () => { await Promise.all([...document.images].filter(i=>!i.complete).map(i=>new Promise(r=>{i.onload=i.onerror=r; setTimeout(r,3000);}))); })()
     `).catch(() => {});
     await new Promise((res) => setTimeout(res, 400)); // settle late shifts
+
+    // Guard against a blank/unrendered page so we never emit false a11y failures.
+    const rendered = await evaluate(client, sessionId, "!!(document.title || (document.body && document.body.children.length))").catch(() => false);
+    if (!rendered) return [tag({ channel: 'harness', code: 'ROUTE_LOAD_FAILED', sev: 'hard', msg: 'page did not render in time (blank document)' })];
 
     const violations: Violation[] = [];
     const dom = await evaluate(client, sessionId, DOM_ASSERTIONS);
