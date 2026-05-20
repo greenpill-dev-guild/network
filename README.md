@@ -99,6 +99,8 @@ curl http://127.0.0.1:8787/content/public-snapshot
 
 Public map-node submissions require an owner email. The agent stores that email only in `intake.map_node_private_contacts` so future owner updates can use one-use email magic links. Configure email sending on the agent with `RESEND_API_KEY`, `MAP_NODE_EMAIL_FROM`, `MAP_NODE_EMAIL_REPLY_TO`, and `MAP_NODE_EDIT_BASE_URL`; do not expose those values to the static website, Keystatic, generated JSON, or browser bundles. Map magic-link replies should route to the monitored map mailbox on the verified sending subdomain, currently `Greenpill Network <map@mail.greenpill.network>`. Missing or failing email provider configuration still returns the same neutral public edit-link response.
 
+Resend delivery webhooks post to `POST /webhooks/resend` on the agent and require `RESEND_WEBHOOK_SECRET`. Subscribe only to operational email events such as `email.sent`, `email.delivered`, `email.delivery_delayed`, `email.failed`, `email.bounced`, `email.complained`, `email.suppressed`, and `email.received`; do not enable open/click tracking for map magic-link emails. The webhook route verifies Svix signatures and stores provider metadata only, not message bodies, subjects, sender addresses, or raw recipient addresses.
+
 ## Directus Admin
 
 Directus is self-hosted as a separate admin service, not as part of the public

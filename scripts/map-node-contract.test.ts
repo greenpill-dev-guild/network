@@ -347,7 +347,7 @@ test('edit-token and update-request migration is replay-safe and public/private 
     'utf8'
   );
 
-  assert.equal(migrationFiles.at(-1), '007_map_node_edit_tokens_update_requests.sql');
+  assert.equal(migrationFiles.includes('007_map_node_edit_tokens_update_requests.sql'), true);
   assert.match(editSql, /create table if not exists intake\.map_node_edit_tokens/);
   assert.match(editSql, /create table if not exists intake\.map_node_update_requests/);
   assert.match(editSql, /token_hash text/);
@@ -368,4 +368,28 @@ test('edit-token and update-request migration is replay-safe and public/private 
   assert.match(editSql, /cleanup_map_node_edit_flow/);
   assert.match(editSql, /expired_tokens_deleted/);
   assert.match(editSql, /private_metadata_retention interval default interval '90 days'/);
+});
+
+test('resend webhook migration stores delivery metadata without raw message content', async () => {
+  const migrationFiles = (await readdir(new URL('../packages/agent/migrations', import.meta.url)))
+    .filter((file) => file.endsWith('.sql'))
+    .sort((a, b) => a.localeCompare(b));
+  const webhookSql = await readFile(
+    new URL('../packages/agent/migrations/008_resend_webhook_events.sql', import.meta.url),
+    'utf8'
+  );
+
+  assert.equal(migrationFiles.at(-1), '008_resend_webhook_events.sql');
+  assert.match(webhookSql, /add column if not exists provider_message_id text/);
+  assert.match(webhookSql, /map_node_edit_tokens_provider_message_idx/);
+  assert.match(webhookSql, /create table if not exists intake\.email_provider_events/);
+  assert.match(webhookSql, /provider_event_id text not null/);
+  assert.match(webhookSql, /provider_message_id text/);
+  assert.match(webhookSql, /recipient_hash text/);
+  assert.match(webhookSql, /related_edit_token_id uuid references intake\.map_node_edit_tokens/);
+  assert.match(webhookSql, /replay_count integer not null default 0/);
+  assert.doesNotMatch(webhookSql, /subject text/);
+  assert.doesNotMatch(webhookSql, /raw_recipient/);
+  assert.doesNotMatch(webhookSql, /message_body/);
+  assert.doesNotMatch(webhookSql, /\bhtml\b/);
 });

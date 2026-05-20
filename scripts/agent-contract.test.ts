@@ -4,6 +4,11 @@ import {
   createAgentApp,
 } from '@greenpill-network/agent/app';
 import {
+  RESEND_WEBHOOK_ROUTE,
+  recordResendWebhookEvent,
+  signResendWebhookPayload,
+} from '@greenpill-network/agent';
+import {
   assertPublicImpactPayload,
   buildChapterImpactPath,
   buildPublicChapterImpactUrl,
@@ -59,11 +64,164 @@ test('agent package exposes stable public route contracts', () => {
   assert.equal(PUBLIC_COUNTS_ROUTE, '/public-counts');
   assert.equal(PUBLIC_OPERATIONAL_CONTENT_ROUTE, '/content/public-snapshot');
   assert.equal(CHAPTER_IMPACT_ROUTE, '/impact/chapters/:slug');
+  assert.equal(RESEND_WEBHOOK_ROUTE, '/webhooks/resend');
   assert.equal(buildChapterImpactPath('greenpill nigeria'), '/impact/chapters/greenpill%20nigeria');
   assert.equal(
     buildPublicChapterImpactUrl('nigeria', 'https://agent.greenpill.network/'),
     'https://agent.greenpill.network/impact/chapters/nigeria'
   );
+});
+
+const RESEND_TEST_WEBHOOK_SECRET = `whsec_${Buffer.from('test-resend-webhook-secret').toString('base64')}`;
+
+function signedResendWebhookRequest(payload, {
+  secret = RESEND_TEST_WEBHOOK_SECRET,
+  svixId = 'msg_test_webhook',
+  timestamp = Math.floor(Date.now() / 1000).toString(),
+} = {}) {
+  const rawBody = JSON.stringify(payload);
+  return {
+    rawBody,
+    headers: {
+      'content-type': 'application/json',
+      'svix-id': svixId,
+      'svix-timestamp': timestamp,
+      'svix-signature': signResendWebhookPayload({
+        rawBody,
+        secret,
+        svixId,
+        svixTimestamp: timestamp,
+      }),
+    },
+  };
+}
+
+test('resend webhook route verifies signatures and records sanitized delivery metadata', async () => {
+  const recorded = [];
+  const app = createAgentApp({
+    env: {
+      RESEND_WEBHOOK_SECRET: RESEND_TEST_WEBHOOK_SECRET,
+    },
+    resendWebhookRepository: {
+      async recordEvent(event) {
+        recorded.push(event);
+      },
+    },
+  });
+  const request = signedResendWebhookRequest({
+    type: 'email.bounced',
+    created_at: '2026-05-20T02:00:00.000Z',
+    data: {
+      email_id: '1f3ab49b-c6ed-4790-b3f2-0b2550282120',
+      from: 'Greenpill Network <map@mail.greenpill.network>',
+      to: ['Person@Example.org'],
+      subject: 'Private map-node owner message',
+      bounce: {
+        type: 'Permanent',
+        subType: 'Suppressed',
+        message: 'Recipient is suppressed.',
+      },
+    },
+  });
+
+  const response = await app.request(RESEND_WEBHOOK_ROUTE, {
+    method: 'POST',
+    headers: request.headers,
+    body: request.rawBody,
+  });
+
+  assert.equal(response.status, 202);
+  assert.deepEqual(await response.json(), { ok: true });
+  assert.equal(recorded.length, 1);
+  assert.equal(recorded[0].eventType, 'email.bounced');
+  assert.equal(recorded[0].providerMessageId, '1f3ab49b-c6ed-4790-b3f2-0b2550282120');
+  assert.equal(recorded[0].providerStatus, 'bounced');
+  assert.match(recorded[0].recipientHash, /^[a-f0-9]{64}$/);
+  assert.equal(recorded[0].metadata.bounceType, 'Permanent');
+  assert.equal(recorded[0].metadata.bounceSubType, 'Suppressed');
+  assert.doesNotMatch(JSON.stringify(recorded[0]), /Person@Example\.org/i);
+  assert.doesNotMatch(JSON.stringify(recorded[0]), /Private map-node owner message/);
+  assert.doesNotMatch(JSON.stringify(recorded[0]), /map@mail\.greenpill\.network/);
+});
+
+test('resend webhook route rejects invalid signatures before persistence', async () => {
+  const recorded = [];
+  const app = createAgentApp({
+    env: {
+      RESEND_WEBHOOK_SECRET: RESEND_TEST_WEBHOOK_SECRET,
+    },
+    resendWebhookRepository: {
+      async recordEvent(event) {
+        recorded.push(event);
+      },
+    },
+  });
+  const request = signedResendWebhookRequest({
+    type: 'email.failed',
+    created_at: '2026-05-20T02:00:00.000Z',
+    data: {
+      email_id: '1f3ab49b-c6ed-4790-b3f2-0b2550282120',
+      to: ['person@example.org'],
+      failed: { reason: 'reached_daily_quota' },
+    },
+  });
+
+  const response = await app.request(RESEND_WEBHOOK_ROUTE, {
+    method: 'POST',
+    headers: {
+      ...request.headers,
+      'svix-signature': 'v1,invalid',
+    },
+    body: request.rawBody,
+  });
+
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error.code, 'invalid_webhook_signature');
+  assert.deepEqual(recorded, []);
+});
+
+function createFakeResendWebhookSql() {
+  const statements = [];
+  const sql = async (strings, ...values) => {
+    const text = strings.join('?').replace(/\s+/g, ' ').trim();
+    statements.push({ text, values });
+    if (text.includes('insert into intake.email_provider_events')) {
+      return [{ id: '33333333-3333-4333-8333-333333333333', replayCount: 0 }];
+    }
+    return [];
+  };
+  sql.json = (value) => value;
+  return { sql, statements };
+}
+
+test('resend webhook persistence links provider message ids without raw recipient storage', async () => {
+  const { sql, statements } = createFakeResendWebhookSql();
+
+  const result = await recordResendWebhookEvent(sql, {
+    providerEventId: 'msg_test_event',
+    providerMessageId: '1f3ab49b-c6ed-4790-b3f2-0b2550282120',
+    eventType: 'email.failed',
+    eventCreatedAt: '2026-05-20T02:00:00.000Z',
+    recipientHash: 'a'.repeat(64),
+    reason: 'reached_daily_quota',
+    metadata: {
+      source: 'resend-webhook',
+      toCount: 1,
+      reason: 'reached_daily_quota',
+    },
+    providerStatus: 'failed',
+  });
+
+  assert.equal(result.id, '33333333-3333-4333-8333-333333333333');
+  const insert = statements.find((statement) => statement.text.includes('insert into intake.email_provider_events'));
+  assert.ok(insert);
+  assert.equal(insert.values.includes('1f3ab49b-c6ed-4790-b3f2-0b2550282120'), true);
+  assert.equal(insert.values.includes('a'.repeat(64)), true);
+  assert.equal(JSON.stringify(insert.values).includes('person@example.org'), false);
+  const update = statements.find((statement) => statement.text.includes('update intake.map_node_edit_tokens'));
+  assert.ok(update);
+  assert.equal(update.values.includes('failed'), true);
+  assert.equal(update.values.includes('reached_daily_quota'), true);
 });
 
 test('agent package exposes a Hono app with data-backed public routes', async () => {
@@ -954,6 +1112,30 @@ test('edit-link requests store token hashes only and preserve neutral provider f
   const providerUpdate = statements.find((statement) => statement.text.includes('set provider_status'));
   assert.ok(providerUpdate);
   assert.equal(providerUpdate.values.includes('send_failed'), true);
+});
+
+test('edit-link requests persist Resend message ids for webhook correlation', async () => {
+  const { sql, statements, submissionId } = createFakeEditLinkSql();
+
+  const response = await createMapNodeEditLinkRequest(sql, `submission:${submissionId}`, 'person@example.org', {
+    ipAddress: '203.0.113.10',
+    userAgent: 'node-test',
+    rateLimitKey: '203.0.113.10',
+  }, {
+    env: {
+      RESEND_API_KEY: 'resend-secret',
+      MAP_NODE_EMAIL_FROM: 'Greenpill Network <map@mail.greenpill.network>',
+      MAP_NODE_EMAIL_REPLY_TO: 'Greenpill Network <map@mail.greenpill.network>',
+      MAP_NODE_EDIT_BASE_URL: 'https://greenpill.network/map/edit',
+    },
+    fetchImpl: async () => Response.json({ id: '1f3ab49b-c6ed-4790-b3f2-0b2550282120' }),
+  });
+
+  assert.deepEqual(response, MAP_NODE_EDIT_LINK_NEUTRAL_RESPONSE);
+  const providerUpdate = statements.find((statement) => statement.text.includes('set provider_status'));
+  assert.ok(providerUpdate);
+  assert.equal(providerUpdate.values.includes('sent'), true);
+  assert.equal(providerUpdate.values.includes('1f3ab49b-c6ed-4790-b3f2-0b2550282120'), true);
 });
 
 test('edit-link cooldown and daily buckets record neutral attempts without sending email', async () => {

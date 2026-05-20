@@ -575,11 +575,11 @@ async function sendEditLinkEmail({
   token: string;
   env?: Record<string, string | undefined>;
   fetchImpl?: FetchLike;
-}): Promise<{ status: string; error: string }> {
+}): Promise<{ status: string; error: string; providerMessageId: string }> {
   const config = editLinkConfig(env);
   const editUrl = buildEditUrl(config.baseUrl, token);
   if (!config.apiKey || !config.from || !editUrl || typeof fetchImpl !== 'function') {
-    return { status: 'provider_not_configured', error: '' };
+    return { status: 'provider_not_configured', error: '', providerMessageId: '' };
   }
 
   const subject = 'Update your Greenpill Network map node';
@@ -607,11 +607,18 @@ async function sendEditLinkEmail({
       }),
     });
     if (!response.ok) {
-      return { status: 'send_failed', error: `resend_http_${response.status}` };
+      return { status: 'send_failed', error: `resend_http_${response.status}`, providerMessageId: '' };
     }
-    return { status: 'sent', error: '' };
+    let providerMessageId = '';
+    try {
+      const payload = await response.json();
+      providerMessageId = cleanString(payload?.id);
+    } catch {
+      providerMessageId = '';
+    }
+    return { status: 'sent', error: '', providerMessageId };
   } catch {
-    return { status: 'send_failed', error: 'resend_fetch_failed' };
+    return { status: 'send_failed', error: 'resend_fetch_failed', providerMessageId: '' };
   }
 }
 
@@ -813,7 +820,10 @@ export async function createMapNodeEditLinkRequest(
     });
     await sql`
       update intake.map_node_edit_tokens
-      set provider_status = ${result.status}, provider_error = ${result.error || null}
+      set
+        provider_status = ${result.status},
+        provider_error = ${result.error || null},
+        provider_message_id = ${result.providerMessageId || null}
       where id = ${contextToSend.attemptId}::uuid
     `;
   }

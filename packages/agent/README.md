@@ -49,3 +49,8 @@ Greenpill-owned `content` schema and applies the shared public-content privacy
 guard before returning data. `/impact/chapters/:slug`, `POST /map-nodes`, and
 `GET /map-nodes/public` preserve the same public/private boundary for impact and
 map-node data.
+
+`POST /webhooks/resend` receives Resend email delivery and inbound metadata. Set
+`RESEND_WEBHOOK_SECRET` from the Resend webhook details page before enabling the
+production endpoint. The route verifies Svix signatures and stores only
+operational metadata, never message bodies or raw recipient addresses.

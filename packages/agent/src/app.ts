@@ -28,6 +28,11 @@ import {
   createPublicContentRepository,
 } from './public-content.js';
 import {
+  RESEND_WEBHOOK_ROUTE,
+  createResendWebhookRepository,
+  handleResendWebhookRequest,
+} from './resend-webhooks.js';
+import {
   assertPublicAggregateCountsPayload,
   assertPublicMapStatePayload,
 } from '@greenpill-network/shared/map-state';
@@ -46,7 +51,9 @@ export interface AgentAppOptions {
   mapNodeRepository?: UnknownRecord;
   mapStateRepository?: UnknownRecord;
   publicContentRepository?: UnknownRecord;
+  resendWebhookRepository?: UnknownRecord;
   reportEditLinkError?: (event: UnknownRecord) => void;
+  env?: Record<string, string | undefined>;
 }
 
 export const PUBLIC_CORS_ORIGINS = Object.freeze([
@@ -91,7 +98,9 @@ export function createAgentApp({
   mapNodeRepository = createMapNodeRepository(),
   mapStateRepository = createMapStateRepository({ mapNodeRepository }),
   publicContentRepository = createPublicContentRepository(),
+  resendWebhookRepository = createResendWebhookRepository(),
   reportEditLinkError = defaultReportEditLinkError,
+  env = process.env,
 }: AgentAppOptions = {}) {
   const app = new Hono();
 
@@ -116,6 +125,28 @@ export function createAgentApp({
       service: 'network-agent',
       database,
     }, ok ? 200 : 503);
+  });
+
+  app.post(RESEND_WEBHOOK_ROUTE, async (context) => {
+    const rawBody = await context.req.text();
+    try {
+      const result = await handleResendWebhookRequest({
+        rawBody,
+        headers: {
+          svixId: context.req.header('svix-id'),
+          svixTimestamp: context.req.header('svix-timestamp'),
+          svixSignature: context.req.header('svix-signature'),
+        },
+        webhookSecret: env.RESEND_WEBHOOK_SECRET ?? '',
+        repository: resendWebhookRepository as any,
+      });
+      return context.json(result.body, result.status as any);
+    } catch {
+      return context.json({
+        ok: false,
+        error: { code: 'webhook_persistence_failed' },
+      }, 500);
+    }
   });
 
   app.get('/impact/chapters/:slug', async (context) => {
