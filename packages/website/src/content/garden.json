@@ -43,7 +43,7 @@
       "kicker": "Step 3 · Match yourself",
       "title": "Take the Regen Assessment",
       "body": "Answer a short set of questions about what you bring, what you want to learn, and whether a chapter, guild, or story path is the best fit.",
-      "meta": "Planned public flow · no private answers in Keystatic",
+      "meta": "Self-guided · public · no account",
       "friction": "Medium friction",
       "cta": {
         "label": "Start assessment",
@@ -59,7 +59,7 @@
       "kicker": "Step 4 · Human-to-human",
       "title": "Book a steward call",
       "body": "For people thinking about starting a chapter, joining a guild, partnering on a project, or finding the right steward to talk with.",
-      "meta": "Operational booking data stays private",
+      "meta": "Private · by request",
       "friction": "Highest friction",
       "cta": {
         "label": "Book a call",
@@ -72,7 +72,7 @@
     {
       "kicker": "If you want local connection",
       "title": "Find an existing chapter",
-      "body": "Browse public chapter records, start with the strongest source-backed locations, and use steward review flags for chapters that need more proof before launch.",
+      "body": "Browse public chapter records and start with the strongest, most source-backed locations.",
       "cta": {
         "label": "Browse chapters",
         "href": "/chapters",
