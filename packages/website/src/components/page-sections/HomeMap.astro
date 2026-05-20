@@ -1,5 +1,9 @@
 ---
 import { getOperationalChapters } from '../../lib/operational-content';
+import { PUBLIC_MAP_THEMES } from '@greenpill-network/shared/map-state';
+
+// Add-node theme checkboxes use the canonical public theme list.
+const mapThemes = PUBLIC_MAP_THEMES;
 
 // Mirrors artifacts/hifi/hifi/map-themes.jsx labels and hues. Slugs match the
 // content/themes/*.json files. Edge color carries theme meaning; node fill
@@ -341,6 +345,11 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
           </a>
         ))}
       </g>
+
+      {/* member nodes — approved submitted + local-pending nodes injected
+          client-side from /map/state. Empty at build time so the map renders
+          and degrades gracefully when the agent is unavailable. */}
+      <g class="gp-home-map-members" data-home-map-members></g>
     </svg>
 
     {/* Integrated stats overlay - top-right inside the map */}
@@ -370,31 +379,172 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
       ))}
     </div>
   )}
+
+  {/* Theme labels/colors for client-rendered member chips, so the script does
+      not need to import the shared map-state module into the browser bundle. */}
+  <script type="application/json" data-home-map-theme-info set:html={JSON.stringify(THEME_INFO)}></script>
+
+  {/* Selected-node panel — opens in-flow when a submitted member node is
+      activated. Chapter nodes navigate; steward nodes only show the hover
+      card. The owner-edit affordance appears for approved nodes only. */}
+  <div class="gp-home-map-selected" data-home-map-selected hidden role="region" aria-label="Selected map node">
+    <button type="button" class="gp-home-map-selected-close" data-selected-close aria-label="Close selected node">
+      <span aria-hidden="true">×</span>
+    </button>
+    <p class="gp-home-map-selected-kicker" data-selected-kicker>Network node</p>
+    <p class="gp-home-map-selected-name" data-selected-name></p>
+    <p class="gp-home-map-selected-place" data-selected-place></p>
+    <div class="gp-home-map-selected-themes" data-selected-themes></div>
+
+    <div class="gp-home-map-update" data-home-map-update hidden>
+      <button type="button" class="gp-home-map-update-trigger" data-update-trigger>Update this node</button>
+
+      <form class="gp-home-map-update-form" data-update-form hidden novalidate>
+        <label class="gp-home-map-update-field">
+          <span>Owner email</span>
+          <input type="email" name="email" inputmode="email" autocomplete="email" required placeholder="you@example.org" />
+        </label>
+        <div class="gp-home-map-update-actions">
+          <button type="button" class="gp-home-map-update-cancel" data-update-cancel>Cancel</button>
+          <button type="submit" class="gp-home-map-update-submit">Send edit link</button>
+        </div>
+        <p class="gp-home-map-update-error" data-update-error role="alert"></p>
+      </form>
+
+      <p class="gp-home-map-update-success" data-update-success role="status" hidden>
+        If this email matches the node owner, we'll send an edit link.
+      </p>
+    </div>
+  </div>
+
+  {/* Add-node panel — collapsed by default so the hero stays clean. Local
+      pending state is only written after the server accepts the submission. */}
+  <details class="gp-home-map-addnode" data-home-map-addnode>
+    <summary>Add your node</summary>
+    <form class="gp-home-map-addnode-form" data-home-map-addnode-form novalidate>
+      <div class="gp-home-map-addnode-grid">
+        <label>
+          <span>Name</span>
+          <input name="name" autocomplete="name" required placeholder="Your name or project" />
+        </label>
+        <label>
+          <span>City or place</span>
+          <input name="place" autocomplete="address-level2" required placeholder="Lagos, Nigeria" />
+        </label>
+        <label>
+          <span>Latitude</span>
+          <input name="lat" inputmode="decimal" required type="number" step="0.000001" min="-90" max="90" placeholder="6.5244" />
+        </label>
+        <label>
+          <span>Longitude</span>
+          <input name="long" inputmode="decimal" required type="number" step="0.000001" min="-180" max="180" placeholder="3.3792" />
+        </label>
+      </div>
+
+      <fieldset class="gp-home-map-addnode-themes">
+        <legend>Themes</legend>
+        <div class="gp-home-map-addnode-theme-options">
+          {mapThemes.map((theme) => (
+            <label class="gp-home-map-addnode-theme">
+              <input type="checkbox" name="themes" value={theme.id} />
+              <span>{theme.label}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <label class="gp-home-map-addnode-note">
+        <span>Public note</span>
+        <textarea name="publicNote" rows="3" maxlength="280" placeholder="What are you working on with the network?"></textarea>
+      </label>
+
+      <label class="gp-home-map-addnode-email">
+        <span>Private email for future edits</span>
+        <input name="contact" autocomplete="email" type="email" required placeholder="you@example.org" />
+      </label>
+
+      <div class="gp-home-map-addnode-footer">
+        <p class="gp-home-map-addnode-mode" data-home-map-mode-copy>In moderated mode, your node appears on your device while stewards review it. Your email stays private and is used only for future edit links.</p>
+        <button type="submit" class="gp-home-map-addnode-submit">Add node</button>
+      </div>
+
+      <p class="gp-home-map-addnode-status" data-home-map-addnode-status role="status"></p>
+    </form>
+  </details>
 </figure>
 
 <script>
-  // Modest hover/focus behavior: when a chapter or steward node is active,
-  // highlight its adjacent mycelial threads and surface a small focus card.
+  import {
+    PENDING_NODE_UPDATED_EVENT,
+    loadLocalPendingNodes,
+    saveLocalPendingNode,
+  } from '@greenpill-network/shared/map-nodes';
+
+  type MemberNode = {
+    key: string;
+    sourceId: string;
+    name: string;
+    place: string;
+    themes: string[];
+    lat: number;
+    long: number;
+    approved: boolean;
+    pending: boolean;
+  };
+
   (() => {
     const root = document.querySelector('[data-home-map]') as HTMLElement | null;
     if (!root) return;
+    // root is the canvas (its .is-focused class drives the SVG focus styles).
+    // The legend, selected panel, update form, and add-node form live in the
+    // surrounding <figure>, so query those from the figure scope, not root.
+    const scope: ParentNode = root.closest('.gp-home-map') ?? document;
+    // Astro scopes component <style> via a generated attribute. Elements created
+    // in JS must carry the same attribute, or the scoped node/chip styles (fill,
+    // halo, ring, theme chips) will not apply and nodes render unstyled.
+    const astroCidAttr = root.getAttributeNames().find((n) => n.startsWith('data-astro-cid-')) ?? '';
+    const applyScope = (el: Element) => { if (astroCidAttr) el.setAttribute(astroCidAttr, ''); };
 
+    // Equirectangular projection — must match the build-time SSR projection
+    // (viewBox 0..200 x 0..100) so injected nodes land on the same grid.
+    const VIEW_W = 200;
+    const VIEW_H = 100;
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    const lonToX = (lon: number) => ((lon + 180) / 360) * VIEW_W;
+    const latToY = (lat: number) => ((90 - lat) / 180) * VIEW_H;
+
+    const isLocalHost = ['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(window.location.hostname);
+    const agentBaseUrl = isLocalHost ? 'http://127.0.0.1:8787' : 'https://agent.greenpill.network';
+
+    const membersGroup = root.querySelector('[data-home-map-members]') as SVGGElement | null;
     const focusEl = root.querySelector('[data-home-map-focus]') as HTMLElement | null;
     const focusRole = root.querySelector('[data-focus-role]') as HTMLElement | null;
     const focusName = root.querySelector('[data-focus-name]') as HTMLElement | null;
     const focusMeta = root.querySelector('[data-focus-meta]') as HTMLElement | null;
-    const threads = Array.from(root.querySelectorAll<SVGPathElement>('.gp-home-map-thread'));
-    const links = Array.from(
-      root.querySelectorAll<SVGGElement | SVGAElement>('.gp-home-map-node-link'),
-    );
 
+    // Theme labels/colors for member chips, serialized from SSR.
+    const themeInfo: Record<string, { label: string; color: string }> = (() => {
+      const node = document.querySelector('[data-home-map-theme-info]');
+      try {
+        return node?.textContent ? JSON.parse(node.textContent) : {};
+      } catch {
+        return {};
+      }
+    })();
+    const themeLabel = (slug: string) => themeInfo[slug]?.label ?? slug.replace(/-/g, ' ');
+    const themeColor = (slug: string) => themeInfo[slug]?.color ?? '#B8E835';
+
+    const clean = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+    const toFiniteNumber = (value: unknown) => {
+      const num = typeof value === 'number' ? value : Number(value);
+      return Number.isFinite(num) ? num : null;
+    };
+
+    // ---- Hover / focus card (lightweight, pointer-events:none) -------------
     const clearFocus = () => {
       root.classList.remove('is-focused');
-      threads.forEach((t) => {
-        t.classList.remove('is-adj');
-        t.classList.remove('is-dim');
-      });
-      links.forEach((l) => l.classList.remove('is-adj', 'is-dim'));
+      root.querySelectorAll('.gp-home-map-thread').forEach((t) => t.classList.remove('is-adj', 'is-dim'));
+      root.querySelectorAll('.gp-home-map-node-link').forEach((l) => l.classList.remove('is-adj', 'is-dim'));
       if (focusEl) focusEl.setAttribute('aria-hidden', 'true');
     };
 
@@ -406,7 +556,7 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
       root.classList.add('is-focused');
 
       const adjacentIds = new Set<string>([id]);
-      threads.forEach((t) => {
+      root.querySelectorAll<SVGPathElement>('.gp-home-map-thread').forEach((t) => {
         const from = t.getAttribute('data-from');
         const to = t.getAttribute('data-to');
         if (from === id || to === id) {
@@ -420,37 +570,372 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
         }
       });
 
-      links.forEach((l) => {
+      root.querySelectorAll('.gp-home-map-node-link').forEach((l) => {
         const lid = l.getAttribute('data-node-id');
         if (!lid) return;
-        if (adjacentIds.has(lid)) {
-          l.classList.add('is-adj');
-          l.classList.remove('is-dim');
-        } else {
-          l.classList.add('is-dim');
-          l.classList.remove('is-adj');
-        }
+        l.classList.toggle('is-adj', adjacentIds.has(lid));
+        l.classList.toggle('is-dim', !adjacentIds.has(lid));
       });
 
       if (focusEl && focusRole && focusName && focusMeta) {
-        const title = target.querySelector('title');
-        const raw = title ? title.textContent || '' : '';
+        const raw = target.querySelector('title')?.textContent || '';
         const parts = raw.split('·').map((s) => s.trim());
         focusName.textContent = parts[0] || '';
-        focusRole.textContent = type === 'chapter' ? 'Chapter' : 'Steward';
+        focusRole.textContent = type === 'chapter' ? 'Chapter' : type === 'member' ? 'Member' : 'Steward';
         focusMeta.textContent = parts.slice(1).join(' · ');
         focusEl.setAttribute('aria-hidden', 'false');
       }
     };
 
-    links.forEach((link) => {
+    // ---- Selected-node panel + owner edit-link request ---------------------
+    const selectedEl = scope.querySelector('[data-home-map-selected]') as HTMLElement | null;
+    const selectedKicker = scope.querySelector('[data-selected-kicker]') as HTMLElement | null;
+    const selectedName = scope.querySelector('[data-selected-name]') as HTMLElement | null;
+    const selectedPlace = scope.querySelector('[data-selected-place]') as HTMLElement | null;
+    const selectedThemes = scope.querySelector('[data-selected-themes]') as HTMLElement | null;
+    const selectedClose = scope.querySelector('[data-selected-close]') as HTMLButtonElement | null;
+    const updateWrap = scope.querySelector('[data-home-map-update]') as HTMLElement | null;
+    const updateTrigger = scope.querySelector('[data-update-trigger]') as HTMLButtonElement | null;
+    const updateForm = scope.querySelector('[data-update-form]') as HTMLFormElement | null;
+    const updateCancel = scope.querySelector('[data-update-cancel]') as HTMLButtonElement | null;
+    const updateError = scope.querySelector('[data-update-error]') as HTMLElement | null;
+    const updateSuccess = scope.querySelector('[data-update-success]') as HTMLElement | null;
+    const updateEmail = updateForm?.elements.namedItem('email') as HTMLInputElement | null;
+
+    let activeSourceId = '';
+
+    const resetUpdateState = () => {
+      activeSourceId = '';
+      if (updateForm) {
+        updateForm.hidden = true;
+        if (updateEmail) updateEmail.value = '';
+      }
+      if (updateError) updateError.textContent = '';
+      if (updateSuccess) updateSuccess.hidden = true;
+      if (updateTrigger) updateTrigger.hidden = false;
+    };
+
+    const closeSelected = () => {
+      if (selectedEl) selectedEl.hidden = true;
+      resetUpdateState();
+      root.querySelectorAll('.gp-home-map-node-link.is-selected').forEach((l) => l.classList.remove('is-selected'));
+    };
+
+    const openSelected = (member: MemberNode, link: Element) => {
+      if (!selectedEl) return;
+      resetUpdateState();
+      root.querySelectorAll('.gp-home-map-node-link.is-selected').forEach((l) => l.classList.remove('is-selected'));
+      link.classList.add('is-selected');
+
+      if (selectedKicker) selectedKicker.textContent = member.pending ? 'Pending node' : 'Member node';
+      if (selectedName) selectedName.textContent = member.name;
+      if (selectedPlace) selectedPlace.textContent = member.place;
+      if (selectedThemes) {
+        selectedThemes.textContent = '';
+        member.themes.slice(0, 4).forEach((slug) => {
+          const chip = document.createElement('span');
+          applyScope(chip);
+          chip.textContent = themeLabel(slug);
+          chip.style.setProperty('--chip-color', themeColor(slug));
+          selectedThemes.append(chip);
+        });
+      }
+
+      // Owner edit-link is offered for approved submitted nodes only.
+      if (updateWrap) updateWrap.hidden = !member.approved;
+      activeSourceId = member.approved ? member.sourceId : '';
+
+      selectedEl.hidden = false;
+      selectedEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+
+    // Fire-and-forget. The public response is intentionally neutral, so the UI
+    // shows the same copy whether or not the email/node match — and even if the
+    // network request fails — to avoid leaking ownership signal.
+    const requestEditLink = (sourceId: string, email: string) => {
+      if (!sourceId) return;
+      void fetch(`${agentBaseUrl}/map-nodes/${encodeURIComponent(sourceId)}/edit-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      }).catch(() => {});
+    };
+
+    updateTrigger?.addEventListener('click', () => {
+      if (!updateForm) return;
+      updateTrigger.hidden = true;
+      updateForm.hidden = false;
+      if (updateError) updateError.textContent = '';
+      updateEmail?.focus();
+    });
+
+    updateCancel?.addEventListener('click', () => {
+      if (updateForm) updateForm.hidden = true;
+      if (updateError) updateError.textContent = '';
+      if (updateEmail) updateEmail.value = '';
+      if (updateTrigger) updateTrigger.hidden = false;
+    });
+
+    updateForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const email = clean(updateEmail?.value).toLowerCase();
+      if (updateEmail) updateEmail.value = email;
+      if (!email || !updateEmail?.checkValidity()) {
+        if (updateError) updateError.textContent = 'Enter a valid email address.';
+        return;
+      }
+
+      const sourceId = activeSourceId;
+      // Terminal, neutral UI first; clear the input so no email lingers in the DOM.
+      updateForm.hidden = true;
+      if (updateEmail) updateEmail.value = '';
+      if (updateTrigger) updateTrigger.hidden = true;
+      if (updateError) updateError.textContent = '';
+      if (updateSuccess) updateSuccess.hidden = false;
+
+      requestEditLink(sourceId, email);
+    });
+
+    selectedClose?.addEventListener('click', closeSelected);
+
+    // ---- Member node injection ---------------------------------------------
+    const injectedKeys = new Set<string>();
+    const memberByKey = new Map<string, MemberNode>();
+
+    const makeCircle = (cls: string, cx: number, cy: number, r: number) => {
+      const circle = document.createElementNS(SVG_NS, 'circle');
+      circle.setAttribute('class', cls);
+      circle.setAttribute('cx', cx.toFixed(2));
+      circle.setAttribute('cy', cy.toFixed(2));
+      circle.setAttribute('r', String(r));
+      applyScope(circle);
+      return circle;
+    };
+
+    const registerNode = (link: Element) => {
       link.addEventListener('mouseenter', () => setFocus(link));
       link.addEventListener('focus', () => setFocus(link));
       link.addEventListener('mouseleave', clearFocus);
       link.addEventListener('blur', clearFocus);
+      if (!link.classList.contains('is-member')) return;
+      const open = () => {
+        const key = (link as HTMLElement).dataset.memberKey || '';
+        const member = memberByKey.get(key);
+        if (member) openSelected(member, link);
+      };
+      link.addEventListener('click', open);
+      link.addEventListener('keydown', (event) => {
+        const key = (event as KeyboardEvent).key;
+        if (key === 'Enter' || key === ' ') {
+          event.preventDefault();
+          open();
+        }
+      });
+    };
+
+    const injectMember = (member: MemberNode) => {
+      if (!membersGroup || injectedKeys.has(member.key)) return;
+      injectedKeys.add(member.key);
+      memberByKey.set(member.key, member);
+
+      const x = lonToX(member.long);
+      const y = latToY(member.lat);
+      const group = document.createElementNS(SVG_NS, 'g');
+      applyScope(group);
+      group.setAttribute(
+        'class',
+        `gp-home-map-node-link is-member${member.pending ? ' is-pending' : ''}`
+      );
+      group.setAttribute('tabindex', '0');
+      group.setAttribute('role', 'button');
+      group.setAttribute('data-node-id', member.key);
+      group.setAttribute('data-node-type', 'member');
+      group.dataset.memberKey = member.key;
+      const roleWord = member.pending ? 'Pending member node' : 'Member node';
+      group.setAttribute('aria-label', `${member.name}, ${roleWord}${member.place ? `, ${member.place}` : ''}`);
+
+      const title = document.createElementNS(SVG_NS, 'title');
+      title.textContent = `${member.name} · Member${member.place ? ` · ${member.place}` : ''}`;
+      group.append(title);
+      group.append(makeCircle('gp-home-map-node-halo', x, y, 4));
+      group.append(makeCircle('gp-home-map-node-ring', x, y, 2.3));
+      group.append(makeCircle('gp-home-map-node-dot', x, y, 1.6));
+      group.append(makeCircle('gp-home-map-node-ripple is-ripple-a', x, y, 0));
+      group.append(makeCircle('gp-home-map-node-ripple is-ripple-b', x, y, 0));
+
+      membersGroup.append(group);
+      registerNode(group);
+    };
+
+    const toMember = (
+      raw: Record<string, any>,
+      kind: 'approved-submission' | 'local-pending'
+    ): MemberNode | null => {
+      const lat = toFiniteNumber(raw.lat ?? raw.latitude);
+      const long = toFiniteNumber(raw.long ?? raw.longitude);
+      if (lat === null || long === null) return null;
+      const name = clean(raw.name || raw.displayName);
+      if (!name) return null;
+      const sourceId = clean(raw.sourceId || raw.id).replace(/^submission:/, '');
+      const themes = Array.isArray(raw.themes) ? raw.themes.map(clean).filter(Boolean) : [];
+      const place = clean(raw.place || raw.placeName || raw.city);
+      const approved = kind === 'approved-submission';
+      return {
+        key: approved ? `submission:${sourceId}` : `local:${clean(raw.id) || `${lat},${long}`}`,
+        sourceId: approved ? sourceId : '',
+        name,
+        place,
+        themes,
+        lat,
+        long,
+        approved,
+        pending: !approved,
+      };
+    };
+
+    const renderLocalPending = () => {
+      loadLocalPendingNodes(window.localStorage).forEach((node) => {
+        const member = toMember(node as Record<string, any>, 'local-pending');
+        if (member) injectMember(member);
+      });
+    };
+
+    // ---- Add-node intake mode copy -----------------------------------------
+    const modeCopyEl = scope.querySelector('[data-home-map-mode-copy]') as HTMLElement | null;
+    const setModeCopy = (mode: string) => {
+      if (!modeCopyEl) return;
+      modeCopyEl.textContent = mode === 'live'
+        ? 'Live onboarding is on — your node appears on the public map right after you submit. Your email stays private and is used only for future edit links.'
+        : 'In moderated mode, your node appears on your device while stewards review it. Your email stays private and is used only for future edit links.';
+    };
+
+    let intakeMode: 'moderated' | 'live' = 'moderated';
+
+    // ---- /map/state fetch (single, no polling) -----------------------------
+    const loadMapState = async () => {
+      try {
+        const response = await fetch(`${agentBaseUrl}/map/state`, { cache: 'no-store' });
+        if (!response.ok) return;
+        const state = await response.json();
+        intakeMode = state?.intakeMode === 'live' ? 'live' : 'moderated';
+        setModeCopy(intakeMode);
+        const nodes = Array.isArray(state?.nodes) ? state.nodes : [];
+        nodes
+          .filter((node: Record<string, any>) => node?.source === 'approved-submission')
+          .forEach((node: Record<string, any>) => {
+            const member = toMember(node, 'approved-submission');
+            if (member) injectMember(member);
+          });
+      } catch {
+        // Agent unavailable: keep the SSR baseline map. No-op.
+      }
+    };
+
+    // ---- Add-node submission ------------------------------------------------
+    const addForm = scope.querySelector('[data-home-map-addnode-form]') as HTMLFormElement | null;
+    const addStatus = scope.querySelector('[data-home-map-addnode-status]') as HTMLElement | null;
+
+    const setAddStatus = (message: string, tone: 'idle' | 'success' | 'error' = 'idle') => {
+      if (!addStatus) return;
+      addStatus.textContent = message;
+      if (tone === 'idle') addStatus.removeAttribute('data-tone');
+      else addStatus.dataset.tone = tone;
+    };
+
+    const createLocalId = () => (
+      'randomUUID' in crypto
+        ? `local-${crypto.randomUUID()}`
+        : `local-${Date.now()}-${Math.round(Math.random() * 1e5)}`
+    );
+
+    addForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const submitButton = addForm.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+      const data = new FormData(addForm);
+      const name = clean(data.get('name'));
+      const place = clean(data.get('place'));
+      const lat = toFiniteNumber(data.get('lat'));
+      const long = toFiniteNumber(data.get('long'));
+      const themes = data.getAll('themes').map((v) => clean(v)).filter(Boolean);
+      const publicNote = clean(data.get('publicNote'));
+      const emailInput = addForm.elements.namedItem('contact') as HTMLInputElement | null;
+      const email = clean(data.get('contact')).toLowerCase();
+      if (emailInput) emailInput.value = email;
+
+      if (!name || !place || lat === null || long === null || !emailInput?.checkValidity()) {
+        setAddStatus('Add a name, place, latitude, longitude, and valid private email before submitting.', 'error');
+        return;
+      }
+
+      setAddStatus('Submitting your node…', 'idle');
+      if (submitButton) submitButton.disabled = true;
+
+      try {
+        const response = await fetch(`${agentBaseUrl}/map-nodes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            displayName: name,
+            placeName: place,
+            lat,
+            long,
+            role: 'member',
+            themes,
+            publicNote,
+            email,
+            contactConsent: true,
+          }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload?.error?.message || 'Submission failed.');
+        }
+
+        const node = payload?.node || payload;
+        if (node?.status === 'approved') {
+          // Live onboarding: the node is public immediately. Never write local
+          // pending state for an approved node.
+          const member = toMember({ ...node, sourceId: node.id }, 'approved-submission');
+          if (member) injectMember(member);
+          setAddStatus('Your node is approved and visible on the public map.', 'success');
+        } else {
+          // Moderated: only now — after the server accepted — do we persist a
+          // local pending node for this browser.
+          saveLocalPendingNode(window.localStorage, {
+            id: createLocalId(),
+            name,
+            place,
+            lat,
+            long,
+            role: 'member',
+            themes,
+            publicNote,
+          });
+          window.dispatchEvent(new Event(PENDING_NODE_UPDATED_EVENT));
+          renderLocalPending();
+          setAddStatus('Saved on this device and submitted for steward review.', 'success');
+        }
+        addForm.reset();
+      } catch (error) {
+        // Server rejected or the request failed: do NOT write local pending state.
+        // Surface server-provided validation messages, but show friendly copy for
+        // raw network failures (fetch throws a TypeError when it cannot connect).
+        const message = error instanceof Error && error.name !== 'TypeError'
+          ? error.message
+          : 'We could not reach the network right now. Please try again.';
+        setAddStatus(message, 'error');
+      } finally {
+        if (submitButton) submitButton.disabled = false;
+      }
     });
 
+    // ---- Init ---------------------------------------------------------------
+    root.querySelectorAll('.gp-home-map-node-link').forEach(registerNode);
     root.addEventListener('mouseleave', clearFocus);
+    window.addEventListener(PENDING_NODE_UPDATED_EVENT, renderLocalPending);
+
+    renderLocalPending();
+    loadMapState();
   })();
 </script>
 
@@ -596,6 +1081,45 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     opacity: 0.5;
   }
 
+  /* Member node treatment — submitted nodes injected client-side. Teal keeps
+     them distinct from lime chapters and gold stewards. */
+  .gp-home-map-node-link.is-member .gp-home-map-node-dot {
+    fill: #4FD1C5;
+    stroke: var(--gp-green-950);
+    stroke-width: 0.5;
+    transition: r 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .gp-home-map-node-link.is-member .gp-home-map-node-ring {
+    fill: none;
+    stroke: #4FD1C5;
+    stroke-width: 0.4;
+    opacity: 0.6;
+  }
+  .gp-home-map-node-link.is-member .gp-home-map-node-halo {
+    fill: #4FD1C5;
+    opacity: 0.14;
+    transition: opacity 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .gp-home-map-node-link.is-member:hover .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-member:focus-visible .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-member.is-selected .gp-home-map-node-halo {
+    opacity: 0.46;
+  }
+  .gp-home-map-node-link.is-member:focus-visible .gp-home-map-node-dot,
+  .gp-home-map-node-link.is-member.is-selected .gp-home-map-node-dot {
+    stroke: var(--gp-lime-400);
+    stroke-width: 0.8;
+  }
+  /* Pending nodes live only in this browser; render them as provisional. */
+  .gp-home-map-node-link.is-member.is-pending .gp-home-map-node-dot {
+    fill: var(--gp-green-500);
+    stroke: #4FD1C5;
+  }
+  .gp-home-map-node-link.is-member.is-pending .gp-home-map-node-ring {
+    stroke-dasharray: 0.8 0.8;
+    opacity: 0.9;
+  }
+
   /* Focus ripples — only visible while the node is actively focused. We
      animate a CSS variable through stops so each ripple breathes
      outward and fades, then resets. r is CSS-animatable in modern
@@ -613,6 +1137,10 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
   .gp-home-map-node-link.is-steward .gp-home-map-node-ripple {
     stroke: var(--gp-secondary);
     stroke-width: 0.14;
+  }
+  .gp-home-map-node-link.is-member .gp-home-map-node-ripple {
+    stroke: #4FD1C5;
+    stroke-width: 0.16;
   }
   .gp-home-map-node-link:hover .gp-home-map-node-ripple,
   .gp-home-map-node-link:focus-visible .gp-home-map-node-ripple {
@@ -776,6 +1304,334 @@ const statsA11y = `World map of ${chapterCount} active chapters connected by sha
     height: 8px;
     border-radius: 50%;
     flex: none;
+  }
+
+  /* Selected-node panel — in-flow (not an overlay) so it never clips on
+     mobile. Appears only when a submitted member node is activated. */
+  .gp-home-map-selected {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px 16px;
+    border: 1px solid rgba(79, 209, 197, 0.32);
+    border-radius: var(--gp-radius-md);
+    background: rgba(15, 50, 38, 0.92);
+  }
+  .gp-home-map-selected[hidden] { display: none; }
+
+  .gp-home-map-selected-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-pill);
+    background: rgba(7, 24, 15, 0.6);
+    color: var(--gp-fg-muted);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .gp-home-map-selected-close:hover { color: var(--gp-fg); }
+
+  .gp-home-map-selected-kicker {
+    margin: 0;
+    padding-right: 38px;
+    font-family: var(--gp-font-mono);
+    color: #7fe6da;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .gp-home-map-selected-name {
+    margin: 0;
+    padding-right: 38px;
+    font-family: var(--gp-font-display);
+    color: var(--gp-secondary);
+    font-size: 18px;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+  .gp-home-map-selected-place {
+    margin: 0;
+    color: var(--gp-fg-muted);
+    font-size: 13px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+  .gp-home-map-selected-place:empty { display: none; }
+
+  .gp-home-map-selected-themes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .gp-home-map-selected-themes:empty { display: none; }
+  .gp-home-map-selected-themes span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 26px;
+    padding: 2px 9px;
+    border: 1px solid color-mix(in srgb, var(--chip-color, #4FD1C5) 60%, transparent);
+    border-radius: var(--gp-radius-pill);
+    background: color-mix(in srgb, var(--chip-color, #4FD1C5) 16%, transparent);
+    color: var(--gp-fg);
+    font-size: 12px;
+    line-height: 1;
+    overflow-wrap: anywhere;
+  }
+
+  /* Owner edit-link request — neutral on every outcome. */
+  .gp-home-map-update { margin-top: 8px; }
+  .gp-home-map-update[hidden] { display: none; }
+  .gp-home-map-update-trigger {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border: 1px solid rgba(79, 209, 197, 0.5);
+    border-radius: var(--gp-radius-pill);
+    background: rgba(79, 209, 197, 0.14);
+    color: #b8f5ec;
+    font-family: var(--gp-font-body);
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 160ms ease;
+  }
+  .gp-home-map-update-trigger:hover { background: rgba(79, 209, 197, 0.24); }
+  .gp-home-map-update-trigger[hidden] { display: none; }
+
+  .gp-home-map-update-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .gp-home-map-update-form[hidden] { display: none; }
+  .gp-home-map-update-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .gp-home-map-update-field span {
+    color: var(--gp-fg-muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .gp-home-map-update-field input {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 44px;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-md);
+    padding: 10px 12px;
+    background: rgba(2, 12, 7, 0.7);
+    color: var(--gp-fg);
+    font: inherit;
+    outline: none;
+  }
+  .gp-home-map-update-field input:focus {
+    border-color: rgba(79, 209, 197, 0.78);
+    box-shadow: 0 0 0 3px rgba(79, 209, 197, 0.14);
+  }
+  .gp-home-map-update-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .gp-home-map-update-actions button {
+    min-height: 44px;
+    flex: 1 1 auto;
+    border-radius: var(--gp-radius-pill);
+    padding: 8px 16px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .gp-home-map-update-cancel {
+    border: 1px solid var(--gp-border-soft);
+    background: transparent;
+    color: var(--gp-fg-muted);
+  }
+  .gp-home-map-update-submit {
+    border: 0;
+    background: #4FD1C5;
+    color: #07241a;
+  }
+  .gp-home-map-update-error {
+    margin: 0;
+    color: #f0dca0;
+    font-size: 13px;
+  }
+  .gp-home-map-update-error:empty { display: none; }
+  .gp-home-map-update-success {
+    margin: 6px 0 0;
+    color: #b8f5ec;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .gp-home-map-update-success[hidden] { display: none; }
+
+  /* Add-node panel — collapsed by default; keeps the hero uncluttered. */
+  .gp-home-map-addnode {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-md);
+    background: rgba(7, 24, 15, 0.5);
+  }
+  .gp-home-map-addnode > summary {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    color: var(--gp-primary);
+    font-family: var(--gp-font-body);
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+  }
+  .gp-home-map-addnode > summary::-webkit-details-marker { display: none; }
+  .gp-home-map-addnode > summary::before {
+    content: '+';
+    margin-right: 8px;
+    font-size: 18px;
+    line-height: 1;
+  }
+  .gp-home-map-addnode[open] > summary::before { content: '\2013'; }
+
+  .gp-home-map-addnode-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 0 16px 16px;
+  }
+  .gp-home-map-addnode-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .gp-home-map-addnode-form > label,
+  .gp-home-map-addnode-grid label,
+  .gp-home-map-addnode-themes {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+  }
+  .gp-home-map-addnode-form label > span,
+  .gp-home-map-addnode-themes > legend {
+    color: var(--gp-fg-muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .gp-home-map-addnode-themes {
+    border: 0;
+    padding: 0;
+    margin: 0;
+  }
+  .gp-home-map-addnode-form input,
+  .gp-home-map-addnode-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 44px;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-md);
+    padding: 10px 12px;
+    background: rgba(2, 12, 7, 0.7);
+    color: var(--gp-fg);
+    font: inherit;
+    outline: none;
+  }
+  .gp-home-map-addnode-form textarea { min-height: 76px; resize: vertical; }
+  .gp-home-map-addnode-form input:focus,
+  .gp-home-map-addnode-form textarea:focus {
+    border-color: rgba(184, 232, 53, 0.7);
+    box-shadow: 0 0 0 3px rgba(184, 232, 53, 0.12);
+  }
+  .gp-home-map-addnode-theme-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .gp-home-map-addnode-theme {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-md);
+    padding: 6px 10px;
+    background: rgba(2, 12, 7, 0.36);
+    cursor: pointer;
+  }
+  .gp-home-map-addnode-theme input {
+    width: 16px;
+    min-height: 16px;
+    flex: none;
+    accent-color: var(--gp-primary);
+  }
+  .gp-home-map-addnode-theme span { font-size: 13px; font-weight: 600; }
+  .gp-home-map-addnode-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .gp-home-map-addnode-mode {
+    flex: 1 1 14rem;
+    margin: 0;
+    color: var(--gp-fg-muted);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .gp-home-map-addnode-submit {
+    min-height: 48px;
+    min-width: 8.5rem;
+    border: 0;
+    border-radius: var(--gp-radius-pill);
+    padding: 10px 18px;
+    background: var(--gp-primary);
+    color: var(--gp-primary-fg);
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 160ms ease, opacity 160ms ease;
+  }
+  .gp-home-map-addnode-submit:disabled { opacity: 0.64; cursor: wait; }
+  .gp-home-map-addnode-submit:not(:disabled):hover { transform: translateY(-1px); }
+  .gp-home-map-addnode-status {
+    margin: 0;
+    color: var(--gp-primary);
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .gp-home-map-addnode-status:empty { display: none; }
+  .gp-home-map-addnode-status[data-tone='error'] { color: #f0dca0; }
+  .gp-home-map-addnode-status[data-tone='success'] { color: var(--gp-primary); }
+
+  @media (max-width: 640px) {
+    .gp-home-map-addnode-grid,
+    .gp-home-map-addnode-theme-options {
+      grid-template-columns: 1fr;
+    }
+    .gp-home-map-addnode-footer {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .gp-home-map-addnode-submit { width: 100%; }
   }
 
   @keyframes gpMapThread {

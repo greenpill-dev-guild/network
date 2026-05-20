@@ -393,3 +393,63 @@ test('resend webhook migration stores delivery metadata without raw message cont
   assert.doesNotMatch(webhookSql, /message_body/);
   assert.doesNotMatch(webhookSql, /\bhtml\b/);
 });
+
+test('home map intake requires a valid email and stores local pending only after server accept', async () => {
+  // The interactive public map lives on the home page now; ChapterMap.astro and
+  // scripts/map.ts were retired so there is a single map implementation.
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+
+  // Add-node form requires a private owner email and explains its use.
+  assert.match(component, /<input name="contact"[^>]*type="email"[^>]*required[^>]*>/);
+  assert.match(component, /future edit links/);
+  assert.match(component, /email,\s*contactConsent: true/s);
+  assert.doesNotMatch(component, /email:\s*email\s*\|\|\s*undefined/);
+
+  // Email is validated client-side, and a local pending node is written ONLY
+  // after the server accepts the submission (a 201 response). A rejected or
+  // failed request must not leave a phantom local pending node behind.
+  const addSubmitIndex = component.indexOf("addForm?.addEventListener('submit'");
+  const emailValidationIndex = component.indexOf('emailInput?.checkValidity()', addSubmitIndex);
+  const responseOkGuardIndex = component.indexOf('if (!response.ok)', addSubmitIndex);
+  const localPendingIndex = component.indexOf('saveLocalPendingNode', addSubmitIndex);
+  assert.ok(addSubmitIndex !== -1, 'home map must define the add-node submit handler');
+  assert.ok(emailValidationIndex !== -1, 'add-node must validate the private email client-side');
+  assert.ok(localPendingIndex !== -1, 'add-node must retain local pending behavior');
+  assert.ok(
+    emailValidationIndex < localPendingIndex,
+    'add-node must validate the email before saving a local pending node'
+  );
+  assert.ok(
+    responseOkGuardIndex !== -1 && responseOkGuardIndex < localPendingIndex,
+    'add-node must save a local pending node only after the server accepts the submission'
+  );
+
+  // The owner update flow requests a neutral edit-link by node id and never
+  // reveals match status. Token handling stays on /map/edit only.
+  assert.match(component, /\/map-nodes\/\$\{encodeURIComponent\(sourceId\)\}\/edit-link/);
+  assert.match(component, /If this email matches the node owner, we'll send an edit link\./);
+  assert.doesNotMatch(component, /edit-session/);
+  assert.doesNotMatch(component, /update-requests/);
+});
+
+test('map-node edit flow has an operator cleanup command', async () => {
+  const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+  const cleanupScript = await readFile(
+    new URL('../scripts/map-node-edit-flow-cleanup.ts', import.meta.url),
+    'utf8'
+  );
+
+  assert.equal(
+    packageJson.scripts['db:cleanup:map-node-edit-flow'],
+    'bun run build:packages && bun --no-env-file --env-file-if-exists=.env.local scripts/map-node-edit-flow-cleanup.ts'
+  );
+  assert.equal(
+    packageJson.scripts['test:map-edit:browser'],
+    'bun run build:website && bun --no-env-file scripts/map-edit-browser-smoke.ts'
+  );
+  assert.match(cleanupScript, /cleanupEditFlow/);
+  assert.match(cleanupScript, /DATABASE_URL is required/);
+});

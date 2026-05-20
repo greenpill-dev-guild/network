@@ -42,7 +42,7 @@ bun run preview:website
 
 `bun run dev`, `bun run build`, and `bun run preview` delegate to the website package. The production static build emits to `packages/website/dist/`.
 
-Keystatic is enabled only during local website development for file-backed content authoring. There is no deployed Keystatic server, CMS API route, or public database connection in the website package.
+Keystatic is enabled only during local website development for editorial and site-composition authoring. It does not expose operational collections such as chapters, people, guilds, projects, or themes. There is no deployed Keystatic server, CMS API route, or public database connection in the website package.
 
 Operational content for chapters, public steward profiles, guilds, projects,
 locations, and impact source bindings is Directus/Postgres-owned after the
@@ -50,6 +50,9 @@ one-time migration. The static website consumes an approved public snapshot at
 build time. By default local builds use
 `packages/website/src/data/operational-content-snapshot.json`; production builds
 can set `OPERATIONAL_CONTENT_SNAPSHOT_URL` to the agent route.
+The seed JSON used for the one-time migration and local snapshot refresh lives in
+`packages/website/src/data/operational-content-seed/`, outside Astro/Keystatic
+editorial collections.
 
 Public assets live in `packages/website/public/`. Generated public JSON routes include:
 
@@ -100,6 +103,8 @@ curl http://127.0.0.1:8787/content/public-snapshot
 Public map-node submissions require an owner email. The agent stores that email only in `intake.map_node_private_contacts` so future owner updates can use one-use email magic links. Configure email sending on the agent with `RESEND_API_KEY`, `MAP_NODE_EMAIL_FROM`, `MAP_NODE_EMAIL_REPLY_TO`, and `MAP_NODE_EDIT_BASE_URL`; do not expose those values to the static website, Keystatic, generated JSON, or browser bundles. Map magic-link replies should route to the monitored map mailbox on the verified sending subdomain, currently `Greenpill Network <map@mail.greenpill.network>`. Missing or failing email provider configuration still returns the same neutral public edit-link response.
 
 Resend delivery webhooks post to `POST /webhooks/resend` on the agent and require `RESEND_WEBHOOK_SECRET`. Subscribe only to operational email events such as `email.sent`, `email.delivered`, `email.delivery_delayed`, `email.failed`, `email.bounced`, `email.complained`, `email.suppressed`, and `email.received`; do not enable open/click tracking for map magic-link emails. The webhook route verifies Svix signatures and stores provider metadata only, not message bodies, subjects, sender addresses, or raw recipient addresses.
+
+Run `bun run db:cleanup:map-node-edit-flow` from a private environment with `DATABASE_URL` set to delete expired edit-token rows after their grace period and scrub retained private edit-link/update-request metadata.
 
 ## Directus Admin
 
