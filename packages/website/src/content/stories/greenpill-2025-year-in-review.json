@@ -4,7 +4,7 @@
   "category": "field-report",
   "publishDate": "2025",
   "updatedDate": "2025",
-  "dek": "The approved Paragraph preview gives the site a source-backed 2025 story for gatherings, the podcast archive, ecosystem work, hard truths, and 2026 seeds.",
+  "dek": "A network-level look at the service days, local gatherings, podcast archive, Regen Coordination work, and hard-earned lessons that shaped Greenpill's 2025.",
   "excerpt": "A network-level 2025 review covering IRL service, Ethereum Localism, the Greenpill podcast, Regen Coordination, and the lessons shaping 2026.",
   "region": "global",
   "tag": "Year in Review",
@@ -14,10 +14,10 @@
     "ethereum-localism",
     "regen-coordination"
   ],
-  "body": "The approved 2025 Paragraph preview should be treated as a network-level story source.\n\nIt captures the mix of local service, in-person gathering, podcast publishing, ecosystem building, and honest operating lessons that shaped the year. The story includes Greenpill Goonies Giveback service activity around ETHDenver, GFEL Boulder and Ethereum Localism, 280+ podcast episodes across multiple seasons and mini-series, Regen Coordination and CIDS adoption work, Regen Commons, Gardens-based conviction voting, Localism Fund discussions, and candid notes on dormancy, coordination overhead, grant dependency, and volunteer burnout.\n\nThis should not become a large set of thin operational records. The right public use is one Year in Review story plus links into stronger chapter, guild, and resource surfaces.\n\n## Sources\n\n- S070: https://paragraph.com/@greenpill/preview/8QcFgBeASBiEy4QVxmZj",
+  "body": "Greenpill's 2025 was a year of local service, ecosystem building, and honest reflection.\n\nAcross the network, chapters and guilds kept showing up: Greenpill Goonies Giveback service activity around ETHDenver, GFEL Boulder and Ethereum Localism, 280+ podcast episodes across multiple seasons and mini-series, Regen Coordination and CIDS adoption work, Regen Commons, Gardens-based conviction voting, Localism Fund discussions, and candid notes on dormancy, coordination overhead, grant dependency, and volunteer burnout.\n\nRead it as a field report from the network's year: what gathered momentum, what strained the system, and what seeds are worth carrying into 2026.\n\n## Sources\n\n- S070: https://paragraph.com/@greenpill/preview/8QcFgBeASBiEy4QVxmZj",
   "image": "/images/stories/greenpill-2025-year-in-review.jpg",
   "author": "Greenpill Network research",
-  "authorRole": "Source-backed seed copy",
+  "authorRole": "Network field report",
   "authorBio": "",
   "authorSlug": "",
   "authorAvatar": "",
@@ -44,7 +44,7 @@
   "proofSignals": [
     {
       "label": "2025 Year in Review",
-      "value": "Approved Paragraph preview",
+      "value": "Paragraph source article",
       "source": "S070",
       "href": "https://paragraph.com/@greenpill/preview/8QcFgBeASBiEy4QVxmZj"
     }

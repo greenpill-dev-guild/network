@@ -27,8 +27,10 @@ const websiteShellDir = join(rootDir, 'packages/website/src/components/shell');
 const keystaticConfigPath = join(rootDir, 'packages/website/keystatic.config.ts');
 const astroContentConfigPath = join(rootDir, 'packages/website/src/content/config.ts');
 const snapshotPath = join(rootDir, 'packages/website/src/data/operational-content-snapshot.json');
+const podcastSnapshotPath = join(rootDir, 'packages/website/src/data/podcast-feed-snapshot.json');
 const operationalContentScriptPath = join(rootDir, 'scripts/operational-content.ts');
 const homePagePath = join(rootDir, 'packages/website/src/pages/index.astro');
+const libraryPagePath = join(rootDir, 'packages/website/src/pages/library/index.astro');
 const storyDetailPagePath = join(rootDir, 'packages/website/src/pages/stories/[slug].astro');
 const storiesIndexPagePath = join(rootDir, 'packages/website/src/pages/stories/index.astro');
 const chapterPagePath = join(rootDir, 'packages/website/src/pages/chapters/[slug].astro');
@@ -359,6 +361,27 @@ test('site shell keeps the graphic page background visible', async () => {
   assert.doesNotMatch(footer, /background:\s*var\(--gp-green-950\)/);
 });
 
+test('library podcast section uses RSS snapshot and in-page audio', async () => {
+  const [libraryPage, podcastSnapshotSource] = await Promise.all([
+    readFile(libraryPagePath, 'utf8'),
+    readFile(podcastSnapshotPath, 'utf8'),
+  ]);
+  const podcastSnapshot = JSON.parse(podcastSnapshotSource);
+
+  assert.equal(podcastSnapshot.sourceUrl, 'https://rss.libsyn.com/shows/400481/destinations/3304589.xml');
+  assert.equal(podcastSnapshot.episodeCount, 296);
+  assert.equal(podcastSnapshot.episodes.length >= 8, true);
+  assert.equal(podcastSnapshot.episodes.every((episode) => episode.title && episode.audioUrl), true);
+
+  assert.match(libraryPage, /import podcastFeed/);
+  assert.match(libraryPage, /id="podcast"/);
+  assert.match(libraryPage, /<audio class="gp-library-audio/);
+  assert.match(libraryPage, /gardenGuides\.map/);
+  assert.doesNotMatch(libraryPage, /episodeResources\.map/);
+  assert.doesNotMatch(libraryPage, /guideResources\.map/);
+  assert.doesNotMatch(libraryPage, /gp-library-play/);
+});
+
 test('operational content snapshot generation rejects private fields and non-published records', () => {
   assert.throws(
     () => toPublicOperationalContentSnapshot({
@@ -487,9 +510,14 @@ test('Directus operational enrichment targets public guilds and visible initiati
   const enrichment = await loadOperationalEnrichment();
   const emailLike = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i;
   const initiativeSlugs = new Set(enrichment.chapterInitiatives.map((initiative) => initiative.slug));
+  const guildImageStatuses = enrichment.guilds.flatMap((guild) => (
+    guild.image || guild.media?.image || guild.media?.ogImage || guild.seo?.ogImage
+      ? [`${guild.slug}:${guild.media?.reviewStatus}`]
+      : []
+  ));
 
-  assert.deepEqual(enrichment.guilds.map((guild) => guild.slug), ['dev-guild', 'writers-guild']);
-  assert.equal(enrichment.guilds.every((guild) => guild.image && guild.media?.reviewStatus === 'approved'), true);
+  assert.deepEqual(enrichment.guilds.map((guild) => guild.slug), ['dev-guild', 'greensci', 'writers-guild']);
+  assert.deepEqual(guildImageStatuses.sort(), ['dev-guild:approved', 'writers-guild:approved']);
   for (const slug of requiredEnrichedInitiativeSlugs) {
     assert.equal(initiativeSlugs.has(slug), true);
   }

@@ -32,6 +32,12 @@ import {
   PUBLIC_MAP_STATE_ROUTE,
 } from '@greenpill-network/agent/map-state';
 import {
+  NEWSLETTER_SUBSCRIBE_ROUTE,
+  RESEND_CONTACTS_ENDPOINT,
+  RESEND_CONTACTS_USER_AGENT,
+  subscribeToNewsletter,
+} from '@greenpill-network/agent/newsletter';
+import {
   PUBLIC_OPERATIONAL_CONTENT_ROUTE,
 } from '@greenpill-network/agent/public-content';
 import {
@@ -64,6 +70,7 @@ test('agent package exposes stable public route contracts', () => {
   assert.equal(PUBLIC_MAP_STATE_ROUTE, '/map/state');
   assert.equal(PUBLIC_COUNTS_ROUTE, '/public-counts');
   assert.equal(PUBLIC_OPERATIONAL_CONTENT_ROUTE, '/content/public-snapshot');
+  assert.equal(NEWSLETTER_SUBSCRIBE_ROUTE, '/newsletter/subscribe');
   assert.equal(CHAPTER_IMPACT_ROUTE, '/impact/chapters/:slug');
   assert.equal(RESEND_WEBHOOK_ROUTE, '/webhooks/resend');
   assert.equal(buildChapterImpactPath('greenpill nigeria'), '/impact/chapters/greenpill%20nigeria');
@@ -75,6 +82,131 @@ test('agent package exposes stable public route contracts', () => {
 
 const RESEND_TEST_WEBHOOK_SECRET = `whsec_${Buffer.from('test-resend-webhook-secret').toString('base64')}`;
 const RESEND_TEST_RECIPIENT_HASH_SECRET = 'test-recipient-hash-secret';
+
+test('newsletter subscribe route wires POST requests through the agent app', async () => {
+  const calls = [];
+  const app = createAgentApp({
+    newsletterRepository: {
+      async subscribe(input) {
+        calls.push(input);
+        return {
+          status: 200,
+          body: { ok: true, status: 'subscribed' },
+        };
+      },
+    },
+  });
+
+  const response = await app.request(NEWSLETTER_SUBSCRIBE_ROUTE, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'person@example.org' }),
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { ok: true, status: 'subscribed' });
+  assert.deepEqual(calls, [{ email: 'person@example.org' }]);
+});
+
+test('newsletter subscribe rejects invalid emails before contacting Resend', async () => {
+  let fetchCalls = 0;
+  const result = await subscribeToNewsletter({ email: 'not-an-email' }, {
+    env: { RESEND_API_KEY: 'resend-secret' },
+    fetchImpl: async () => {
+      fetchCalls += 1;
+      return Response.json({});
+    },
+  });
+
+  assert.equal(result.status, 400);
+  assert.deepEqual(result.body, { ok: false, error: 'invalid_email' });
+  assert.equal(fetchCalls, 0);
+});
+
+test('newsletter subscribe reports missing Resend config without calling provider', async () => {
+  let fetchCalls = 0;
+  const result = await subscribeToNewsletter({ email: 'person@example.org' }, {
+    env: {},
+    fetchImpl: async () => {
+      fetchCalls += 1;
+      return Response.json({});
+    },
+  });
+
+  assert.equal(result.status, 503);
+  assert.deepEqual(result.body, { ok: false, error: 'newsletter_not_configured' });
+  assert.equal(fetchCalls, 0);
+});
+
+test('newsletter subscribe creates a Resend contact with Garden metadata', async () => {
+  let request;
+  const result = await subscribeToNewsletter({ email: ' Person@Example.ORG ' }, {
+    env: {
+      RESEND_API_KEY: 'resend-secret',
+      RESEND_NEWSLETTER_SEGMENT_ID: 'seg_123',
+      RESEND_NEWSLETTER_TOPIC_ID: 'topic_456',
+    },
+    fetchImpl: async (url, options) => {
+      request = { url, options };
+      return Response.json({ object: 'contact', id: 'contact_1' });
+    },
+  });
+
+  assert.equal(result.status, 200);
+  assert.deepEqual(result.body, { ok: true, status: 'subscribed' });
+  assert.equal(request.url, RESEND_CONTACTS_ENDPOINT);
+  assert.equal(request.options.method, 'POST');
+  assert.equal(request.options.headers.authorization, 'Bearer resend-secret');
+  assert.equal(request.options.headers['content-type'], 'application/json');
+  assert.equal(request.options.headers['user-agent'], RESEND_CONTACTS_USER_AGENT);
+  assert.deepEqual(JSON.parse(request.options.body), {
+    email: 'person@example.org',
+    unsubscribed: false,
+    properties: {
+      source: 'garden',
+      signup_path: '/garden',
+    },
+    segments: [{ id: 'seg_123' }],
+    topics: [{ id: 'topic_456', subscription: 'opt_in' }],
+  });
+});
+
+test('newsletter subscribe treats existing contacts as public success', async () => {
+  const result = await subscribeToNewsletter({ email: 'person@example.org' }, {
+    env: { RESEND_API_KEY: 'resend-secret' },
+    fetchImpl: async () => new Response(JSON.stringify({
+      error: { message: 'Contact already exists.' },
+    }), {
+      status: 409,
+      headers: { 'content-type': 'application/json' },
+    }),
+  });
+
+  assert.equal(result.status, 200);
+  assert.deepEqual(result.body, { ok: true, status: 'subscribed' });
+});
+
+test('newsletter subscribe responses do not leak raw email addresses', async () => {
+  const rawEmail = 'Person@Example.org';
+  const invalid = await subscribeToNewsletter({ email: rawEmail }, {
+    env: {},
+  });
+  assert.doesNotMatch(JSON.stringify(invalid.body), /Person@Example\.org/i);
+
+  const providerFailure = await subscribeToNewsletter({ email: rawEmail }, {
+    env: { RESEND_API_KEY: 'resend-secret' },
+    fetchImpl: async () => new Response(JSON.stringify({
+      message: `Provider rejected ${rawEmail}`,
+    }), {
+      status: 500,
+      headers: { 'content-type': 'application/json' },
+    }),
+  });
+
+  assert.equal(providerFailure.status, 502);
+  assert.deepEqual(providerFailure.body, { ok: false, error: 'newsletter_unavailable' });
+  assert.doesNotMatch(JSON.stringify(providerFailure.body), /Person@Example\.org/i);
+});
 
 function signedResendWebhookRequest(payload, {
   secret = RESEND_TEST_WEBHOOK_SECRET,
@@ -550,7 +682,10 @@ test('agent package exposes a Hono app with data-backed public routes', async ()
   assert.equal(mapStatePayload.intakeMode, 'moderated');
   assert.equal(mapStatePayload.counts.chapterNodes, 1);
   assert.equal(mapStatePayload.counts.approvedSubmittedNodes, 1);
-  assert.equal(mapStatePayload.edges.length, 1);
+  assert.equal(mapStatePayload.edges.length, 0);
+  assert.equal(mapStatePayload.edges.some((edge) => (
+    String(edge.from).startsWith('chapter:') || String(edge.to).startsWith('chapter:')
+  )), false);
   assert.equal(containsPrivateMapStateField(mapStatePayload), false);
 
   const counts = await app.request('/public-counts');

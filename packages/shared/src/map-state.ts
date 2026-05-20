@@ -362,13 +362,14 @@ export function generatePublicMapEdges(
   nodes: PublicMapStateNode[],
   { limit = 160 }: { limit?: number } = {}
 ): PublicMapStateEdge[] {
-  const chapters = nodes.filter((node) => node.type === 'chapter');
   const stewards = nodes.filter((node) => node.type === 'steward');
   const members = nodes.filter((node) => node.type === 'member');
-  const nonChapters = nodes.filter((node) => node.type !== 'chapter');
   const edges: PublicMapStateEdge[] = [];
   const edgeKeys = new Set<string>();
-  const personLinked = new Set<string>();
+  const stewardEdgeLimit = Math.min(
+    Math.max(0, limit),
+    Math.max(0, Math.ceil(stewards.length * 0.75))
+  );
 
   const addEdge = ({
     from,
@@ -396,8 +397,6 @@ export function generatePublicMapEdges(
       weight: Math.min(3, Math.max(1, weight)),
       source: 'generated-theme-match',
     });
-    if (from.type !== 'chapter') personLinked.add(from.id);
-    if (to.type !== 'chapter') personLinked.add(to.id);
   };
 
   // Steward-member edges are the primary local web: members find nearby
@@ -448,11 +447,14 @@ export function generatePublicMapEdges(
       });
     }
   }
+  let stewardEdgesAdded = 0;
   for (const candidate of stewardCandidates.sort((a, b) => (
     b.shared.length - a.shared.length ||
     a.distance - b.distance ||
     a.a.name.localeCompare(b.a.name)
   ))) {
+    if (stewardEdgesAdded >= stewardEdgeLimit) break;
+    const edgeCountBefore = edges.length;
     addEdge({
       from: candidate.a,
       to: candidate.b,
@@ -460,6 +462,7 @@ export function generatePublicMapEdges(
       theme: candidate.shared[0],
       weight: candidate.shared.length,
     });
+    if (edges.length > edgeCountBefore) stewardEdgesAdded += 1;
     if (edges.length >= limit) return edges;
   }
 
@@ -490,31 +493,6 @@ export function generatePublicMapEdges(
       kind: 'member-member',
       theme: candidate.shared[0],
       weight: candidate.shared.length,
-    });
-    if (edges.length >= limit) return edges;
-  }
-
-  // Fallback anchor: if a submitted public node has no person relationship yet,
-  // attach that individual to the closest compatible chapter so a sparse first
-  // workshop still renders context without creating chapter-to-chapter claims.
-  for (const node of nonChapters) {
-    if (personLinked.has(node.id)) continue;
-    const match = chapters
-      .map((chapter) => ({
-        chapter,
-        shared: sharedThemes(node, chapter),
-        distance: distanceDegrees(node, chapter),
-      }))
-      .filter((candidate) => candidate.shared.length > 0)
-      .sort((a, b) => b.shared.length - a.shared.length || a.distance - b.distance)[0];
-
-    if (!match) continue;
-    addEdge({
-      from: node,
-      to: match.chapter,
-      kind: 'person-anchor',
-      theme: match.shared[0],
-      weight: match.shared.length,
     });
     if (edges.length >= limit) return edges;
   }

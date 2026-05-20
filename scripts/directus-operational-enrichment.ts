@@ -9,6 +9,7 @@ const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const seedDir = join(rootDir, 'packages/website/src/data/operational-content-seed');
 const guildSlugs = Object.freeze([
   'dev-guild',
+  'greensci',
   'writers-guild',
 ]);
 

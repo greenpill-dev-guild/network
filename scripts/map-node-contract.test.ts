@@ -257,8 +257,7 @@ test('public map-state combines chapter anchors and approved submitted nodes saf
   assert.equal(payload.counts.chapterNodes, 1);
   assert.equal(payload.counts.approvedSubmittedNodes, 1);
   assert.equal(payload.counts.byTheme.public, 2);
-  assert.equal(payload.edges.length, 1);
-  assert.equal(payload.edges[0].source, 'generated-theme-match');
+  assert.equal(payload.edges.length, 0);
   assert.equal(containsPrivateMapStateField(payload), false);
   assert.equal(JSON.stringify(payload).includes('private@example.com'), false);
   assert.equal(JSON.stringify(payload).includes('private submission context'), false);
@@ -320,7 +319,43 @@ test('public map-state generates person-first relationship edges', () => {
     edge.to === 'submission:steward-1'
   )), true);
   assert.equal(payload.edges.some((edge) => (
-    edge.from.startsWith('chapter:') && edge.to.startsWith('chapter:')
+    edge.from.startsWith('chapter:') || edge.to.startsWith('chapter:')
+  )), false);
+});
+
+test('public map-state keeps steward-only relationships sparse and theme-based', () => {
+  const stewardNodes = Array.from({ length: 8 }, (_, index) => ({
+    id: `steward-${index + 1}`,
+    name: `Steward ${index + 1}`,
+    place: `Place ${index + 1}`,
+    lat: 5 + index,
+    long: -70 + index * 8,
+    role: 'steward',
+    themes: ['public', index % 2 === 0 ? 'events' : 'funding'],
+    status: 'approved',
+    source: 'approved-submission',
+  }));
+  const payload = toPublicMapStatePayload({
+    generatedAt: '2026-05-20T12:30:00.000Z',
+    chapterLocations: [{
+      id: 'anchor-chapter',
+      name: 'Anchor Chapter',
+      lat: 0,
+      long: 0,
+      link: '/chapters/anchor-chapter',
+      status: 'active',
+      themes: ['public'],
+    }],
+    publicMapNodes: stewardNodes,
+  });
+
+  const stewardEdges = payload.edges.filter((edge) => edge.kind === 'steward-steward');
+  assert.ok(stewardEdges.length > 0, 'shared-theme stewards should still connect without members');
+  assert.ok(stewardEdges.length <= Math.ceil(stewardNodes.length * 0.75));
+  assert.ok(stewardEdges.length < (stewardNodes.length * (stewardNodes.length - 1)) / 2);
+  assert.equal(stewardEdges.every((edge) => edge.theme === 'public'), true);
+  assert.equal(payload.edges.some((edge) => (
+    edge.from.startsWith('chapter:') || edge.to.startsWith('chapter:')
   )), false);
 });
 
@@ -537,12 +572,34 @@ test('home map intake requires a valid email and stores local pending only after
     new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
     'utf8'
   );
+  const homepage = await readFile(
+    new URL('../packages/website/src/pages/index.astro', import.meta.url),
+    'utf8'
+  );
 
   // Add-node form requires a private owner email and explains its use.
   assert.match(component, /<input name="contact"[^>]*type="email"[^>]*required[^>]*>/);
   assert.match(component, /future edit links/);
   assert.match(component, /email,\s*contactConsent: true/s);
   assert.doesNotMatch(component, /email:\s*email\s*\|\|\s*undefined/);
+  assert.match(component, /<dialog class="gp-home-map-addnode-dialog"/);
+  assert.match(homepage, /<Button type="button" data-home-map-open/);
+  assert.doesNotMatch(component, /data-addnode-trigger/);
+  assert.match(component, /showModal/);
+  assert.match(component, /addDialog\?\.addEventListener\('cancel'/);
+  assert.match(component, /closeAddDialogOnEscape/);
+  assert.match(component, /event\.target === addDialog/);
+  assert.doesNotMatch(component, /<details class="gp-home-map-addnode"/);
+
+  // The HiFi flow is a multi-step walkthrough, not the previous raw checkbox
+  // form embedded in the map controls.
+  assert.match(component, /data-walkthrough-step="themes"/);
+  assert.match(component, /data-walkthrough-step="identity"/);
+  assert.match(component, /data-walkthrough-step="review"/);
+  assert.match(component, /data-theme-choice/);
+  assert.match(component, /data-location-map/);
+  assert.match(component, /data-review-themes/);
+  assert.doesNotMatch(component, /type="checkbox"|type='checkbox'/);
 
   // Email is validated client-side, and a local pending node is written ONLY
   // after the server accepts the submission (a 201 response). A rejected or
@@ -582,13 +639,13 @@ test('home map enforces the exactly-four-theme activity rule', async () => {
   assert.match(component, /Choose exactly four themes/);
   assert.match(component, /data-home-map-theme-count/);
   assert.match(component, /REQUIRED_THEME_COUNT = 4/);
-  assert.match(component, /themes\.length !== 4/);
+  assert.match(component, /themes\.length !== REQUIRED_THEME_COUNT/);
 
   // The exactly-four guard sits after the email check (so a local pending node
   // is still never written before the email is valid) and before the fetch.
   const submitIndex = component.indexOf("addForm?.addEventListener('submit'");
   const emailValidationIndex = component.indexOf('emailInput?.checkValidity()', submitIndex);
-  const themeGuardIndex = component.indexOf('themes.length !== 4', submitIndex);
+  const themeGuardIndex = component.indexOf('themes.length !== REQUIRED_THEME_COUNT', submitIndex);
   const fetchIndex = component.indexOf('await fetch(`${agentBaseUrl}/map-nodes`', submitIndex);
   assert.ok(emailValidationIndex !== -1 && themeGuardIndex !== -1 && fetchIndex !== -1);
   assert.ok(emailValidationIndex < themeGuardIndex, 'email validity is still checked first');
@@ -620,6 +677,27 @@ test('home map grows live: reconciles, polls visibly, and redraws after submit',
 
   // /map/state stays the canonical public source, fetched no-store.
   assert.match(component, /\$\{agentBaseUrl\}\/map\/state`, \{ cache: 'no-store' \}/);
+});
+
+test('home map focus cards are anchored near nodes, not bottom-left panels', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+
+  assert.match(component, /data-focus-themes/);
+  assert.match(component, /data-focus-connections/);
+  assert.match(component, /focusEl\.style\.left = `\$\{xPct\}%`/);
+  assert.match(component, /focusEl\.style\.top = `\$\{yPct\}%`/);
+  assert.match(component, /focusEl\.style\.transform = `translate/);
+  assert.match(component, /root\.addEventListener\('pointermove'/);
+  assert.match(component, /nodeAtPointer/);
+
+  const focusCssStart = component.indexOf('/* Focus card */');
+  const controlsCssStart = component.indexOf('/* Embedded HiFi-style map controls */');
+  const focusCss = component.slice(focusCssStart, controlsCssStart);
+  assert.doesNotMatch(focusCss, /bottom:\s*12px/);
+  assert.doesNotMatch(focusCss, /left:\s*12px/);
 });
 
 test('map-node edit flow has an operator cleanup command', async () => {

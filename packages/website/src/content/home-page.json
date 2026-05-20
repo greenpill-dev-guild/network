@@ -154,9 +154,9 @@
   "proofSignals": [
     {
       "label": "Podcast archive",
-      "value": "293 episodes",
-      "source": "S006 Apple Podcasts",
-      "href": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639"
+      "value": "296 episodes",
+      "source": "Libsyn RSS snapshot",
+      "href": "https://rss.libsyn.com/shows/400481/destinations/3304589.xml"
     },
     {
       "label": "Dev Guild grant",

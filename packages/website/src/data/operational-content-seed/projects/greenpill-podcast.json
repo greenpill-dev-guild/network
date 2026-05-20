@@ -3,7 +3,7 @@
   "status": "active",
   "guild": "writers-guild",
   "summary": "Long-running public podcast about crypto-economic systems that create positive externalities.",
-  "description": "The Greenpill Podcast remains one of the network's strongest public media surfaces, with the research artifact citing 293 public episodes from 2022 through 2026 and sub-series including VDAO x Greenpill and Network Nations.",
+  "description": "The Greenpill Podcast remains one of the network's strongest public media surfaces, with the current Libsyn RSS snapshot exposing 296 public episodes from 2022 through 2026 and sub-series including VDAO x Greenpill and Network Nations.",
   "image": "",
   "techStack": [
     "Podcast",
@@ -25,9 +25,9 @@
   "proofSignals": [
     {
       "label": "Podcast archive",
-      "value": "293 episodes",
-      "source": "S006 Apple Podcasts",
-      "href": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639"
+      "value": "296 episodes",
+      "source": "Libsyn RSS snapshot",
+      "href": "https://rss.libsyn.com/shows/400481/destinations/3304589.xml"
     }
   ],
   "media": {

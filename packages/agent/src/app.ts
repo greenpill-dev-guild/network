@@ -24,6 +24,10 @@ import {
   createMapStateRepository,
 } from './map-state.js';
 import {
+  NEWSLETTER_SUBSCRIBE_ROUTE,
+  createNewsletterRepository,
+} from './newsletter.js';
+import {
   PUBLIC_OPERATIONAL_CONTENT_ROUTE,
   createPublicContentRepository,
 } from './public-content.js';
@@ -50,6 +54,7 @@ export interface AgentAppOptions {
   impactRepository?: UnknownRecord;
   mapNodeRepository?: UnknownRecord;
   mapStateRepository?: UnknownRecord;
+  newsletterRepository?: UnknownRecord;
   publicContentRepository?: UnknownRecord;
   resendWebhookRepository?: UnknownRecord;
   reportEditLinkError?: (event: UnknownRecord) => void;
@@ -97,12 +102,14 @@ export function createAgentApp({
   impactRepository = createImpactRepository(),
   mapNodeRepository = createMapNodeRepository(),
   mapStateRepository = createMapStateRepository({ mapNodeRepository }),
+  newsletterRepository,
   publicContentRepository = createPublicContentRepository(),
   resendWebhookRepository = createResendWebhookRepository(),
   reportEditLinkError = defaultReportEditLinkError,
   env = process.env,
 }: AgentAppOptions = {}) {
   const app = new Hono();
+  const newsletter = newsletterRepository ?? createNewsletterRepository({ env });
 
   app.use('*', cors({
     origin: (origin) => PUBLIC_CORS_ORIGINS.includes(origin) ? origin : '',
@@ -148,6 +155,18 @@ export function createAgentApp({
         error: { code: 'webhook_persistence_failed' },
       }, 500);
     }
+  });
+
+  app.post(NEWSLETTER_SUBSCRIBE_ROUTE, async (context) => {
+    let input: UnknownRecord = {};
+    try {
+      input = await context.req.json() as UnknownRecord;
+    } catch {
+      input = {};
+    }
+
+    const response = await (newsletter as any).subscribe(input);
+    return context.json(response.body, response.status as any);
   });
 
   app.get('/impact/chapters/:slug', async (context) => {

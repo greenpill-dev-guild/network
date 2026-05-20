@@ -404,7 +404,6 @@ export default config({
       schema: {
         hero: pageHeroField,
         sections: pageSectionField,
-        featuredChapterSlugs: slugListField('Featured Chapter Slugs', 'Chapter Slug'),
         filterCopy: fields.object({
           regionLabel: fields.text({ label: 'Region Filter Label' }),
           statusLabel: fields.text({ label: 'Status Filter Label' }),

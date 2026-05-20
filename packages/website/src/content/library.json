@@ -2,7 +2,7 @@
   "hero": {
     "overline": "Library",
     "title": "Everything we have made public.",
-    "dek": "Books, podcast conversations, Hub threads, project docs, and Garden resources from across the Greenpill network.",
+    "dek": "Books, podcast conversations, working guilds, and Garden guides from across the Greenpill network.",
     "body": "Use the Library as the public knowledge commons. Keep private Drive docs as research references until they have a public mirror or steward approval.",
     "primaryCta": {
       "label": "Browse books",
@@ -11,8 +11,8 @@
     },
     "secondaryCta": {
       "label": "Listen to the podcast",
-      "href": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639",
-      "kind": "external"
+      "href": "#podcast",
+      "kind": "internal"
     },
     "media": {
       "image": "/images/o-impact-networks.jpg",
@@ -54,10 +54,10 @@
       "key": "podcast",
       "overline": "Podcast",
       "title": "A long-running public conversation.",
-      "dek": "The podcast archive has 293 public episodes according to the research artifact's Apple Podcasts source.",
-      "body": "Render episode resources only when they have source-backed title, guest, date, and link metadata.",
+      "dek": "The podcast archive has 296 public episodes in the current Libsyn RSS snapshot.",
+      "body": "Render recent episodes from the build-time RSS snapshot and keep archive links clearly external.",
       "cta": {
-        "label": "Listen on Apple Podcasts",
+        "label": "Open Apple Podcasts archive",
         "href": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639",
         "kind": "external"
       },
@@ -76,14 +76,14 @@
     },
     {
       "key": "tools-guides",
-      "overline": "Tools and guides",
-      "title": "Public docs for work that is already visible.",
-      "dek": "Green Goods docs, Regen Coordination Hub threads, Regen Protocols, Paragraph articles, and Dev Guild writing can render now; internal Drive drafts stay review-only.",
-      "body": "Use resource cards to connect readers to public docs without making Directus or private admin the content source.",
+      "overline": "Guilds and Garden",
+      "title": "Working circles and living guides.",
+      "dek": "Guild cards should show public working circles, while Knowledge Garden cards stay focused on onboarding, stewardship, and living guides.",
+      "body": "Use source-backed guide cards for the Garden and keep generic project docs out of that section.",
       "cta": {
-        "label": "Open Green Goods docs",
-        "href": "https://docs.greengoods.app/community/why-we-build",
-        "kind": "external"
+        "label": "Open Garden",
+        "href": "/garden",
+        "kind": "internal"
       },
       "featuredRefs": [
         {
@@ -129,7 +129,8 @@
   ],
   "featuredGuildSlugs": [
     "dev-guild",
-    "writers-guild"
+    "writers-guild",
+    "greensci"
   ],
   "gardenCard": {
     "eyebrow": "Garden",
@@ -144,14 +145,14 @@
   "proofSignals": [
     {
       "label": "Podcast archive",
-      "value": "293 episodes",
-      "source": "S006 Apple Podcasts",
-      "href": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639"
+      "value": "296 episodes",
+      "source": "Libsyn RSS snapshot",
+      "href": "https://rss.libsyn.com/shows/400481/destinations/3304589.xml"
     }
   ],
   "seo": {
     "title": "Library · Greenpill Network",
-    "description": "Browse Greenpill books, podcast episodes, Hub threads, public docs, project resources, and Garden onboarding material.",
+    "description": "Browse Greenpill books, recent podcast episodes, public guilds, and Garden onboarding material.",
     "ogImage": "",
     "canonicalPath": "/library",
     "noindex": false

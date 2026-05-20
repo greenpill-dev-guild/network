@@ -1,0 +1,96 @@
+{
+  "name": "GreenSci",
+  "type": "guild",
+  "status": "active",
+  "summary": "Open regenerative science, DeSci-oriented knowledge work, and public research coordination linked to the Greenpill network.",
+  "description": "GreenSci is a public guild surface for regenerative science and open research work. The launch Library should treat it as a guild with an external home until source-backed local detail content exists.",
+  "foundedYear": 2024,
+  "oneliner": "Open regenerative science and public research coordination.",
+  "outputs": [
+    {
+      "label": "GreenSci website",
+      "summary": "Public guild home for GreenSci research and DeSci-oriented work.",
+      "href": "https://greensci.pages.dev/"
+    },
+    {
+      "label": "Open research",
+      "summary": "Regenerative science and knowledge commons work that can be linked from the public Library.",
+      "href": "https://greensci.pages.dev/"
+    }
+  ],
+  "mandateParagraphs": [
+    "GreenSci belongs in the public guild set, not as a project or generic resource card.",
+    "The Library should link readers to the public GreenSci site until a source-backed local guild detail page is written and approved."
+  ],
+  "cadence": {
+    "summary": "Public cadence needs steward confirmation before launch copy promises a standing schedule.",
+    "callTime": "",
+    "format": "Open research guild",
+    "recordingsHref": ""
+  },
+  "principles": [
+    {
+      "order": 1,
+      "title": "Open research",
+      "body": "Make regenerative science work visible through public, reusable knowledge surfaces."
+    },
+    {
+      "order": 2,
+      "title": "Source-backed publishing",
+      "body": "Do not create a local guild detail page until there is enough approved source material for one."
+    }
+  ],
+  "image": "",
+  "stewards": [],
+  "stewardSlugs": [],
+  "memberSlugs": [],
+  "publicMembers": [],
+  "themeSlugs": [
+    "knowledge-commons",
+    "education",
+    "public"
+  ],
+  "links": [
+    {
+      "label": "GreenSci",
+      "url": "https://greensci.pages.dev/",
+      "subtext": "Public GreenSci website",
+      "handle": "greensci.pages.dev",
+      "action": "Visit",
+      "icon": "external",
+      "kind": "external"
+    }
+  ],
+  "connectLinks": [
+    {
+      "label": "GreenSci",
+      "url": "https://greensci.pages.dev/",
+      "subtext": "Public GreenSci website",
+      "handle": "greensci.pages.dev",
+      "action": "Visit guild site",
+      "icon": "external",
+      "kind": "external"
+    }
+  ],
+  "featuredWeight": 60,
+  "proofSignals": [
+    {
+      "label": "GreenSci website",
+      "value": "Public site",
+      "source": "GreenSci",
+      "href": "https://greensci.pages.dev/"
+    }
+  ],
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "GreenSci · Greenpill Network",
+    "description": "GreenSci is a public Greenpill guild surface for regenerative science and open research work.",
+    "ogImage": "",
+    "canonicalPath": "",
+    "noindex": false
+  }
+}

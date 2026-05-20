@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-20T09:54:44.399Z",
+  "generatedAt": "2026-05-20T13:58:28.445Z",
   "themes": [
     {
       "name": "Local Regeneration",
@@ -924,7 +924,7 @@
       "city": "Cape Town",
       "country": "South Africa",
       "region": "africa",
-      "summary": "Active chapter in Cape Town, South Africa. Public source links and detailed program notes are being backfilled with stewards.",
+      "summary": "Public-goods gatherings and Ethereum community events connecting regenerative builders in South Africa.",
       "introQuote": "",
       "introQuoteAttribution": "",
       "image": "/images/chapters/greenpill-cape-town-eth10-venue.jpg",
@@ -1256,7 +1256,7 @@
       "city": "Ottawa",
       "country": "Canada",
       "region": "americas",
-      "summary": "Public research confirms an active Greenpill Ottawa X account. Deeper chapter activity needs steward backfill before launch copy makes specific program claims.",
+      "summary": "Local regenerative coordination, public-goods conversations, steward-led events, and active community channels in Ottawa.",
       "introQuote": "",
       "introQuoteAttribution": "",
       "image": "/images/chapters/greenpill-ottawa-reimagining-future.jpg",
@@ -1354,7 +1354,7 @@
       "city": "London",
       "country": "Canada",
       "region": "americas",
-      "summary": "Public TechAlliance listing confirms Greenpill London Ontario presented Vibe Coding for Good, a collaborative build night at Reimagine Co on April 28, 2025.",
+      "summary": "Collaborative build nights and local public-goods software work rooted in London, Ontario.",
       "introQuote": "",
       "introQuoteAttribution": "",
       "image": "/images/chapters/greenpill-london-ontario-event.jpg",
@@ -1456,7 +1456,7 @@
       "city": "Toronto",
       "country": "Canada",
       "region": "americas",
-      "summary": "Public sources identify Greenpill Toronto as a Toronto public-goods and regenerative cryptoeconomics chapter, including Consensus 2025 sponsor context and greenpill.to / greenpill.ca links.",
+      "summary": "A Toronto hub for regenerative cryptoeconomics, public-goods builders, local impact projects, and Greenpill programming.",
       "introQuote": "",
       "introQuoteAttribution": "",
       "image": "/images/chapters/greenpill-toronto-web3-solutions.jpg",
@@ -1556,7 +1556,7 @@
       "city": "Distributed",
       "country": "Kenya",
       "region": "africa",
-      "summary": "Public Gitcoin source describes a Kenya program focused on biological carbon sequestration, sustainable farming, Web3 workshops, soil enhancement, river cleanups, waste collection, wallet-safety education, and a Regen Hub. Exact event year needs steward review.",
+      "summary": "ReFi education, soil health, river cleanups, wallet-safety workshops, and local Regen Hub coordination in Kenya.",
       "introQuote": "",
       "introQuoteAttribution": "",
       "image": "/images/chapters/greenpill-kenya-profile.jpg",
@@ -1646,7 +1646,7 @@
       "city": "Distributed",
       "country": "Germany / DACH",
       "region": "europe",
-      "summary": "The public GreenPillGER account frames Greenpill Germany / DACH around decentralized communities, regenerative finance, biodiversity, climate, and social movement work. The previously listed chapter website needs a fresh source check before launch.",
+      "summary": "A DACH network for ReFi, biodiversity, climate action, and decentralized community builders.",
       "introQuote": "",
       "introQuoteAttribution": "",
       "image": "/images/chapters/greenpill-germany-profile.jpg",
@@ -1737,7 +1737,7 @@
       "city": "Abidjan",
       "country": "Cote d'Ivoire",
       "region": "africa",
-      "summary": "Public Green Mission / La Ligne Verte source describes a coordination and environmental action platform around collection, education, and waste valorization. Targets should be published as goals, not completed metrics.",
+      "summary": "A local Green Mission effort focused on environmental education, collection, and waste valorization.",
       "introQuote": "",
       "introQuoteAttribution": "",
       "image": "/images/chapters/greenpill-civ-mission.jpg",
@@ -1951,7 +1951,7 @@
       "city": "New York City",
       "country": "United States",
       "region": "americas",
-      "summary": "Public sources describe Greenpill NYC as a public-goods education chapter with monthly meetups, a Luma calendar, and an active X account.",
+      "summary": "Monthly meetups, public-goods education, and local builder gatherings for New York City's Greenpill community.",
       "introQuote": "",
       "introQuoteAttribution": "",
       "image": "/images/chapters/greenpill-nyc-meetup.jpg",
@@ -2090,7 +2090,7 @@
       "city": "Koh Phangan",
       "country": "Thailand",
       "region": "asia",
-      "summary": "Public sources connect Greenpill Koh Phangan to ReFi Phangan, local regenerative finance, PhanganQF, Re:Plast recycling context, Giveth, X, and a 10 Years of Ethereum Phangan event.",
+      "summary": "Island ReFi coordination across Greenpill, ReFi Phangan, recycling efforts, quadratic funding, and Ethereum gatherings.",
       "introQuote": "",
       "introQuoteAttribution": "",
       "image": "/images/chapters/greenpill-phangan-ethereum10.jpg",
@@ -2217,7 +2217,7 @@
       "city": "Taipei (distributed)",
       "country": "Taiwan",
       "region": "asia",
-      "summary": "GreenSofa, also referenced as Greenpill Taiwan, has public HackMD, Giveth, X, Hub, and Taiwan Hypercerts Dashboard sources with itemized public-goods tooling and event funding receipts.",
+      "summary": "Taiwan-based Greenpill node advancing Ethereum localism, Hypercerts experiments, public-goods tooling, and civic funding events.",
       "introQuote": "",
       "introQuoteAttribution": "",
       "image": "/images/chapters/greensofa-ethereum-localism.jpg",
@@ -2390,7 +2390,7 @@
       "city": "Lagos / Awka",
       "country": "Nigeria",
       "region": "africa",
-      "summary": "Public goods and ReFi education chapter with source-backed Water Cup updates, a 10-week Take the Greenpill education program, an Ethereum-at-10 Awka event, and a public Water Cup Mapping Hypercert.",
+      "summary": "ReFi education, Water Cup mapping, public-goods events, and impact proof work across Lagos, Awka, and beyond.",
       "introQuote": "",
       "introQuoteAttribution": "",
       "image": "/images/chapters/greenpill-nigeria-education.jpeg",
@@ -2545,7 +2545,7 @@
       "city": "Rio de Janeiro (multi-city)",
       "country": "Brazil",
       "region": "americas",
-      "summary": "Source-backed public chapter with weekly Greenpilled sessions, Portuguese translations, ImpactEAS work, Green Goods contributions, Gitcoin / KarmaGAP climate milestones, and public events in Rio de Janeiro.",
+      "summary": "Weekly Portuguese-language gatherings, learning resources, and climate-oriented public-goods work across Brazil.",
       "introQuote": "",
       "introQuoteAttribution": "",
       "image": "/images/chapters/greenpill-brasil-community.jpg",
@@ -3344,6 +3344,104 @@
       "memberSlugs": [],
       "publicMembers": [],
       "themeSlugs": [
+        "knowledge-commons",
+        "education",
+        "public"
+      ],
+      "links": [
+        {
+          "label": "GreenSci",
+          "url": "https://greensci.pages.dev/",
+          "subtext": "Public GreenSci website",
+          "handle": "greensci.pages.dev",
+          "action": "Visit",
+          "icon": "external",
+          "kind": "external"
+        }
+      ],
+      "connectLinks": [
+        {
+          "label": "GreenSci",
+          "url": "https://greensci.pages.dev/",
+          "subtext": "Public GreenSci website",
+          "handle": "greensci.pages.dev",
+          "action": "Visit guild site",
+          "icon": "external",
+          "kind": "external"
+        }
+      ],
+      "proofSignals": [
+        {
+          "label": "GreenSci website",
+          "value": "Public site",
+          "source": "GreenSci",
+          "href": "https://greensci.pages.dev/"
+        }
+      ],
+      "media": {
+        "image": "",
+        "imageAlt": "",
+        "ogImage": ""
+      },
+      "seo": {
+        "title": "GreenSci · Greenpill Network",
+        "description": "GreenSci is a public Greenpill guild surface for regenerative science and open research work.",
+        "ogImage": "",
+        "canonicalPath": "",
+        "noindex": false
+      },
+      "name": "GreenSci",
+      "summary": "Open regenerative science, DeSci-oriented knowledge work, and public research coordination linked to the Greenpill network.",
+      "description": "GreenSci is a public guild surface for regenerative science and open research work. The launch Library should treat it as a guild with an external home until source-backed local detail content exists.",
+      "foundedYear": 2024,
+      "oneliner": "Open regenerative science and public research coordination.",
+      "outputs": [
+        {
+          "label": "GreenSci website",
+          "summary": "Public guild home for GreenSci research and DeSci-oriented work.",
+          "href": "https://greensci.pages.dev/"
+        },
+        {
+          "label": "Open research",
+          "summary": "Regenerative science and knowledge commons work that can be linked from the public Library.",
+          "href": "https://greensci.pages.dev/"
+        }
+      ],
+      "mandateParagraphs": [
+        "GreenSci belongs in the public guild set, not as a project or generic resource card.",
+        "The Library should link readers to the public GreenSci site until a source-backed local guild detail page is written and approved."
+      ],
+      "cadence": {
+        "summary": "Public cadence needs steward confirmation before launch copy promises a standing schedule.",
+        "callTime": "",
+        "format": "Open research guild",
+        "recordingsHref": ""
+      },
+      "principles": [
+        {
+          "order": 1,
+          "title": "Open research",
+          "body": "Make regenerative science work visible through public, reusable knowledge surfaces."
+        },
+        {
+          "order": 2,
+          "title": "Source-backed publishing",
+          "body": "Do not create a local guild detail page until there is enough approved source material for one."
+        }
+      ],
+      "image": "",
+      "featuredWeight": 60,
+      "slug": "greensci",
+      "id": "greensci"
+    },
+    {
+      "type": "guild",
+      "status": "active",
+      "stewards": [],
+      "stewardSlugs": [],
+      "memberSlugs": [],
+      "publicMembers": [],
+      "themeSlugs": [
         "stories",
         "education",
         "knowledge-commons",
@@ -3398,7 +3496,7 @@
         },
         {
           "label": "Podcast archive",
-          "value": "293 episodes",
+          "value": "296 episodes",
           "source": "S006",
           "href": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639"
         },
@@ -3943,9 +4041,9 @@
       "proofSignals": [
         {
           "label": "Podcast archive",
-          "value": "293 episodes",
-          "source": "S006 Apple Podcasts",
-          "href": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639"
+          "value": "296 episodes",
+          "source": "Libsyn RSS snapshot",
+          "href": "https://rss.libsyn.com/shows/400481/destinations/3304589.xml"
         }
       ],
       "media": {
@@ -3963,7 +4061,7 @@
       "name": "Greenpill Podcast",
       "guild": "writers-guild",
       "summary": "Long-running public podcast about crypto-economic systems that create positive externalities.",
-      "description": "The Greenpill Podcast remains one of the network's strongest public media surfaces, with the research artifact citing 293 public episodes from 2022 through 2026 and sub-series including VDAO x Greenpill and Network Nations.",
+      "description": "The Greenpill Podcast remains one of the network's strongest public media surfaces, with the current Libsyn RSS snapshot exposing 296 public episodes from 2022 through 2026 and sub-series including VDAO x Greenpill and Network Nations.",
       "image": "",
       "repoUrl": "",
       "liveUrl": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639",
@@ -4343,7 +4441,7 @@
   ],
   "impactSourceBindings": {
     "version": 1,
-    "generatedAt": "2026-05-20T09:54:44.399Z",
+    "generatedAt": "2026-05-20T13:58:28.445Z",
     "chapters": [
       {
         "chapterSlug": "brasil",

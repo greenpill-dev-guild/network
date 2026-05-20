@@ -46,9 +46,15 @@ curl http://127.0.0.1:8787/content/public-snapshot
 
 `/content/public-snapshot` reads only published operational content from the
 Greenpill-owned `content` schema and applies the shared public-content privacy
-guard before returning data. `/impact/chapters/:slug`, `POST /map-nodes`, and
-`GET /map-nodes/public` preserve the same public/private boundary for impact and
-map-node data.
+guard before returning data. `/impact/chapters/:slug`, `POST /map-nodes`,
+`GET /map-nodes/public`, and `POST /newsletter/subscribe` preserve the same
+public/private boundary for impact, map-node data, and Garden newsletter signup.
+
+`POST /newsletter/subscribe` accepts a public email signup from `/garden` and
+creates a global Resend Contact with optional newsletter segment/topic metadata.
+Configure `RESEND_API_KEY` on the agent service and optionally set
+`RESEND_NEWSLETTER_SEGMENT_ID` or `RESEND_NEWSLETTER_TOPIC_ID`; never expose
+those values to the static website.
 
 `POST /webhooks/resend` receives Resend email delivery and inbound metadata at
 `https://agent.greenpill.network/webhooks/resend`. Set `RESEND_WEBHOOK_SECRET`

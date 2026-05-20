@@ -15,8 +15,8 @@
       "friction": "Lowest friction",
       "cta": {
         "label": "Subscribe",
-        "href": "https://paragraph.com/@greenpill",
-        "kind": "external"
+        "href": "#step-1",
+        "kind": "form"
       }
     },
     {
@@ -31,7 +31,7 @@
       "friction": "Light friction",
       "cta": {
         "label": "Open Telegram",
-        "href": "https://t.me/+g9TM8i7GpxAzMGUx",
+        "href": "https://t.me/+e-aa2Ed3LWVlYjNh",
         "kind": "external"
       }
     },
@@ -47,7 +47,7 @@
       "friction": "Medium friction",
       "cta": {
         "label": "Start assessment",
-        "href": "/garden#assessment",
+        "href": "https://forms.gle/1JNLcvExXLekgzt59",
         "kind": "form"
       }
     },
@@ -63,7 +63,7 @@
       "friction": "Highest friction",
       "cta": {
         "label": "Book a call",
-        "href": "/garden#steward-call",
+        "href": "https://calendar.app.google/gia7UpaSVKwwEKxy5",
         "kind": "booking"
       }
     }
@@ -116,8 +116,8 @@
   ],
   "stickyCta": {
     "label": "Start with Step 1",
-    "href": "https://paragraph.com/@greenpill",
-    "kind": "external"
+    "href": "#step-1",
+    "kind": "internal"
   },
   "emailPreview": {
     "kicker": "Field notes",
@@ -128,8 +128,8 @@
     "imageAlt": "",
     "cta": {
       "label": "Subscribe",
-      "href": "https://paragraph.com/@greenpill",
-      "kind": "external"
+      "href": "#step-1",
+      "kind": "form"
     }
   },
   "telegramPreview": {
@@ -141,7 +141,7 @@
     "imageAlt": "",
     "cta": {
       "label": "Open Telegram",
-      "href": "https://t.me/+g9TM8i7GpxAzMGUx",
+      "href": "https://t.me/+e-aa2Ed3LWVlYjNh",
       "kind": "external"
     }
   },
@@ -154,7 +154,7 @@
     "imageAlt": "",
     "cta": {
       "label": "Start assessment",
-      "href": "/garden#assessment",
+      "href": "https://forms.gle/1JNLcvExXLekgzt59",
       "kind": "form"
     }
   },
@@ -167,7 +167,7 @@
     "imageAlt": "",
     "cta": {
       "label": "Book a call",
-      "href": "/garden#steward-call",
+      "href": "https://calendar.app.google/gia7UpaSVKwwEKxy5",
       "kind": "booking"
     }
   },
