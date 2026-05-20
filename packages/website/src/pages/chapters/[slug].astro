@@ -8,6 +8,7 @@ import ArrowLink from '../../components/ui/ArrowLink.astro';
 import Overline from '../../components/ui/Overline.astro';
 import Text from '../../components/ui/Text.astro';
 import Meta from '../../components/ui/Meta.astro';
+import Avatar from '../../components/ui/Avatar.astro';
 import LinkRow from '../../components/ui/LinkRow.astro';
 import Breadcrumb from '../../components/shell/Breadcrumb.astro';
 import StatusChip from '../../components/ui/StatusChip.astro';
@@ -34,6 +35,14 @@ const proofSignals = data.proofSignals ?? [];
 const stewardSlugs: string[] = data.stewardSlugs ?? [];
 const stewardRecords = (data.stewards ?? []).filter((s: any) => s.name);
 const relatedSlugs: string[] = data.relatedChapterSlugs ?? [];
+const media = data.media ?? {};
+const hasApprovedMedia = media.reviewStatus === 'approved';
+const chapterImage = hasApprovedMedia ? (media.image || data.image || '') : '';
+const chapterImageAlt = media.imageAlt || `${data.name} chapter activity`;
+const chapterImageSource = hasApprovedMedia ? media.imageSourceUrl || '' : '';
+const chapterOgImage = hasApprovedMedia
+  ? data.seo?.ogImage || media.ogImage || chapterImage || undefined
+  : undefined;
 
 function titleCase(slug: string) {
   return slug
@@ -41,8 +50,12 @@ function titleCase(slug: string) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-const stewardEntries: { name: string; role?: string }[] = stewardRecords.length > 0
-  ? stewardRecords.map((s: any) => ({ name: s.name as string, role: s.role as string | undefined }))
+const stewardEntries: { name: string; role?: string; location?: string }[] = stewardRecords.length > 0
+  ? stewardRecords.map((s: any) => ({
+    name: s.name as string,
+    role: s.role as string | undefined,
+    location: s.location as string | undefined,
+  }))
   : stewardSlugs.map((slug) => ({ name: titleCase(slug) }));
 
 const allChapters = await getOperationalChapters();
@@ -67,7 +80,7 @@ function primaryInitiativeHref(initiative: any) {
 <GpLayout
   title={data.seo?.title || `${data.name} · Greenpill Chapter`}
   description={data.seo?.description || data.summary || `${data.name} chapter of the Greenpill Network.`}
-  ogImage={data.seo?.ogImage || data.media?.ogImage || undefined}
+  ogImage={chapterOgImage}
   canonicalPath={data.seo?.canonicalPath || `/chapters/${item.id}`}
   noindex={data.seo?.noindex}
   activeNav="Chapters"
@@ -113,6 +126,19 @@ function primaryInitiativeHref(initiative: any) {
               {data.link && <Button href={data.link} variant="ghost">Workspace</Button>}
               {links[0] && <Button href={links[0].url}>{links[0].action || links[0].label}</Button>}
             </div>
+          )}
+
+          {chapterImage && (
+            <figure class="gp-chapter-hero-media">
+              {chapterImageSource ? (
+                <a href={chapterImageSource} target="_blank" rel="noopener">
+                  <img src={chapterImage} alt={chapterImageAlt} loading="eager" decoding="async" />
+                </a>
+              ) : (
+                <img src={chapterImage} alt={chapterImageAlt} loading="eager" decoding="async" />
+              )}
+              {media.imageCredit && <figcaption>{media.imageCredit}</figcaption>}
+            </figure>
           )}
         </div>
       </Container>
@@ -300,9 +326,17 @@ function primaryInitiativeHref(initiative: any) {
           </div>
           <div class="gp-chapter-stewards">
             {stewardEntries.map((s) => (
-              <Chip tone="soft-gold">
-                {s.name}{s.role ? ` · ${s.role}` : ''}
-              </Chip>
+              <article class="gp-chapter-steward-card">
+                <Avatar name={s.name} size={48} />
+                <div>
+                  <Text variant="title-md" class="gp-chapter-steward-name">{s.name}</Text>
+                  {(s.role || s.location) && (
+                    <Text variant="caption" class="gp-chapter-steward-meta">
+                      {[s.role, s.location].filter(Boolean).join(' · ')}
+                    </Text>
+                  )}
+                </div>
+              </article>
             ))}
           </div>
         </Container>
@@ -479,6 +513,36 @@ function primaryInitiativeHref(initiative: any) {
     margin-top: var(--gp-space-md);
   }
 
+  .gp-chapter-hero-media {
+    width: min(100%, 920px);
+    margin: var(--gp-space-lg) 0 0;
+    overflow: hidden;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: 8px;
+    background: var(--gp-card);
+  }
+
+  .gp-chapter-hero-media a,
+  .gp-chapter-hero-media img {
+    display: block;
+    width: 100%;
+  }
+
+  .gp-chapter-hero-media img {
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+
+  .gp-chapter-hero-media figcaption {
+    padding: 10px 14px;
+    border-top: 1px solid var(--gp-border-soft);
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-mono);
+    font-size: 11px;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+
   .gp-chapter-section {
     padding: clamp(var(--gp-space-2xl), 5vw, var(--gp-space-3xl)) 0;
     border-top: 1px solid var(--gp-border-soft);
@@ -526,9 +590,32 @@ function primaryInitiativeHref(initiative: any) {
   }
 
   .gp-chapter-stewards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--gp-space-md);
+  }
+
+  .gp-chapter-steward-card {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    align-items: center;
+    gap: var(--gp-space-sm);
+    min-width: 0;
+    padding: var(--gp-space-md);
+    border: 1px solid var(--gp-border-soft);
+    border-radius: 8px;
+    background: var(--gp-card);
+  }
+
+  .gp-chapter-steward-card > div {
+    min-width: 0;
+  }
+
+  .gp-chapter-steward-card :global(.gp-chapter-steward-name) {
+    letter-spacing: 0;
+  }
+
+  .gp-chapter-steward-card :global(.gp-chapter-steward-meta) {
+    color: var(--gp-fg-dim);
   }
 
   .gp-chapter-initiative-grid {
