@@ -10,7 +10,7 @@
     "overall_status": "active",
     "priority": "p1",
     "created_at": "2026-05-16T18:17:35.508Z",
-    "updated_at": "2026-05-18T03:55:00.000Z"
+    "updated_at": "2026-05-20T03:01:10.000Z"
   },
   "links": {
     "brief": "brief.md",
@@ -36,6 +36,10 @@
       "packages/agent/src/app.js",
       "packages/agent/src/map-nodes.js",
       "packages/agent/migrations/001_private_map_node_schema.sql",
+      "packages/agent/migrations/004_operational_content_schema.sql",
+      "packages/agent/migrations/007_map_node_edit_tokens_update_requests.sql",
+      "packages/admin",
+      "scripts/directus-operational-content-setup.ts",
       ".plans/active/public-website-design-implementation/artifacts/v2",
       ".plans/active/content-private-node-scaffold"
     ],
@@ -122,6 +126,27 @@
       "lane": "platform",
       "status": "in_progress",
       "note": "Added the Directus moderation spike report with a provisional go for a separate admin pilot and no repo dependency."
+    },
+    {
+      "timestamp": "2026-05-20T03:01:10.000Z",
+      "actor": "codex",
+      "lane": "platform",
+      "status": "in_progress",
+      "note": "Applied and verified production Directus content/schema migrations 003 through 007 on network-admin, with migration ledger entries 001 through 007 present."
+    },
+    {
+      "timestamp": "2026-05-20T03:01:10.000Z",
+      "actor": "codex",
+      "lane": "platform",
+      "status": "in_progress",
+      "note": "Ran production Directus RBAC setup, verified the four Greenpill roles/policies, 46 permissions, private-field separation, token cleanup, and admin/agent health."
+    },
+    {
+      "timestamp": "2026-05-20T03:01:10.000Z",
+      "actor": "codex",
+      "lane": "content",
+      "status": "in_progress",
+      "note": "Tracked remaining operational follow-ups: steward invitations and role assignment, production non-admin RBAC smoke test, and the production content seed decision."
     }
   ]
 }
