@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /design-system/
+Disallow: /map/edit/
+
+Sitemap: https://greenpill.network/sitemap.xml

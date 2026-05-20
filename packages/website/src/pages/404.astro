@@ -1,0 +1,72 @@
+---
+import GpLayout from '../layouts/GpLayout.astro';
+import Button from '../components/ui/Button.astro';
+import Container from '../components/ui/Container.astro';
+import Overline from '../components/ui/Overline.astro';
+import Text from '../components/ui/Text.astro';
+---
+
+<GpLayout
+  title="Page not found · Greenpill Network"
+  description="The page you requested could not be found on Greenpill Network."
+  noindex
+  activeNav={null}
+>
+  <main class="gp-not-found">
+    <section class="gp-not-found-hero gp-topo">
+      <Container size="2xl">
+        <div class="gp-not-found-copy">
+          <Overline segments={['404', 'Greenpill Network']} />
+          <Text variant="display">Page not found.</Text>
+          <Text variant="body-lg">
+            This route is not published. Start from the public network map, the Garden, or the Library.
+          </Text>
+          <div class="gp-not-found-actions">
+            <Button href="/">Go home</Button>
+            <Button href="/garden" variant="ghost">Enter the Garden</Button>
+            <Button href="/library" variant="ghost">Browse the Library</Button>
+          </div>
+        </div>
+      </Container>
+    </section>
+  </main>
+</GpLayout>
+
+<style>
+  .gp-not-found {
+    min-height: 100dvh;
+    background: transparent;
+  }
+
+  .gp-not-found-hero {
+    display: flex;
+    align-items: center;
+    min-height: calc(100dvh - var(--gp-header-height));
+    padding: clamp(var(--gp-space-4xl), 12vw, 160px) 0;
+  }
+
+  .gp-not-found-copy {
+    display: grid;
+    max-width: 760px;
+    gap: var(--gp-space-lg);
+  }
+
+  .gp-not-found-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gp-space-md);
+    margin-top: var(--gp-space-sm);
+  }
+
+  @container (max-width: 640px) {
+    .gp-not-found-hero {
+      align-items: flex-start;
+      min-height: calc(100dvh - var(--gp-header-height));
+      padding: var(--gp-space-4xl) 0 var(--gp-space-5xl);
+    }
+
+    .gp-not-found-actions {
+      display: grid;
+    }
+  }
+</style>
