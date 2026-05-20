@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-20T09:34:22.775Z",
+  "generatedAt": "2026-05-20T09:54:44.399Z",
   "themes": [
     {
       "name": "Local Regeneration",
@@ -2703,6 +2703,138 @@
     {
       "status": "active",
       "themeSlugs": [
+        "public-goods",
+        "coordination-tools",
+        "events",
+        "funding",
+        "local-regeneration"
+      ],
+      "links": [
+        {
+          "label": "GreenSofa intro and milestones",
+          "url": "https://hackmd.io/@greensofa/home",
+          "subtext": "Public HackMD home",
+          "handle": "HackMD",
+          "action": "Read",
+          "icon": "article",
+          "kind": "external"
+        },
+        {
+          "label": "Ethereum Localism event",
+          "url": "https://luma.com/qnfi7efi",
+          "subtext": "Public event page",
+          "handle": "Luma",
+          "action": "Open",
+          "icon": "calendar",
+          "kind": "external"
+        },
+        {
+          "label": "Ethereum Localism field report",
+          "url": "https://www.ethereumlocalism.xyz/library/Field-Reports/GreenSofa-Taiwan",
+          "subtext": "Public field report",
+          "handle": "Ethereum Localism",
+          "action": "Read",
+          "icon": "article",
+          "kind": "external"
+        }
+      ],
+      "proofSignals": [
+        {
+          "label": "Ethereum Localism gathering",
+          "value": "Hybrid event",
+          "source": "Luma",
+          "href": "https://luma.com/qnfi7efi"
+        },
+        {
+          "label": "Public-goods tooling receipts",
+          "value": "HackMD milestone log",
+          "source": "HackMD",
+          "href": "https://hackmd.io/@greensofa/home"
+        }
+      ],
+      "impactSources": {},
+      "relatedStorySlugs": [
+        "greensofa-taiwan-public-goods-tooling"
+      ],
+      "relatedResourceSlugs": [
+        "ethereum-localism"
+      ],
+      "chapterSlug": "greensofa",
+      "title": "Ethereum Localism and Public-Goods Tooling",
+      "summary": "GreenSofa public-goods tooling, Ethereum Localism education, and civic-tech bridge work in Taiwan.",
+      "description": "Public GreenSofa sources document Ethereum Localism events, GreenSofa / FAB DAO context, public-goods tooling work, Hypercert dashboard development, Gitcoin/Giveth participation, and civic-tech bridge-building with Taiwan communities.",
+      "featuredWeight": 88,
+      "slug": "greensofa-ethereum-localism-public-goods-tooling",
+      "id": "greensofa-ethereum-localism-public-goods-tooling"
+    },
+    {
+      "status": "active",
+      "themeSlugs": [
+        "trees",
+        "food",
+        "education",
+        "impact",
+        "local-regeneration"
+      ],
+      "links": [
+        {
+          "label": "Greenpill Kenya overview",
+          "url": "https://hub.regencoordination.xyz/t/greenpill-kenya/92",
+          "subtext": "Public chapter thread",
+          "handle": "Regen Hub",
+          "action": "Read",
+          "icon": "hub",
+          "kind": "external"
+        },
+        {
+          "label": "Kenya Q4 2024 updates",
+          "url": "https://hub.regencoordination.xyz/t/greenpillkenya-q4-2024-updates/185",
+          "subtext": "Public update thread",
+          "handle": "Regen Hub",
+          "action": "Read",
+          "icon": "hub",
+          "kind": "external"
+        },
+        {
+          "label": "Biochar and vermicomposting",
+          "url": "https://hub.regencoordination.xyz/t/greenpill-kenya-biochar-and-vermicomposting-experiment-to-mitigate-ghgs-emissions/94",
+          "subtext": "Public experiment thread",
+          "handle": "Regen Hub",
+          "action": "Read",
+          "icon": "hub",
+          "kind": "external"
+        }
+      ],
+      "proofSignals": [
+        {
+          "label": "Regenerative agriculture and training",
+          "value": "Demo farm and tree nursery",
+          "source": "Regen Hub",
+          "href": "https://hub.regencoordination.xyz/t/greenpill-kenya/92"
+        },
+        {
+          "label": "Biochar and vermicomposting",
+          "value": "Experiment thread",
+          "source": "Regen Hub",
+          "href": "https://hub.regencoordination.xyz/t/greenpill-kenya-biochar-and-vermicomposting-experiment-to-mitigate-ghgs-emissions/94"
+        }
+      ],
+      "impactSources": {},
+      "relatedStorySlugs": [],
+      "relatedResourceSlugs": [
+        "regen-coordination-hub"
+      ],
+      "chapterSlug": "kenya",
+      "title": "Regenerative Agriculture, Biochar, and Vermicomposting Hub",
+      "summary": "Greenpill Kenya work around environmental workshops, regenerative agriculture, tree planting, biochar, and vermicomposting.",
+      "description": "Public Regen Hub posts describe Greenpill Kenya goals for forestry, soil carbon, composting, biochar, environmental workshops, regenerative agriculture, tree planting, cleanups, vermicomposting, and a demo farm / tree nursery partner. Keep numeric impact claims out until steward-reviewed measurements are available.",
+      "featuredWeight": 86,
+      "slug": "kenya-regenerative-agriculture-hub",
+      "id": "kenya-regenerative-agriculture-hub"
+    },
+    {
+      "status": "active",
+      "themeSlugs": [
         "impact",
         "opensrc",
         "public",
@@ -2761,6 +2893,54 @@
       "status": "active",
       "themeSlugs": [
         "events",
+        "education",
+        "public-goods"
+      ],
+      "links": [
+        {
+          "label": "Ethereum 10Y Cape Town",
+          "url": "https://luma.com/ethereum-10y-capetown",
+          "subtext": "Public event page",
+          "handle": "Luma",
+          "action": "Open",
+          "icon": "calendar",
+          "kind": "external"
+        },
+        {
+          "label": "Greenpill Cape Town calendar",
+          "url": "https://luma.com/greenpill.capetown?k=c",
+          "subtext": "Chapter event calendar",
+          "handle": "Luma",
+          "action": "Follow",
+          "icon": "calendar",
+          "kind": "external"
+        }
+      ],
+      "proofSignals": [
+        {
+          "label": "Greenpill partner and livestream host",
+          "value": "Ethereum 10Y Cape Town",
+          "source": "Luma",
+          "href": "https://luma.com/ethereum-10y-capetown"
+        }
+      ],
+      "impactSources": {},
+      "relatedStorySlugs": [],
+      "relatedResourceSlugs": [
+        "ethereum-localism"
+      ],
+      "chapterSlug": "cape-town",
+      "title": "Ethereum 10Y Cape Town",
+      "summary": "Local Ethereum 10Y celebration and livestream activation with Greenpill listed as a partner on the public event page.",
+      "description": "The Luma event page names Greenpill as a partner and notes that Greenpill Cape Town would show the global livestream at the Cape Town celebration venue. Keep this as an event activation until the chapter adds post-event outcomes.",
+      "featuredWeight": 82,
+      "slug": "cape-town-ethereum-at-10",
+      "id": "cape-town-ethereum-at-10"
+    },
+    {
+      "status": "active",
+      "themeSlugs": [
+        "events",
         "public",
         "impact"
       ],
@@ -2795,6 +2975,104 @@
       "featuredWeight": 80,
       "slug": "koh-phangan-ethereum-at-10",
       "id": "koh-phangan-ethereum-at-10"
+    },
+    {
+      "status": "active",
+      "themeSlugs": [
+        "events",
+        "public-goods",
+        "funding",
+        "local-regeneration"
+      ],
+      "links": [
+        {
+          "label": "GreenPill TO at Consensus",
+          "url": "https://luma.com/tgie0ose",
+          "subtext": "Public event page",
+          "handle": "Luma",
+          "action": "Open",
+          "icon": "calendar",
+          "kind": "external"
+        },
+        {
+          "label": "Greenpill TO Hub thread",
+          "url": "https://hub.regencoordination.xyz/t/greenpill-to-toronto-ontario/30",
+          "subtext": "Public chapter thread",
+          "handle": "Regen Hub",
+          "action": "Read",
+          "icon": "hub",
+          "kind": "external"
+        }
+      ],
+      "proofSignals": [
+        {
+          "label": "Consensus-side public event",
+          "value": "Web3 Solutions for Local Impact",
+          "source": "Luma",
+          "href": "https://luma.com/tgie0ose"
+        }
+      ],
+      "impactSources": {},
+      "relatedStorySlugs": [],
+      "relatedResourceSlugs": [
+        "ethereum-localism"
+      ],
+      "chapterSlug": "toronto",
+      "title": "Web3 Solutions for Local Impact",
+      "summary": "GreenPill Toronto Consensus-side gathering on Web3, regeneration, public-goods funding, and local impact.",
+      "description": "The public Luma page describes a GreenPill Toronto fireside chat bringing together investors, builders, academics, nonprofits, and Indigenous leaders to discuss ReFi, Ethereum Localism, public goods funding, and community projects.",
+      "featuredWeight": 78,
+      "slug": "toronto-local-impact-web3-solutions",
+      "id": "toronto-local-impact-web3-solutions"
+    },
+    {
+      "status": "active",
+      "themeSlugs": [
+        "events",
+        "education",
+        "local-regeneration",
+        "public-goods"
+      ],
+      "links": [
+        {
+          "label": "Reimagining Our Future",
+          "url": "https://luma.com/pdtn6mhh",
+          "subtext": "Public event page",
+          "handle": "Luma",
+          "action": "Open",
+          "icon": "calendar",
+          "kind": "external"
+        },
+        {
+          "label": "GreenPill Ottawa Hub thread",
+          "url": "https://hub.regencoordination.xyz/t/greenpill-ottawa/46",
+          "subtext": "Public chapter thread",
+          "handle": "Regen Hub",
+          "action": "Read",
+          "icon": "hub",
+          "kind": "external"
+        }
+      ],
+      "proofSignals": [
+        {
+          "label": "Monthly community meetup",
+          "value": "Reimagining Our Future",
+          "source": "Luma",
+          "href": "https://luma.com/pdtn6mhh"
+        }
+      ],
+      "impactSources": {},
+      "relatedStorySlugs": [],
+      "relatedResourceSlugs": [
+        "regen-coordination-hub"
+      ],
+      "chapterSlug": "ottawa",
+      "title": "Reimagining Our Future Meetups",
+      "summary": "GreenPill Ottawa meetup series introducing regen philosophy, web3 coordination, and positive-sum local action.",
+      "description": "The public Luma page frames the meetup as a monthly Green Pill community gathering for people exploring regenerative finance, web3 coordination, and local/global positive impact. It is launch-safe as an event/community initiative, not yet an outcomes report.",
+      "featuredWeight": 76,
+      "slug": "ottawa-reimagining-our-future",
+      "id": "ottawa-reimagining-our-future"
     },
     {
       "status": "active",
@@ -2980,6 +3258,46 @@
     {
       "status": "active",
       "themeSlugs": [
+        "events",
+        "desci",
+        "education",
+        "public-goods"
+      ],
+      "links": [
+        {
+          "label": "GreenPill Germany update",
+          "url": "https://hub.regencoordination.xyz/t/greenpill-germany/102",
+          "subtext": "Public chapter update",
+          "handle": "Regen Hub",
+          "action": "Read",
+          "icon": "hub",
+          "kind": "external"
+        }
+      ],
+      "proofSignals": [
+        {
+          "label": "Community activation and education",
+          "value": "ReFi and DeSci update",
+          "source": "Regen Hub",
+          "href": "https://hub.regencoordination.xyz/t/greenpill-germany/102"
+        }
+      ],
+      "impactSources": {},
+      "relatedStorySlugs": [],
+      "relatedResourceSlugs": [
+        "regen-coordination-hub"
+      ],
+      "chapterSlug": "germany",
+      "title": "ReFi, DeSci, and Community Activation",
+      "summary": "GreenPill Germany source-backed activity around ReFi meetups, DeSci collaboration, Hypercert education, and chapter reactivation.",
+      "description": "The public Regen Hub chapter update lists Hamburg and Munich ReFi activity, a first Hypercert launch, DeSci and ReFi at Berlin Science Week, community activation, steward onboarding, and future education campaigns. Treat metrics as qualitative until a newer steward update adds counts or deliverables.",
+      "featuredWeight": 68,
+      "slug": "germany-refi-community-activation",
+      "id": "germany-refi-community-activation"
+    },
+    {
+      "status": "active",
+      "themeSlugs": [
         "opensrc",
         "events",
         "education"
@@ -3060,6 +3378,15 @@
           "action": "Read",
           "icon": "article",
           "kind": "external"
+        },
+        {
+          "label": "Greenpill Podcast",
+          "url": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639",
+          "subtext": "Long-running public podcast archive",
+          "handle": "Apple Podcasts",
+          "action": "Listen",
+          "icon": "podcast",
+          "kind": "external"
         }
       ],
       "proofSignals": [
@@ -3083,14 +3410,17 @@
         }
       ],
       "media": {
-        "image": "",
-        "imageAlt": "",
-        "ogImage": ""
+        "image": "/images/guilds/writers-guild-greenpill-paragraph.png",
+        "imageAlt": "Greenpill publication artwork used for the public Paragraph archive.",
+        "ogImage": "/images/guilds/writers-guild-greenpill-paragraph.png",
+        "imageSourceUrl": "https://paragraph.com/@greenpill",
+        "imageCredit": "Greenpill Network via Paragraph",
+        "reviewStatus": "approved"
       },
       "seo": {
         "title": "Writers Guild · Greenpill Network",
         "description": "The Greenpill Writers Guild supports field reports, publishing, translations, and public knowledge work across the network.",
-        "ogImage": "",
+        "ogImage": "/images/guilds/writers-guild-greenpill-paragraph.png",
         "canonicalPath": "/guilds/writers-guild",
         "noindex": false
       },
@@ -3149,7 +3479,7 @@
           "body": "Newsletter drafts, Drive docs, raw notes, and submission data stay out of public Keystatic until approved."
         }
       ],
-      "image": "",
+      "image": "/images/guilds/writers-guild-greenpill-paragraph.png",
       "featuredWeight": 70,
       "slug": "writers-guild",
       "id": "writers-guild"
@@ -3240,6 +3570,15 @@
           "action": "Read updates",
           "icon": "article",
           "kind": "external"
+        },
+        {
+          "label": "Builder spaces",
+          "url": "https://luma.com/greenpilldevguild",
+          "subtext": "Public workshop calendar",
+          "handle": "Luma",
+          "action": "Join a space",
+          "icon": "calendar",
+          "kind": "external"
         }
       ],
       "proofSignals": [
@@ -3263,14 +3602,17 @@
         }
       ],
       "media": {
-        "image": "",
-        "imageAlt": "",
-        "ogImage": ""
+        "image": "/images/guilds/dev-guild-regenerative-stack.jpg",
+        "imageAlt": "Infographic for the Greenpill Dev Guild regenerative stack.",
+        "ogImage": "/images/guilds/dev-guild-regenerative-stack.jpg",
+        "imageSourceUrl": "https://paragraph.com/@greenpilldevguild/validating-the-regenerative-stack",
+        "imageCredit": "Greenpill Dev Guild via Paragraph",
+        "reviewStatus": "approved"
       },
       "seo": {
         "title": "Dev Guild · Greenpill Network",
         "description": "The Greenpill Dev Guild builds open-source coordination tools for public goods, impact verification, and regenerative communities.",
-        "ogImage": "",
+        "ogImage": "/images/guilds/dev-guild-regenerative-stack.jpg",
         "canonicalPath": "/guilds/dev-guild",
         "noindex": false
       },
@@ -3334,7 +3676,7 @@
           "body": "Show how tools support local chapters and real regenerative work, not software for its own sake."
         }
       ],
-      "image": "",
+      "image": "/images/guilds/dev-guild-regenerative-stack.jpg",
       "featuredWeight": 100,
       "slug": "dev-guild",
       "id": "dev-guild"
@@ -4001,7 +4343,7 @@
   ],
   "impactSourceBindings": {
     "version": 1,
-    "generatedAt": "2026-05-20T09:34:22.775Z",
+    "generatedAt": "2026-05-20T09:54:44.399Z",
     "chapters": [
       {
         "chapterSlug": "brasil",

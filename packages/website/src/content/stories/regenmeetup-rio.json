@@ -14,7 +14,7 @@
     "regenmeetup"
   ],
   "body": "This event source can support local-events cards and chapter activity strips.\n\nThe story should avoid invented attendance, impact, or follow-on metrics until steward-reviewed sources are added.\n\n## Sources\n\n- S021: https://luma.com/qm4tiq1e",
-  "image": "",
+  "image": "/images/chapters/greenpill-brasil-community.jpg",
   "author": "Greenpill Network research",
   "authorRole": "Source-backed seed copy",
   "authorBio": "",
@@ -46,14 +46,14 @@
   "featuredWeight": 50,
   "readTime": "2 min read",
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "ogImage": ""
+    "image": "/images/chapters/greenpill-brasil-community.jpg",
+    "imageAlt": "Greenpill Brasil community members gathered around a table.",
+    "ogImage": "/images/chapters/greenpill-brasil-community.jpg"
   },
   "seo": {
     "title": "RegenMeetUp Rio · Greenpill Stories",
     "description": "Source-backed Greenpill Brasil event story for the RegenMeetUp at Fabulosa Lab in Rio de Janeiro.",
-    "ogImage": "",
+    "ogImage": "/images/chapters/greenpill-brasil-community.jpg",
     "canonicalPath": "/stories/regenmeetup-rio",
     "noindex": false
   }

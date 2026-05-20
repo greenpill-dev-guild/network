@@ -61,7 +61,7 @@
       "body": "Show how tools support local chapters and real regenerative work, not software for its own sake."
     }
   ],
-  "image": "",
+  "image": "/images/guilds/dev-guild-regenerative-stack.jpg",
   "stewards": [],
   "stewardSlugs": [
     "afo-aiyeloja",
@@ -145,6 +145,15 @@
       "action": "Read updates",
       "icon": "article",
       "kind": "external"
+    },
+    {
+      "label": "Builder spaces",
+      "url": "https://luma.com/greenpilldevguild",
+      "subtext": "Public workshop calendar",
+      "handle": "Luma",
+      "action": "Join a space",
+      "icon": "calendar",
+      "kind": "external"
     }
   ],
   "featuredWeight": 100,
@@ -169,14 +178,17 @@
     }
   ],
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "ogImage": ""
+    "image": "/images/guilds/dev-guild-regenerative-stack.jpg",
+    "imageAlt": "Infographic for the Greenpill Dev Guild regenerative stack.",
+    "ogImage": "/images/guilds/dev-guild-regenerative-stack.jpg",
+    "imageSourceUrl": "https://paragraph.com/@greenpilldevguild/validating-the-regenerative-stack",
+    "imageCredit": "Greenpill Dev Guild via Paragraph",
+    "reviewStatus": "approved"
   },
   "seo": {
     "title": "Dev Guild · Greenpill Network",
     "description": "The Greenpill Dev Guild builds open-source coordination tools for public goods, impact verification, and regenerative communities.",
-    "ogImage": "",
+    "ogImage": "/images/guilds/dev-guild-regenerative-stack.jpg",
     "canonicalPath": "/guilds/dev-guild",
     "noindex": false
   }

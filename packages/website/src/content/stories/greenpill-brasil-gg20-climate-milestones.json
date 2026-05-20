@@ -15,7 +15,7 @@
     "karma-gap"
   ],
   "body": "Greenpill Brasil has strong public proof through KarmaGAP, Gitcoin, and the Regen Coordination Hub.\n\nThe seed should use the completed GG20 Climate Round milestones as the launch-safe proof point. The research artifact also mentions meeting-hour and contributor-count claims from Gitcoin self-reporting, but those should receive steward signoff before being promoted as launch copy.\n\n## Sources\n\n- S018: https://www.karmahq.xyz/project/greenpill-brasil\n- S019: https://hub.regencoordination.xyz/t/greenpill-brasil/44\n- S020: https://checker.gitcoin.co/public/project/show/greenpill-brazil",
-  "image": "",
+  "image": "/images/chapters/greenpill-brasil-community.jpg",
   "author": "Greenpill Network research",
   "authorRole": "Source-backed seed copy",
   "authorBio": "",
@@ -55,14 +55,14 @@
   "featuredWeight": 95,
   "readTime": "3 min read",
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "ogImage": ""
+    "image": "/images/chapters/greenpill-brasil-community.jpg",
+    "imageAlt": "Greenpill Brasil community members gathered around a table.",
+    "ogImage": "/images/chapters/greenpill-brasil-community.jpg"
   },
   "seo": {
     "title": "Greenpill Brasil GG20 Climate Milestones · Greenpill Stories",
     "description": "Source-backed Greenpill Brasil story based on KarmaGAP GG20 Climate Round milestones and public grant context.",
-    "ogImage": "",
+    "ogImage": "/images/chapters/greenpill-brasil-community.jpg",
     "canonicalPath": "/stories/greenpill-brasil-gg20-climate-milestones",
     "noindex": false
   }

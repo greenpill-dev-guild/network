@@ -14,7 +14,7 @@
     "nigeria"
   ],
   "body": "The research artifact identifies this public Hub thread as a strong education proof point for Greenpill Nigeria.\n\nFor page implementation, this should support education-oriented chapter cards, story filters, and proof signals. Avoid adding attendee counts or completion metrics that the source does not explicitly support.\n\n## Sources\n\n- S016: https://hub.regencoordination.xyz/t/take-the-greenpill-with-greenpill-nigeria-10-weeks-of-refi-education/324",
-  "image": "",
+  "image": "/images/chapters/greenpill-nigeria-education.jpeg",
   "author": "Greenpill Network research",
   "authorRole": "Source-backed seed copy",
   "authorBio": "",
@@ -46,14 +46,14 @@
   "featuredWeight": 80,
   "readTime": "2 min read",
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "ogImage": ""
+    "image": "/images/chapters/greenpill-nigeria-education.jpeg",
+    "imageAlt": "Greenpill Nigeria ReFi education group photo.",
+    "ogImage": "/images/chapters/greenpill-nigeria-education.jpeg"
   },
   "seo": {
     "title": "Take the Greenpill with Greenpill Nigeria · Greenpill Stories",
     "description": "Source-backed seed story for Greenpill Nigeria's 10-week ReFi and public-goods education program.",
-    "ogImage": "",
+    "ogImage": "/images/chapters/greenpill-nigeria-education.jpeg",
     "canonicalPath": "/stories/take-the-greenpill-nigeria-refi-education",
     "noindex": false
   }

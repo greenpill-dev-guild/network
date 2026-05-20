@@ -56,7 +56,7 @@
       "body": "Newsletter drafts, Drive docs, raw notes, and submission data stay out of public Keystatic until approved."
     }
   ],
-  "image": "",
+  "image": "/images/guilds/writers-guild-greenpill-paragraph.png",
   "stewards": [],
   "stewardSlugs": [],
   "memberSlugs": [],
@@ -96,6 +96,15 @@
       "action": "Read",
       "icon": "article",
       "kind": "external"
+    },
+    {
+      "label": "Greenpill Podcast",
+      "url": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639",
+      "subtext": "Long-running public podcast archive",
+      "handle": "Apple Podcasts",
+      "action": "Listen",
+      "icon": "podcast",
+      "kind": "external"
     }
   ],
   "featuredWeight": 70,
@@ -120,14 +129,17 @@
     }
   ],
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "ogImage": ""
+    "image": "/images/guilds/writers-guild-greenpill-paragraph.png",
+    "imageAlt": "Greenpill publication artwork used for the public Paragraph archive.",
+    "ogImage": "/images/guilds/writers-guild-greenpill-paragraph.png",
+    "imageSourceUrl": "https://paragraph.com/@greenpill",
+    "imageCredit": "Greenpill Network via Paragraph",
+    "reviewStatus": "approved"
   },
   "seo": {
     "title": "Writers Guild · Greenpill Network",
     "description": "The Greenpill Writers Guild supports field reports, publishing, translations, and public knowledge work across the network.",
-    "ogImage": "",
+    "ogImage": "/images/guilds/writers-guild-greenpill-paragraph.png",
     "canonicalPath": "/guilds/writers-guild",
     "noindex": false
   }

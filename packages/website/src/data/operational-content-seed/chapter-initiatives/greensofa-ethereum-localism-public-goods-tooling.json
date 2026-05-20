@@ -1,0 +1,65 @@
+{
+  "chapterSlug": "greensofa",
+  "title": "Ethereum Localism and Public-Goods Tooling",
+  "status": "active",
+  "summary": "GreenSofa public-goods tooling, Ethereum Localism education, and civic-tech bridge work in Taiwan.",
+  "description": "Public GreenSofa sources document Ethereum Localism events, GreenSofa / FAB DAO context, public-goods tooling work, Hypercert dashboard development, Gitcoin/Giveth participation, and civic-tech bridge-building with Taiwan communities.",
+  "themeSlugs": [
+    "public-goods",
+    "coordination-tools",
+    "events",
+    "funding",
+    "local-regeneration"
+  ],
+  "links": [
+    {
+      "label": "GreenSofa intro and milestones",
+      "url": "https://hackmd.io/@greensofa/home",
+      "subtext": "Public HackMD home",
+      "handle": "HackMD",
+      "action": "Read",
+      "icon": "article",
+      "kind": "external"
+    },
+    {
+      "label": "Ethereum Localism event",
+      "url": "https://luma.com/qnfi7efi",
+      "subtext": "Public event page",
+      "handle": "Luma",
+      "action": "Open",
+      "icon": "calendar",
+      "kind": "external"
+    },
+    {
+      "label": "Ethereum Localism field report",
+      "url": "https://www.ethereumlocalism.xyz/library/Field-Reports/GreenSofa-Taiwan",
+      "subtext": "Public field report",
+      "handle": "Ethereum Localism",
+      "action": "Read",
+      "icon": "article",
+      "kind": "external"
+    }
+  ],
+  "proofSignals": [
+    {
+      "label": "Ethereum Localism gathering",
+      "value": "Hybrid event",
+      "source": "Luma",
+      "href": "https://luma.com/qnfi7efi"
+    },
+    {
+      "label": "Public-goods tooling receipts",
+      "value": "HackMD milestone log",
+      "source": "HackMD",
+      "href": "https://hackmd.io/@greensofa/home"
+    }
+  ],
+  "impactSources": {},
+  "relatedStorySlugs": [
+    "greensofa-taiwan-public-goods-tooling"
+  ],
+  "relatedResourceSlugs": [
+    "ethereum-localism"
+  ],
+  "featuredWeight": 88
+}

@@ -14,7 +14,7 @@
     "open-source"
   ],
   "body": "This is a strong first public story for Greenpill London Ontario because the event source is clear, dated, and external.\n\nUse it for event, open-source, and chapter-card surfaces. Do not extrapolate a broader chapter program from a single event listing without steward review.\n\n## Sources\n\n- S033: https://www.techalliance.ca/news/events/vibe-coding-for-good-a-collaborative-build-night-reimagine-co-presented-by-greenpill-london-ontario/",
-  "image": "",
+  "image": "/images/chapters/greenpill-london-ontario-event.jpg",
   "author": "Greenpill Network research",
   "authorRole": "Source-backed seed copy",
   "authorBio": "",
@@ -44,14 +44,14 @@
   "featuredWeight": 70,
   "readTime": "2 min read",
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "ogImage": ""
+    "image": "/images/chapters/greenpill-london-ontario-event.jpg",
+    "imageAlt": "Vibe Coding for Good event artwork for Greenpill London Ontario.",
+    "ogImage": "/images/chapters/greenpill-london-ontario-event.jpg"
   },
   "seo": {
     "title": "Vibe Coding for Good · Greenpill Stories",
     "description": "Source-backed event story for Greenpill London Ontario's Vibe Coding for Good build night.",
-    "ogImage": "",
+    "ogImage": "/images/chapters/greenpill-london-ontario-event.jpg",
     "canonicalPath": "/stories/vibe-coding-good-london-ontario",
     "noindex": false
   }

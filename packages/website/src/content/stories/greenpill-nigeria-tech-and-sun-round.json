@@ -15,7 +15,7 @@
     "localism-fund"
   ],
   "body": "The Tech & Sun Round thread is the strongest new Greenpill Nigeria update from the live Hub pass.\n\nThe public source frames the work as solar-powered public goods infrastructure for Nigerian universities. Follow-up posts document the build moving through site setting, foundation work, container fabrication, solar and smart-meter installation, furniture, internet readiness, and staking infrastructure preparation.\n\nThis should read as a current field report and chapter initiative, not as a completed impact-metrics claim. Use the Hub thread as the public source until steward review adds final activation, usage, or learner counts.\n\n## Sources\n\n- S049: https://hub.regencoordination.xyz/t/tech-sun-round-by-greenpill-nigeria/393",
-  "image": "",
+  "image": "/images/stories/greenpill-nigeria-tech-sun.jpeg",
   "author": "Greenpill Network research",
   "authorRole": "Source-backed seed copy",
   "authorBio": "",
@@ -56,14 +56,14 @@
   "featuredWeight": 98,
   "readTime": "3 min read",
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "ogImage": ""
+    "image": "/images/stories/greenpill-nigeria-tech-sun.jpeg",
+    "imageAlt": "Greenpill Nigeria community member preparing a local Tech and Sun site.",
+    "ogImage": "/images/stories/greenpill-nigeria-tech-sun.jpeg"
   },
   "seo": {
     "title": "Tech & Sun Round by Greenpill Nigeria · Greenpill Stories",
     "description": "Source-backed story for Greenpill Nigeria's solar-powered public goods infrastructure and builder education work.",
-    "ogImage": "",
+    "ogImage": "/images/stories/greenpill-nigeria-tech-sun.jpeg",
     "canonicalPath": "/stories/greenpill-nigeria-tech-and-sun-round",
     "noindex": false
   }

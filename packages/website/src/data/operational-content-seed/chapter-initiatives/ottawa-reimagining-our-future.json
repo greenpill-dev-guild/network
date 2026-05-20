@@ -1,0 +1,47 @@
+{
+  "chapterSlug": "ottawa",
+  "title": "Reimagining Our Future Meetups",
+  "status": "active",
+  "summary": "GreenPill Ottawa meetup series introducing regen philosophy, web3 coordination, and positive-sum local action.",
+  "description": "The public Luma page frames the meetup as a monthly Green Pill community gathering for people exploring regenerative finance, web3 coordination, and local/global positive impact. It is launch-safe as an event/community initiative, not yet an outcomes report.",
+  "themeSlugs": [
+    "events",
+    "education",
+    "local-regeneration",
+    "public-goods"
+  ],
+  "links": [
+    {
+      "label": "Reimagining Our Future",
+      "url": "https://luma.com/pdtn6mhh",
+      "subtext": "Public event page",
+      "handle": "Luma",
+      "action": "Open",
+      "icon": "calendar",
+      "kind": "external"
+    },
+    {
+      "label": "GreenPill Ottawa Hub thread",
+      "url": "https://hub.regencoordination.xyz/t/greenpill-ottawa/46",
+      "subtext": "Public chapter thread",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "hub",
+      "kind": "external"
+    }
+  ],
+  "proofSignals": [
+    {
+      "label": "Monthly community meetup",
+      "value": "Reimagining Our Future",
+      "source": "Luma",
+      "href": "https://luma.com/pdtn6mhh"
+    }
+  ],
+  "impactSources": {},
+  "relatedStorySlugs": [],
+  "relatedResourceSlugs": [
+    "regen-coordination-hub"
+  ],
+  "featuredWeight": 76
+}

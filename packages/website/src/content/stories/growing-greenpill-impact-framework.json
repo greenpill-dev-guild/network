@@ -14,7 +14,7 @@
     "capital-formation"
   ],
   "body": "The public Impact Framework thread is the best current source for explaining the impact direction on greenpill.network.\n\nThe research artifact includes richer internal framework language around MDR, CIDS, Y2I, Hypercerts, and anomaly detection. Those details should remain in the seed inventory and steward-review queue unless a public mirror or approval exists.\n\n## Sources\n\n- S043: https://hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411\n- S047: https://docs.greengoods.app/community/why-we-build",
-  "image": "",
+  "image": "/images/stories/green-goods-regen-stack.webp",
   "author": "Greenpill Network research",
   "authorRole": "Source-backed seed copy",
   "authorBio": "",
@@ -48,14 +48,14 @@
   "featuredWeight": 75,
   "readTime": "3 min read",
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "ogImage": ""
+    "image": "/images/stories/green-goods-regen-stack.webp",
+    "imageAlt": "Green Goods regenerative stack diagram.",
+    "ogImage": "/images/stories/green-goods-regen-stack.webp"
   },
   "seo": {
     "title": "Growing the Greenpill Impact Framework · Greenpill Stories",
     "description": "Source-backed story for the public Greenpill Impact Framework thread and Green Goods direction.",
-    "ogImage": "",
+    "ogImage": "/images/stories/green-goods-regen-stack.webp",
     "canonicalPath": "/stories/growing-greenpill-impact-framework",
     "noindex": false
   }

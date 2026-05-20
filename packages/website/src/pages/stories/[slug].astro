@@ -66,6 +66,8 @@ function linkifyText(text: string) {
 const bodyBlocks = bodyToBlocks(data.body || '');
 const relatedGuild = data.relatedGuild || '';
 const relatedGuildPath = publicGuildPath(relatedGuild);
+const storyImage = data.media?.image || data.image || '';
+const storyImageAlt = data.media?.imageAlt || `${data.title} story image`;
 ---
 
 <GpLayout
@@ -103,6 +105,12 @@ const relatedGuildPath = publicGuildPath(relatedGuild);
                 </span>
               )}
             </div>
+          )}
+
+          {storyImage && (
+            <figure class="gp-story-hero-media">
+              <img src={storyImage} alt={storyImageAlt} loading="eager" decoding="async" />
+            </figure>
           )}
         </div>
       </Container>
@@ -255,6 +263,23 @@ const relatedGuildPath = publicGuildPath(relatedGuild);
     display: flex;
     flex-direction: column;
     gap: 2px;
+  }
+
+  .gp-story-hero-media {
+    width: min(100%, 920px);
+    aspect-ratio: 16 / 9;
+    margin: var(--gp-space-sm) 0 0;
+    overflow: hidden;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-lg);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .gp-story-hero-media img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
   }
 
   .gp-story-readtime {

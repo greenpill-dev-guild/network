@@ -62,13 +62,13 @@
   "readTime": "3 min read",
   "media": {
     "image": "/images/hifi/garden-overlay.jpg",
-    "imageAlt": "Garden texture from the high-fidelity design package",
-    "ogImage": ""
+    "imageAlt": "Garden texture from the high-fidelity design package.",
+    "ogImage": "/images/hifi/garden-overlay.jpg"
   },
   "seo": {
     "title": "Greenpill Garden Season One · Greenpill Stories",
     "description": "Source-backed Greenpill Garden story connecting onboarding, stewardship, chapters, tools, and impact reporting.",
-    "ogImage": "",
+    "ogImage": "/images/hifi/garden-overlay.jpg",
     "canonicalPath": "/stories/greenpill-garden-season-one",
     "noindex": false
   }

@@ -1,0 +1,38 @@
+{
+  "chapterSlug": "germany",
+  "title": "ReFi, DeSci, and Community Activation",
+  "status": "active",
+  "summary": "GreenPill Germany source-backed activity around ReFi meetups, DeSci collaboration, Hypercert education, and chapter reactivation.",
+  "description": "The public Regen Hub chapter update lists Hamburg and Munich ReFi activity, a first Hypercert launch, DeSci and ReFi at Berlin Science Week, community activation, steward onboarding, and future education campaigns. Treat metrics as qualitative until a newer steward update adds counts or deliverables.",
+  "themeSlugs": [
+    "events",
+    "desci",
+    "education",
+    "public-goods"
+  ],
+  "links": [
+    {
+      "label": "GreenPill Germany update",
+      "url": "https://hub.regencoordination.xyz/t/greenpill-germany/102",
+      "subtext": "Public chapter update",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "hub",
+      "kind": "external"
+    }
+  ],
+  "proofSignals": [
+    {
+      "label": "Community activation and education",
+      "value": "ReFi and DeSci update",
+      "source": "Regen Hub",
+      "href": "https://hub.regencoordination.xyz/t/greenpill-germany/102"
+    }
+  ],
+  "impactSources": {},
+  "relatedStorySlugs": [],
+  "relatedResourceSlugs": [
+    "regen-coordination-hub"
+  ],
+  "featuredWeight": 68
+}

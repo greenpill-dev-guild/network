@@ -14,7 +14,7 @@
     "nigeria"
   ],
   "body": "The Luma source gives the site a clean public event proof point for Greenpill Nigeria.\n\nUse this as an event recap / local activation seed. Do not treat RSVP or attendance numbers as available unless a source-backed count is added later.\n\n## Sources\n\n- S017: https://luma.com/hlkglzcg",
-  "image": "",
+  "image": "/images/stories/ethereum-at-10-awka.jpg",
   "author": "Greenpill Network research",
   "authorRole": "Source-backed seed copy",
   "authorBio": "",
@@ -47,14 +47,14 @@
   "featuredWeight": 55,
   "readTime": "2 min read",
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "ogImage": ""
+    "image": "/images/stories/ethereum-at-10-awka.jpg",
+    "imageAlt": "Ethereum at 10 Greenpill Nigeria event cover.",
+    "ogImage": "/images/stories/ethereum-at-10-awka.jpg"
   },
   "seo": {
     "title": "Ethereum at 10 Awka · Greenpill Stories",
     "description": "Source-backed event story for Greenpill Nigeria's Awka Ethereum-at-10 event.",
-    "ogImage": "",
+    "ogImage": "/images/stories/ethereum-at-10-awka.jpg",
     "canonicalPath": "/stories/ethereum-at-10-awka",
     "noindex": false
   }

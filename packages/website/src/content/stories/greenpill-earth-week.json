@@ -15,7 +15,7 @@
     "environment"
   ],
   "body": "Greenpill Earth Week is a network story first, not a new operational owner model.\n\nThe Hub thread starts with a call to coordinate real regenerative action around Earth Day through local cleanups, waste audits, garden or tree-planting workdays, teach-ins, mutual aid, and small public goods experiments that can continue beyond the date.\n\nThe replies make the story concrete: Greenpill Kenya discussed plastic collection, tree planting, and Green Goods onboarding; GreenSofa connected the moment to MEGAWEAVING and local resource sharing; Greenpill Cape Town pointed toward support for a Peace Garden project; and Brasil/Fabulosa linked the coordination moment to an upcoming Web3 cafe gathering.\n\nThis should stay as one published network story for now. Split it into chapter initiatives only when stewards confirm each local effort's owner, scope, and publication-ready claims.\n\n## Sources\n\n- S048: https://hub.regencoordination.xyz/t/greenpill-earth-week/413",
-  "image": "",
+  "image": "/images/stories/greenpill-earth-week.webp",
   "author": "Greenpill Network research",
   "authorRole": "Source-backed seed copy",
   "authorBio": "",
@@ -52,14 +52,14 @@
   "featuredWeight": 97,
   "readTime": "4 min read",
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "ogImage": ""
+    "image": "/images/stories/greenpill-earth-week.webp",
+    "imageAlt": "Greenpill Earth Week public event artwork.",
+    "ogImage": "/images/stories/greenpill-earth-week.webp"
   },
   "seo": {
     "title": "Greenpill Earth Week · Greenpill Stories",
     "description": "Source-backed network story for Greenpill Earth Week coordination across local regenerative action, Green Goods, and chapter updates.",
-    "ogImage": "",
+    "ogImage": "/images/stories/greenpill-earth-week.webp",
     "canonicalPath": "/stories/greenpill-earth-week",
     "noindex": false
   }

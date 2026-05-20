@@ -1,0 +1,63 @@
+{
+  "chapterSlug": "kenya",
+  "title": "Regenerative Agriculture, Biochar, and Vermicomposting Hub",
+  "status": "active",
+  "summary": "Greenpill Kenya work around environmental workshops, regenerative agriculture, tree planting, biochar, and vermicomposting.",
+  "description": "Public Regen Hub posts describe Greenpill Kenya goals for forestry, soil carbon, composting, biochar, environmental workshops, regenerative agriculture, tree planting, cleanups, vermicomposting, and a demo farm / tree nursery partner. Keep numeric impact claims out until steward-reviewed measurements are available.",
+  "themeSlugs": [
+    "trees",
+    "food",
+    "education",
+    "impact",
+    "local-regeneration"
+  ],
+  "links": [
+    {
+      "label": "Greenpill Kenya overview",
+      "url": "https://hub.regencoordination.xyz/t/greenpill-kenya/92",
+      "subtext": "Public chapter thread",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "hub",
+      "kind": "external"
+    },
+    {
+      "label": "Kenya Q4 2024 updates",
+      "url": "https://hub.regencoordination.xyz/t/greenpillkenya-q4-2024-updates/185",
+      "subtext": "Public update thread",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "hub",
+      "kind": "external"
+    },
+    {
+      "label": "Biochar and vermicomposting",
+      "url": "https://hub.regencoordination.xyz/t/greenpill-kenya-biochar-and-vermicomposting-experiment-to-mitigate-ghgs-emissions/94",
+      "subtext": "Public experiment thread",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "hub",
+      "kind": "external"
+    }
+  ],
+  "proofSignals": [
+    {
+      "label": "Regenerative agriculture and training",
+      "value": "Demo farm and tree nursery",
+      "source": "Regen Hub",
+      "href": "https://hub.regencoordination.xyz/t/greenpill-kenya/92"
+    },
+    {
+      "label": "Biochar and vermicomposting",
+      "value": "Experiment thread",
+      "source": "Regen Hub",
+      "href": "https://hub.regencoordination.xyz/t/greenpill-kenya-biochar-and-vermicomposting-experiment-to-mitigate-ghgs-emissions/94"
+    }
+  ],
+  "impactSources": {},
+  "relatedStorySlugs": [],
+  "relatedResourceSlugs": [
+    "regen-coordination-hub"
+  ],
+  "featuredWeight": 86
+}

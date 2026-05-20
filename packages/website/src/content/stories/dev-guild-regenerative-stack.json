@@ -15,7 +15,7 @@
     "capital-formation"
   ],
   "body": "The Greenpill Dev Guild's Paragraph series now gives the website a public source trail for the regenerative stack it has been describing across grants, tools, and builder updates.\n\nThe Public Goods Staking Protocol v0 article frames validator infrastructure, distributed validator technology, and vault routing as a way to create recurring funding for public goods. The earlier Squad Staking article provides the community-staking foundation, while the Capital Formation article connects that yield-bearing path to Green Goods and broader impact financing.\n\nThe same series also documents the application and social layers: Green Goods for visible and verifiable regenerative work, GreenWill for reputation and governance participation, and Allo-aligned allocation tools such as grant ships, conviction voting, streaming funds, and cookie jars.\n\nFor the website, this should read as one Dev Guild workstream story. Individual Paragraph posts belong in the Library and project proof links rather than becoming a scattered set of project pages.\n\n## Sources\n\n- S059: https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0\n- S060: https://paragraph.com/@greenpilldevguild/pioneering-a-regenerative-stack\n- S061: https://paragraph.com/@greenpilldevguild/squad-staking-turning-validator-rewards-into-public-good\n- S062: https://paragraph.com/@greenpilldevguild/the-allo-alliance-innovating-capital-allocation-on-chain\n- S063: https://paragraph.com/@greenpilldevguild/greenwill-powering-governance-through-reputation-tracking\n- S064: https://paragraph.com/@greenpilldevguild/green-goods-simplifying-impact-capture-and-exchange\n- S065: https://paragraph.com/@greenpilldevguild/capital-formation-turning-impact-into-sustainable-revenue\n- S066: https://paragraph.com/@greenpilldevguild/validating-the-regenerative-stack",
-  "image": "/images/hifi/topo-bg.png",
+  "image": "/images/guilds/dev-guild-regenerative-stack.jpg",
   "author": "Greenpill Network research",
   "authorRole": "Source-backed seed copy",
   "authorBio": "",
@@ -63,14 +63,14 @@
   "featuredWeight": 92,
   "readTime": "4 min read",
   "media": {
-    "image": "/images/hifi/topo-bg.png",
-    "imageAlt": "Topographic map texture",
-    "ogImage": ""
+    "image": "/images/guilds/dev-guild-regenerative-stack.jpg",
+    "imageAlt": "Infographic for the Greenpill Dev Guild regenerative stack.",
+    "ogImage": "/images/guilds/dev-guild-regenerative-stack.jpg"
   },
   "seo": {
     "title": "Dev Guild Regenerative Stack · Greenpill Stories",
     "description": "Source-backed story for the Greenpill Dev Guild regenerative stack, PGSP, Squad Staking, Green Goods, GreenWill, and allocation tooling.",
-    "ogImage": "",
+    "ogImage": "/images/guilds/dev-guild-regenerative-stack.jpg",
     "canonicalPath": "/stories/dev-guild-regenerative-stack",
     "noindex": false
   }

@@ -15,7 +15,7 @@
     "environmental-monitoring"
   ],
   "body": "Greenpill Phangan now has a stronger chapter-owned initiative than an event-only record.\n\nThe public Phangan update thread describes ongoing beach cleanup work, Monthly Earth Day activity, and the origin path for DeCleanup Rewards. A later update adds a decentralized environmental monitoring analysis for Koh Phangan using Altruist Sensors by the Robonomics DePIN Network.\n\nThe DeCleanup Network update gives the wider project context: app launch, Celo testing, playbook publication, and public docs. For the Greenpill site, the chapter-owned surface should stay focused on Phangan's cleanup and monitoring work while treating DeCleanup as supporting public tooling context.\n\n## Sources\n\n- S051: https://hub.regencoordination.xyz/t/greenpill-phangan-updates/95\n- S052: https://hub.regencoordination.xyz/t/decleanup-network-base-app-launched-celo-in-testing-playbook-published-docs-live-heres-everything/394",
-  "image": "",
+  "image": "/images/stories/greenpill-phangan-cleanup.jpeg",
   "author": "Greenpill Network research",
   "authorRole": "Source-backed seed copy",
   "authorBio": "",
@@ -56,14 +56,14 @@
   "featuredWeight": 78,
   "readTime": "3 min read",
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "ogImage": ""
+    "image": "/images/stories/greenpill-phangan-cleanup.jpeg",
+    "imageAlt": "Greenpill Phangan cleanup and environmental monitoring activity.",
+    "ogImage": "/images/stories/greenpill-phangan-cleanup.jpeg"
   },
   "seo": {
     "title": "Greenpill Phangan Environmental Monitoring · Greenpill Stories",
     "description": "Source-backed story for Greenpill Phangan cleanup, environmental monitoring, and DeCleanup context.",
-    "ogImage": "",
+    "ogImage": "/images/stories/greenpill-phangan-cleanup.jpeg",
     "canonicalPath": "/stories/greenpill-phangan-environmental-monitoring",
     "noindex": false
   }

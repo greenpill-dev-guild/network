@@ -15,6 +15,9 @@ import {
 import {
   loadChapterEnrichment,
 } from './directus-chapter-enrichment.ts';
+import {
+  loadOperationalEnrichment,
+} from './directus-operational-enrichment.ts';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const editorialContentDir = join(rootDir, 'packages/website/src/content');
@@ -43,6 +46,14 @@ const activeChapterEnrichmentSlugs = [
   'nigeria',
   'ottawa',
   'toronto',
+];
+const requiredEnrichedInitiativeSlugs = [
+  'cape-town-ethereum-at-10',
+  'germany-refi-community-activation',
+  'greensofa-ethereum-localism-public-goods-tooling',
+  'kenya-regenerative-agriculture-hub',
+  'ottawa-reimagining-our-future',
+  'toronto-local-impact-web3-solutions',
 ];
 
 async function readJson(relativePath) {
@@ -289,9 +300,38 @@ test('story pages render markdown lists and use authored featured ordering', asy
   assert.match(storyDetailPage, /kind: 'ol'/);
   assert.match(storyDetailPage, /<li>/);
   assert.match(storyDetailPage, /linkifyText/);
+  assert.match(storyDetailPage, /gp-story-hero-media/);
   assert.match(storiesIndexPage, /featuredStoryRank/);
+  assert.match(storiesIndexPage, /gp-stories-feature-media/);
+  assert.match(storiesIndexPage, /gp-stories-card-media/);
   assert.match(homePage, /homeStoryRank/);
   assert.doesNotMatch(homePage, /Meta items=\{\['Chapter', region\]\}/);
+});
+
+test('published stories carry local image metadata', async () => {
+  const stories = await readCollection('stories');
+  const problems = [];
+
+  for (const [slug, story] of stories) {
+    if (story.status !== 'published' || story.seo?.noindex) continue;
+    const image = story.image || '';
+    const media = story.media ?? {};
+    const seo = story.seo ?? {};
+
+    if (!image) problems.push(`${slug} is missing image`);
+    if (media.image !== image) problems.push(`${slug} media.image does not match image`);
+    if (!media.imageAlt) problems.push(`${slug} is missing media.imageAlt`);
+    if (media.ogImage !== image) problems.push(`${slug} media.ogImage does not match image`);
+    if (seo.ogImage !== image) problems.push(`${slug} seo.ogImage does not match image`);
+
+    if (image.startsWith('/images/')) {
+      await readFile(join(rootDir, 'packages/website/public', image)).catch(() => {
+        problems.push(`${slug} points at missing public image ${image}`);
+      });
+    }
+  }
+
+  assert.deepEqual(problems, []);
 });
 
 test('website page typography avoids viewport-scaled type and negative tracking', async () => {
@@ -441,6 +481,20 @@ test('Directus chapter enrichment targets visible active chapters and public peo
   );
   assert.equal(emailLike.test(JSON.stringify(enrichment)), false);
   assert.equal(enrichment.people.every((person) => person.avatar === ''), true);
+});
+
+test('Directus operational enrichment targets public guilds and visible initiatives', async () => {
+  const enrichment = await loadOperationalEnrichment();
+  const emailLike = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i;
+  const initiativeSlugs = new Set(enrichment.chapterInitiatives.map((initiative) => initiative.slug));
+
+  assert.deepEqual(enrichment.guilds.map((guild) => guild.slug), ['dev-guild', 'writers-guild']);
+  assert.equal(enrichment.guilds.every((guild) => guild.image && guild.media?.reviewStatus === 'approved'), true);
+  for (const slug of requiredEnrichedInitiativeSlugs) {
+    assert.equal(initiativeSlugs.has(slug), true);
+  }
+  assert.equal(enrichment.chapterInitiatives.some((initiative) => initiative.chapterSlug === 'uncommons'), false);
+  assert.equal(emailLike.test(JSON.stringify(enrichment)), false);
 });
 
 test('Directus operational access plan separates draft editors from publishers', () => {

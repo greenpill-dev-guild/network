@@ -1,0 +1,46 @@
+{
+  "chapterSlug": "cape-town",
+  "title": "Ethereum 10Y Cape Town",
+  "status": "active",
+  "summary": "Local Ethereum 10Y celebration and livestream activation with Greenpill listed as a partner on the public event page.",
+  "description": "The Luma event page names Greenpill as a partner and notes that Greenpill Cape Town would show the global livestream at the Cape Town celebration venue. Keep this as an event activation until the chapter adds post-event outcomes.",
+  "themeSlugs": [
+    "events",
+    "education",
+    "public-goods"
+  ],
+  "links": [
+    {
+      "label": "Ethereum 10Y Cape Town",
+      "url": "https://luma.com/ethereum-10y-capetown",
+      "subtext": "Public event page",
+      "handle": "Luma",
+      "action": "Open",
+      "icon": "calendar",
+      "kind": "external"
+    },
+    {
+      "label": "Greenpill Cape Town calendar",
+      "url": "https://luma.com/greenpill.capetown?k=c",
+      "subtext": "Chapter event calendar",
+      "handle": "Luma",
+      "action": "Follow",
+      "icon": "calendar",
+      "kind": "external"
+    }
+  ],
+  "proofSignals": [
+    {
+      "label": "Greenpill partner and livestream host",
+      "value": "Ethereum 10Y Cape Town",
+      "source": "Luma",
+      "href": "https://luma.com/ethereum-10y-capetown"
+    }
+  ],
+  "impactSources": {},
+  "relatedStorySlugs": [],
+  "relatedResourceSlugs": [
+    "ethereum-localism"
+  ],
+  "featuredWeight": 82
+}

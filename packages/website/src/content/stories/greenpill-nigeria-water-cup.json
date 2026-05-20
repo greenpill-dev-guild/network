@@ -14,7 +14,7 @@
     "nigeria"
   ],
   "body": "Greenpill Nigeria has one of the strongest public chapter footprints in the research artifact.\n\nThe Water Cup thread on the Regen Coordination Hub gives the program context. A public Hypercert records the Water Cup Mapping proof surface. A separate Awka Ethereum-at-10 event page shows the chapter presenting Water Cup alongside ReFi and public-goods education.\n\nThis story should render as a proof-backed field note, not as a claim that every downstream impact metric is already verified by the website.\n\n## Sources\n\n- S015: https://hub.regencoordination.xyz/t/greenpill-nigeria-project-water-cup-updates/307\n- S046: https://app.hypercerts.org/hypercerts/42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-86091438830997431256233775680237357498368\n- S017: https://luma.com/hlkglzcg",
-  "image": "",
+  "image": "/images/stories/greenpill-nigeria-water-cup.jpeg",
   "author": "Greenpill Network research",
   "authorRole": "Source-backed seed copy",
   "authorBio": "",
@@ -55,14 +55,14 @@
   "featuredWeight": 100,
   "readTime": "3 min read",
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "ogImage": ""
+    "image": "/images/stories/greenpill-nigeria-water-cup.jpeg",
+    "imageAlt": "Map of Nigerian areas covered by the Greenpill Nigeria Water Cup.",
+    "ogImage": "/images/stories/greenpill-nigeria-water-cup.jpeg"
   },
   "seo": {
     "title": "Greenpill Nigeria Water Cup Mapping · Greenpill Stories",
     "description": "Greenpill Nigeria's Water Cup story is grounded in public Hub, Hypercert, and event sources.",
-    "ogImage": "",
+    "ogImage": "/images/stories/greenpill-nigeria-water-cup.jpeg",
     "canonicalPath": "/stories/greenpill-nigeria-water-cup",
     "noindex": false
   }

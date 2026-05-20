@@ -1,0 +1,47 @@
+{
+  "chapterSlug": "toronto",
+  "title": "Web3 Solutions for Local Impact",
+  "status": "active",
+  "summary": "GreenPill Toronto Consensus-side gathering on Web3, regeneration, public-goods funding, and local impact.",
+  "description": "The public Luma page describes a GreenPill Toronto fireside chat bringing together investors, builders, academics, nonprofits, and Indigenous leaders to discuss ReFi, Ethereum Localism, public goods funding, and community projects.",
+  "themeSlugs": [
+    "events",
+    "public-goods",
+    "funding",
+    "local-regeneration"
+  ],
+  "links": [
+    {
+      "label": "GreenPill TO at Consensus",
+      "url": "https://luma.com/tgie0ose",
+      "subtext": "Public event page",
+      "handle": "Luma",
+      "action": "Open",
+      "icon": "calendar",
+      "kind": "external"
+    },
+    {
+      "label": "Greenpill TO Hub thread",
+      "url": "https://hub.regencoordination.xyz/t/greenpill-to-toronto-ontario/30",
+      "subtext": "Public chapter thread",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "hub",
+      "kind": "external"
+    }
+  ],
+  "proofSignals": [
+    {
+      "label": "Consensus-side public event",
+      "value": "Web3 Solutions for Local Impact",
+      "source": "Luma",
+      "href": "https://luma.com/tgie0ose"
+    }
+  ],
+  "impactSources": {},
+  "relatedStorySlugs": [],
+  "relatedResourceSlugs": [
+    "ethereum-localism"
+  ],
+  "featuredWeight": 78
+}

@@ -15,7 +15,7 @@
     "network"
   ],
   "body": "The Q1 2025 update is a useful bridge between the 2024 recap and the later Garden, Localism, and Dev Guild work.\n\nThe public Paragraph source frames the network as moving into 2025 with renewed purpose, clearer chapter onboarding goals, stronger Regen Coordination ties, public calls, and chapter/guild alignment. It should support editorial copy about the network's operating direction, not a new operational collection.\n\nFor launch content, keep this as a network story and source for related public pages. Do not infer private governance state, application workflows, or internal roadmaps beyond the public article.\n\n## Sources\n\n- S068: https://paragraph.com/@greenpill/q1-2025-laying-the-groundwork",
-  "image": "/images/hifi/topo-bg.png",
+  "image": "/images/stories/greenpill-q1-2025-groundwork.jpg",
   "author": "Greenpill Network research",
   "authorRole": "Source-backed seed copy",
   "authorBio": "",
@@ -51,14 +51,14 @@
   "featuredWeight": 76,
   "readTime": "3 min read",
   "media": {
-    "image": "/images/hifi/topo-bg.png",
-    "imageAlt": "Topographic map texture",
-    "ogImage": ""
+    "image": "/images/stories/greenpill-q1-2025-groundwork.jpg",
+    "imageAlt": "Greenpill Q1 2025 cover artwork.",
+    "ogImage": "/images/stories/greenpill-q1-2025-groundwork.jpg"
   },
   "seo": {
     "title": "Greenpill Q1 2025 · Greenpill Stories",
     "description": "Source-backed Q1 2025 Greenpill network update on onboarding, Regen Coordination, and chapter/guild alignment.",
-    "ogImage": "",
+    "ogImage": "/images/stories/greenpill-q1-2025-groundwork.jpg",
     "canonicalPath": "/stories/greenpill-q1-2025-laying-groundwork",
     "noindex": false
   }

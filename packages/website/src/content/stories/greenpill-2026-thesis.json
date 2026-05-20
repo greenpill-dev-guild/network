@@ -16,7 +16,7 @@
     "writers-guild"
   ],
   "body": "The approved 2026 thesis preview is editorial direction, not a new operational owner model.\n\nThe source introduces Greenpill Garden as a five-month incubation program launched at DevConnect and running through April 2026, with Theory of Change, coherent design strategy, CIDS, protocol, and tooling phases. It also points toward Knowledge Gardens, commitment pooling through Sarafu and Regen Reservoir, sustainable funding via Octant, Giveth, Artizen, Gardens, and Public Goods Staking, plus the Writers Guild and Carbon Copy Web3 Tooling Series.\n\nFor the website, this material should deepen the Garden and Library surfaces while leaving Garden, Knowledge Garden, Sarafu/Regen Reservoir, and Bread/Regen Coordination editorial-only until a separate operational ownership decision is made.\n\n## Sources\n\n- S071: https://paragraph.com/@greenpill/preview/rN8MvIeOa4RGvE8kJN9L",
-  "image": "/images/hifi/garden-overlay.jpg",
+  "image": "/images/stories/greenpill-2026-thesis.jpg",
   "author": "Greenpill Network research",
   "authorRole": "Source-backed seed copy",
   "authorBio": "",
@@ -53,14 +53,14 @@
   "featuredWeight": 88,
   "readTime": "4 min read",
   "media": {
-    "image": "/images/hifi/garden-overlay.jpg",
-    "imageAlt": "Garden texture from the high-fidelity design package",
-    "ogImage": ""
+    "image": "/images/stories/greenpill-2026-thesis.jpg",
+    "imageAlt": "Greenpill 2026 thesis cover artwork.",
+    "ogImage": "/images/stories/greenpill-2026-thesis.jpg"
   },
   "seo": {
     "title": "Greenpill 2026 Thesis · Greenpill Stories",
     "description": "Source-backed 2026 Greenpill thesis covering Garden incubation, knowledge gardens, commitment pooling, sustainable funding, and Writers Guild research.",
-    "ogImage": "",
+    "ogImage": "/images/stories/greenpill-2026-thesis.jpg",
     "canonicalPath": "/stories/greenpill-2026-thesis",
     "noindex": false
   }

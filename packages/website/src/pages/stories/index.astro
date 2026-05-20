@@ -32,6 +32,14 @@ const rest = published.slice(1);
 
 const hero = storiesIndex.hero ?? {};
 const topicSpotlight = storiesIndex.topicSpotlight;
+
+function storyImage(story: typeof published[number]) {
+  return story.data.media?.image || story.data.image || '';
+}
+
+function storyImageAlt(story: typeof published[number]) {
+  return story.data.media?.imageAlt || `${story.data.title} story image`;
+}
 ---
 
 <GpLayout
@@ -95,6 +103,11 @@ const topicSpotlight = storiesIndex.topicSpotlight;
                 <Text variant="caption">Featured source-backed story.</Text>
               </div>
               <a class="gp-stories-feature" href={`/stories/${featured.id}`}>
+                {storyImage(featured) && (
+                  <figure class="gp-stories-feature-media">
+                    <img src={storyImage(featured)} alt={storyImageAlt(featured)} loading="eager" decoding="async" />
+                  </figure>
+                )}
                 <Meta items={[featured.data.category || 'story', featured.data.region || 'global', featured.data.publishDate || '']} accentIndex={0} />
                 <Text variant="h2" class="gp-stories-feature-title">{featured.data.title}</Text>
                 {featured.data.dek && <Text variant="body-lg">{featured.data.dek}</Text>}
@@ -118,6 +131,11 @@ const topicSpotlight = storiesIndex.topicSpotlight;
               <div class="gp-stories-grid">
                 {rest.map((story) => (
                   <a class="gp-stories-card" href={`/stories/${story.id}`}>
+                    {storyImage(story) && (
+                      <figure class="gp-stories-card-media">
+                        <img src={storyImage(story)} alt={storyImageAlt(story)} loading="lazy" decoding="async" />
+                      </figure>
+                    )}
                     <Meta items={[story.data.category || 'story', story.data.region || 'global', story.data.publishDate || '']} accentIndex={0} />
                     <Text variant="h3" class="gp-stories-card-title">{story.data.title}</Text>
                     {story.data.excerpt && <Text variant="body-sm">{story.data.excerpt}</Text>}
@@ -280,6 +298,32 @@ const topicSpotlight = storiesIndex.topicSpotlight;
   .gp-stories-feature:hover {
     border-color: rgba(184, 232, 53, 0.32);
     background: var(--gp-card-elev);
+  }
+
+  .gp-stories-feature-media,
+  .gp-stories-card-media {
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid var(--gp-border-soft);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .gp-stories-feature-media {
+    aspect-ratio: 16 / 9;
+    border-radius: var(--gp-radius-lg);
+  }
+
+  .gp-stories-card-media {
+    aspect-ratio: 16 / 10;
+    border-radius: var(--gp-radius-md);
+  }
+
+  .gp-stories-feature-media img,
+  .gp-stories-card-media img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
   }
 
   .gp-stories-feature :global(.gp-stories-feature-title) {
