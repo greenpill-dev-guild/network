@@ -82,7 +82,9 @@ the Directus API. `directus:studio:setup` applies the Data Studio labels,
 field ordering, interfaces, displays, and hidden technical collections that make
 the same schema usable for steward editing.
 
-The current public site deployment can remain on the existing GitHub Pages path while this package restructure lands. If we later migrate the public site to Vercel, use the repo root as the project root, `bun install --frozen-lockfile` as install command, `bun run build:website` as build command, and `packages/website/dist` as output directory.
+The current public site deployment can remain on GitHub Pages. Because this is a monorepo, do not use the branch/folder picker to look for `packages/website/dist`; GitHub Pages branch publishing only supports the repository root or `/docs`. In repository settings, set Pages source to **GitHub Actions**. The `.github/workflows/github-pages.yml` workflow installs from the checked-in Bun lockfile, runs `bun run build:website`, and publishes `packages/website/dist`.
+
+If we later migrate the public site to Vercel, use the repo root as the project root, `bun install --frozen-lockfile` as install command, `bun run build:website` as build command, and `packages/website/dist` as output directory.
 
 ## Agent And Local Postgres
 
