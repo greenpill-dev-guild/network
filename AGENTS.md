@@ -44,6 +44,8 @@ Run installs and validation from the repo root.
 - `bun run directus:studio:setup` - apply steward-friendly Directus Data Studio collection and field metadata.
 - `bun run directus:steward:smoke` - create a temporary steward user and verify scoped Directus editing behavior.
 - `bun run test:agent`, `bun run test:chapter-impact`, `bun run test:content`, `bun run test:map-nodes`, `bun run plans:validate` - focused contract checks.
+- `bun run ui:check` - source-only website CSS guardrails; no build, browser, or screenshots.
+- `bun run ui:verify <route>` - heavier website build + rendered browser proof at 375 / 1024 / 1440.
 
 ## Architecture Notes
 
@@ -67,6 +69,17 @@ Website source and config live under `packages/website`:
 - `packages/website/keystatic.config.ts` - local Keystatic config.
 - `packages/website/src/scripts/` - browser interaction scripts.
 - `packages/website/src/styles/global.css` - global site styles.
+
+## Website Design Guardrails
+
+Before UI or CSS work in `packages/website`, load the design system sources in this order:
+
+- `packages/website/DESIGN.md`, including the Modern CSS Standard and route reflow matrix.
+- `packages/website/src/styles/gp-tokens.css`.
+- The relevant primitives in `packages/website/src/components/ui/*`.
+
+Use `bun run ui:check` as the fast static guardrail for source CSS drift. Use
+`bun run ui:verify <route>` when the rendered surface must be proven in-browser.
 
 Generated public JSON routes include `/locations.json` and `/impact-sources.json`, derived from the approved operational content snapshot. Keep those outputs public-safe.
 

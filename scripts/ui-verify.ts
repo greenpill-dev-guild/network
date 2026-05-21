@@ -11,6 +11,7 @@
  *
  * Usage:
  *   bun run ui:verify                 # build site, verify all discovered routes
+ *   bun run ui:check                  # source-only CSS guardrails, no browser/build
  *   bun run ui:verify / /chapters     # verify specific routes
  *   UI_VERIFY_ORIGIN=http://localhost:4321 bun scripts/ui-verify.ts /   # against a running dev server (no build)
  *
@@ -19,6 +20,7 @@
  *   UI_VERIFY_ORIGIN            verify against this origin instead of building + serving dist
  *   UI_VERIFY_REQUIRED=1        fail (instead of skip) when no Chrome binary is found
  *   UI_VERIFY_WIDTHS=375,768    override the default 375,1024,1440 widths
+ *   UI_VERIFY_SOURCE_ONLY=1     run only source CSS standard checks and exit
  *
  * Reuses the CDP-over-static-server pattern proven in scripts/map-edit-browser-smoke.ts;
  * adds no runtime dependency beyond the optional axe-core (channel 3 degrades to a warning if absent).
@@ -37,6 +39,7 @@ const distRoot = join(rootDir, 'packages/website/dist');
 const outDir = join(rootDir, 'packages/website/.ui-verify');
 const websiteSrcRoot = join(rootDir, 'packages/website/src');
 const required = process.env.UI_VERIFY_REQUIRED === '1';
+const sourceOnly = process.env.UI_VERIFY_SOURCE_ONLY === '1' || process.argv.includes('--source-only');
 const widths = (process.env.UI_VERIFY_WIDTHS || '375,1024,1440')
   .split(',')
   .map((w) => Number.parseInt(w.trim(), 10))
@@ -311,6 +314,24 @@ async function auditSourceCss(): Promise<Violation[]> {
   return out;
 }
 
+function printSourceViolations(scope: 'ui-check' | 'ui-verify', sourceViolations: Violation[]): void {
+  if (sourceViolations.length === 0) return;
+  console.log(`[${scope}] source checks: ${sourceViolations.length} violation(s)`);
+  for (const x of sourceViolations) console.log(`      ${x.sev === 'hard' ? '✗' : '⚠'} [${x.channel}:${x.code}] ${x.msg}`);
+  console.log('');
+}
+
+async function runSourceCheckOnly(): Promise<void> {
+  const sourceViolations = await auditSourceCss();
+  printSourceViolations('ui-check', sourceViolations);
+
+  const hardCount = sourceViolations.filter((v) => v.sev === 'hard').length;
+  const warnCount = sourceViolations.filter((v) => v.sev === 'warn').length;
+  console.log(`[ui-check] ${hardCount} hard, ${warnCount} warn source violation(s).`);
+
+  if (hardCount > 0) process.exitCode = 1;
+}
+
 // ── In-page assertion bundle for channels 1 & 4 (single expression, returns Violation[]) ──
 const DOM_ASSERTIONS = `
 (() => {
@@ -544,6 +565,11 @@ async function verifyRouteAtWidth(client: CdpClient, origin: string, route: stri
 }
 
 async function run(): Promise<void> {
+  if (sourceOnly) {
+    await runSourceCheckOnly();
+    return;
+  }
+
   const cliRoutes = process.argv.slice(2).filter((a) => a.startsWith('/'));
   const origin = process.env.UI_VERIFY_ORIGIN;
   const chromeBinary = findChromeBinary();
@@ -566,11 +592,7 @@ async function run(): Promise<void> {
   try {
     const sourceViolations = await auditSourceCss();
     all.push(...sourceViolations);
-    if (sourceViolations.length > 0) {
-      console.log(`[ui-verify] source checks: ${sourceViolations.length} violation(s)`);
-      for (const x of sourceViolations) console.log(`      ${x.sev === 'hard' ? '✗' : '⚠'} [${x.channel}:${x.code}] ${x.msg}`);
-      console.log('');
-    }
+    printSourceViolations('ui-verify', sourceViolations);
 
     client = await CdpClient.connect(chrome.webSocketUrl);
     console.log(`[ui-verify] ${routes.length} route(s) × widths [${widths.join(', ')}] via ${chromeBinary.split('/').pop()}\n`);

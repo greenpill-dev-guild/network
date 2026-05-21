@@ -47,6 +47,7 @@
     "test:map-edit:browser:required": "MAP_EDIT_BROWSER_SMOKE_REQUIRED=1 bun run test:map-edit:browser",
     "test:map-nodes": "bun run build:packages && bun test scripts/map-node-contract.test.ts",
     "test:plans": "bun test scripts/plan-hub.test.ts",
+    "ui:check": "UI_VERIFY_SOURCE_ONLY=1 bun --no-env-file scripts/ui-verify.ts",
     "ui:verify": "bun run build:website && bun --no-env-file scripts/ui-verify.ts",
     "ui:verify:required": "UI_VERIFY_REQUIRED=1 bun run ui:verify"
   },

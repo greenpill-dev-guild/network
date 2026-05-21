@@ -293,7 +293,7 @@ Visual character:
 
 ## Modern CSS Standard (2026)
 
-This is the enshrined, enforceable house standard for all UI in `packages/website`. It is grounded in [web.dev — building agent-friendly UX](https://web.dev/articles/ai-agent-site-ux) and [Chrome — CSS & UI](https://developer.chrome.com/docs/css-ui), and it **supersedes earlier prose where they differ** — most importantly, type sizing is now fluid `clamp()`, not fixed px with viewport `@media` step-downs. Every UI change must satisfy it; `bun run ui:verify` and `bun run ui:check` enforce it.
+This is the enshrined, enforceable house standard for all UI in `packages/website`. It is grounded in [web.dev — building agent-friendly UX](https://web.dev/articles/ai-agent-site-ux) and [Chrome — CSS & UI](https://developer.chrome.com/docs/css-ui), and it **supersedes earlier prose where they differ** — most importantly, type sizing is now fluid `clamp()`, not fixed px with viewport `@media` step-downs. Every UI change must satisfy it; `bun run ui:check` is the static source guardrail and `bun run ui:verify` is the rendered browser proof.
 
 ### Responsive mechanism — container queries
 - Component and section roots that reflow set `container-type: inline-size` (or a named container) and reflow via **`@container`**, never viewport `@media`. A component placed in a sidebar, modal, or narrow column then reflows exactly as it would at the matching viewport width. The width thresholds in the per-page reflow matrix below are expressed as `@container` queries.
@@ -331,7 +331,7 @@ When unsure about a CSS or accessibility technique, defer to these rather than i
 - web.dev — [Building agent-friendly UX](https://web.dev/articles/ai-agent-site-ux)
 
 ### Verification is mandatory
-After any UI change, run **`bun run ui:verify <route>`** (renders at 375 / 1024 / 1440 and runs the four validation channels — visual + layout, accessibility tree, axe-core, layout-stability + semantic lint) and read the **375px** screenshot first. Never declare UI work done on code review alone; responsiveness and accessibility bugs are invisible in source. The `greenpill-ui` skill and `packages/website/CLAUDE.md` drive this workflow.
+After any UI change, run **`bun run ui:check`** first. It is source-only/static and catches CSS standard drift without building or opening a browser. Before declaring rendered UI done, run **`bun run ui:verify <route>`** (builds and renders at 375 / 1024 / 1440, then runs the four validation channels — visual + layout, accessibility tree, axe-core, layout-stability + semantic lint) and read the **375px** screenshot first. Never declare UI work done on code review alone; responsiveness and accessibility bugs are invisible in source. The `greenpill-ui` skill and `packages/website/CLAUDE.md` drive this workflow.
 
 ## Colors
 

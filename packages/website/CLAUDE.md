@@ -6,9 +6,10 @@ is `packages/website/DESIGN.md`; this is the load-bearing digest.
 
 ## Before you touch any UI
 
-1. Read `src/styles/gp-tokens.css` (the `--gp-*` token values).
-2. Open `DESIGN.md` and find the page you're changing in the **per-page reflow matrix**. State the desktop/tablet/mobile behaviour you must hit before writing CSS.
-3. Use the **`greenpill-ui` skill**, or at minimum run the verification loop below before declaring done.
+1. Open `DESIGN.md`, including the **Modern CSS Standard** and the page you're changing in the **per-page reflow matrix**. State the desktop/tablet/mobile behaviour you must hit before writing CSS.
+2. Read `src/styles/gp-tokens.css` (the `--gp-*` token values).
+3. Inspect the relevant `src/components/ui/*` primitives before writing raw markup.
+4. Use the **`greenpill-ui` skill**, or at minimum run the verification loop below before declaring done.
 
 The live site is 100% on the `--gp-*` token system + `src/components/ui` primitives. **Match it. Do not improvise a new aesthetic, and do not use the generic `frontend-design` plugin here** — this package has its own standard.
 
@@ -35,14 +36,15 @@ The live site is 100% on the `--gp-*` token system + `src/components/ui` primiti
 
 ## Verification is mandatory
 
-After any UI change, render and look at it before declaring done:
+After any UI change, run the source guardrail first. Before declaring rendered UI done, run the browser proof and inspect the screenshots:
 
 ```
-bun run build:website            # or run a dev server + set UI_VERIFY_ORIGIN
-bun scripts/ui-verify.ts /your-route   # (or `bun run ui:verify /your-route` if registered)
+bun run ui:check
+bun run ui:verify /your-route
+# or run a dev server + set UI_VERIFY_ORIGIN for ui:verify
 ```
 
-It renders at 375/1024/1440 and runs four channels — layout (overflow / wrapped pills / 44px targets), accessibility tree, axe-core, and CLS + semantic lint — writing screenshots + `report.json` to `.ui-verify/`. **Read the 375px PNG first.** Fix every HARD violation. Never declare UI work done on code review alone — responsiveness and a11y bugs are invisible in source.
+`ui:check` is static/source-only and catches CSS standard drift without building or opening a browser. `ui:verify` renders at 375/1024/1440 and runs four channels — layout (overflow / wrapped pills / 44px targets), accessibility tree, axe-core, and CLS + semantic lint — writing screenshots + `report.json` to `.ui-verify/`. **Read the 375px PNG first.** Fix every HARD violation. Never declare UI work done on code review alone — responsiveness and a11y bugs are invisible in source.
 
 ## House component pattern
 
