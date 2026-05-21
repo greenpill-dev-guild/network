@@ -682,7 +682,8 @@ test('agent package exposes a Hono app with data-backed public routes', async ()
   assert.equal(mapStatePayload.intakeMode, 'moderated');
   assert.equal(mapStatePayload.counts.chapterNodes, 1);
   assert.equal(mapStatePayload.counts.approvedSubmittedNodes, 1);
-  assert.equal(mapStatePayload.edges.length, 0);
+  assert.equal(mapStatePayload.nodes.some((node) => node.source === 'generated-density'), true);
+  assert.equal(mapStatePayload.edges.length > 0, true);
   assert.equal(mapStatePayload.edges.some((edge) => (
     String(edge.from).startsWith('chapter:') || String(edge.to).startsWith('chapter:')
   )), false);

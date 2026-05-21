@@ -251,13 +251,14 @@ test('public map-state combines chapter anchors and approved submitted nodes saf
 
   assert.equal(payload.version, 1);
   assert.equal(payload.intakeMode, 'live');
-  assert.equal(payload.nodes.length, 1);
-  assert.equal(payload.nodes[0].type, 'chapter');
-  assert.equal(payload.nodes.some((node) => node.type === 'steward'), false);
+  assert.equal(payload.nodes.some((node) => node.type === 'chapter'), true);
+  assert.equal(payload.nodes.some((node) => node.type === 'steward'), true);
+  assert.equal(payload.nodes.some((node) => node.source === 'generated-density'), true);
   assert.equal(payload.counts.chapterNodes, 1);
-  assert.equal(payload.counts.approvedSubmittedNodes, 0);
-  assert.equal(payload.counts.byTheme.public, 1);
-  assert.equal(payload.edges.length, 0);
+  assert.equal(payload.counts.approvedSubmittedNodes, 1);
+  assert.equal(payload.counts.byType.steward, 1);
+  assert.equal(payload.counts.byTheme.public > 1, true);
+  assert.equal(payload.edges.length > 0, true);
   assert.equal(containsPrivateMapStateField(payload), false);
   assert.equal(JSON.stringify(payload).includes('private@example.com'), false);
   assert.equal(JSON.stringify(payload).includes('private submission context'), false);
@@ -324,7 +325,8 @@ test('public map-state generates person-first relationship edges', () => {
   });
 
   assert.equal(payload.edges.some((edge) => edge.kind === 'chapter-theme'), false);
-  assert.equal(payload.nodes.some((node) => node.type === 'steward'), false);
+  assert.equal(payload.nodes.some((node) => node.type === 'steward'), true);
+  assert.equal(payload.edges.some((edge) => edge.kind === 'steward-member'), true);
   assert.equal(payload.edges.some((edge) => (
     edge.kind === 'member-member' &&
     [edge.from, edge.to].sort().join(':') === 'submission:member-1:submission:member-2'
@@ -334,7 +336,7 @@ test('public map-state generates person-first relationship edges', () => {
   )), false);
 });
 
-test('public map-state excludes steward-only submissions from launch payloads', () => {
+test('public map-state includes opt-in stewards and anonymous density safely', () => {
   const stewardNodes = Array.from({ length: 8 }, (_, index) => ({
     id: `steward-${index + 1}`,
     name: `Steward ${index + 1}`,
@@ -361,9 +363,10 @@ test('public map-state excludes steward-only submissions from launch payloads', 
   });
 
   const stewardEdges = payload.edges.filter((edge) => edge.kind === 'steward-steward');
-  assert.equal(payload.nodes.some((node) => node.type === 'steward'), false);
-  assert.equal(payload.counts.approvedSubmittedNodes, 0);
-  assert.equal(stewardEdges.length, 0);
+  assert.equal(payload.nodes.filter((node) => node.type === 'steward').length, stewardNodes.length);
+  assert.equal(payload.nodes.some((node) => node.source === 'generated-density'), true);
+  assert.equal(payload.counts.approvedSubmittedNodes, stewardNodes.length);
+  assert.equal(stewardEdges.length > 0, true);
   assert.equal(payload.edges.some((edge) => (
     edge.from.startsWith('chapter:') || edge.to.startsWith('chapter:')
   )), false);
@@ -638,28 +641,28 @@ test('home map intake requires a valid email and stores local pending only after
   assert.doesNotMatch(component, /update-requests/);
 });
 
-test('home map enforces the exactly-four-theme activity rule', async () => {
+test('home map enforces the up-to-four-theme activity rule', async () => {
   const component = await readFile(
     new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
     'utf8'
   );
 
   // The form labels the rule and a live counter, and the submit handler refuses
-  // anything other than four themes before it ever contacts the server.
-  assert.match(component, /Choose exactly four themes/);
+  // zero themes or more than four themes before it ever contacts the server.
+  assert.match(component, /Pick up to four/);
   assert.match(component, /data-home-map-theme-count/);
-  assert.match(component, /REQUIRED_THEME_COUNT = 4/);
-  assert.match(component, /themes\.length !== REQUIRED_THEME_COUNT/);
+  assert.match(component, /MAX_THEME_COUNT = 4/);
+  assert.match(component, /themes\.length < 1 \|\| themes\.length > MAX_THEME_COUNT/);
 
-  // The exactly-four guard sits after the email check (so a local pending node
+  // The up-to-four guard sits after the email check (so a local pending node
   // is still never written before the email is valid) and before the fetch.
   const submitIndex = component.indexOf("addForm?.addEventListener('submit'");
   const emailValidationIndex = component.indexOf('emailInput?.checkValidity()', submitIndex);
-  const themeGuardIndex = component.indexOf('themes.length !== REQUIRED_THEME_COUNT', submitIndex);
+  const themeGuardIndex = component.indexOf('themes.length < 1 || themes.length > MAX_THEME_COUNT', submitIndex);
   const fetchIndex = component.indexOf('await fetch(`${agentBaseUrl}/map-nodes`', submitIndex);
   assert.ok(emailValidationIndex !== -1 && themeGuardIndex !== -1 && fetchIndex !== -1);
   assert.ok(emailValidationIndex < themeGuardIndex, 'email validity is still checked first');
-  assert.ok(themeGuardIndex < fetchIndex, 'exactly-four rule is enforced before the network call');
+  assert.ok(themeGuardIndex < fetchIndex, 'up-to-four rule is enforced before the network call');
 });
 
 test('home map grows live: reconciles, polls visibly, and redraws after submit', async () => {

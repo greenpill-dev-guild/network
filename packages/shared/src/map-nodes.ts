@@ -12,6 +12,8 @@ export interface PublicMapNode {
   lat: number;
   long: number;
   role: string;
+  chapterSlug?: string;
+  profileUrl?: string;
   themes: string[];
   publicNote: string;
   status: 'approved';
@@ -113,6 +115,8 @@ export const PUBLIC_MAP_NODE_FIELDS = Object.freeze([
   'lat',
   'long',
   'role',
+  'chapterSlug',
+  'profileUrl',
   'themes',
   'publicNote',
   'status',
@@ -166,6 +170,14 @@ const normalizeNumber = (value: unknown): number | null => {
   return Number.isFinite(number) ? number : null;
 };
 
+const cleanHref = (value: unknown): string => {
+  const href = cleanString(value);
+  if (href.startsWith('/') || href.startsWith('https://') || href.startsWith('http://')) {
+    return href;
+  }
+  return '';
+};
+
 const normalizeThemes = (themes: unknown): string[] => (
   Array.isArray(themes)
     ? themes.map(cleanString).filter(Boolean)
@@ -204,6 +216,8 @@ export function toPublicMapNode(submission: UnknownRecord): PublicMapNode | null
     lat,
     long,
     role: cleanString(submission.role || submission.intent),
+    chapterSlug: cleanString(submission.chapterSlug ?? submission.chapter_slug),
+    profileUrl: cleanHref(submission.profileUrl ?? submission.profile_url),
     themes: normalizeThemes(submission.themes),
     publicNote: cleanString(submission.publicNote),
     status: 'approved',

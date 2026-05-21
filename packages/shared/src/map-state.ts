@@ -36,12 +36,14 @@ export interface PublicMapStateNode {
   long: number;
   href?: string;
   role?: string;
+  chapterSlug?: string;
+  profileUrl?: string;
   publicNote?: string;
   status: string;
   size: PublicMapNodeSize;
   themes: string[];
   primaryTheme: string;
-  source: 'chapter-content' | 'approved-submission';
+  source: 'chapter-content' | 'approved-submission' | 'generated-density';
 }
 
 export interface PublicMapStateEdge {
@@ -244,10 +246,6 @@ const mapSizeForType = (type: PublicMapNodeType): PublicMapNodeSize => {
   return 'S';
 };
 
-const isVisiblePublicMapStateNode = (node: PublicMapStateNode): boolean => (
-  node.type !== 'steward'
-);
-
 const normalizeSourceStatus = (status: unknown): PublicMapSourceStatusValue => {
   const cleaned = cleanString(status);
   return (PUBLIC_MAP_SOURCE_STATUSES as readonly string[]).includes(cleaned)
@@ -329,7 +327,10 @@ export function toPublicMapStateSubmittedNode(input: UnknownRecord): PublicMapSt
     country: node.country,
     lat: node.lat,
     long: node.long,
+    href: cleanHref(input?.href ?? input?.profileUrl ?? node.profileUrl),
     role: node.role,
+    chapterSlug: cleanString(input?.chapterSlug ?? input?.chapter_slug ?? node.chapterSlug),
+    profileUrl: cleanHref(input?.profileUrl ?? input?.profile_url ?? node.profileUrl),
     publicNote: node.publicNote,
     status: 'approved',
     size: mapSizeForType(type),
@@ -504,6 +505,96 @@ export function generatePublicMapEdges(
   return edges;
 }
 
+const ANONYMOUS_DENSITY_PLACES = Object.freeze([
+  { label: 'Lagos', city: 'Lagos', region: '', country: 'Nigeria', lat: 6.5244, long: 3.3792 },
+  { label: 'Berlin', city: 'Berlin', region: '', country: 'Germany', lat: 52.52, long: 13.405 },
+  { label: 'Bogota', city: 'Bogota', region: '', country: 'Colombia', lat: 4.711, long: -74.0721 },
+  { label: 'Bali', city: 'Bali', region: '', country: 'Indonesia', lat: -8.3405, long: 115.092 },
+  { label: 'Toronto', city: 'Toronto', region: 'Ontario', country: 'Canada', lat: 43.6532, long: -79.3832 },
+  { label: 'New York City', city: 'New York City', region: 'New York', country: 'United States', lat: 40.7128, long: -74.006 },
+  { label: 'Nairobi', city: 'Nairobi', region: '', country: 'Kenya', lat: -1.2864, long: 36.8172 },
+  { label: 'Cape Town', city: 'Cape Town', region: '', country: 'South Africa', lat: -33.9249, long: 18.4241 },
+  { label: 'Sao Paulo', city: 'Sao Paulo', region: '', country: 'Brazil', lat: -23.5505, long: -46.6333 },
+  { label: 'Tokyo', city: 'Tokyo', region: '', country: 'Japan', lat: 35.6762, long: 139.6503 },
+  { label: 'Lisbon', city: 'Lisbon', region: '', country: 'Portugal', lat: 38.7223, long: -9.1393 },
+  { label: 'London', city: 'London', region: '', country: 'United Kingdom', lat: 51.5072, long: -0.1276 },
+  { label: 'Buenos Aires', city: 'Buenos Aires', region: '', country: 'Argentina', lat: -34.6037, long: -58.3816 },
+  { label: 'Accra', city: 'Accra', region: '', country: 'Ghana', lat: 5.6037, long: -0.187 },
+  { label: 'Mumbai', city: 'Mumbai', region: 'Maharashtra', country: 'India', lat: 19.076, long: 72.8777 },
+  { label: 'Manila', city: 'Manila', region: '', country: 'Philippines', lat: 14.5995, long: 120.9842 },
+]);
+
+const densityHash = (value: string): number => Array.from(value).reduce((acc, char) => (
+  ((acc * 31) + char.charCodeAt(0)) % 100000
+), 17);
+
+const densityJitter = (seed: number): number => {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+};
+
+function generateAnonymousDensityNodes(
+  baseNodes: PublicMapStateNode[],
+  themes: PublicMapTheme[],
+  { targetTotal = 96 }: { targetTotal?: number } = {}
+): PublicMapStateNode[] {
+  if (baseNodes.length === 0) return [];
+
+  const themeIds = themes.map((theme) => theme.id).filter(Boolean);
+  if (themeIds.length === 0) return [];
+
+  const existingMemberLike = baseNodes.filter((node) => (
+    node.type === 'member' || node.type === 'steward'
+  )).length;
+  const targetCount = Math.max(0, Math.min(84, targetTotal - baseNodes.length - existingMemberLike));
+  const densityNodes: PublicMapStateNode[] = [];
+
+  const chapterAnchors = baseNodes.filter((node) => node.type === 'chapter');
+  const anchors = chapterAnchors.length ? chapterAnchors : baseNodes;
+
+  for (let index = 0; index < targetCount; index += 1) {
+    const anchor = index % 2 === 0 && anchors.length
+      ? anchors[index % anchors.length]
+      : null;
+    const place = ANONYMOUS_DENSITY_PLACES[index % ANONYMOUS_DENSITY_PLACES.length];
+    const seed = densityHash(`${place.label}:${index}:${anchor?.id ?? ''}`);
+    const latBase = anchor ? anchor.lat : place.lat;
+    const longBase = anchor ? anchor.long : place.long;
+    const lat = Math.max(-58, Math.min(72, latBase + (densityJitter(seed) - 0.5) * (anchor ? 8 : 3)));
+    const long = Math.max(-178, Math.min(178, longBase + (densityJitter(seed + 7) - 0.5) * (anchor ? 14 : 6)));
+    const primaryTheme = anchor?.themes[index % Math.max(1, anchor.themes.length)]
+      || themeIds[index % themeIds.length];
+    const themesForNode = [
+      primaryTheme,
+      themeIds[(index * 3 + 1) % themeIds.length],
+      themeIds[(index * 5 + 2) % themeIds.length],
+    ].filter(Boolean);
+    const themes = [...new Set(themesForNode)];
+    const id = `density:${index + 1}`;
+
+    densityNodes.push({
+      id,
+      sourceId: id,
+      type: 'member',
+      name: 'Anonymous member',
+      place: anchor ? `${anchor.name} orbit` : place.label,
+      city: anchor?.city || place.city,
+      region: anchor?.region || place.region,
+      country: anchor?.country || place.country,
+      lat,
+      long,
+      role: 'anonymous-density',
+      status: 'anonymous',
+      size: 'S',
+      themes,
+      primaryTheme: themes[0] || '',
+      source: 'generated-density',
+    });
+  }
+
+  return densityNodes;
+}
+
 function normalizeEdge(edge: Partial<PublicMapStateEdge> & UnknownRecord): PublicMapStateEdge | null {
   const from = cleanString(edge?.from);
   const to = cleanString(edge?.to);
@@ -555,6 +646,9 @@ function countNodesForSource(nodes: PublicMapStateNode[], source: string): numbe
   if (source === 'approved-map-nodes') {
     return nodes.filter((node) => node.source === 'approved-submission').length;
   }
+  if (source === 'generated-density') {
+    return nodes.filter((node) => node.source === 'generated-density').length;
+  }
   return null;
 }
 
@@ -565,6 +659,7 @@ function normalizeMapStateSourceStatuses(
   const sourceCounts = new Map([
     ['chapter-locations', countNodesForSource(nodes, 'chapter-locations')],
     ['approved-map-nodes', countNodesForSource(nodes, 'approved-map-nodes')],
+    ['generated-density', countNodesForSource(nodes, 'generated-density')],
   ]);
 
   const normalized = Array.isArray(sourceStatus) && sourceStatus.length
@@ -595,6 +690,11 @@ function normalizeMapStateSourceStatuses(
       status: (sourceCounts.get('approved-map-nodes') ?? 0) > 0 ? 'ok' : 'empty',
       count: sourceCounts.get('approved-map-nodes') ?? 0,
     }),
+    normalizePublicMapSourceStatus({
+      source: 'generated-density',
+      status: (sourceCounts.get('generated-density') ?? 0) > 0 ? 'ok' : 'empty',
+      count: sourceCounts.get('generated-density') ?? 0,
+    }),
   ];
 }
 
@@ -622,9 +722,10 @@ export function toPublicMapStatePayload({
     ...chapterLocations.map(toPublicMapStateChapterNode).filter(isPresent),
     ...publicMapNodes.map(toPublicMapStateSubmittedNode).filter(isPresent),
   ]
-    .filter(isVisiblePublicMapStateNode)
     .sort((a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name));
-  const uniqueNodes = [...new Map(nodes.map((node) => [node.id, node])).values()];
+  const uniqueBaseNodes = [...new Map(nodes.map((node) => [node.id, node])).values()];
+  const densityNodes = generateAnonymousDensityNodes(uniqueBaseNodes, publicThemes);
+  const uniqueNodes = [...new Map([...uniqueBaseNodes, ...densityNodes].map((node) => [node.id, node])).values()];
   const publicEdges = (Array.isArray(edges)
     ? edges.map(normalizeEdge).filter(isPresent)
     : generatePublicMapEdges(uniqueNodes))

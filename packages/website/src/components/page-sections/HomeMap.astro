@@ -144,7 +144,8 @@ const chapterNodes: ChapterNode[] = chapters
   });
 
 // Mycelial threads are loaded from the public map-state endpoint. Chapters
-// remain map anchors and never become relationship endpoints.
+// remain SSR anchors; public stewards, members, and anonymous density nodes
+// are progressively enhanced from /map/state.
 type Edge = {
   fromId: string;
   toId: string;
@@ -163,9 +164,10 @@ const themeColor = (slug: string) => THEME_INFO[slug]?.color ?? '#B8E835';
 const chapterCount = chapterNodes.length;
 const nodeTypeFilters = [
   { id: 'chapter', label: 'Chapters', count: chapterCount },
+  { id: 'steward', label: 'Stewards', count: 0 },
   { id: 'member', label: 'Members', count: 0 },
 ] as const;
-const statsA11y = `World map of ${chapterCount} active chapters and public member nodes.`;
+const statsA11y = `World map of ${chapterCount} active chapters, public stewards, and public-safe member nodes.`;
 ---
 
 <figure class="gp-home-map" aria-labelledby="gp-home-map-title">
@@ -243,13 +245,14 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
         ))}
       </g>
 
-      {/* member nodes — approved submitted + local-pending nodes injected
-          client-side from /map/state. Empty at build time so the map renders
-          and degrades gracefully when the agent is unavailable. */}
+      {/* public people nodes — approved submitted stewards/members, anonymous
+          density nodes, and local-pending nodes injected client-side from
+          /map/state. Empty at build time so the map renders and degrades
+          gracefully when the agent is unavailable. */}
       <g class="gp-home-map-members" data-home-map-members></g>
     </svg>
 
-    {/* Integrated stats overlay - top-right inside the map. Member/steward
+    {/* Integrated stats overlay - top-right inside the map. Steward/member
         counts stay visible at zero. */}
     <div class="gp-home-map-stats" aria-hidden="true">
       {nodeTypeFilters.map((type) => (
@@ -320,9 +323,9 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
       not need to import the shared map-state module into the browser bundle. */}
   <script type="application/json" data-home-map-theme-info set:html={JSON.stringify(THEME_INFO)}></script>
 
-  {/* Selected-node panel — opens in-flow when a submitted member node is
-      activated. Chapter nodes navigate; steward nodes only show the hover
-      card. The owner-edit affordance appears for approved nodes only. */}
+  {/* Selected-node panel — opens in-flow when a submitted steward/member node or
+      anonymous density node is activated. Chapter nodes navigate. The
+      owner-edit affordance appears for approved submitted nodes only. */}
   <div class="gp-home-map-selected" data-home-map-selected hidden role="region" aria-label="Selected map node">
     <button type="button" class="gp-home-map-selected-close" data-selected-close aria-label="Close selected node">
       <span aria-hidden="true">×</span>
@@ -365,7 +368,7 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
       <section class="gp-home-map-addnode-step is-active" data-walkthrough-step="themes">
         <p class="gp-home-map-addnode-kicker">Step · what you care about</p>
         <h2 id="gp-home-map-addnode-title">What are you here to grow?</h2>
-        <p class="gp-home-map-addnode-copy">Pick exactly four. These choose the color of your threads on the map and find your people.</p>
+        <p class="gp-home-map-addnode-copy">Pick up to four. These choose the color of your threads on the map and find your people.</p>
 
         <div class="gp-home-map-addnode-theme-options" data-home-map-themes>
           {mapThemes.map((theme) => (
@@ -433,7 +436,7 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
         </div>
 
         <label class="gp-home-map-addnode-note">
-          <span>Public note</span>
+          <span>Public profile intro</span>
           <textarea name="publicNote" rows="3" maxlength="280" placeholder="What are you working on with the network?"></textarea>
         </label>
       </section>
@@ -457,7 +460,7 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
             <button type="button" data-edit-step="themes">Edit</button>
           </div>
           <div>
-            <span>Public note</span>
+            <span>Profile intro</span>
             <p data-review-note>None yet</p>
             <button type="button" data-edit-step="identity">Edit</button>
           </div>
@@ -488,7 +491,7 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
     saveLocalPendingNode,
   } from '@greenpill-network/shared/map-nodes';
 
-  type DynamicMapNodeType = 'member';
+  type DynamicMapNodeType = 'steward' | 'member';
 
   type DynamicMapNode = {
     key: string;
@@ -500,6 +503,7 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
     lat: number;
     long: number;
     approved: boolean;
+    density: boolean;
     pending: boolean;
   };
 
@@ -553,7 +557,7 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
     const themeFilterButtons = Array.from(scope.querySelectorAll('[data-theme-filter]')) as HTMLButtonElement[];
     const filterToggleButtons = Array.from(scope.querySelectorAll('[data-filter-toggle]')) as HTMLButtonElement[];
     const filterPanels = Array.from(scope.querySelectorAll('[data-filter-panel]')) as HTMLElement[];
-    const activeTypes = new Set(['chapter', 'member']);
+    const activeTypes = new Set(['chapter', 'steward', 'member']);
     const activeThemes = new Set(themeFilterButtons.map((button) => clean(button.dataset.themeFilter)).filter(Boolean));
     const allThemeCount = activeThemes.size;
     let openFilterPanel = '';
@@ -967,7 +971,7 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
       }
     });
 
-    // ---- Member node injection ---------------------------------------------
+    // ---- Public person node injection --------------------------------------
     const injectedKeys = new Set<string>();
     const memberByKey = new Map<string, DynamicMapNode>();
 
@@ -988,8 +992,8 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
       link.addEventListener('blur', clearFocus);
       const memberKey = (link as HTMLElement).dataset.memberKey;
       if (!memberKey) {
-        // Chapter nodes are <a> and navigate on click. Any non-member nodes have
-        // no panel, so a tap just highlights them and their adjacent threads.
+        // Chapter nodes are <a> and navigate on click. Any other static nodes
+        // just highlight themselves and their adjacent threads.
         if (!link.hasAttribute('href')) {
           const activate = () => setFocus(link);
           link.addEventListener('click', activate);
@@ -1049,9 +1053,10 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
       const titleType = member.type.charAt(0).toUpperCase() + member.type.slice(1);
       title.textContent = `${member.name} · ${titleType}${member.place ? ` · ${member.place}` : ''}`;
       group.append(title);
-      group.append(makeCircle('gp-home-map-node-halo', x, y, 4));
-      group.append(makeCircle('gp-home-map-node-ring', x, y, 2.3));
-      group.append(makeCircle('gp-home-map-node-dot', x, y, 1.6));
+      const size = member.type === 'steward' ? 2.05 : member.density ? 1.15 : 1.6;
+      group.append(makeCircle('gp-home-map-node-halo', x, y, member.type === 'steward' ? 3.4 : 4));
+      group.append(makeCircle('gp-home-map-node-ring', x, y, member.type === 'steward' ? 2 : 2.3));
+      group.append(makeCircle('gp-home-map-node-dot', x, y, size));
       group.append(makeCircle('gp-home-map-node-ripple is-ripple-a', x, y, 0));
       group.append(makeCircle('gp-home-map-node-ripple is-ripple-b', x, y, 0));
 
@@ -1077,22 +1082,24 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
 
     const toMember = (
       raw: Record<string, any>,
-      kind: 'approved-submission' | 'local-pending'
+      kind: 'approved-submission' | 'generated-density' | 'local-pending'
     ): DynamicMapNode | null => {
       const lat = toFiniteNumber(raw.lat ?? raw.latitude);
       const long = toFiniteNumber(raw.long ?? raw.longitude);
       if (lat === null || long === null) return null;
-      const name = clean(raw.name || raw.displayName);
+      const rawType = clean(raw.type || raw.nodeType || raw.role);
+      const type = filterTypeFor(rawType);
+      if (type === 'chapter') return null;
+      const density = kind === 'generated-density';
+      const name = clean(raw.name || raw.displayName) || (density ? 'Anonymous member' : '');
       if (!name) return null;
-      const sourceId = clean(raw.sourceId || raw.id).replace(/^submission:/, '');
+      const rawId = clean(raw.id) || `${lat},${long}`;
+      const sourceId = clean(raw.sourceId || raw.id).replace(/^submission:/, '').replace(/^density:/, '');
       const themes = Array.isArray(raw.themes) ? raw.themes.map(clean).filter(Boolean) : [];
       const place = clean(raw.place || raw.placeName || raw.city);
       const approved = kind === 'approved-submission';
-      const rawType = clean(raw.type || raw.nodeType);
-      if (rawType === 'steward') return null;
-      const type: DynamicMapNodeType = 'member';
       return {
-        key: approved ? `submission:${sourceId}` : `local:${clean(raw.id) || `${lat},${long}`}`,
+        key: approved ? (rawId.startsWith('submission:') ? rawId : `submission:${sourceId}`) : density ? rawId : `local:${clean(raw.id) || `${lat},${long}`}`,
         sourceId: approved ? sourceId : '',
         type,
         name,
@@ -1101,7 +1108,8 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
         lat,
         long,
         approved,
-        pending: !approved,
+        density,
+        pending: kind === 'local-pending',
       };
     };
 
@@ -1111,13 +1119,20 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
     ) => {
       if (!dynamicThreadsGroup) return;
       dynamicThreadsGroup.textContent = '';
-      const nodeById = new Map<string, { x: number; y: number; type: 'member' }>();
+      const nodeById = new Map<string, { x: number; y: number; type: 'chapter' | 'steward' | 'member' }>();
+      root.querySelectorAll('.gp-home-map-node-link').forEach((node) => {
+        const id = clean(node.getAttribute('data-node-id'));
+        const dot = node.querySelector('.gp-home-map-node-dot') as SVGCircleElement | null;
+        const x = toFiniteNumber(dot?.getAttribute('cx'));
+        const y = toFiniteNumber(dot?.getAttribute('cy'));
+        if (!id || x === null || y === null) return;
+        nodeById.set(id, { x, y, type: filterTypeFor(node.getAttribute('data-node-type')) });
+      });
       rawNodes.forEach((node) => {
         const id = clean(node?.id);
         const lat = toFiniteNumber(node?.lat);
         const long = toFiniteNumber(node?.long);
         const type = filterTypeFor(node?.type);
-        if (type !== 'member') return;
         if (!id || lat === null || long === null) return;
         nodeById.set(id, { x: lonToX(long), y: latToY(lat), type });
       });
@@ -1173,6 +1188,10 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
       scope.querySelectorAll(`[data-home-map-stat-count="${type}"], [data-home-map-type-count="${type}"]`)
         .forEach((el) => { el.textContent = String(safeCount); });
     };
+    const baseTypeCount = (type: 'chapter' | 'steward' | 'member') => {
+      const el = scope.querySelector(`[data-home-map-stat-count="${type}"]`) as HTMLElement | null;
+      return Number(el?.dataset.baseCount) || 0;
+    };
 
     let intakeMode: 'moderated' | 'live' = 'moderated';
 
@@ -1180,7 +1199,7 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
     // Fetched on load, again after every successful submit, and — while live
     // onboarding is on — on a gentle visible-page poll so already-open browsers
     // watch the relationship web grow as more people join.
-    const POLL_INTERVAL_MS = 20000;
+    const POLL_INTERVAL_MS = 2000;
     let pollTimer: number | null = null;
 
     const stopPolling = () => {
@@ -1209,8 +1228,12 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
         const approved = nodes.filter(
           (node: Record<string, any>) => node?.source === 'approved-submission'
         );
-        approved.forEach((node: Record<string, any>) => {
-          const member = toMember(node, 'approved-submission');
+        const generatedDensity = nodes.filter(
+          (node: Record<string, any>) => node?.source === 'generated-density'
+        );
+        [...approved, ...generatedDensity].forEach((node: Record<string, any>) => {
+          const kind = node?.source === 'generated-density' ? 'generated-density' : 'approved-submission';
+          const member = toMember(node, kind);
           if (member) injectMember(member);
         });
 
@@ -1227,12 +1250,18 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
           Array.isArray(state?.edges) ? state.edges : []
         );
 
-        const submittedCounts = approved.reduce((counts: { member: number }, node: Record<string, any>) => {
+        const byType = state?.counts?.byType && typeof state.counts.byType === 'object'
+          ? state.counts.byType
+          : {};
+        const submittedCounts = nodes.reduce((counts: { steward: number; member: number }, node: Record<string, any>) => {
           const type = filterTypeFor(node?.type ?? node?.nodeType);
+          if (type === 'steward') counts.steward += 1;
           if (type === 'member') counts.member += 1;
           return counts;
-        }, { member: 0 });
-        setTypeCount('member', submittedCounts.member);
+        }, { steward: 0, member: 0 });
+        setTypeCount('chapter', Number(byType.chapter) || baseTypeCount('chapter'));
+        setTypeCount('steward', Number(byType.steward) || submittedCounts.steward);
+        setTypeCount('member', Number(byType.member) || submittedCounts.member);
 
         if (intakeMode === 'live') startPolling();
         else stopPolling();
@@ -1277,7 +1306,7 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
     const reviewNote = scope.querySelector('[data-review-note]') as HTMLElement | null;
     const editStepButtons = Array.from(scope.querySelectorAll('[data-edit-step]')) as HTMLButtonElement[];
 
-    const REQUIRED_THEME_COUNT = 4;
+    const MAX_THEME_COUNT = 4;
     const walkthroughSteps = ['themes', 'identity', 'review'];
     const selectedThemes = new Set<string>();
     let currentStep = 0;
@@ -1373,7 +1402,7 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
 
     function canAdvanceCurrentStep() {
       if (!addForm) return false;
-      if (walkthroughSteps[currentStep] === 'themes') return selectedThemes.size === REQUIRED_THEME_COUNT;
+      if (walkthroughSteps[currentStep] === 'themes') return selectedThemes.size > 0 && selectedThemes.size <= MAX_THEME_COUNT;
       if (walkthroughSteps[currentStep] !== 'identity') return true;
       const data = new FormData(addForm);
       const emailInput = addForm.elements.namedItem('contact') as HTMLInputElement | null;
@@ -1400,9 +1429,9 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
         const theme = clean(button.dataset.themeChoice);
         const on = selectedThemes.has(theme);
         button.setAttribute('aria-pressed', on ? 'true' : 'false');
-        button.disabled = !on && selectedThemes.size >= REQUIRED_THEME_COUNT;
+        button.disabled = !on && selectedThemes.size >= MAX_THEME_COUNT;
       });
-      if (themeCountEl) themeCountEl.textContent = `${selectedThemes.size} / ${REQUIRED_THEME_COUNT} selected`;
+      if (themeCountEl) themeCountEl.textContent = `${selectedThemes.size} / ${MAX_THEME_COUNT} selected`;
       if (backButton) backButton.hidden = currentStep === 0;
       if (nextButton) {
         nextButton.hidden = currentStep === walkthroughSteps.length - 1;
@@ -1486,7 +1515,7 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
         const theme = clean(button.dataset.themeChoice);
         if (!theme) return;
         if (selectedThemes.has(theme)) selectedThemes.delete(theme);
-        else if (selectedThemes.size < REQUIRED_THEME_COUNT) selectedThemes.add(theme);
+        else if (selectedThemes.size < MAX_THEME_COUNT) selectedThemes.add(theme);
         syncWalkthroughState();
       });
     });
@@ -1555,9 +1584,9 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
         setAddStatus('Add a name, place, and valid private email before submitting.', 'error');
         return;
       }
-      if (themes.length !== REQUIRED_THEME_COUNT) {
+      if (themes.length < 1 || themes.length > MAX_THEME_COUNT) {
         setWalkthroughStep('themes');
-        setAddStatus('Choose exactly four themes before submitting.', 'error');
+        setAddStatus('Pick one to four themes before submitting.', 'error');
         return;
       }
 
@@ -1777,6 +1806,10 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
     fill: var(--gp-map-steward);
     opacity: 0.15;
     transition: opacity 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .gp-home-map-node-link.is-steward .gp-home-map-node-ring {
+    fill: none;
+    stroke: transparent;
   }
   .gp-home-map-node-link.is-steward:hover .gp-home-map-node-halo,
   .gp-home-map-node-link.is-steward:focus-visible .gp-home-map-node-halo {
@@ -2205,7 +2238,8 @@ const statsA11y = `World map of ${chapterCount} active chapters and public membe
   }
 
   /* Selected-node panel — in-flow (not an overlay) so it never clips on
-     mobile. Appears only when a submitted member node is activated. */
+     mobile. Appears when a submitted steward/member or anonymous density node
+     is activated. */
   .gp-home-map-selected {
     position: relative;
     width: 100%;
