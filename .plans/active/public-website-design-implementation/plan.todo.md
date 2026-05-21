@@ -26,6 +26,21 @@
 - [x] Run visual checks at desktop, tablet, and mobile breakpoints for each implemented surface
 - [x] Run `bun scripts/plan-hub.ts validate`
 
+## P0 Public Map Recovery
+
+- [x] Save the recovery audit/report in this hub and mark prior map-complete claims superseded for the map slice.
+- [x] Correct the shared public map contract so opt-in/allowlisted stewards can appear as public steward nodes.
+- [x] Add anonymous public-safe generated density nodes so the map can recover the HiFi mycelial feel before enough real members exist.
+- [x] Update Home map rendering so chapter, steward, member, and anonymous density nodes can render with theme-colored public edges.
+- [x] Change add-node theme selection from exactly four to up to four.
+- [ ] Add or extend browser proof for the full add-node flow: open dialog, select one to four themes, place a node or use text fallback, submit against a controlled test path, and verify live refresh without reload.
+- [ ] Add HiFi comparison proof at 375, 1024, and 1440 for node treatments, mycelial edges, filter legibility, and mobile readability.
+- [ ] Add a live-mode operator preflight/runbook covering `/map/state.intakeMode`, live refresh, allowlisted steward behavior, disable-live path, and post-session review.
+- [ ] Complete Steward Sync Week 1: Directus/admin onboarding, role assignment, chapter content update workflow, and public map profile opt-ins.
+- [ ] Complete Steward Sync Week 2: steward self-add rehearsal with allowlisted emails in controlled live mode.
+- [ ] Prepare June 10 live member self-add session; this is map participation, not a public-note feature.
+- [ ] After separate explicit approval only, reuse/rename the reverted Linear project and issues under `Network Presence`.
+
 ## Foundation Pass Notes
 
 - `packages/website/src/styles/gp-tokens.css` is a close port of the HiFi token file. The adapters are `.gp-topo::before` pointing to `/images/hifi/topo-bg.png`, because Astro serves copied public assets from `packages/website/public`, plus normalized zero letter-spacing and fixed breakpoint type sizing so the implementation foundation stays responsive without viewport-scaled typography.

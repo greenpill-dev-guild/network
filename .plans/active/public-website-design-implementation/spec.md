@@ -54,6 +54,17 @@ Build the next public Greenpill Network website experience in `packages/website`
 - Directus/admin access must keep token rows, owner emails, IP/user-agent, and raw request metadata restricted to trusted/admin roles. Standard stewards should only see review-safe update request fields needed to approve or reject edits.
 - Directus/admin review should provide current-vs-proposed comparisons, explicit approve/reject transitions, reviewer metadata, and private notes.
 
+## Public Map Recovery Decisions
+
+- The public map recovery is P0 and the current map should be treated as not production-ready until the recovery evaluation passes.
+- Stewards are public map nodes when they are opt-in/allowlisted. Public steward payloads may include only public-safe profile identity: id, type `steward`, name, public location fields, coordinates, themes, optional `chapterSlug`, and optional public profile URL/reference.
+- Controlled live sessions auto-approve valid submissions in real time. Allowlisted steward emails force the public node type to `steward`; non-allowlisted valid submissions publish as `member`.
+- Live mode affects new submissions only. Owner edit requests remain pending until steward/admin review.
+- Anonymous generated density nodes are allowed to restore the HiFi mycelial feel before enough real members exist. They are visual/network scaffolding only and must not carry fake names, fake biographies, fake profile links, contact fields, or any implication that they are real people.
+- The add-node theme picker is up to four themes. One theme is enough to continue; more than four is blocked.
+- The June 10 activity is a live member self-add / map participation session, not a public-note feature. Existing `publicNote` storage should be treated in UI copy as a short public profile/intro field until a separate note feature is explicitly scoped.
+- Linear cleanup/tracking is not part of repo implementation. Reusing/renaming the reverted Linear project and issues requires a separate explicit approval.
+
 ## Open Questions
 
 - Which parts of the high-fidelity package should be adapted to preserve useful live-site texture, imagery, or logo treatments?

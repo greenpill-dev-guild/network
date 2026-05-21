@@ -8,13 +8,17 @@
 - Runtime SQL and package contracts live under `packages/`.
 - `status.json` matches the intended stage and lane state.
 - Stale route scan confirms the retired public onboarding, guild-index, and project route families are not listed as future implementation targets.
-- The map-state public contract includes only safe `intakeMode` metadata and approved nodes; no pending submissions or review/private fields leak.
+- The map-state public contract includes only safe `intakeMode` metadata, approved submitted nodes, opt-in public stewards, chapter anchors, anonymous generated density nodes, and generated/source-backed public edges; no pending submissions or review/private fields leak.
 - `POST /map-nodes` keeps submissions pending by default and auto-approves only when the admin-owned intake settings singleton has Live Onboarding Mode enabled.
 - Live auto-approval writes a private audit/review row marked `system:live-onboarding`.
-- The website map consumes `/map/state`, falls back to `/locations.json`, uses distinct member/chapter/steward node colors, renders theme-colored mycelial connections, and polls about every two seconds only while live mode is active and the map is visible.
+- The website map consumes `/map/state`, falls back to `/locations.json`, uses distinct member/chapter/steward node colors, renders anonymous density nodes, renders theme-colored mycelial connections, and polls about every two seconds only while live mode is active and the map is visible.
 - Live-mode map-state responses avoid stale public caching; moderated mode keeps acceptable lightweight caching.
 - The map includes non-color identity cues, an accessible legend, and edge-density behavior that keeps mycelial lines legible on mobile and dense regions.
-- The add-node flow renders clear moderated/live copy, local pending self-nodes, success/error states, and mobile-friendly controls without overflow.
+- The add-node flow renders clear moderated/live copy, allows one to four themes, keeps local pending self-nodes for moderated submissions, shows live success/error states, and uses mobile-friendly controls without overflow.
+- Browser proof opens the add-node dialog from the homepage CTA and map control, selects one to four themes, places a node or uses text fallback, submits against a controlled test path, and verifies live map refresh without a page reload.
+- Browser proof verifies allowlisted live submissions render as public stewards and non-allowlisted live submissions render as public members.
+- Seeded-data proof verifies chapter, steward, member, and anonymous density nodes plus mycelial edges render together.
+- Visual proof compares the map against the HiFi reference at 375, 1024, and 1440 widths, including node treatments, filter legibility, thread density, and mobile readability.
 - Email magic-link node updates are email-only, use hashed one-use tokens, expire after 30 minutes, and never expose owner email or token state in public responses.
 - The edit-token/update-request migration uses the next available migration number after the current highest migration and does not collide with operational content migrations.
 - New public `POST /map-nodes` submissions require email.
@@ -38,7 +42,10 @@
 - `bun scripts/plan-hub.ts validate`
 - `bun run test:map-nodes`
 - `bun run test:agent`
+- `bun run test:content`
 - `bun run build:website`
+- `bun run ui:check`
+- `bun run ui:verify /`
 - Migration ordering check against `packages/agent/migrations`.
 - Contract tests for required email on new public map-node submissions.
 - Contract tests for role/type edit boundary, one-pending-update or optimistic-lock behavior, retention cleanup, and broad edit-link rate limits.
@@ -48,6 +55,6 @@
 - Contract tests for pending update requests, token consumption after successful update-request creation, approved update application, and public map-state privacy guards.
 - Logging/privacy checks for no raw token persistence, no raw token logging, and Directus/admin permission boundaries around token, owner email, IP/user-agent, and raw request metadata.
 - Header/cache checks for live-mode map-state freshness and moderated-mode acceptable caching.
-- Website checks for selected-node update request, `/map/edit?token=...`, token removal from visible URL before analytics/outbound navigation, success/error states, and mobile overflow.
+- Website checks for selected-node update request, `/map/edit?token=...`, token removal from visible URL before analytics/outbound navigation, success/error states, mobile overflow, add-node dialog interaction, theme selection, placement fallback, live refresh, and public steward/member rendering.
 - Targeted stale-path scan for the former root V2 and research locations across README, root config, package scripts, and `.plans`.
-- Visual checks at 1440, 1024, and 375 for map legibility, non-color node cues, accessible legend, edge-density behavior, connection clarity, live-mode copy, and mobile add-node flow.
+- Visual checks at 1440, 1024, and 375 for HiFi comparison, chapter/steward/member node treatments, anonymous density, mycelial edges, filter color comfort, non-color cues, accessible legend, edge-density behavior, connection clarity, live-mode copy, and mobile add-node flow.

@@ -10,7 +10,7 @@
     "overall_status": "active",
     "priority": "p0",
     "created_at": "2026-05-17T23:16:40.923Z",
-    "updated_at": "2026-05-20T08:35:00Z"
+    "updated_at": "2026-05-21T12:00:00Z"
   },
   "links": {
     "brief": "brief.md",
@@ -35,6 +35,7 @@
       "design-implementation",
       "content-model",
       "map-polish",
+      "map-recovery",
       "live-onboarding",
       "node-ownership",
       "magic-link-updates",
@@ -55,7 +56,7 @@
   "lanes": {
     "ui": {
       "owner": "claude",
-      "status": "ready",
+      "status": "in_progress",
       "depends_on": [],
       "handoff": "handoffs/README.md"
     },
@@ -67,13 +68,13 @@
     },
     "platform": {
       "owner": "codex",
-      "status": "ready",
+      "status": "in_progress",
       "depends_on": [],
       "handoff": "handoffs/README.md"
     },
     "qa_pass_1": {
       "owner": "claude",
-      "status": "ready",
+      "status": "todo",
       "depends_on": [
         "ui",
         "content",
@@ -83,7 +84,7 @@
     },
     "qa_pass_2": {
       "owner": "codex",
-      "status": "ready",
+      "status": "todo",
       "depends_on": [
         "qa_pass_1"
       ],
@@ -293,6 +294,13 @@
       "lane": "qa_pass_1",
       "status": "ready",
       "note": "Demo mobile-polish pass (Home, Library, Garden primary; Chapters, Stories secondary QA); map lane untouched. Home: fixed a 375px Stories-bento break that the verifier missed — the still-active max-width:1100px tablet placements (.count-4 .is-row-N, specificity 0,4,0) outranked the 720px mobile reset (.gp-home-story, 0,2,0), so cards fell into implicit grid columns with clipped text; the mobile reset now matches 0,4,0. Converted both viewport @media reflow blocks to @container against #main-content per DESIGN.md (tablet/desktop bento confirmed intact at 1024/1440); min-height 100vh -> 100dvh; garden-ramp step CTAs are now ghost so the hero keeps the single lime primary. Garden: added real #assessment and #steward-call target panels (public-safe assessmentPreview/stewardCallPreview kicker+title with honest framing and scroll-margin for the sticky header) so the Step 3/4 CTAs and Home's garden ramp now land; removed the DESIGN.md-forbidden infinite float/pulse on the hero pill, keeping a static glow. Library: added the book-rail edge-fade mask affordance and logical inset props on the resource arrow. Chapters: bumped filter pills (36px) and featured-card link rows (38px) to 44px at mobile width (the coarse-pointer rule the verifier cannot emulate), and promoted the Featured/Full-directory section labels to h2 to fix the h1->h3 heading-order jump (new optional, backward-compatible Overline as= prop; scoped styles keep the overline look). Verification: bun run ui:verify / /library /garden /chapters /stories = 0 HARD, 0 WARN at 375/1024/1440 (was 0 HARD / 29 WARN, all on /chapters); test:content 12 pass; plans:validate 7 hubs; website build clean. Shared touch: components/ui/Overline.astro (optional as prop, default div). Mobile Container gutter held at 24px (shared primitive; screenshots showed no cramping and Chapters/Stories collapse tight at <=520px). Console/runtime not separately audited beyond the headless render; the only client JS on these surfaces is HomeMap (map lane) and the unchanged Chapters filter script."
+    },
+    {
+      "timestamp": "2026-05-21T12:00:00Z",
+      "actor": "codex",
+      "lane": "system",
+      "status": "in_progress",
+      "note": "Opened the P0 public map recovery after read-only audit and product decisions. This supersedes prior map-complete and visual-QA-complete claims for the map slice: stewards must be public opt-in/allowlisted nodes, live sessions auto-approve valid submissions in real time, anonymous public-safe density must restore the HiFi mycelial feel, the theme picker is up to four themes, June 10 is a member self-add activity rather than a public-note feature, and Linear/production mutations remain separate approval-only work. Recovery report: reports/public-map-recovery-2026-05-21.md."
     }
   ]
 }
