@@ -24,10 +24,11 @@
  *
  * Reuses the CDP-over-static-server pattern proven in scripts/map-edit-browser-smoke.ts;
  * adds no runtime dependency beyond the optional axe-core (channel 3 degrades to a warning if absent).
+ * The report also records public /llms.txt reachability and WebMCP discovery status.
  */
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { accessSync, constants, existsSync, readdirSync } from 'node:fs';
+import { accessSync, constants, existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, extname, join, resolve, sep } from 'node:path';
@@ -38,6 +39,7 @@ const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const distRoot = join(rootDir, 'packages/website/dist');
 const outDir = join(rootDir, 'packages/website/.ui-verify');
 const websiteSrcRoot = join(rootDir, 'packages/website/src');
+const sourceBaselinePath = join(rootDir, 'scripts/data/ui-source-baseline.tsv');
 const required = process.env.UI_VERIFY_REQUIRED === '1';
 const sourceOnly = process.env.UI_VERIFY_SOURCE_ONLY === '1' || process.argv.includes('--source-only');
 const widths = (process.env.UI_VERIFY_WIDTHS || '375,1024,1440')
@@ -47,6 +49,30 @@ const widths = (process.env.UI_VERIFY_WIDTHS || '375,1024,1440')
 
 type Severity = 'hard' | 'warn';
 interface Violation { channel: string; code: string; sev: Severity; msg: string; route?: string; width?: number; }
+interface LlmsTxtStatus {
+  status: 'ok' | 'missing' | 'error';
+  url: string;
+  bytes?: number;
+  contentType?: string;
+  message?: string;
+}
+interface WebMcpSourceSignal {
+  path: string;
+  line: number;
+  signal: string;
+}
+interface WebMcpRouteProbe {
+  route: string;
+  navigatorModelContext: boolean;
+  registerToolType: string;
+  declarativeTools: Array<{ name: string; description: string }>;
+}
+interface WebMcpDiscovery {
+  status: 'not_configured' | 'detected' | 'error';
+  message?: string;
+  sourceSignals: WebMcpSourceSignal[];
+  routeProbes: WebMcpRouteProbe[];
+}
 
 // ── Browser discovery (extends the smoke-test list with Playwright/Puppeteer caches) ──
 function existsExecutable(p: string | undefined): p is string {
@@ -101,6 +127,7 @@ function contentTypeFor(filePath: string): string {
     case '.css': return 'text/css; charset=utf-8';
     case '.js': return 'text/javascript; charset=utf-8';
     case '.json': return 'application/json; charset=utf-8';
+    case '.txt': return 'text/plain; charset=utf-8';
     case '.png': return 'image/png';
     case '.jpg': case '.jpeg': return 'image/jpeg';
     case '.svg': return 'image/svg+xml';
@@ -271,6 +298,24 @@ function sourceFilesToScan(): string[] {
   return files.sort();
 }
 
+function webMcpFilesToScan(): string[] {
+  const files: string[] = [];
+  const allowed = new Set(['.astro', '.html', '.js', '.jsx', '.mjs', '.ts', '.tsx']);
+  const walk = (absDir: string) => {
+    for (const entry of readdirSync(absDir, { withFileTypes: true })) {
+      const abs = join(absDir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.astro') continue;
+        walk(abs);
+      } else if (allowed.has(extname(entry.name))) {
+        files.push(abs);
+      }
+    }
+  };
+  walk(join(rootDir, 'packages/website'));
+  return files.sort();
+}
+
 function stripCommentsPreserveLines(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, (match) => '\n'.repeat((match.match(/\n/g) || []).length));
 }
@@ -283,6 +328,58 @@ function relativeSourcePath(absPath: string): string {
   return absPath.replace(`${rootDir}${sep}`, '');
 }
 
+async function auditLlmsTxt(baseOrigin: string): Promise<{ status: LlmsTxtStatus; violations: Violation[] }> {
+  const url = `${baseOrigin}/llms.txt`;
+  try {
+    const response = await fetch(url, { redirect: 'manual' });
+    const contentType = response.headers.get('content-type') || '';
+    const body = await response.text().catch(() => '');
+    const bytes = Buffer.byteLength(body);
+    if (!response.ok) {
+      return {
+        status: { status: 'missing', url, contentType, bytes, message: `HTTP ${response.status}` },
+        violations: [{ channel: 'llms', code: 'LLMS_TXT_MISSING', sev: 'hard', msg: `/llms.txt returned HTTP ${response.status}` }],
+      };
+    }
+    if (!body.trim()) {
+      return {
+        status: { status: 'missing', url, contentType, bytes, message: 'empty body' },
+        violations: [{ channel: 'llms', code: 'LLMS_TXT_EMPTY', sev: 'hard', msg: '/llms.txt was served but empty' }],
+      };
+    }
+    return { status: { status: 'ok', url, contentType, bytes }, violations: [] };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      status: { status: 'error', url, message },
+      violations: [{ channel: 'llms', code: 'LLMS_TXT_ERROR', sev: 'hard', msg: `/llms.txt could not be fetched: ${message}` }],
+    };
+  }
+}
+
+async function scanWebMcpSourceSignals(): Promise<WebMcpSourceSignal[]> {
+  const patterns = [
+    'navigator.modelContext',
+    'registerTool',
+    'toolname',
+    'tooldescription',
+  ];
+  const signals: WebMcpSourceSignal[] = [];
+  for (const file of webMcpFilesToScan()) {
+    const source = await readFile(file, 'utf8').catch(() => '');
+    if (!source) continue;
+    const lines = source.split('\n');
+    for (let index = 0; index < lines.length; index += 1) {
+      for (const pattern of patterns) {
+        if (lines[index].includes(pattern)) {
+          signals.push({ path: relativeSourcePath(file), line: index + 1, signal: pattern });
+        }
+      }
+    }
+  }
+  return signals;
+}
+
 function isAllowedMediaQuery(absPath: string, query: string): boolean {
   const rel = relativeSourcePath(absPath);
   if (
@@ -292,26 +389,115 @@ function isAllowedMediaQuery(absPath: string, query: string): boolean {
   return /pointer\s*:\s*coarse/i.test(query) || /prefers-reduced-motion/i.test(query);
 }
 
-async function auditSourceCss(): Promise<Violation[]> {
-  const out: Violation[] = [];
+interface SourceFinding extends Violation { file: string; line: number; text: string; }
+interface SourceBaselineEntry { file: string; code: string; needle: string; reason: string; }
+
+const sourceTokenFiles = new Set([
+  'packages/website/src/styles/gp-tokens.css',
+  'packages/website/src/pages/design-system.astro',
+]);
+
+const sourceRawValueAllowedFiles = new Set([
+  'packages/website/src/components/page-sections/HomeMap.astro',
+]);
+
+function sourceFinding(file: string, line: number, code: string, sev: Severity, text: string, msg: string): SourceFinding {
+  return { channel: 'source', code, sev, file, line, text, msg };
+}
+
+function loadSourceBaseline(): SourceBaselineEntry[] {
+  if (!existsSync(sourceBaselinePath)) return [];
+  return readFileSync(sourceBaselinePath, 'utf8')
+    .split('\n')
+    .filter((line) => line.trim() && !line.startsWith('#'))
+    .map((line, index) => {
+      const [file, code, needle, reason] = line.split('\t');
+      if (!file || !code || !needle || !reason) {
+        throw new Error(`Invalid source baseline entry ${index + 1}: expected file, code, needle, reason`);
+      }
+      return { file, code, needle, reason };
+    });
+}
+
+function matchesSourceBaseline(hit: SourceFinding, baseline: SourceBaselineEntry[]): boolean {
+  return baseline.some((entry) => entry.file === hit.file && entry.code === hit.code && hit.text.includes(entry.needle));
+}
+
+function shouldSkipRawDesignValue(rel: string): boolean {
+  return sourceTokenFiles.has(rel) || sourceRawValueAllowedFiles.has(rel);
+}
+
+function collectLineSourceFindings(rel: string, scan: string): SourceFinding[] {
+  const findings: SourceFinding[] = [];
+  const lines = scan.split('\n');
+  for (let index = 0; index < lines.length; index += 1) {
+    const text = lines[index].trim();
+    if (!text) continue;
+    const line = index + 1;
+
+    if (/\b(?:margin|padding|border|inset)-(?:left|right)\b|\b(?:left|right)\s*:/.test(text)) {
+      findings.push(sourceFinding(rel, line, 'PHYSICAL_SIDE_PROPERTY', 'hard', text, `${rel}:${line} uses a physical side property; prefer logical inline/block properties or baseline an intentional positioned exception`));
+    }
+
+    if (/\b\d+(?:\.\d+)?vh\b/.test(text)) {
+      findings.push(sourceFinding(rel, line, 'VIEWPORT_VH_UNIT', 'hard', text, `${rel}:${line} uses vh; prefer dvh/svh/lvh or baseline an intentional atmospheric exception`));
+    }
+
+    if (/font-size\s*:\s*(?!var\(|clamp\(|calc\(|inherit\b|initial\b|unset\b)[^;]+;/.test(text)) {
+      findings.push(sourceFinding(rel, line, 'HARDCODED_FONT_SIZE', 'hard', text, `${rel}:${line} hardcodes font-size; use gp typography tokens or clamp() display tokens`));
+    }
+
+    if (!shouldSkipRawDesignValue(rel) && /#[0-9A-Fa-f]{3,8}|rgba\(|linear-gradient\(/.test(text)) {
+      findings.push(sourceFinding(rel, line, 'RAW_DESIGN_VALUE', 'hard', text, `${rel}:${line} uses a raw design value; use gp tokens, color-mix from tokens, or baseline an intentional exception`));
+    }
+  }
+  return findings;
+}
+
+async function collectSourceFindings(): Promise<SourceFinding[]> {
+  const out: SourceFinding[] = [];
   for (const file of sourceFilesToScan()) {
     const source = await readFile(file, 'utf8');
     const scan = stripCommentsPreserveLines(source);
+    const rel = relativeSourcePath(file);
     const mediaPattern = /@media\s+([^{]+)\{/g;
     let match: RegExpExecArray | null;
     while ((match = mediaPattern.exec(scan))) {
       const query = match[1].trim();
       if (isAllowedMediaQuery(file, query)) continue;
-      const rel = relativeSourcePath(file);
-      out.push({
-        channel: 'source',
-        code: 'VIEWPORT_MEDIA_QUERY',
-        sev: 'hard',
-        msg: `${rel}:${lineForIndex(scan, match.index)} uses @media ${query}; use @container or document a reviewed exception`,
-      });
+      const line = lineForIndex(scan, match.index);
+      out.push(sourceFinding(rel, line, 'VIEWPORT_MEDIA_QUERY', 'hard', `@media ${query}`, `${rel}:${line} uses @media ${query}; use @container or document a reviewed exception`));
     }
+    out.push(...collectLineSourceFindings(rel, scan));
   }
   return out;
+}
+
+async function writeSourceBaseline(): Promise<void> {
+  const hits = await collectSourceFindings();
+  const lines = [
+    '# file\tcode\tneedle\treason',
+    ...hits.map((hit) => `${hit.file}\t${hit.code}\t${hit.text}\tExisting audited Network CSS standard exception; convert to gp tokens, logical properties, or dynamic viewport primitives when touching this surface.`),
+    '',
+  ];
+  writeFileSync(sourceBaselinePath, lines.join('\n'));
+  console.log(`[ui-check] wrote ${hits.length} source baseline entr${hits.length === 1 ? 'y' : 'ies'} to ${relativeSourcePath(sourceBaselinePath)}`);
+}
+
+async function auditSourceCss(): Promise<Violation[]> {
+  const findings = await collectSourceFindings();
+  const baseline = loadSourceBaseline();
+  const stale = baseline.filter((entry) => !findings.some((hit) => entry.file === hit.file && entry.code === hit.code && hit.text.includes(entry.needle)));
+  const unapproved = findings.filter((hit) => !matchesSourceBaseline(hit, baseline));
+  return [
+    ...unapproved.map(({ file: _file, line: _line, text: _text, ...violation }) => violation),
+    ...stale.map((entry) => ({
+      channel: 'source',
+      code: 'STALE_SOURCE_BASELINE',
+      sev: 'hard' as Severity,
+      msg: `${entry.file} ${entry.code} baseline no longer matches: ${entry.needle}`,
+    })),
+  ];
 }
 
 function printSourceViolations(scope: 'ui-check' | 'ui-verify', sourceViolations: Violation[]): void {
@@ -501,6 +687,77 @@ async function auditAxe(client: CdpClient, sessionId: string): Promise<Violation
   }));
 }
 
+async function probeWebMcpRoute(client: CdpClient, origin: string, route: string): Promise<WebMcpRouteProbe> {
+  const target = await client.send('Target.createTarget', { url: 'about:blank' });
+  const attached = await client.send('Target.attachToTarget', { targetId: target.targetId, flatten: true });
+  const sessionId = attached.sessionId;
+  const url = `${origin}${route}`;
+  try {
+    await client.send('Page.enable', {}, sessionId);
+    await client.send('Runtime.enable', {}, sessionId);
+    await client.send('Page.navigate', { url }, sessionId);
+    await waitForExpression(client, sessionId, "location.href !== 'about:blank' && document.readyState === 'complete'", 12000);
+    const probe = await evaluate(client, sessionId, `
+      (() => {
+        const modelContext = navigator.modelContext || null;
+        const declarativeTools = [...document.querySelectorAll('form[toolname], form[tooldescription]')].map((form) => ({
+          name: form.getAttribute('toolname') || '',
+          description: form.getAttribute('tooldescription') || ''
+        }));
+        return {
+          navigatorModelContext: Boolean(modelContext),
+          registerToolType: typeof modelContext?.registerTool,
+          declarativeTools
+        };
+      })()
+    `).catch((error) => ({
+      navigatorModelContext: false,
+      registerToolType: 'undefined',
+      declarativeTools: [],
+      error: error instanceof Error ? error.message : String(error),
+    }));
+    return {
+      route,
+      navigatorModelContext: Boolean(probe.navigatorModelContext),
+      registerToolType: String(probe.registerToolType || 'undefined'),
+      declarativeTools: Array.isArray(probe.declarativeTools) ? probe.declarativeTools : [],
+    };
+  } finally {
+    await client.send('Target.closeTarget', { targetId: target.targetId }).catch(() => {});
+  }
+}
+
+async function discoverWebMcp(client: CdpClient, origin: string, routes: string[]): Promise<WebMcpDiscovery> {
+  const sourceSignals = await scanWebMcpSourceSignals();
+  try {
+    const routeProbes: WebMcpRouteProbe[] = [];
+    for (const route of routes) {
+      routeProbes.push(await probeWebMcpRoute(client, origin, route));
+    }
+    const hasRuntimeSignal = routeProbes.some((probe) => (
+      probe.navigatorModelContext ||
+      probe.registerToolType !== 'undefined' ||
+      probe.declarativeTools.length > 0
+    ));
+    const hasSourceSignal = sourceSignals.length > 0;
+    return {
+      status: hasRuntimeSignal || hasSourceSignal ? 'detected' : 'not_configured',
+      message: hasRuntimeSignal || hasSourceSignal
+        ? 'WebMCP signal detected; verify strategy, visibility, schema, confirmation, and forbidden-action rules before shipping runtime tools.'
+        : 'No WebMCP runtime or declarative tool signals detected.',
+      sourceSignals,
+      routeProbes,
+    };
+  } catch (error) {
+    return {
+      status: 'error',
+      message: error instanceof Error ? error.message : String(error),
+      sourceSignals,
+      routeProbes: [],
+    };
+  }
+}
+
 // ── Per-route × width verification ──
 async function verifyRouteAtWidth(client: CdpClient, origin: string, route: string, width: number): Promise<Violation[]> {
   const target = await client.send('Target.createTarget', { url: 'about:blank' });
@@ -565,6 +822,11 @@ async function verifyRouteAtWidth(client: CdpClient, origin: string, route: stri
 }
 
 async function run(): Promise<void> {
+  if (process.argv.includes('--write-source-baseline')) {
+    await writeSourceBaseline();
+    return;
+  }
+
   if (sourceOnly) {
     await runSourceCheckOnly();
     return;
@@ -589,13 +851,22 @@ async function run(): Promise<void> {
   const chrome = await launchChrome(chromeBinary);
   let client: CdpClient | null = null;
   const all: Violation[] = [];
+  let llmsTxt: LlmsTxtStatus | null = null;
+  let webMcp: WebMcpDiscovery | null = null;
   try {
     const sourceViolations = await auditSourceCss();
     all.push(...sourceViolations);
     printSourceViolations('ui-verify', sourceViolations);
 
+    const llmsResult = await auditLlmsTxt(baseOrigin);
+    llmsTxt = llmsResult.status;
+    all.push(...llmsResult.violations);
+
     client = await CdpClient.connect(chrome.webSocketUrl);
+    webMcp = await discoverWebMcp(client, baseOrigin, routes);
     console.log(`[ui-verify] ${routes.length} route(s) × widths [${widths.join(', ')}] via ${chromeBinary.split('/').pop()}\n`);
+    console.log(`[ui-verify] llms.txt: ${llmsTxt.status}${llmsTxt.bytes ? ` (${llmsTxt.bytes} bytes)` : ''}`);
+    console.log(`[ui-verify] WebMCP: ${webMcp.status} — ${webMcp.message}\n`);
     for (const route of routes) {
       for (const width of widths) {
         const v = await verifyRouteAtWidth(client, baseOrigin, route, width).catch((e) => ([{ channel: 'harness', code: 'ROUTE_ERROR', sev: 'hard' as Severity, msg: String(e), route, width }]));
@@ -615,7 +886,7 @@ async function run(): Promise<void> {
 
   const hardCount = all.filter((v) => v.sev === 'hard').length;
   const warnCount = all.filter((v) => v.sev === 'warn').length;
-  await writeFile(join(outDir, 'report.json'), JSON.stringify({ generatedAt: new Date().toISOString(), widths, routes, hardCount, warnCount, violations: all }, null, 2));
+  await writeFile(join(outDir, 'report.json'), JSON.stringify({ generatedAt: new Date().toISOString(), widths, routes, llmsTxt, webMcp, hardCount, warnCount, violations: all }, null, 2));
   console.log(`\n[ui-verify] ${hardCount} hard, ${warnCount} warn across ${routes.length} route(s). Screenshots + report.json in packages/website/.ui-verify/`);
   if (hardCount > 0) process.exitCode = 1;
 }

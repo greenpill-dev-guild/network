@@ -57,6 +57,13 @@ Website source and config live under `packages/website`:
 - `packages/website/src/scripts/` - browser interaction scripts.
 - `packages/website/src/styles/gp-tokens.css` - canonical design tokens + base styles (cascade layers, clamp() type). The UI standard is `packages/website/DESIGN.md`; `packages/website/CLAUDE.md` is the always-loaded rule digest. Verify UI with `bun run ui:verify` (`scripts/ui-verify.ts`, renders at 375/1024/1440 + axe) or the `greenpill-ui` skill.
 
+## Agentic Modern Web Standard
+
+- Baseline target: Baseline Widely Available. Before frontend, UI, CSS, accessibility, browser proof, or web-design changes in `packages/website`, search and retrieve current Chrome Modern Web Guidance, then apply `packages/website/DESIGN.md` and the website token system.
+- Prefer semantic HTML, native controls, platform CSS, and browser primitives before custom JavaScript. Keep landmarks, headings, links, forms, accessible names, focus states, touch targets, empty/error/loading states, and reduced-motion behavior clear in the rendered DOM and accessibility tree.
+- Run `bun run agentic:check` for the advisory source proof path (`plans:validate` plus `ui:check`). Use `bun run agentic:browser-proof <route>` (same rendered lane as `agentic:verify`) when layout, interaction, motion, or public routes need browser proof at the repo's 375 / 1024 / 1440 viewport loop.
+- WebMCP is strategy-only in v1. Do not ship runtime WebMCP tools unless explicitly requested; future tools must be visible, user-confirmable, public-safe, and must not expose Directus private state, database credentials, pending intake, steward notes, hidden admin actions, destructive operations, or background-only actions.
+
 Generated public JSON routes include `/locations.json` and `/impact-sources.json`, derived from the approved operational content snapshot. Keep those outputs public-safe.
 
 The agent package owns private runtime concerns. `/health` is process health, `/ready` checks `DATABASE_URL`, `/content/public-snapshot` exposes the approved operational snapshot, and the impact/map-node routes preserve public/private projection contracts.
