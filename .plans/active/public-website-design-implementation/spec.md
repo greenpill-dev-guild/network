@@ -62,10 +62,17 @@ Build the next public Greenpill Network website experience in `packages/website`
 ## Public Map Recovery Decisions
 
 - The public map recovery is P0 and the current map should be treated as not production-ready until the recovery evaluation passes.
-- Stewards are public map nodes when they are opt-in/allowlisted. Public steward payloads may include only public-safe profile identity: id, type `steward`, name, public location fields, coordinates, themes, optional `chapterSlug`, and optional public profile URL/reference.
+- The existing `public-website-design-implementation` hub is the single plan source for this work. Do not create a parallel Home map or steward-map plan.
+- Public map state includes only real chapter anchors, approved submitted member nodes, and approved submitted steward nodes. Generated anonymous density nodes are removed and must not be counted or implied in public UI.
+- Everyone uses the same add-node flow: private owner email, display name, placed coordinates, one to four themes, and optional public note.
+- Stewards are public map nodes when their private owner email is allowlisted. Public steward payloads may include only public-safe profile identity: id, type `steward`, name, public location fields, coordinates, themes, optional trusted `chapterSlug`, optional `bioregion`, and optional public profile URL/reference.
+- The steward allowlist is email-to-chapter mapping: the email determines `role: steward` and, when configured, the trusted `chapterSlug`. Public payloads never expose the email.
+- Users place their submitted node anywhere on the map. Placement is not snapped to a chapter location.
+- Public node details may show `bioregion` only when an approved value exists. Until a checked-in, license-approved polygon dataset exists, public output keeps the placed coordinates and leaves bioregion blank rather than implying real matching.
 - Controlled live sessions auto-approve valid submissions in real time. Allowlisted steward emails force the public node type to `steward`; non-allowlisted valid submissions publish as `member`.
 - Live mode affects new submissions only. Owner edit requests remain pending until steward/admin review.
-- Anonymous generated density nodes are allowed to restore the HiFi mycelial feel before enough real members exist. They are visual/network scaffolding only and must not carry fake names, fake biographies, fake profile links, contact fields, or any implication that they are real people.
+- Relationship edges are limited to real public nodes: trusted steward-to-chapter edges, plus member/steward-to-member/steward edges when nodes share at least one theme. Shared non-pending bioregion can strengthen or annotate the relationship. There is no steward-steward special case beyond shared theme and shared bioregion rules.
+- Visible edges must be capped per node so the map remains legible on mobile and in dense regions.
 - The add-node theme picker is up to four themes. One theme is enough to continue; more than four is blocked.
 - The June 10 activity is a live member self-add / map participation session, not a public-note feature. Existing `publicNote` storage should be treated in UI copy as a short public profile/intro field until a separate note feature is explicitly scoped.
 - Linear cleanup/tracking is not part of repo implementation. Reusing/renaming the reverted Linear project and issues requires a separate explicit approval.

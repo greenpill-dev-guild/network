@@ -64,8 +64,8 @@ export interface AgentAppOptions {
 export const PUBLIC_CORS_ORIGINS = Object.freeze([
   'https://greenpill.network',
   'https://www.greenpill.network',
-  'http://localhost:4321',
-  'http://127.0.0.1:4321',
+  'http://localhost:3301',
+  'http://127.0.0.1:3301',
 ]);
 
 const PUBLIC_MAP_STATE_CACHE_CONTROL = 'no-store, max-age=0';

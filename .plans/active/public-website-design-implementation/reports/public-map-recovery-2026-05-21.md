@@ -14,6 +14,15 @@ This report supersedes any local claim that the Home map, live add-node flow, or
 - The existing steward email allowlist path forces allowlisted submissions to role/type `steward`; non-allowlisted steward/organizer/coordinator claims are normalized to `member`.
 - Public projections already guard against private email, raw notes, pending submissions, review notes, edit-token data, IP/user-agent data, rate-limit data, and moderation metadata.
 
+## Unified Recovery Amendment
+
+- This recovery now uses the existing `public-website-design-implementation` hub as the single plan source. Do not open a competing steward-map or Home-map plan.
+- Anonymous generated density nodes are superseded and removed. The public map should show real chapter anchors, approved submitted members, approved submitted stewards, and source-backed relationships only.
+- Everyone uses one add-node flow. Private email controls ownership and steward allowlisting, not public display.
+- Steward allowlist entries may map `email=chapter-slug`; matching emails become public stewards and receive that trusted `chapterSlug`, while email remains private.
+- Public `bioregion` is shown only when a real approved value exists. No polygon lookup is claimed until a checked-in redistributable dataset exists; until then, coordinates are preserved and bioregion stays blank.
+- Relationship edges are trusted steward-to-chapter edges plus shared-theme member/steward edges. Shared non-pending bioregion can strengthen or annotate an edge; there is no steward-steward special case.
+
 ## Divergence From HiFi
 
 - The checked-in HiFi map is a chapter/steward/member mycelial network, not a chapter-only map with later member dots.
@@ -24,17 +33,16 @@ This report supersedes any local claim that the Home map, live add-node flow, or
 
 ## Data/API Mismatch
 
-- Public map state must include chapters, opt-in public stewards, approved members, anonymous generated density nodes, and theme-colored edges.
-- Steward public fields are limited to public-safe profile identity: `id`, `type: "steward"`, `name`, public location fields, `lat`, `long`, `themes`, optional `chapterSlug`, and optional public profile URL/reference.
-- Anonymous density nodes are visual/network scaffolding only. They must not use fake names, fake biographies, fake profile URLs, private identity hints, or any data that implies a real person.
-- Real submitted members and stewards should replace or augment anonymous density over time.
+- Public map state must include chapters, opt-in public stewards, approved members, and theme-colored source-backed edges. It must not include generated or fake participant nodes.
+- Steward public fields are limited to public-safe profile identity: `id`, `type: "steward"`, `name`, public location fields, `lat`, `long`, `themes`, optional trusted `chapterSlug`, optional `bioregion`, and optional public profile URL/reference.
+- Submitted map-node coordinates should preserve where the user placed the node. Public details may show a known `bioregion`, but must not show private location metadata, forced chapter placement, or a fake pending bioregion as if lookup exists.
 
 ## Validation Gaps
 
 - Source-string tests allowed implementation drift from the HiFi reference.
 - The UI verifier did not open the add-node dialog, select themes, place a node, submit, verify live refresh, or compare screenshots to the HiFi reference.
 - Existing tests asserted steward exclusion, which contradicted the desired map behavior.
-- Acceptance must prove chapter/steward/member treatments, anonymous density, mycelial edges, live refresh, and privacy guards together.
+- Acceptance must prove chapter/steward/member treatments, real mycelial edges, selected-node public details, live refresh, and privacy guards together.
 
 ## Production Readiness Gaps
 

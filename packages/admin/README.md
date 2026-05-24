@@ -21,7 +21,7 @@ Then start Directus:
 bun run dev:admin
 ```
 
-Directus will be available at `http://localhost:8055`.
+Directus will be available at `http://localhost:3302`.
 
 Default local bootstrap credentials are:
 
@@ -204,7 +204,9 @@ query parameters, browser storage, or generated website content.
 To let known stewards create steward nodes during a session without exposing
 Directus user data publicly, set the agent secret
 `MAP_NODE_STEWARD_EMAIL_ALLOWLIST` to a comma- or whitespace-separated list of
-their email addresses. The public form still submits a normal member role; the
+`email=chapter-slug` entries. Plain email entries still promote the role for
+compatibility, but mapped entries also attach the trusted public `chapterSlug`
+to the steward node. The public form still submits a normal member role; the
 agent promotes matching owner emails to `steward` server-side. Non-allowlisted
 submissions are normalized away from steward/organizer/coordinator roles.
 

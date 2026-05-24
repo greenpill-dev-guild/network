@@ -3,6 +3,7 @@ import { isIP } from 'node:net';
 import {
   containsPrivateMapNodeField,
   createOptimisticPendingNode,
+  derivePublicBioregionFromCoordinates,
   toEditablePublicMapNode,
   toPublicMapNode,
 } from '@greenpill-network/shared/map-nodes';
@@ -89,6 +90,8 @@ export const MAP_NODE_EDIT_LINK_DAILY_IP_LIMIT = 30;
 export const MAP_NODE_EDIT_LINK_DAILY_EMAIL_LIMIT = 10;
 export const RESEND_EMAILS_ENDPOINT = 'https://api.resend.com/emails';
 export const MAP_NODE_STEWARD_EMAIL_ALLOWLIST_ENV = 'MAP_NODE_STEWARD_EMAIL_ALLOWLIST';
+export const MAP_NODE_THEME_MIN_COUNT = 1;
+export const MAP_NODE_THEME_MAX_COUNT = 4;
 
 const cleanString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 const cleanIpAddress = (value: unknown): string => {
@@ -103,7 +106,7 @@ const normalizeNumber = (value: unknown): number | null => {
 
 const normalizeThemes = (themes: unknown): string[] => (
   Array.isArray(themes)
-    ? themes.map(cleanString).filter(Boolean)
+    ? [...new Set(themes.map(cleanString).filter(Boolean))]
     : []
 );
 
@@ -122,11 +125,37 @@ export function isValidOwnerEmail(value: unknown): boolean {
 export function parseMapNodeStewardEmailAllowlist(
   env: Record<string, string | undefined> = process.env
 ): Set<string> {
-  return new Set(
-    cleanString(env[MAP_NODE_STEWARD_EMAIL_ALLOWLIST_ENV])
-      .split(/[\s,]+/)
-      .map(normalizeOwnerEmail)
-      .filter(isValidOwnerEmail)
+  return new Set(parseMapNodeStewardEmailAssignments(env).keys());
+}
+
+const normalizeChapterSlug = (value: unknown): string => (
+  cleanString(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+);
+
+export function parseMapNodeStewardEmailAssignments(
+  env: Record<string, string | undefined> = process.env
+): Map<string, string> {
+  const assignments = new Map<string, string>();
+  for (const entry of cleanString(env[MAP_NODE_STEWARD_EMAIL_ALLOWLIST_ENV]).split(/[\s,]+/)) {
+    const cleaned = cleanString(entry);
+    if (!cleaned) continue;
+    const separatorIndex = cleaned.search(/[=:]/);
+    const email = normalizeOwnerEmail(separatorIndex > 0 ? cleaned.slice(0, separatorIndex) : cleaned);
+    const chapterSlug = separatorIndex > 0 ? normalizeChapterSlug(cleaned.slice(separatorIndex + 1)) : '';
+    if (isValidOwnerEmail(email)) assignments.set(email, chapterSlug);
+  }
+  return assignments;
+}
+
+export function getMapNodeStewardChapterSlug(
+  email: string,
+  env: Record<string, string | undefined> = process.env
+): string {
+  return (
+    parseMapNodeStewardEmailAssignments(env).get(normalizeOwnerEmail(email)) ?? ''
   );
 }
 
@@ -134,7 +163,7 @@ export function isMapNodeStewardEmailAllowlisted(
   email: string,
   env: Record<string, string | undefined> = process.env
 ): boolean {
-  return parseMapNodeStewardEmailAllowlist(env).has(normalizeOwnerEmail(email));
+  return parseMapNodeStewardEmailAssignments(env).has(normalizeOwnerEmail(email));
 }
 
 function normalizeSubmittedRole(
@@ -259,7 +288,9 @@ function toPublicPendingMapNode(submission: UnknownRecord): SubmittedPendingMapN
     lat: submission.lat,
     long: submission.long,
     role: submission.role,
+    chapterSlug: submission.chapterSlug ?? submission.chapter_slug,
     themes: submission.themes,
+    bioregion: submission.bioregion,
     publicNote: submission.publicNote,
   }, submission.createdAt ?? new Date());
 
@@ -309,7 +340,16 @@ function normalizeSubmissionInput(
     throw new PublicInputError('invalid_email', 'A valid email is required.');
   }
 
+  const themes = normalizeThemes(input.themes);
+  if (themes.length < MAP_NODE_THEME_MIN_COUNT || themes.length > MAP_NODE_THEME_MAX_COUNT) {
+    throw new PublicInputError(
+      'invalid_themes',
+      `Pick ${MAP_NODE_THEME_MIN_COUNT} to ${MAP_NODE_THEME_MAX_COUNT} themes.`
+    );
+  }
+
   const stewardAllowlisted = isMapNodeStewardEmailAllowlisted(email, env);
+  const chapterSlug = getMapNodeStewardChapterSlug(email, env);
 
   return {
     displayName,
@@ -320,7 +360,9 @@ function normalizeSubmissionInput(
     lat,
     long,
     role: normalizeSubmittedRole(input.role ?? input.intent, { stewardAllowlisted }),
-    themes: normalizeThemes(input.themes),
+    chapterSlug,
+    themes,
+    bioregion: derivePublicBioregionFromCoordinates(lat, long),
     publicNote: cleanString(input.publicNote ?? input.public_note),
     rawNote: cleanString(input.rawNote ?? input.raw_note),
     email,
@@ -372,7 +414,9 @@ export async function createMapNodeSubmission(
         latitude,
         longitude,
         role,
+        chapter_slug,
         themes,
+        bioregion,
         public_note,
         raw_note,
         rate_limit_key,
@@ -390,7 +434,9 @@ export async function createMapNodeSubmission(
         ${normalized.lat},
         ${normalized.long},
         ${normalized.role || null},
+        ${normalized.chapterSlug || null},
         ${normalized.themes},
+        ${normalized.bioregion || null},
         ${normalized.publicNote || null},
         ${normalized.rawNote || null},
         ${meta.rateLimitKey || null},
@@ -409,7 +455,9 @@ export async function createMapNodeSubmission(
         latitude::float8 as lat,
         longitude::float8 as long,
         role,
+        chapter_slug as "chapterSlug",
         themes,
+        bioregion,
         public_note as "publicNote",
         created_at as "createdAt",
         approved_at as "approvedAt"
@@ -497,7 +545,14 @@ function normalizeUpdateThemes(input: UnknownRecord): string[] | undefined {
   if (!Array.isArray(input.themes)) {
     throw new PublicInputError('invalid_update_field', 'Themes must be an array.');
   }
-  return normalizeThemes(input.themes);
+  const themes = normalizeThemes(input.themes);
+  if (themes.length < MAP_NODE_THEME_MIN_COUNT || themes.length > MAP_NODE_THEME_MAX_COUNT) {
+    throw new PublicInputError(
+      'invalid_update_field',
+      `Pick ${MAP_NODE_THEME_MIN_COUNT} to ${MAP_NODE_THEME_MAX_COUNT} themes.`
+    );
+  }
+  return themes;
 }
 
 function normalizeUpdateRequestInput(input: PublicMapNodeUpdateRequestInput = {}) {
@@ -1066,7 +1121,9 @@ export async function listPublicMapNodes(sql: SqlLike): Promise<PublicMapNode[]>
       lat::float8,
       long::float8,
       role,
+      chapter_slug as "chapterSlug",
       themes,
+      bioregion,
       public_note as "publicNote",
       status::text,
       approved_at as "approvedAt"

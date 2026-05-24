@@ -29,12 +29,15 @@
 ## P0 Public Map Recovery
 
 - [x] Save the recovery audit/report in this hub and mark prior map-complete claims superseded for the map slice.
+- [x] Record the unified Home map recovery amendment in this existing hub instead of creating a competing map plan.
 - [x] Correct the shared public map contract so opt-in/allowlisted stewards can appear as public steward nodes.
-- [x] Add anonymous public-safe generated density nodes so the map can recover the HiFi mycelial feel before enough real members exist.
-- [x] Update Home map rendering so chapter, steward, member, and anonymous density nodes can render with theme-colored public edges.
-- [x] Change add-node theme selection from exactly four to up to four.
-- [ ] Add or extend browser proof for the full add-node flow: open dialog, select one to four themes, place a node or use text fallback, submit against a controlled test path, and verify live refresh without reload.
-- [ ] Add HiFi comparison proof at 375, 1024, and 1440 for node treatments, mycelial edges, filter legibility, and mobile readability.
+- [x] Remove anonymous generated density nodes entirely; public map state is chapters plus approved real member/steward submissions only.
+- [x] Extend the steward allowlist from email-to-role to email-to-chapter mapping so trusted steward submissions receive a public-safe `chapterSlug` without exposing email.
+- [x] Keep `bioregion` as an optional public field for future approved values; no polygon lookup is claimed until a redistributable dataset is checked in.
+- [x] Update Home map rendering so chapter, steward, and member nodes use HiFi token colors, count-free identity legend, public-safe details, and connected-node highlighting without fake participation cues.
+- [x] Change add-node theme selection from exactly four to one to four themes.
+- [x] Add browser proof for the Home add-node flow against mocked agent responses: moderated pending, live approved member, allowlisted steward, selected details, and private-field DOM/storage guards.
+- [ ] Add HiFi comparison proof at 375, 1024, and 1440 for chapter/member/steward node treatments, real mycelial edges, selected-node details, filter legibility, and mobile readability.
 - [ ] Add a live-mode operator preflight/runbook covering `/map/state.intakeMode`, live refresh, allowlisted steward behavior, disable-live path, and post-session review.
 - [ ] Complete Steward Sync Week 1: Directus/admin onboarding, role assignment, chapter content update workflow, and public map profile opt-ins.
 - [ ] Complete Steward Sync Week 2: steward self-add rehearsal with allowlisted emails in controlled live mode.
@@ -65,9 +68,9 @@
 ## Home Map Polish Pass
 
 - Steward-sync feedback is now an explicit implementation slice for the Home map: the world graphic needs to read clearly beneath the route lines, chapter nodes should be dark/anchored green with a ring, steward nodes should be warm gold, and theme colors should explain relationships without overriding node identity.
-- The homepage map treats theme connections as mycelial relationship lines generated from shared themes. Theme colors drive edges and chips; chapter and steward node identities remain visible, but homepage proof stats are limited to chapter count and podcast count.
+- The homepage map treats theme connections as mycelial relationship lines generated from shared themes between real approved member/steward submissions, plus trusted steward-to-chapter edges when a steward email maps to a chapter. Theme colors drive edges and chips; chapter, steward, and member identities remain visible, but homepage proof stats are limited to chapter count and podcast count.
 - The homepage must not surface steward count, member count, continent count, member-tier copy, self-node walkthroughs, or `/map/state` polling as proof/stat behavior.
-- Home map polish should retain non-color identity cues, accessible focus behavior, an accessible legend, and mobile/dense-region behavior that reduces mycelial edge noise.
+- Home map polish should retain non-color identity cues, accessible focus behavior, an accessible legend, public-safe selected-node details, and mobile/dense-region behavior that reduces mycelial edge noise.
 
 ## Public Route Guardrails
 

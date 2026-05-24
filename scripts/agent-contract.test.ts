@@ -547,7 +547,8 @@ test('agent package exposes a Hono app with data-backed public routes', async ()
             country: 'Portugal',
             lat: 38.7223,
             long: -9.1393,
-            role: 'member',
+            role: 'steward',
+            chapterSlug: 'nigeria',
             themes: ['public'],
             publicNote: 'Running public-goods meetups.',
             status: 'approved',
@@ -659,6 +660,7 @@ test('agent package exposes a Hono app with data-backed public routes', async ()
       place: 'Oakland',
       lat: 37.8044,
       long: -122.2712,
+      themes: ['public'],
       email: 'private@example.com',
       rawNote: 'steward-only context',
     }),
@@ -682,11 +684,11 @@ test('agent package exposes a Hono app with data-backed public routes', async ()
   assert.equal(mapStatePayload.intakeMode, 'moderated');
   assert.equal(mapStatePayload.counts.chapterNodes, 1);
   assert.equal(mapStatePayload.counts.approvedSubmittedNodes, 1);
-  assert.equal(mapStatePayload.nodes.some((node) => node.source === 'generated-density'), true);
+  assert.equal(mapStatePayload.nodes.some((node) => node.source === 'generated-density'), false);
   assert.equal(mapStatePayload.edges.length > 0, true);
   assert.equal(mapStatePayload.edges.some((edge) => (
     String(edge.from).startsWith('chapter:') || String(edge.to).startsWith('chapter:')
-  )), false);
+  )), true);
   assert.equal(containsPrivateMapStateField(mapStatePayload), false);
 
   const counts = await app.request('/public-counts');
@@ -749,7 +751,7 @@ test('POST /map-nodes requires a valid owner email before creating a submission'
           lat: Number(input.lat),
           long: Number(input.long),
           role: 'member',
-          themes: [],
+          themes: input.themes,
           publicNote: '',
           status: 'pending',
           source: 'submitted-pending',
@@ -798,6 +800,7 @@ test('POST /map-nodes requires a valid owner email before creating a submission'
       place: 'Lisbon',
       lat: 38.7223,
       long: -9.1393,
+      themes: ['public'],
       email: 'person@example.org',
     }),
   });
@@ -1008,6 +1011,27 @@ test('map-node submissions stay pending unless live onboarding is enabled', asyn
   );
 });
 
+test('map-node submissions require one to four themes', async () => {
+  for (const themes of [[], ['public', 'events', 'trees', 'water', 'energy']]) {
+    const { sql, statements } = createFakeSubmissionSql({ liveOnboardingEnabled: false });
+    await assert.rejects(
+      () => createMapNodeSubmission(sql, {
+        name: 'Session Member',
+        place: 'Oakland',
+        lat: 37.8044,
+        long: -122.2712,
+        themes,
+        email: 'private@example.com',
+      }),
+      (error) => error instanceof PublicInputError && error.code === 'invalid_themes'
+    );
+    assert.equal(
+      statements.some((statement) => statement.text.includes('insert into intake.map_node_submissions')),
+      false
+    );
+  }
+});
+
 test('map-node steward role can only be set by an allowlisted owner email', async () => {
   const regular = createFakeSubmissionSql({ liveOnboardingEnabled: false });
   await createMapNodeSubmission(regular.sql, {
@@ -1016,6 +1040,7 @@ test('map-node steward role can only be set by an allowlisted owner email', asyn
     lat: 37.8044,
     long: -122.2712,
     role: 'chapter steward',
+    themes: ['public'],
     email: 'person@example.org',
   });
 
@@ -1033,10 +1058,11 @@ test('map-node steward role can only be set by an allowlisted owner email', asyn
     lat: 6.5244,
     long: 3.3792,
     role: 'member',
+    themes: ['public'],
     email: 'Steward@Example.org',
   }, {}, {
     env: {
-      MAP_NODE_STEWARD_EMAIL_ALLOWLIST: 'steward@example.org, other@example.org',
+      MAP_NODE_STEWARD_EMAIL_ALLOWLIST: 'steward@example.org=nigeria, other@example.org',
     },
   });
 
@@ -1045,6 +1071,7 @@ test('map-node steward role can only be set by an allowlisted owner email', asyn
   ));
   assert.ok(stewardInsert);
   assert.equal(stewardInsert.values.includes('steward'), true);
+  assert.equal(stewardInsert.values.includes('nigeria'), true);
 });
 
 test('live onboarding auto-approves submissions and appends private audit row', async () => {

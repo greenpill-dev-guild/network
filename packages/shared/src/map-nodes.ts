@@ -9,6 +9,7 @@ export interface PublicMapNode {
   city: string;
   region: string;
   country: string;
+  bioregion: string;
   lat: number;
   long: number;
   role: string;
@@ -112,6 +113,7 @@ export const PUBLIC_MAP_NODE_FIELDS = Object.freeze([
   'city',
   'region',
   'country',
+  'bioregion',
   'lat',
   'long',
   'role',
@@ -170,6 +172,22 @@ const normalizeNumber = (value: unknown): number | null => {
   return Number.isFinite(number) ? number : null;
 };
 
+const normalizePublicBioregion = (value: unknown): string => cleanString(value);
+
+export function derivePublicBioregionFromCoordinates(
+  lat: unknown,
+  long: unknown,
+  knownBioregion?: unknown
+): string {
+  const bioregion = cleanString(knownBioregion);
+  if (bioregion) return bioregion;
+
+  // No redistributable bioregion polygon dataset is checked into this repo yet.
+  // Keep coordinates public-safe and leave bioregion blank until an approved
+  // polygon source can make a real match.
+  return '';
+}
+
 const cleanHref = (value: unknown): string => {
   const href = cleanString(value);
   if (href.startsWith('/') || href.startsWith('https://') || href.startsWith('http://')) {
@@ -213,6 +231,9 @@ export function toPublicMapNode(submission: UnknownRecord): PublicMapNode | null
     city: cleanString(submission.city),
     region: cleanString(submission.region),
     country: cleanString(submission.country),
+    bioregion: normalizePublicBioregion(
+      derivePublicBioregionFromCoordinates(lat, long, submission.bioregion)
+    ),
     lat,
     long,
     role: cleanString(submission.role || submission.intent),
@@ -266,6 +287,9 @@ export function createOptimisticPendingNode(
     city: cleanString(input?.city),
     region: cleanString(input?.region),
     country: cleanString(input?.country),
+    bioregion: normalizePublicBioregion(
+      derivePublicBioregionFromCoordinates(lat, long, input?.bioregion)
+    ),
     lat,
     long,
     role: cleanString(input?.role || input?.intent),

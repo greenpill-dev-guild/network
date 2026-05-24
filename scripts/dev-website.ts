@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const websiteDir = resolve(rootDir, 'packages/website');
+const websitePort = process.env.NETWORK_WEBSITE_PORT ?? '3301';
 const operationalSeedDir = resolve(rootDir, 'packages/website/src/data/operational-content-seed');
 
 let snapshotTimer: ReturnType<typeof setTimeout> | null = null;
@@ -107,7 +108,7 @@ function startOperationalContentWatcher() {
 await waitForSuccess('building workspace packages', ['bun', 'run', 'build:packages']);
 
 const watcher = startOperationalContentWatcher();
-const astro = runCommand('starting Astro dev server', ['bun', '--bun', 'astro', 'dev'], websiteDir);
+const astro = runCommand('starting Astro dev server', ['bun', '--bun', 'astro', 'dev', '--host', '127.0.0.1', '--port', websitePort], websiteDir);
 
 const close = () => {
   watcher?.close();

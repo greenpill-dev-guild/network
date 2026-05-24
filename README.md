@@ -111,8 +111,9 @@ curl http://127.0.0.1:8787/content/public-snapshot
 Public map-node submissions require an owner email. The agent stores that email only in `intake.map_node_private_contacts` so future owner updates can use one-use email magic links. Configure email sending on the agent with `RESEND_API_KEY`, `MAP_NODE_EMAIL_FROM`, `MAP_NODE_EMAIL_REPLY_TO`, and `MAP_NODE_EDIT_BASE_URL`; do not expose those values to the static website, Keystatic, generated JSON, or browser bundles. Map magic-link replies should route to the monitored map mailbox on the verified sending subdomain, currently `Greenpill Network <map@mail.greenpill.network>`. Missing or failing email provider configuration still returns the same neutral public edit-link response.
 
 For steward onboarding sessions, set `MAP_NODE_STEWARD_EMAIL_ALLOWLIST` on the
-agent to a comma- or whitespace-separated list of steward emails. Matching
-submissions are projected as `steward` nodes by the server; non-allowlisted
+agent to a comma- or whitespace-separated list of `email=chapter-slug` entries.
+Plain email entries still promote the role for compatibility, but mapped entries
+also attach the trusted public `chapterSlug` to the steward node. Non-allowlisted
 public submissions cannot self-claim steward, organizer, or coordinator roles.
 Pair this with Live Onboarding Mode when steward nodes should appear publicly
 during the session.
@@ -134,7 +135,7 @@ bun run directus:content:setup
 bun run directus:studio:setup
 ```
 
-The local Directus service runs at `http://localhost:8055` and connects to the
+The local Directus service runs at `http://localhost:3302` and connects to the
 same local Postgres database as the agent. Use it for steward moderation,
 authenticated operational content edits, owner-update review, and internal data
 review only; keep public intake and public API traffic behind the agent routes.

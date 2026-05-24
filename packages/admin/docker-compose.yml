@@ -2,7 +2,7 @@ services:
   admin-directus:
     image: directus/directus:11.17.4
     ports:
-      - "8055:8055"
+      - "${DIRECTUS_PORT:-3302}:8055"
     volumes:
       - ./uploads:/directus/uploads
       - ./extensions:/directus/extensions
@@ -10,10 +10,10 @@ services:
     environment:
       HOST: "0.0.0.0"
       PORT: "8055"
-      PUBLIC_URL: "${DIRECTUS_PUBLIC_URL:-http://localhost:8055}"
+      PUBLIC_URL: "${DIRECTUS_PUBLIC_URL:-http://localhost:3302}"
       SECRET: "${DIRECTUS_SECRET:-dev-only-directus-secret-change-before-production}"
       DB_CLIENT: "pg"
-      DB_CONNECTION_STRING: "${DIRECTUS_DB_CONNECTION_STRING:-postgres://greenpill:greenpill@host.docker.internal:54329/greenpill_network}"
+      DB_CONNECTION_STRING: "${DIRECTUS_DB_CONNECTION_STRING:-postgres://greenpill:greenpill@host.docker.internal:3304/greenpill_network}"
       DB_SEARCH_PATH: "${DIRECTUS_DB_SEARCH_PATH:-array:public,content,intake,impact,workspace,audit}"
       DB_HEALTHCHECK_THRESHOLD: "${DIRECTUS_DB_HEALTHCHECK_THRESHOLD:-2000}"
       STORAGE_LOCATIONS: "local"
@@ -23,7 +23,7 @@ services:
       MAX_PAYLOAD_SIZE: "${DIRECTUS_MAX_PAYLOAD_SIZE:-25mb}"
       WEBSOCKETS_ENABLED: "true"
       CORS_ENABLED: "true"
-      CORS_ORIGIN: "${DIRECTUS_CORS_ORIGIN:-http://localhost:4321,http://localhost:8055,https://greenpill.network,https://www.greenpill.network,https://network-admin.fly.dev,https://admin.greenpill.network}"
+      CORS_ORIGIN: "${DIRECTUS_CORS_ORIGIN:-http://localhost:3301,http://127.0.0.1:3301,http://localhost:3302,https://greenpill.network,https://www.greenpill.network,https://network-admin.fly.dev,https://admin.greenpill.network}"
       ADMIN_EMAIL: "${DIRECTUS_ADMIN_EMAIL:-admin@greenpill.network}"
       ADMIN_PASSWORD: "${DIRECTUS_ADMIN_PASSWORD:-directus-local-password}"
       EMAIL_VERIFY_SETUP: "${DIRECTUS_EMAIL_VERIFY_SETUP:-false}"

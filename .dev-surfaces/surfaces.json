@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "project": {
+    "id": "greenpill-network",
+    "name": "Greenpill Network",
+    "root": "/Users/afo/Code/greenpill/network"
+  },
+  "surfaces": [
+    {
+      "id": "website",
+      "name": "Astro website",
+      "kind": "ui",
+      "ports": [
+        3301
+      ],
+      "command": [
+        "bun",
+        "run",
+        "dev:website"
+      ],
+      "urls": [
+        "http://localhost:3301/"
+      ]
+    },
+    {
+      "id": "directus",
+      "name": "Directus admin/CMS",
+      "kind": "support-ui",
+      "ports": [
+        3302
+      ],
+      "command": [
+        "bun",
+        "run",
+        "dev:admin"
+      ],
+      "dependsOn": [
+        "postgres"
+      ],
+      "env": {
+        "DIRECTUS_PUBLIC_URL": "http://localhost:3302",
+        "DIRECTUS_DB_CONNECTION_STRING": "postgres://greenpill:greenpill@host.docker.internal:3304/greenpill_network",
+        "DIRECTUS_CORS_ORIGIN": "http://localhost:3301,http://127.0.0.1:3301,http://localhost:3302,https://greenpill.network,https://www.greenpill.network,https://network-admin.fly.dev,https://admin.greenpill.network"
+      },
+      "downCommand": [
+        "bun",
+        "run",
+        "admin:down"
+      ],
+      "urls": [
+        "http://localhost:3302/"
+      ]
+    },
+    {
+      "id": "agent",
+      "name": "agent/API",
+      "kind": "api",
+      "ports": [
+        3303
+      ],
+      "command": [
+        "bun",
+        "run",
+        "dev:agent"
+      ],
+      "dependsOn": [
+        "postgres"
+      ],
+      "env": {
+        "PORT": "3303",
+        "AGENT_PORT": "3303",
+        "AGENT_HOST": "127.0.0.1"
+      },
+      "urls": [
+        "http://localhost:3303/health"
+      ]
+    },
+    {
+      "id": "postgres",
+      "name": "Postgres",
+      "kind": "database",
+      "ports": [
+        3304
+      ],
+      "command": [
+        "bun",
+        "run",
+        "db:local:up"
+      ],
+      "mode": "oneshot",
+      "downCommand": [
+        "bun",
+        "run",
+        "db:local:down"
+      ],
+      "urls": []
+    }
+  ]
+}

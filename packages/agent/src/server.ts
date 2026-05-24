@@ -6,7 +6,7 @@ const parsePort = (value: string | undefined, fallback: number): number => {
   return Number.isFinite(port) && port > 0 ? port : fallback;
 };
 
-const port = parsePort(process.env.PORT || process.env.AGENT_PORT, 8787);
+const port = parsePort(process.env.PORT || process.env.AGENT_PORT, 3303);
 const hostname = process.env.AGENT_HOST || '0.0.0.0';
 
 serve({

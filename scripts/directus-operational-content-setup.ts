@@ -208,9 +208,11 @@ const MAP_NODE_SUBMISSION_REVIEW_FIELDS = Object.freeze([
   'city',
   'region',
   'country',
+  'bioregion',
   'latitude',
   'longitude',
   'role',
+  'chapter_slug',
   'themes',
   'public_note',
   'created_at',
@@ -775,7 +777,7 @@ function cleanString(value) {
 
 function directusUrlFromEnv(env = process.env) {
   return cleanString(env.DIRECTUS_ADMIN_URL || env.DIRECTUS_URL || env.DIRECTUS_PUBLIC_URL)
-    .replace(/\/+$/, '') || 'http://127.0.0.1:8055';
+    .replace(/\/+$/, '') || 'http://127.0.0.1:3302';
 }
 
 type DirectusRequestOptions = {

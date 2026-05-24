@@ -144,8 +144,8 @@ const chapterNodes: ChapterNode[] = chapters
   });
 
 // Mycelial threads are loaded from the public map-state endpoint. Chapters
-// remain SSR anchors; public stewards, members, and anonymous density nodes
-// are progressively enhanced from /map/state.
+// remain SSR anchors; public stewards and members are progressively enhanced
+// from /map/state.
 type Edge = {
   fromId: string;
   toId: string;
@@ -163,9 +163,9 @@ const themeColor = (slug: string) => THEME_INFO[slug]?.color ?? '#B8E835';
 
 const chapterCount = chapterNodes.length;
 const nodeTypeFilters = [
-  { id: 'chapter', label: 'Chapters', count: chapterCount },
-  { id: 'steward', label: 'Stewards', count: 0 },
-  { id: 'member', label: 'Members', count: 0 },
+  { id: 'chapter', label: 'Chapters' },
+  { id: 'steward', label: 'Stewards' },
+  { id: 'member', label: 'Members' },
 ] as const;
 const statsA11y = `World map of ${chapterCount} active chapters, public stewards, and public-safe member nodes.`;
 ---
@@ -245,27 +245,21 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
         ))}
       </g>
 
-      {/* public people nodes — approved submitted stewards/members, anonymous
-          density nodes, and local-pending nodes injected client-side from
-          /map/state. Empty at build time so the map renders and degrades
-          gracefully when the agent is unavailable. */}
+      {/* public people nodes — approved submitted stewards/members and
+          local-pending nodes injected client-side from /map/state. Empty at
+          build time so the map renders and degrades gracefully when the agent
+          is unavailable. */}
       <g class="gp-home-map-members" data-home-map-members></g>
     </svg>
 
-    {/* Integrated stats overlay - top-right inside the map. Steward/member
-        counts stay visible at zero. */}
-    <div class="gp-home-map-stats" aria-hidden="true">
+    {/* Count-free legend. The homepage should explain node identity without
+        surfacing member/steward counts while real participation is still
+        growing. */}
+    <div class="gp-home-map-legend" aria-hidden="true">
       {nodeTypeFilters.map((type) => (
-        <span class={`gp-home-map-stat is-${type.id}`}>
-          <span class={`gp-home-map-stat-mark is-${type.id}`} aria-hidden="true"></span>
-          <span
-            class="gp-home-map-stat-value"
-            data-home-map-stat-count={type.id}
-            data-base-count={type.count}
-          >
-            {type.count}
-          </span>
-          <span class="gp-home-map-stat-label">{type.label.toLowerCase()}</span>
+        <span class={`gp-home-map-legend-item is-${type.id}`}>
+          <span class={`gp-home-map-legend-mark is-${type.id}`} aria-hidden="true"></span>
+          <span class="gp-home-map-legend-label">{type.label}</span>
         </span>
       ))}
     </div>
@@ -290,9 +284,6 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
           >
             <span class="gp-home-map-filter-marker" aria-hidden="true"></span>
             <span>{type.label}</span>
-            <span class="gp-home-map-filter-count" data-home-map-type-count={type.id} data-base-count={type.count}>
-              {type.count}
-            </span>
           </button>
         ))}
       </div>
@@ -323,9 +314,9 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
       not need to import the shared map-state module into the browser bundle. */}
   <script type="application/json" data-home-map-theme-info set:html={JSON.stringify(THEME_INFO)}></script>
 
-  {/* Selected-node panel — opens in-flow when a submitted steward/member node or
-      anonymous density node is activated. Chapter nodes navigate. The
-      owner-edit affordance appears for approved submitted nodes only. */}
+  {/* Selected-node panel — opens in-flow when a submitted steward/member node is
+      activated. Chapter nodes navigate. The owner-edit affordance appears for
+      approved submitted nodes only. */}
   <div class="gp-home-map-selected" data-home-map-selected hidden role="region" aria-label="Selected map node">
     <button type="button" class="gp-home-map-selected-close" data-selected-close aria-label="Close selected node">
       <span aria-hidden="true">×</span>
@@ -333,7 +324,10 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
     <p class="gp-home-map-selected-kicker" data-selected-kicker>Network node</p>
     <p class="gp-home-map-selected-name" data-selected-name></p>
     <p class="gp-home-map-selected-place" data-selected-place></p>
+    <p class="gp-home-map-selected-bioregion" data-selected-bioregion></p>
     <div class="gp-home-map-selected-themes" data-selected-themes></div>
+    <p class="gp-home-map-selected-note" data-selected-note></p>
+    <p class="gp-home-map-selected-connections" data-selected-connections></p>
 
     <div class="gp-home-map-update" data-home-map-update hidden>
       <button type="button" class="gp-home-map-update-trigger" data-update-trigger>Update this node</button>
@@ -432,7 +426,7 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
           <input type="hidden" name="lat" data-location-lat />
           <input type="hidden" name="long" data-location-long />
 
-          <p class="gp-home-map-addnode-location-status" data-location-status>Click anywhere on land to drop your pin.</p>
+          <p class="gp-home-map-addnode-location-status" data-location-status>Click anywhere on the map to drop your pin.</p>
         </div>
 
         <label class="gp-home-map-addnode-note">
@@ -499,11 +493,13 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
     type: DynamicMapNodeType;
     name: string;
     place: string;
+    chapterSlug: string;
+    bioregion: string;
+    publicNote: string;
     themes: string[];
     lat: number;
     long: number;
     approved: boolean;
-    density: boolean;
     pending: boolean;
   };
 
@@ -552,6 +548,7 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
     const themeLabel = (slug: string) => themeInfo[slug]?.label ?? slug.replace(/-/g, ' ');
     const themeColor = (slug: string) => themeInfo[slug]?.color ?? '#B8E835';
     const clean = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+    const publicBioregion = (value: unknown) => clean(value);
 
     const typeFilterButtons = Array.from(scope.querySelectorAll('[data-type-filter]')) as HTMLButtonElement[];
     const themeFilterButtons = Array.from(scope.querySelectorAll('[data-theme-filter]')) as HTMLButtonElement[];
@@ -645,6 +642,30 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
       if (focusEl) focusEl.setAttribute('aria-hidden', 'true');
     };
 
+    const relationshipSummary = (nodeId: string) => {
+      let chapterConnections = 0;
+      let stewardConnections = 0;
+      let memberConnections = 0;
+      root.querySelectorAll<SVGPathElement>('.gp-home-map-thread').forEach((thread) => {
+        const from = thread.getAttribute('data-from');
+        const to = thread.getAttribute('data-to');
+        if (from !== nodeId && to !== nodeId) return;
+        const adjacentId = from === nodeId ? to : from;
+        if (!adjacentId) return;
+        const adjacent = root.querySelector(`[data-node-id="${CSS.escape(adjacentId)}"]`);
+        if (!adjacent) return;
+        const adjacentType = filterTypeFor(adjacent.getAttribute('data-node-type'));
+        if (adjacentType === 'chapter') chapterConnections += 1;
+        if (adjacentType === 'steward') stewardConnections += 1;
+        if (adjacentType === 'member') memberConnections += 1;
+      });
+      const pieces = [];
+      if (chapterConnections) pieces.push(`${chapterConnections} chapter${chapterConnections === 1 ? '' : 's'}`);
+      if (stewardConnections) pieces.push(`${stewardConnections} steward${stewardConnections === 1 ? '' : 's'}`);
+      if (memberConnections) pieces.push(`${memberConnections} member${memberConnections === 1 ? '' : 's'}`);
+      return pieces.length ? `Connected to ${pieces.join(' · ')}` : 'No public connections yet';
+    };
+
     const setFocus = (target: Element) => {
       const id = target.getAttribute('data-node-id');
       const type = target.getAttribute('data-node-type');
@@ -683,7 +704,13 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
         const roleLabel = clean(targetEl.dataset.nodeRole) || focusType.charAt(0).toUpperCase() + focusType.slice(1);
         const placeLabel = clean(targetEl.dataset.nodePlace) || parts.slice(1).join(' · ');
         focusRole.textContent = placeLabel ? `${roleLabel} · ${placeLabel}` : roleLabel;
-        focusMeta.textContent = '';
+        const bioregion = publicBioregion(targetEl.dataset.nodeBioregion);
+        const note = clean(targetEl.dataset.nodePublicNote);
+        focusMeta.textContent = focusType === 'chapter'
+          ? ''
+          : bioregion && note
+            ? `${bioregion} · ${note}`
+            : bioregion || note;
         if (focusThemes) {
           focusThemes.textContent = '';
           nodeThemes(target).slice(0, 4).forEach((slug) => {
@@ -695,20 +722,7 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
           });
         }
         if (focusConnections) {
-          let stewardConnections = 0;
-          let memberConnections = 0;
-          adjacentIds.forEach((adjacentId) => {
-            if (adjacentId === id) return;
-            const adjacent = root.querySelector(`[data-node-id="${CSS.escape(adjacentId)}"]`);
-            if (!adjacent) return;
-            const adjacentType = filterTypeFor(adjacent?.getAttribute('data-node-type'));
-            if (adjacentType === 'steward') stewardConnections += 1;
-            if (adjacentType === 'member') memberConnections += 1;
-          });
-          const pieces = [];
-          if (stewardConnections) pieces.push(`${stewardConnections} steward${stewardConnections === 1 ? '' : 's'}`);
-          if (memberConnections) pieces.push(`${memberConnections} member${memberConnections === 1 ? '' : 's'}`);
-          focusConnections.textContent = pieces.length ? pieces.join(' · ') : 'no connections yet';
+          focusConnections.textContent = relationshipSummary(id);
         }
         const dot = target.querySelector('.gp-home-map-node-dot') as SVGCircleElement | null;
         const cx = Number(dot?.getAttribute('cx'));
@@ -775,7 +789,10 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
     const selectedKicker = scope.querySelector('[data-selected-kicker]') as HTMLElement | null;
     const selectedName = scope.querySelector('[data-selected-name]') as HTMLElement | null;
     const selectedPlace = scope.querySelector('[data-selected-place]') as HTMLElement | null;
+    const selectedBioregion = scope.querySelector('[data-selected-bioregion]') as HTMLElement | null;
     const selectedThemesEl = scope.querySelector('[data-selected-themes]') as HTMLElement | null;
+    const selectedNote = scope.querySelector('[data-selected-note]') as HTMLElement | null;
+    const selectedConnections = scope.querySelector('[data-selected-connections]') as HTMLElement | null;
     const selectedClose = scope.querySelector('[data-selected-close]') as HTMLButtonElement | null;
     const updateWrap = scope.querySelector('[data-home-map-update]') as HTMLElement | null;
     const updateTrigger = scope.querySelector('[data-update-trigger]') as HTMLButtonElement | null;
@@ -816,6 +833,11 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
       }
       if (selectedName) selectedName.textContent = member.name;
       if (selectedPlace) selectedPlace.textContent = member.place;
+      if (selectedBioregion) {
+        const bioregion = publicBioregion(member.bioregion);
+        selectedBioregion.textContent = bioregion;
+        selectedBioregion.hidden = !bioregion;
+      }
       if (selectedThemesEl) {
         selectedThemesEl.textContent = '';
         member.themes.slice(0, 4).forEach((slug) => {
@@ -826,6 +848,11 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
           selectedThemesEl.append(chip);
         });
       }
+      if (selectedNote) {
+        selectedNote.textContent = member.publicNote;
+        selectedNote.hidden = !member.publicNote;
+      }
+      if (selectedConnections) selectedConnections.textContent = relationshipSummary(member.key);
 
       // Owner edit-link is offered for approved submitted nodes only.
       if (updateWrap) updateWrap.hidden = !member.approved;
@@ -1044,6 +1071,9 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
         member.pending ? `Pending ${member.type}` : member.type.charAt(0).toUpperCase() + member.type.slice(1)
       );
       group.setAttribute('data-node-place', member.place);
+      if (member.chapterSlug) group.setAttribute('data-node-chapter-slug', member.chapterSlug);
+      group.setAttribute('data-node-bioregion', publicBioregion(member.bioregion));
+      group.setAttribute('data-node-public-note', member.publicNote);
       group.setAttribute('data-node-themes', member.themes.join(' '));
       group.dataset.memberKey = member.key;
       const roleWord = member.pending ? `Pending ${member.type} node` : `${member.type} node`;
@@ -1053,7 +1083,7 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
       const titleType = member.type.charAt(0).toUpperCase() + member.type.slice(1);
       title.textContent = `${member.name} · ${titleType}${member.place ? ` · ${member.place}` : ''}`;
       group.append(title);
-      const size = member.type === 'steward' ? 2.05 : member.density ? 1.15 : 1.6;
+      const size = member.type === 'steward' ? 2.05 : 1.6;
       group.append(makeCircle('gp-home-map-node-halo', x, y, member.type === 'steward' ? 3.4 : 4));
       group.append(makeCircle('gp-home-map-node-ring', x, y, member.type === 'steward' ? 2 : 2.3));
       group.append(makeCircle('gp-home-map-node-dot', x, y, size));
@@ -1082,7 +1112,7 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
 
     const toMember = (
       raw: Record<string, any>,
-      kind: 'approved-submission' | 'generated-density' | 'local-pending'
+      kind: 'approved-submission' | 'local-pending'
     ): DynamicMapNode | null => {
       const lat = toFiniteNumber(raw.lat ?? raw.latitude);
       const long = toFiniteNumber(raw.long ?? raw.longitude);
@@ -1090,25 +1120,26 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
       const rawType = clean(raw.type || raw.nodeType || raw.role);
       const type = filterTypeFor(rawType);
       if (type === 'chapter') return null;
-      const density = kind === 'generated-density';
-      const name = clean(raw.name || raw.displayName) || (density ? 'Anonymous member' : '');
+      const name = clean(raw.name || raw.displayName);
       if (!name) return null;
       const rawId = clean(raw.id) || `${lat},${long}`;
-      const sourceId = clean(raw.sourceId || raw.id).replace(/^submission:/, '').replace(/^density:/, '');
+      const sourceId = clean(raw.sourceId || raw.id).replace(/^submission:/, '');
       const themes = Array.isArray(raw.themes) ? raw.themes.map(clean).filter(Boolean) : [];
       const place = clean(raw.place || raw.placeName || raw.city);
       const approved = kind === 'approved-submission';
       return {
-        key: approved ? (rawId.startsWith('submission:') ? rawId : `submission:${sourceId}`) : density ? rawId : `local:${clean(raw.id) || `${lat},${long}`}`,
+        key: approved ? (rawId.startsWith('submission:') ? rawId : `submission:${sourceId}`) : `local:${clean(raw.id) || `${lat},${long}`}`,
         sourceId: approved ? sourceId : '',
         type,
         name,
         place,
+        chapterSlug: clean(raw.chapterSlug || raw.chapter_slug),
+        bioregion: publicBioregion(raw.bioregion),
+        publicNote: clean(raw.publicNote || raw.public_note),
         themes,
         lat,
         long,
         approved,
-        density,
         pending: kind === 'local-pending',
       };
     };
@@ -1182,17 +1213,6 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
         : 'In moderated mode, your node appears on your device while stewards review it. Your email stays private and is used only for future edit links.';
     };
 
-    // ---- Live map type counts ----------------------------------------------
-    const setTypeCount = (type: 'chapter' | 'steward' | 'member', count: number) => {
-      const safeCount = Number.isFinite(count) ? Math.max(0, Math.trunc(count)) : 0;
-      scope.querySelectorAll(`[data-home-map-stat-count="${type}"], [data-home-map-type-count="${type}"]`)
-        .forEach((el) => { el.textContent = String(safeCount); });
-    };
-    const baseTypeCount = (type: 'chapter' | 'steward' | 'member') => {
-      const el = scope.querySelector(`[data-home-map-stat-count="${type}"]`) as HTMLElement | null;
-      return Number(el?.dataset.baseCount) || 0;
-    };
-
     let intakeMode: 'moderated' | 'live' = 'moderated';
 
     // ---- /map/state fetch + live growth ------------------------------------
@@ -1228,12 +1248,8 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
         const approved = nodes.filter(
           (node: Record<string, any>) => node?.source === 'approved-submission'
         );
-        const generatedDensity = nodes.filter(
-          (node: Record<string, any>) => node?.source === 'generated-density'
-        );
-        [...approved, ...generatedDensity].forEach((node: Record<string, any>) => {
-          const kind = node?.source === 'generated-density' ? 'generated-density' : 'approved-submission';
-          const member = toMember(node, kind);
+        approved.forEach((node: Record<string, any>) => {
+          const member = toMember(node, 'approved-submission');
           if (member) injectMember(member);
         });
 
@@ -1249,19 +1265,6 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
           nodes as Array<Record<string, any>>,
           Array.isArray(state?.edges) ? state.edges : []
         );
-
-        const byType = state?.counts?.byType && typeof state.counts.byType === 'object'
-          ? state.counts.byType
-          : {};
-        const submittedCounts = nodes.reduce((counts: { steward: number; member: number }, node: Record<string, any>) => {
-          const type = filterTypeFor(node?.type ?? node?.nodeType);
-          if (type === 'steward') counts.steward += 1;
-          if (type === 'member') counts.member += 1;
-          return counts;
-        }, { steward: 0, member: 0 });
-        setTypeCount('chapter', Number(byType.chapter) || baseTypeCount('chapter'));
-        setTypeCount('steward', Number(byType.steward) || submittedCounts.steward);
-        setTypeCount('member', Number(byType.member) || submittedCounts.member);
 
         if (intakeMode === 'live') startPolling();
         else stopPolling();
@@ -1460,7 +1463,7 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
       if (latInput) latInput.value = '';
       if (longInput) longInput.value = '';
       if (locationPin) locationPin.hidden = true;
-      if (locationStatus) locationStatus.textContent = 'Click anywhere on land to drop your pin.';
+      if (locationStatus) locationStatus.textContent = 'Click anywhere on the map to drop your pin.';
       if (locationText) locationText.hidden = true;
       locationMap?.removeAttribute('hidden');
       if (locationModeToggle) locationModeToggle.textContent = 'or type a city ↗';
@@ -1924,8 +1927,8 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
       gpMapNutrientBlip 2.6s linear infinite;
   }
 
-  /* Stats overlay inside the map */
-  .gp-home-map-stats {
+  /* Count-free identity legend inside the map */
+  .gp-home-map-legend {
     position: absolute;
     top: 12px;
     right: 12px;
@@ -1943,47 +1946,36 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
     pointer-events: none;
   }
 
-  .gp-home-map-stat {
+  .gp-home-map-legend-item {
     display: inline-flex;
     align-items: center;
     gap: 10px;
     white-space: nowrap;
   }
-  .gp-home-map-stat[hidden] {
-    display: none;
-  }
 
-  .gp-home-map-stat-mark {
+  .gp-home-map-legend-mark {
     width: 11px;
     height: 11px;
     border-radius: 50%;
     flex: none;
   }
 
-  .gp-home-map-stat-mark.is-chapter {
+  .gp-home-map-legend-mark.is-chapter {
     background: var(--gp-map-chapter);
     box-shadow: 0 0 0 1.5px var(--gp-map-chapter-ring);
   }
 
-  .gp-home-map-stat-mark.is-steward {
+  .gp-home-map-legend-mark.is-steward {
     background: var(--gp-map-steward);
     box-shadow: 0 0 0 1.5px rgba(7, 24, 15, 0.7);
   }
 
-  .gp-home-map-stat-mark.is-member {
+  .gp-home-map-legend-mark.is-member {
     background: var(--gp-map-member);
     box-shadow: 0 0 0 1.5px var(--gp-green-950);
   }
 
-  .gp-home-map-stat-value {
-    font-family: var(--gp-font-display);
-    color: var(--gp-secondary);
-    font-size: 24px;
-    line-height: 1;
-    font-weight: 500;
-  }
-
-  .gp-home-map-stat-label {
+  .gp-home-map-legend-label {
     font-family: var(--gp-font-mono);
     color: var(--gp-fg-dim);
     font-size: 12px;
@@ -2138,7 +2130,7 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
   .gp-home-map-filter-option {
     min-height: 38px;
     display: grid;
-    grid-template-columns: 16px minmax(0, 1fr) auto;
+    grid-template-columns: 16px minmax(0, 1fr);
     align-items: center;
     gap: 10px;
     padding: 6px 8px;
@@ -2187,13 +2179,6 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
     box-shadow: 0 0 0 1.5px var(--gp-green-950);
   }
 
-  .gp-home-map-filter-count {
-    color: var(--gp-fg-dim);
-    font-family: var(--gp-font-mono);
-    font-size: 11px;
-    font-weight: 700;
-  }
-
   .gp-home-map-filter-tabs {
     display: inline-flex;
     align-items: center;
@@ -2238,8 +2223,7 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
   }
 
   /* Selected-node panel — in-flow (not an overlay) so it never clips on
-     mobile. Appears when a submitted steward/member or anonymous density node
-     is activated. */
+     mobile. Appears when a submitted steward/member node is activated. */
   .gp-home-map-selected {
     position: relative;
     width: 100%;
@@ -2300,6 +2284,41 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
     overflow-wrap: anywhere;
   }
   .gp-home-map-selected-place:empty { display: none; }
+
+  .gp-home-map-selected-bioregion,
+  .gp-home-map-selected-note,
+  .gp-home-map-selected-connections {
+    margin: 0;
+    color: var(--gp-fg-muted);
+    font-size: 13px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+
+  .gp-home-map-selected-bioregion {
+    color: var(--gp-map-member);
+    font-family: var(--gp-font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .gp-home-map-selected-note[hidden] {
+    display: none;
+  }
+
+  .gp-home-map-selected-connections {
+    padding-top: 6px;
+    border-top: 1px solid rgba(250, 247, 238, 0.1);
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
 
   .gp-home-map-selected-themes {
     display: flex;
@@ -3028,7 +3047,7 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
       border-radius: var(--gp-radius-lg);
     }
 
-    .gp-home-map-stats {
+    .gp-home-map-legend {
       top: 8px;
       right: 8px;
       padding: 8px 10px;
@@ -3037,13 +3056,9 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
       justify-content: flex-end;
     }
 
-    .gp-home-map-stat-label {
+    .gp-home-map-legend-label {
       font-size: 10px;
       letter-spacing: 0.08em;
-    }
-
-    .gp-home-map-stat-value {
-      font-size: 18px;
     }
 
     .gp-home-map-focus {
@@ -3084,15 +3099,15 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
   }
 
   @container (max-width: 480px) {
-    .gp-home-map-stats {
+    .gp-home-map-legend {
       max-width: 52%;
     }
 
-    .gp-home-map-stat {
+    .gp-home-map-legend-item {
       gap: 6px;
     }
 
-    .gp-home-map-stat-mark {
+    .gp-home-map-legend-mark {
       width: 9px;
       height: 9px;
     }

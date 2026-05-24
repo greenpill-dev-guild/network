@@ -61,6 +61,7 @@ const bodyClasses = [
     <link rel="shortcut icon" href="/favicon.ico" />
   </head>
   <body class:list={bodyClasses}>
+    <div class="gp-background-parallax" data-gp-parallax-bg aria-hidden="true"></div>
     {!hideShell && <a class="gp-skip-link" href="#main-content">Skip to content</a>}
     {!hideShell && <SiteHeader activeNav={activeNav} />}
     <div id="main-content" class="gp-main-target" tabindex="-1">
@@ -73,25 +74,62 @@ const bodyClasses = [
 <style is:global>
   html {
     background: var(--gp-green-950);
+    overflow-x: clip;
   }
 
   body.gp-root {
     margin: 0;
     min-height: 100vh;
     background-color: var(--gp-green-950);
-    background-image: url('/images/greenpill-bg.png');
-    background-position: top center;
-    background-repeat: repeat-y;
-    background-size: max(1400px, 100vw) auto;
+    background-image: none;
     position: relative;
     isolation: isolate;
+    overflow-x: clip;
   }
 
   body.gp-root.has-graphic-background {
-    background-image: url('/images/greenpill-bg.png');
-    background-position: top center;
-    background-repeat: repeat-y;
-    background-size: max(1400px, 100vw) auto;
+    background-image: none;
+  }
+
+  body.gp-root .gp-background-parallax {
+    position: fixed;
+    inset: -14vh 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(circle at 16% 18%, rgba(184, 232, 53, 0.1), transparent 30%),
+      radial-gradient(circle at 82% 74%, rgba(240, 220, 160, 0.08), transparent 34%),
+      url('/images/greenpill-bg.png');
+    background-position:
+      center,
+      center,
+      top center;
+    background-repeat: no-repeat, no-repeat, repeat-y;
+    background-size:
+      76vmax 76vmax,
+      68vmax 68vmax,
+      max(1400px, 100vw) auto;
+    opacity: 0.94;
+    transform: translate3d(0, 0, 0);
+  }
+
+  body.gp-root .gp-background-parallax::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('/images/hifi/topo-bg.png');
+    background-position: center;
+    background-repeat: repeat;
+    background-size: min(1200px, 140vw) auto;
+    mix-blend-mode: overlay;
+    opacity: 0.075;
+  }
+
+  body.gp-root .gp-site-header,
+  body.gp-root .gp-main-target,
+  body.gp-root .gp-site-footer {
+    position: relative;
+    z-index: 1;
   }
 
   body.gp-root a {
@@ -118,6 +156,15 @@ const bodyClasses = [
     text-decoration: none;
     transform: translateY(calc(-100% - var(--gp-space-2xl)));
     transition: transform 160ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    body.gp-root .gp-background-parallax {
+      position: absolute;
+      inset: 0;
+      min-height: 100%;
+      transform: none;
+    }
   }
 
   body.gp-root .gp-skip-link:focus {

@@ -32,6 +32,7 @@ export interface PublicMapStateNode {
   city: string;
   region: string;
   country: string;
+  bioregion?: string;
   lat: number;
   long: number;
   href?: string;
@@ -43,7 +44,7 @@ export interface PublicMapStateNode {
   size: PublicMapNodeSize;
   themes: string[];
   primaryTheme: string;
-  source: 'chapter-content' | 'approved-submission' | 'generated-density';
+  source: 'chapter-content' | 'approved-submission';
 }
 
 export interface PublicMapStateEdge {
@@ -52,6 +53,7 @@ export interface PublicMapStateEdge {
   to: string;
   kind: string;
   theme: string;
+  bioregion?: string;
   weight: number;
   source: 'generated-theme-match' | 'source-backed' | string;
 }
@@ -325,6 +327,7 @@ export function toPublicMapStateSubmittedNode(input: UnknownRecord): PublicMapSt
     city: node.city,
     region: node.region,
     country: node.country,
+    bioregion: node.bioregion,
     lat: node.lat,
     long: node.long,
     href: cleanHref(input?.href ?? input?.profileUrl ?? node.profileUrl),
@@ -363,236 +366,132 @@ const sharedThemes = (a: PublicMapStateNode, b: PublicMapStateNode): string[] =>
   a.themes.filter((theme) => b.themes.includes(theme))
 );
 
+const hasPublicBioregion = (value: unknown): value is string => {
+  const bioregion = cleanString(value);
+  return Boolean(bioregion) && bioregion.toLowerCase() !== 'bioregion pending';
+};
+
 export function generatePublicMapEdges(
   nodes: PublicMapStateNode[],
-  { limit = 160 }: { limit?: number } = {}
+  { limit = 160, perNodeLimit = 4 }: { limit?: number; perNodeLimit?: number } = {}
 ): PublicMapStateEdge[] {
-  const stewards = nodes.filter((node) => node.type === 'steward');
-  const members = nodes.filter((node) => node.type === 'member');
+  const people = nodes.filter((node) => node.type === 'member' || node.type === 'steward');
+  const chaptersBySlug = new Map(
+    nodes
+      .filter((node) => node.type === 'chapter')
+      .flatMap((node) => {
+        const keys = [node.slug, node.sourceId]
+          .map(cleanString)
+          .filter(Boolean);
+        return keys.map((key) => [key, node] as const);
+      })
+  );
   const edges: PublicMapStateEdge[] = [];
   const edgeKeys = new Set<string>();
-  const stewardEdgeLimit = Math.min(
-    Math.max(0, limit),
-    Math.max(0, Math.ceil(stewards.length * 0.75))
-  );
+  const nodeEdgeCounts = new Map<string, number>();
 
   const addEdge = ({
     from,
     to,
     kind,
     theme,
+    bioregion = '',
     weight = 1,
+    source = 'generated-theme-match',
   }: {
     from: PublicMapStateNode;
     to: PublicMapStateNode;
     kind: string;
     theme: string;
+    bioregion?: string;
     weight?: number;
+    source?: PublicMapStateEdge['source'];
   }) => {
     if (from.id === to.id || edges.length >= limit) return;
     const key = `${kind}:${[from.id, to.id].sort().join(':')}`;
     if (edgeKeys.has(key)) return;
+    if ((nodeEdgeCounts.get(from.id) ?? 0) >= perNodeLimit) return;
+    if ((nodeEdgeCounts.get(to.id) ?? 0) >= perNodeLimit) return;
     edgeKeys.add(key);
+    nodeEdgeCounts.set(from.id, (nodeEdgeCounts.get(from.id) ?? 0) + 1);
+    nodeEdgeCounts.set(to.id, (nodeEdgeCounts.get(to.id) ?? 0) + 1);
     edges.push({
       id: `edge:${from.id}:${to.id}:${theme || 'related'}`,
       from: from.id,
       to: to.id,
       kind,
       theme,
+      ...(bioregion ? { bioregion } : {}),
       weight: Math.min(3, Math.max(1, weight)),
-      source: 'generated-theme-match',
+      source,
     });
   };
 
-  // Steward-member edges are the primary local web: members find nearby
-  // stewards first, with shared themes increasing the relationship weight.
-  for (const member of members) {
-    const nearStewards = stewards
-      .map((steward) => ({
-        steward,
-        shared: sharedThemes(member, steward),
-        distance: distanceDegrees(member, steward),
-      }))
-      .filter((candidate) => candidate.distance <= 12)
-      .sort((a, b) => (
-        b.shared.length - a.shared.length ||
-        a.distance - b.distance ||
-        a.steward.name.localeCompare(b.steward.name)
-      ))
-      .slice(0, 2);
-
-    for (const match of nearStewards) {
-      addEdge({
-        from: member,
-        to: match.steward,
-        kind: 'steward-member',
-        theme: match.shared[0] || member.primaryTheme || match.steward.primaryTheme,
-        weight: match.shared.length || 1,
-      });
-      if (edges.length >= limit) return edges;
-    }
-  }
-
-  // Steward-steward edges carry cross-chapter thematic relationships.
-  const stewardCandidates: Array<{
-    a: PublicMapStateNode;
-    b: PublicMapStateNode;
-    shared: string[];
-    distance: number;
-  }> = [];
-  for (let i = 0; i < stewards.length; i += 1) {
-    for (let j = i + 1; j < stewards.length; j += 1) {
-      const shared = sharedThemes(stewards[i], stewards[j]);
-      if (!shared.length) continue;
-      stewardCandidates.push({
-        a: stewards[i],
-        b: stewards[j],
-        shared,
-        distance: distanceDegrees(stewards[i], stewards[j]),
-      });
-    }
-  }
-  let stewardEdgesAdded = 0;
-  for (const candidate of stewardCandidates.sort((a, b) => (
-    b.shared.length - a.shared.length ||
-    a.distance - b.distance ||
-    a.a.name.localeCompare(b.a.name)
-  ))) {
-    if (stewardEdgesAdded >= stewardEdgeLimit) break;
-    const edgeCountBefore = edges.length;
+  for (const steward of people.filter((node) => node.type === 'steward')) {
+    const chapterSlug = cleanString(steward.chapterSlug);
+    const chapter = chapterSlug ? chaptersBySlug.get(chapterSlug) : null;
+    if (!chapter) continue;
+    const shared = sharedThemes(steward, chapter);
     addEdge({
-      from: candidate.a,
-      to: candidate.b,
-      kind: 'steward-steward',
-      theme: candidate.shared[0],
-      weight: candidate.shared.length,
+      from: steward,
+      to: chapter,
+      kind: 'steward-chapter',
+      theme: shared[0] || steward.primaryTheme || chapter.primaryTheme,
+      weight: 2,
+      source: 'source-backed',
     });
-    if (edges.length > edgeCountBefore) stewardEdgesAdded += 1;
     if (edges.length >= limit) return edges;
   }
 
-  // Member-member edges stay rarer and require stronger theme overlap.
-  const memberCandidates: Array<{
+  const candidates: Array<{
     a: PublicMapStateNode;
     b: PublicMapStateNode;
     shared: string[];
+    sharedBioregion: string;
     distance: number;
+    score: number;
   }> = [];
-  for (let i = 0; i < members.length; i += 1) {
-    for (let j = i + 1; j < members.length; j += 1) {
-      const shared = sharedThemes(members[i], members[j]);
-      if (shared.length < 2) continue;
-      const distance = distanceDegrees(members[i], members[j]);
-      if (distance < 30) continue;
-      memberCandidates.push({ a: members[i], b: members[j], shared, distance });
+
+  for (let i = 0; i < people.length; i += 1) {
+    for (let j = i + 1; j < people.length; j += 1) {
+      const shared = sharedThemes(people[i], people[j]);
+      if (!shared.length) continue;
+      const aBioregion = cleanString(people[i].bioregion);
+      const bBioregion = cleanString(people[j].bioregion);
+      const sharedBioregion = hasPublicBioregion(aBioregion) && aBioregion === bBioregion
+        ? aBioregion
+        : '';
+      const distance = distanceDegrees(people[i], people[j]);
+      candidates.push({
+        a: people[i],
+        b: people[j],
+        shared,
+        sharedBioregion,
+        distance,
+        score: shared.length * 4 + (sharedBioregion ? 2 : 0) - Math.min(distance, 90) / 60,
+      });
     }
   }
-  for (const candidate of memberCandidates.sort((a, b) => (
+
+  for (const candidate of candidates.sort((a, b) => (
+    b.score - a.score ||
     b.shared.length - a.shared.length ||
-    b.distance - a.distance ||
-    a.a.name.localeCompare(b.a.name)
+    a.distance - b.distance ||
+    a.a.name.localeCompare(b.a.name) ||
+    a.b.name.localeCompare(b.b.name)
   ))) {
     addEdge({
       from: candidate.a,
       to: candidate.b,
-      kind: 'member-member',
+      kind: 'shared-theme',
       theme: candidate.shared[0],
-      weight: candidate.shared.length,
+      bioregion: candidate.sharedBioregion,
+      weight: candidate.shared.length + (candidate.sharedBioregion ? 1 : 0),
     });
     if (edges.length >= limit) return edges;
   }
 
   return edges;
-}
-
-const ANONYMOUS_DENSITY_PLACES = Object.freeze([
-  { label: 'Lagos', city: 'Lagos', region: '', country: 'Nigeria', lat: 6.5244, long: 3.3792 },
-  { label: 'Berlin', city: 'Berlin', region: '', country: 'Germany', lat: 52.52, long: 13.405 },
-  { label: 'Bogota', city: 'Bogota', region: '', country: 'Colombia', lat: 4.711, long: -74.0721 },
-  { label: 'Bali', city: 'Bali', region: '', country: 'Indonesia', lat: -8.3405, long: 115.092 },
-  { label: 'Toronto', city: 'Toronto', region: 'Ontario', country: 'Canada', lat: 43.6532, long: -79.3832 },
-  { label: 'New York City', city: 'New York City', region: 'New York', country: 'United States', lat: 40.7128, long: -74.006 },
-  { label: 'Nairobi', city: 'Nairobi', region: '', country: 'Kenya', lat: -1.2864, long: 36.8172 },
-  { label: 'Cape Town', city: 'Cape Town', region: '', country: 'South Africa', lat: -33.9249, long: 18.4241 },
-  { label: 'Sao Paulo', city: 'Sao Paulo', region: '', country: 'Brazil', lat: -23.5505, long: -46.6333 },
-  { label: 'Tokyo', city: 'Tokyo', region: '', country: 'Japan', lat: 35.6762, long: 139.6503 },
-  { label: 'Lisbon', city: 'Lisbon', region: '', country: 'Portugal', lat: 38.7223, long: -9.1393 },
-  { label: 'London', city: 'London', region: '', country: 'United Kingdom', lat: 51.5072, long: -0.1276 },
-  { label: 'Buenos Aires', city: 'Buenos Aires', region: '', country: 'Argentina', lat: -34.6037, long: -58.3816 },
-  { label: 'Accra', city: 'Accra', region: '', country: 'Ghana', lat: 5.6037, long: -0.187 },
-  { label: 'Mumbai', city: 'Mumbai', region: 'Maharashtra', country: 'India', lat: 19.076, long: 72.8777 },
-  { label: 'Manila', city: 'Manila', region: '', country: 'Philippines', lat: 14.5995, long: 120.9842 },
-]);
-
-const densityHash = (value: string): number => Array.from(value).reduce((acc, char) => (
-  ((acc * 31) + char.charCodeAt(0)) % 100000
-), 17);
-
-const densityJitter = (seed: number): number => {
-  const x = Math.sin(seed) * 10000;
-  return x - Math.floor(x);
-};
-
-function generateAnonymousDensityNodes(
-  baseNodes: PublicMapStateNode[],
-  themes: PublicMapTheme[],
-  { targetTotal = 96 }: { targetTotal?: number } = {}
-): PublicMapStateNode[] {
-  if (baseNodes.length === 0) return [];
-
-  const themeIds = themes.map((theme) => theme.id).filter(Boolean);
-  if (themeIds.length === 0) return [];
-
-  const existingMemberLike = baseNodes.filter((node) => (
-    node.type === 'member' || node.type === 'steward'
-  )).length;
-  const targetCount = Math.max(0, Math.min(84, targetTotal - baseNodes.length - existingMemberLike));
-  const densityNodes: PublicMapStateNode[] = [];
-
-  const chapterAnchors = baseNodes.filter((node) => node.type === 'chapter');
-  const anchors = chapterAnchors.length ? chapterAnchors : baseNodes;
-
-  for (let index = 0; index < targetCount; index += 1) {
-    const anchor = index % 2 === 0 && anchors.length
-      ? anchors[index % anchors.length]
-      : null;
-    const place = ANONYMOUS_DENSITY_PLACES[index % ANONYMOUS_DENSITY_PLACES.length];
-    const seed = densityHash(`${place.label}:${index}:${anchor?.id ?? ''}`);
-    const latBase = anchor ? anchor.lat : place.lat;
-    const longBase = anchor ? anchor.long : place.long;
-    const lat = Math.max(-58, Math.min(72, latBase + (densityJitter(seed) - 0.5) * (anchor ? 8 : 3)));
-    const long = Math.max(-178, Math.min(178, longBase + (densityJitter(seed + 7) - 0.5) * (anchor ? 14 : 6)));
-    const primaryTheme = anchor?.themes[index % Math.max(1, anchor.themes.length)]
-      || themeIds[index % themeIds.length];
-    const themesForNode = [
-      primaryTheme,
-      themeIds[(index * 3 + 1) % themeIds.length],
-      themeIds[(index * 5 + 2) % themeIds.length],
-    ].filter(Boolean);
-    const themes = [...new Set(themesForNode)];
-    const id = `density:${index + 1}`;
-
-    densityNodes.push({
-      id,
-      sourceId: id,
-      type: 'member',
-      name: 'Anonymous member',
-      place: anchor ? `${anchor.name} orbit` : place.label,
-      city: anchor?.city || place.city,
-      region: anchor?.region || place.region,
-      country: anchor?.country || place.country,
-      lat,
-      long,
-      role: 'anonymous-density',
-      status: 'anonymous',
-      size: 'S',
-      themes,
-      primaryTheme: themes[0] || '',
-      source: 'generated-density',
-    });
-  }
-
-  return densityNodes;
 }
 
 function normalizeEdge(edge: Partial<PublicMapStateEdge> & UnknownRecord): PublicMapStateEdge | null {
@@ -605,6 +504,7 @@ function normalizeEdge(edge: Partial<PublicMapStateEdge> & UnknownRecord): Publi
     to,
     kind: cleanString(edge?.kind) || 'related',
     theme: cleanString(edge?.theme),
+    ...(cleanString(edge?.bioregion) ? { bioregion: cleanString(edge?.bioregion) } : {}),
     weight: Math.max(1, normalizeInteger(edge?.weight) || 1),
     source: cleanString(edge?.source) || 'source-backed',
   };
@@ -646,9 +546,6 @@ function countNodesForSource(nodes: PublicMapStateNode[], source: string): numbe
   if (source === 'approved-map-nodes') {
     return nodes.filter((node) => node.source === 'approved-submission').length;
   }
-  if (source === 'generated-density') {
-    return nodes.filter((node) => node.source === 'generated-density').length;
-  }
   return null;
 }
 
@@ -659,7 +556,6 @@ function normalizeMapStateSourceStatuses(
   const sourceCounts = new Map([
     ['chapter-locations', countNodesForSource(nodes, 'chapter-locations')],
     ['approved-map-nodes', countNodesForSource(nodes, 'approved-map-nodes')],
-    ['generated-density', countNodesForSource(nodes, 'generated-density')],
   ]);
 
   const normalized = Array.isArray(sourceStatus) && sourceStatus.length
@@ -690,11 +586,6 @@ function normalizeMapStateSourceStatuses(
       status: (sourceCounts.get('approved-map-nodes') ?? 0) > 0 ? 'ok' : 'empty',
       count: sourceCounts.get('approved-map-nodes') ?? 0,
     }),
-    normalizePublicMapSourceStatus({
-      source: 'generated-density',
-      status: (sourceCounts.get('generated-density') ?? 0) > 0 ? 'ok' : 'empty',
-      count: sourceCounts.get('generated-density') ?? 0,
-    }),
   ];
 }
 
@@ -723,9 +614,7 @@ export function toPublicMapStatePayload({
     ...publicMapNodes.map(toPublicMapStateSubmittedNode).filter(isPresent),
   ]
     .sort((a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name));
-  const uniqueBaseNodes = [...new Map(nodes.map((node) => [node.id, node])).values()];
-  const densityNodes = generateAnonymousDensityNodes(uniqueBaseNodes, publicThemes);
-  const uniqueNodes = [...new Map([...uniqueBaseNodes, ...densityNodes].map((node) => [node.id, node])).values()];
+  const uniqueNodes = [...new Map(nodes.map((node) => [node.id, node])).values()];
   const publicEdges = (Array.isArray(edges)
     ? edges.map(normalizeEdge).filter(isPresent)
     : generatePublicMapEdges(uniqueNodes))

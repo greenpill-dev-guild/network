@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: greenpill
       POSTGRES_PASSWORD: greenpill
     ports:
-      - "54329:5432"
+      - "${NETWORK_POSTGRES_PORT:-3304}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U greenpill -d greenpill_network"]
       interval: 5s

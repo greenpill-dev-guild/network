@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "feature": {
+    "slug": "ai-native-dev-workflow",
+    "title": "AI-Native Developer Workflow",
+    "kind": "quality",
+    "stage": "active"
+  },
+  "workflow": {
+    "overall_status": "active",
+    "priority": "p1",
+    "created_at": "2026-05-24",
+    "updated_at": "2026-05-24"
+  },
+  "links": {
+    "brief": "brief.md",
+    "spec": "spec.md",
+    "plan": "plan.todo.md",
+    "eval": "eval.md"
+  },
+  "notes": [
+    "status.json is authoritative for hub state.",
+    ".plans carries planning truth; packages carry runtime contracts.",
+    "This repo uses manual plan updates plus validation in v1.",
+    "This hub is process infrastructure only until a lane explicitly scopes package changes."
+  ],
+  "taxonomy": {
+    "initiative": "public-experience",
+    "tracks": [
+      "platform",
+      "content",
+      "ui"
+    ],
+    "work_types": [
+      "review",
+      "testing",
+      "docs"
+    ],
+    "surfaces": [
+      ".plans/active/ai-native-dev-workflow",
+      "packages/website",
+      "packages/shared",
+      "packages/agent",
+      "packages/admin"
+    ],
+    "depends_on_features": []
+  },
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "blocked",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "content": {
+      "owner": "claude",
+      "status": "blocked",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "platform": {
+      "owner": "codex",
+      "status": "completed",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "qa_pass_1": {
+      "owner": "claude",
+      "status": "blocked",
+      "depends_on": [
+        "ui",
+        "content",
+        "platform"
+      ],
+      "handoff": "handoffs/README.md"
+    },
+    "qa_pass_2": {
+      "owner": "codex",
+      "status": "blocked",
+      "depends_on": [
+        "qa_pass_1"
+      ],
+      "handoff": "handoffs/README.md"
+    }
+  },
+  "history": [
+    {
+      "timestamp": "2026-05-24",
+      "actor": "codex",
+      "lane": "system",
+      "status": "scaffolded",
+      "note": "Created active AI-native developer workflow hub."
+    },
+    {
+      "timestamp": "2026-05-24",
+      "actor": "codex",
+      "lane": "platform",
+      "status": "completed",
+      "note": "Closed scaffold-hardening lane with filled ledger, scorecard, adversarial review, closeout gate, and copy-runnable validation command evidence. UI/content stay blocked until future adoption explicitly scopes website or content changes."
+    }
+  ]
+}

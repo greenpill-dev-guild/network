@@ -3,6 +3,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import {
   containsPrivateMapNodeField,
+  derivePublicBioregionFromCoordinates,
   EDITABLE_MAP_NODE_UPDATE_FIELDS,
   loadLocalPendingNodes,
   localPendingNodeSignature,
@@ -57,6 +58,7 @@ test('approved public projection removes private submission fields', () => {
 
   assert.equal(publicNode.status, 'approved');
   assert.equal(publicNode.name, 'Afo');
+  assert.equal(publicNode.bioregion, '');
   assert.equal(containsPrivateMapNodeField(publicNode), false);
   for (const field of PRIVATE_MAP_NODE_FIELDS) {
     assert.equal(Object.hasOwn(publicNode, field), false);
@@ -240,6 +242,7 @@ test('public map-state combines chapter anchors and approved submitted nodes saf
       lat: 6.5244,
       long: 3.3792,
       role: 'chapter steward',
+      chapterSlug: 'nigeria',
       themes: ['public', 'events'],
       publicNote: 'Running public-goods meetups.',
       status: 'approved',
@@ -253,12 +256,13 @@ test('public map-state combines chapter anchors and approved submitted nodes saf
   assert.equal(payload.intakeMode, 'live');
   assert.equal(payload.nodes.some((node) => node.type === 'chapter'), true);
   assert.equal(payload.nodes.some((node) => node.type === 'steward'), true);
-  assert.equal(payload.nodes.some((node) => node.source === 'generated-density'), true);
+  assert.equal(payload.nodes.some((node) => node.source === 'generated-density'), false);
+  assert.equal(payload.nodes.find((node) => node.type === 'steward')?.bioregion, '');
   assert.equal(payload.counts.chapterNodes, 1);
   assert.equal(payload.counts.approvedSubmittedNodes, 1);
   assert.equal(payload.counts.byType.steward, 1);
   assert.equal(payload.counts.byTheme.public > 1, true);
-  assert.equal(payload.edges.length > 0, true);
+  assert.equal(payload.edges.some((edge) => edge.kind === 'steward-chapter'), true);
   assert.equal(containsPrivateMapStateField(payload), false);
   assert.equal(JSON.stringify(payload).includes('private@example.com'), false);
   assert.equal(JSON.stringify(payload).includes('private submission context'), false);
@@ -295,6 +299,7 @@ test('public map-state generates person-first relationship edges', () => {
         lat: 6.5244,
         long: 3.3792,
         role: 'steward',
+        chapterSlug: 'nigeria',
         themes: ['public'],
         status: 'approved',
         source: 'approved-submission',
@@ -306,6 +311,7 @@ test('public map-state generates person-first relationship edges', () => {
         lat: 6.6,
         long: 3.45,
         role: 'member',
+        bioregion: 'West African Coast',
         themes: ['public', 'events'],
         status: 'approved',
         source: 'approved-submission',
@@ -317,6 +323,7 @@ test('public map-state generates person-first relationship edges', () => {
         lat: 52.52,
         long: 13.405,
         role: 'member',
+        bioregion: 'West African Coast',
         themes: ['public', 'events'],
         status: 'approved',
         source: 'approved-submission',
@@ -326,17 +333,18 @@ test('public map-state generates person-first relationship edges', () => {
 
   assert.equal(payload.edges.some((edge) => edge.kind === 'chapter-theme'), false);
   assert.equal(payload.nodes.some((node) => node.type === 'steward'), true);
-  assert.equal(payload.edges.some((edge) => edge.kind === 'steward-member'), true);
+  assert.equal(payload.edges.some((edge) => edge.kind === 'steward-chapter'), true);
   assert.equal(payload.edges.some((edge) => (
-    edge.kind === 'member-member' &&
+    edge.kind === 'shared-theme' &&
     [edge.from, edge.to].sort().join(':') === 'submission:member-1:submission:member-2'
   )), true);
-  assert.equal(payload.edges.some((edge) => (
-    edge.from.startsWith('chapter:') || edge.to.startsWith('chapter:')
-  )), false);
+  assert.equal(payload.edges.find((edge) => (
+    edge.kind === 'shared-theme' &&
+    [edge.from, edge.to].sort().join(':') === 'submission:member-1:submission:member-2'
+  ))?.bioregion, 'West African Coast');
 });
 
-test('public map-state includes opt-in stewards and anonymous density safely', () => {
+test('public map-state includes real opt-in stewards without anonymous density', () => {
   const stewardNodes = Array.from({ length: 8 }, (_, index) => ({
     id: `steward-${index + 1}`,
     name: `Steward ${index + 1}`,
@@ -362,14 +370,20 @@ test('public map-state includes opt-in stewards and anonymous density safely', (
     publicMapNodes: stewardNodes,
   });
 
-  const stewardEdges = payload.edges.filter((edge) => edge.kind === 'steward-steward');
+  const stewardEdges = payload.edges.filter((edge) => edge.kind === 'shared-theme');
   assert.equal(payload.nodes.filter((node) => node.type === 'steward').length, stewardNodes.length);
-  assert.equal(payload.nodes.some((node) => node.source === 'generated-density'), true);
+  assert.equal(payload.nodes.some((node) => node.source === 'generated-density'), false);
   assert.equal(payload.counts.approvedSubmittedNodes, stewardNodes.length);
   assert.equal(stewardEdges.length > 0, true);
+  assert.equal(payload.edges.some((edge) => edge.kind === 'steward-steward'), false);
   assert.equal(payload.edges.some((edge) => (
     edge.from.startsWith('chapter:') || edge.to.startsWith('chapter:')
   )), false);
+});
+
+test('public bioregion field stays blank without a checked-in polygon dataset', () => {
+  assert.equal(derivePublicBioregionFromCoordinates(37.8044, -122.2712), '');
+  assert.equal(derivePublicBioregionFromCoordinates(37.8044, -122.2712, 'Bay Delta'), 'Bay Delta');
 });
 
 test('public content seed map nodes are approved-only projection fixtures', async () => {
@@ -492,6 +506,22 @@ test('public SQL view is approved-only and excludes private fields', async () =>
   assert.match(viewSql, /where status = 'approved'/);
   for (const field of ['email', 'raw_note', 'review_notes', 'ip_address', 'rate_limit_key', 'spam_signals', 'user_agent']) {
     assert.equal(viewSql.includes(field), false, `${field} must not be exposed by public_map_nodes`);
+  }
+});
+
+test('map-node recovery migration exposes only public chapter and bioregion fields', async () => {
+  const sql = await readFile(
+    new URL('../packages/agent/migrations/013_map_node_steward_chapter_bioregion.sql', import.meta.url),
+    'utf8'
+  );
+
+  assert.match(sql, /add column if not exists chapter_slug text/);
+  assert.match(sql, /add column if not exists bioregion text/);
+  assert.doesNotMatch(sql, /Bioregion pending/);
+  assert.match(sql, /chapter_slug/);
+  assert.match(sql, /bioregion/);
+  for (const field of ['email', 'raw_note', 'review_notes', 'ip_address', 'rate_limit_key', 'spam_signals', 'user_agent']) {
+    assert.equal(sql.includes(field), false, `${field} must not be exposed by recovered public_map_nodes`);
   }
 });
 

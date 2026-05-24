@@ -10,7 +10,7 @@
     "overall_status": "active",
     "priority": "p0",
     "created_at": "2026-05-17T23:16:40.923Z",
-    "updated_at": "2026-05-21T12:00:00Z"
+    "updated_at": "2026-05-24T00:00:00Z"
   },
   "links": {
     "brief": "brief.md",
@@ -22,7 +22,8 @@
     "status.json is authoritative for hub state.",
     ".plans carries planning, research, handoffs, readiness, and evolving implementation context.",
     "Runtime contracts that code depends on belong under packages.",
-    "This hub owns the public website design package, research inputs, and implementation sequence."
+    "This hub owns the public website design package, research inputs, and implementation sequence.",
+    "2026-05-24 modern Web UI follow-up: added reports/modern-web-ui-follow-up-2026-05-24.md and checklist items for text-scale readiness, Astro MPA View Transitions, CSS scroll spy, scroll-state header behavior, closedby dialog polish, and stale parallax/script review. Lane statuses are unchanged."
   ],
   "taxonomy": {
     "initiative": "public-experience",
@@ -300,7 +301,28 @@
       "actor": "codex",
       "lane": "system",
       "status": "in_progress",
-      "note": "Opened the P0 public map recovery after read-only audit and product decisions. This supersedes prior map-complete and visual-QA-complete claims for the map slice: stewards must be public opt-in/allowlisted nodes, live sessions auto-approve valid submissions in real time, anonymous public-safe density must restore the HiFi mycelial feel, the theme picker is up to four themes, June 10 is a member self-add activity rather than a public-note feature, and Linear/production mutations remain separate approval-only work. Recovery report: reports/public-map-recovery-2026-05-21.md."
+      "note": "Opened the P0 public map recovery after read-only audit and product decisions. This supersedes prior map-complete and visual-QA-complete claims for the map slice: stewards must be public opt-in/allowlisted nodes, live sessions auto-approve valid submissions in real time, the then-proposed anonymous-density recovery path required explicit product confirmation and was later superseded by the unified real-node-only recovery, the theme picker is up to four themes, June 10 is a member self-add activity rather than a public-note feature, and Linear/production mutations remain separate approval-only work. Recovery report: reports/public-map-recovery-2026-05-21.md."
+    },
+    {
+      "timestamp": "2026-05-21T19:30:35Z",
+      "actor": "codex",
+      "lane": "platform",
+      "status": "implemented_local",
+      "note": "Applied the unified Home map recovery locally: the active hub remains the single plan source, generated anonymous density nodes are removed, public map state is chapters plus approved real member/steward submissions, steward allowlist entries can map email to trusted chapterSlug, public nodes reserve optional bioregion for future approved values without claiming polygon lookup, edges are trusted steward-to-chapter plus shared-theme relationships with per-node caps, and HomeMap selected-node details remain public-safe. Focused shared and agent contract tests pass; browser proof remains an explicit follow-up."
+    },
+    {
+      "timestamp": "2026-05-21T20:10:53Z",
+      "actor": "codex",
+      "lane": "qa_pass_2",
+      "status": "ready",
+      "note": "Addressed Home map recovery review findings locally: bioregion is an honest optional field with no fake pending fallback or relationship scoring, the Home map uses a count-free node identity legend instead of 0 steward/member counts, and scripts/home-map-browser-smoke.ts now exercises the real homepage add-node flow with mocked moderated/live agent responses, allowlisted steward rendering, selected-node relationship summary, and private-field DOM/storage guards. Validation passed for map-node contracts, agent contracts, Home browser smoke, website build, ui:check, ui:verify /, and plan validation."
+    },
+    {
+      "timestamp": "2026-05-24T00:00:00Z",
+      "actor": "codex",
+      "lane": "system",
+      "status": "modern_web_ui_followup_recorded",
+      "note": "Recorded the cross-repo modern CSS/Web UI audit follow-up inside this existing active hub without changing the current P0 map/design lane statuses or authorizing runtime CSS edits."
     }
   ]
 }

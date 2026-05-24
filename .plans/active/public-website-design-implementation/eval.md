@@ -8,17 +8,19 @@
 - Runtime SQL and package contracts live under `packages/`.
 - `status.json` matches the intended stage and lane state.
 - Stale route scan confirms the retired public onboarding, guild-index, and project route families are not listed as future implementation targets.
-- The map-state public contract includes only safe `intakeMode` metadata, approved submitted nodes, opt-in public stewards, chapter anchors, anonymous generated density nodes, and generated/source-backed public edges; no pending submissions or review/private fields leak.
+- The map-state public contract includes only safe `intakeMode` metadata, approved submitted member/steward nodes, chapter anchors, optional public-safe `bioregion`, and source-backed public edges; no anonymous density nodes, pending submissions, or review/private fields leak.
 - `POST /map-nodes` keeps submissions pending by default and auto-approves only when the admin-owned intake settings singleton has Live Onboarding Mode enabled.
 - Live auto-approval writes a private audit/review row marked `system:live-onboarding`.
-- The website map consumes `/map/state`, falls back to `/locations.json`, uses distinct member/chapter/steward node colors, renders anonymous density nodes, renders theme-colored mycelial connections, and polls about every two seconds only while live mode is active and the map is visible.
+- The website map consumes `/map/state`, falls back to `/locations.json`, uses distinct member/chapter/steward node colors, renders only real approved submitted nodes plus chapter anchors, renders theme-colored mycelial connections, and polls about every two seconds only while live mode is active and the map is visible.
 - Live-mode map-state responses avoid stale public caching; moderated mode keeps acceptable lightweight caching.
 - The map includes non-color identity cues, an accessible legend, and edge-density behavior that keeps mycelial lines legible on mobile and dense regions.
-- The add-node flow renders clear moderated/live copy, allows one to four themes, keeps local pending self-nodes for moderated submissions, shows live success/error states, and uses mobile-friendly controls without overflow.
+- The add-node flow renders clear moderated/live copy, allows one to four themes, stores the user's placed coordinates rather than forcing chapter placement, keeps local pending self-nodes for moderated submissions, shows live success/error states, and uses mobile-friendly controls without overflow.
+- Non-allowlisted submissions publish as `member`; allowlisted submissions publish as `steward` and receive the configured trusted `chapterSlug` without exposing email.
+- Public node details show name, role, themes, optional known `bioregion`, optional public note, and a public-safe relationship summary.
 - Browser proof opens the add-node dialog from the homepage CTA and map control, selects one to four themes, places a node or uses text fallback, submits against a controlled test path, and verifies live map refresh without a page reload.
 - Browser proof verifies allowlisted live submissions render as public stewards and non-allowlisted live submissions render as public members.
-- Seeded-data proof verifies chapter, steward, member, and anonymous density nodes plus mycelial edges render together.
-- Visual proof compares the map against the HiFi reference at 375, 1024, and 1440 widths, including node treatments, filter legibility, thread density, and mobile readability.
+- Seeded-data proof verifies chapter, steward, and member nodes plus real mycelial edges render together without anonymous density nodes.
+- Visual proof compares the map against the HiFi reference at 375, 1024, and 1440 widths, including chapter/member/steward node treatments, selected-node details, filter legibility, thread density, and mobile readability.
 - Any modern CSS/Web UI primitive proposed after this plan update has a feature-readiness classification, reduced-motion path, and static fallback or `@supports`/feature-detection proof.
 - Any changed site shell, map, chip, card, focus, or form-control primitive includes a contrast or forced-colors spot check when color, translucency, shadow, or image-backed text carries meaning.
 - Text-scale meta is not enabled until large-text behavior is proven at 375, 1024, and 1440 widths.
@@ -50,8 +52,10 @@
 - `bun run build:website`
 - `bun run ui:check`
 - `bun run ui:verify /`
+- `bun run test:home-map:browser`
 - Migration ordering check against `packages/agent/migrations`.
 - Contract tests for required email on new public map-node submissions.
+- Contract tests for non-allowlisted member submissions, allowlisted steward submissions, trusted steward `chapterSlug`, optional `bioregion` with no fake fallback, generated-density removal, and real-node-only relationship edges.
 - Contract tests for role/type edit boundary, one-pending-update or optimistic-lock behavior, retention cleanup, and broad edit-link rate limits.
 - Contract tests for identical edit-link public responses across matching, non-matching, missing-node, ownerless, and cooldown-limited cases.
 - Contract tests for missing email configuration and send failure paths preserving the neutral public edit-link response.
@@ -61,5 +65,5 @@
 - Header/cache checks for live-mode map-state freshness and moderated-mode acceptable caching.
 - Website checks for selected-node update request, `/map/edit?token=...`, token removal from visible URL before analytics/outbound navigation, success/error states, mobile overflow, add-node dialog interaction, theme selection, placement fallback, live refresh, and public steward/member rendering.
 - Targeted stale-path scan for the former root V2 and research locations across README, root config, package scripts, and `.plans`.
-- Visual checks at 1440, 1024, and 375 for HiFi comparison, chapter/steward/member node treatments, anonymous density, mycelial edges, filter color comfort, non-color cues, accessible legend, edge-density behavior, connection clarity, live-mode copy, and mobile add-node flow.
+- Visual checks at 1440, 1024, and 375 for HiFi comparison, chapter/steward/member node treatments, real mycelial edges, selected-node detail clarity, filter color comfort, non-color cues, accessible legend, edge-density behavior, connection clarity, live-mode copy, and mobile add-node flow.
 - Modern CSS/Web UI follow-up checks, when implemented later: text-scale screenshots, reduced-motion verification, unsupported-feature fallback proof, and focused route/browser checks for any scroll spy, View Transition, scroll-state, or dialog-light-dismiss changes.

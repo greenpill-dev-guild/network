@@ -13,7 +13,7 @@
  *   bun run ui:verify                 # build site, verify all discovered routes
  *   bun run ui:check                  # source-only CSS guardrails, no browser/build
  *   bun run ui:verify / /chapters     # verify specific routes
- *   UI_VERIFY_ORIGIN=http://localhost:4321 bun scripts/ui-verify.ts /   # against a running dev server (no build)
+ *   UI_VERIFY_ORIGIN=http://localhost:3301 bun scripts/ui-verify.ts /   # against a running dev server (no build)
  *
  * Env:
  *   CHROME_BIN / CHROMIUM_BIN   explicit browser binary

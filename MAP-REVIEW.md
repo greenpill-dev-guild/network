@@ -48,7 +48,7 @@ database flag**, not a code defect — there is no repo change that fixes it. Fl
 
 - `agent /ready`: `{"ok":true,"database":{"configured":true,"connected":true,"status":"ok"}}`
 - `/map/state` from `https://greenpill.network`: GET 200, no console errors, CORS OK.
-- CORS allowlist (code): greenpill.network, www.greenpill.network, localhost:4321, 127.0.0.1:4321.
+- CORS allowlist (code): greenpill.network, www.greenpill.network, localhost:3301, 127.0.0.1:3301.
 
 ---
 *Untracked deliverable — not committed. No code was changed during this review.*
