@@ -46,6 +46,8 @@ bun run ui:verify /your-route
 
 `ui:check` is static/source-only and catches CSS standard drift without building or opening a browser. `ui:verify` renders at 375/1024/1440 and runs four channels — layout (overflow / wrapped pills / 44px targets), accessibility tree, axe-core, and CLS + semantic lint — writing screenshots + `report.json` to `.ui-verify/`. **Read the 375px PNG first.** Fix every HARD violation. Never declare UI work done on code review alone — responsiveness and a11y bugs are invisible in source.
 
+For local human/agent walkthroughs, WebMCP validation, and DevTools MCP proof, prefer Brave with an isolated/non-default profile. Keep `ui:check` / `ui:verify` Chrome/Chromium-compatible for contributors and CI unless a task explicitly requires Brave-only WebMCP validation.
+
 ## House component pattern
 
 New components are `.astro` with a scoped `<style>` block, `gp-`-prefixed classes, and `var(--gp-*)` values only. Template off `src/components/ui/Button.astro`, `Card.astro`, `Chip.astro`. Pages wrap content in `Container.astro` inside `GpLayout.astro` (which sets `body.gp-root` and the container context).
