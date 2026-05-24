@@ -443,7 +443,7 @@ function collectLineSourceFindings(rel: string, scan: string): SourceFinding[] {
       findings.push(sourceFinding(rel, line, 'VIEWPORT_VH_UNIT', 'hard', text, `${rel}:${line} uses vh; prefer dvh/svh/lvh or baseline an intentional atmospheric exception`));
     }
 
-    if (/font-size\s*:\s*(?!var\(|clamp\(|calc\(|inherit\b|initial\b|unset\b)[^;]+;/.test(text)) {
+    if (/font-size\s*:\s*(?!\s*(?:var|clamp|calc)\(|\s*(?:inherit|initial|unset)\b)[^;]+;/.test(text)) {
       findings.push(sourceFinding(rel, line, 'HARDCODED_FONT_SIZE', 'hard', text, `${rel}:${line} hardcodes font-size; use gp typography tokens or clamp() display tokens`));
     }
 
