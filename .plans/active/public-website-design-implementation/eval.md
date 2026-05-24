@@ -19,6 +19,10 @@
 - Browser proof verifies allowlisted live submissions render as public stewards and non-allowlisted live submissions render as public members.
 - Seeded-data proof verifies chapter, steward, member, and anonymous density nodes plus mycelial edges render together.
 - Visual proof compares the map against the HiFi reference at 375, 1024, and 1440 widths, including node treatments, filter legibility, thread density, and mobile readability.
+- Any modern CSS/Web UI primitive proposed after this plan update has a feature-readiness classification, reduced-motion path, and static fallback or `@supports`/feature-detection proof.
+- Any changed site shell, map, chip, card, focus, or form-control primitive includes a contrast or forced-colors spot check when color, translucency, shadow, or image-backed text carries meaning.
+- Text-scale meta is not enabled until large-text behavior is proven at 375, 1024, and 1440 widths.
+- Astro MPA View Transitions, CSS scroll spy, scroll-state header behavior, and `closedby="any"` dialog polish remain progressive enhancements and do not gate content access.
 - Email magic-link node updates are email-only, use hashed one-use tokens, expire after 30 minutes, and never expose owner email or token state in public responses.
 - The edit-token/update-request migration uses the next available migration number after the current highest migration and does not collide with operational content migrations.
 - New public `POST /map-nodes` submissions require email.
@@ -58,3 +62,4 @@
 - Website checks for selected-node update request, `/map/edit?token=...`, token removal from visible URL before analytics/outbound navigation, success/error states, mobile overflow, add-node dialog interaction, theme selection, placement fallback, live refresh, and public steward/member rendering.
 - Targeted stale-path scan for the former root V2 and research locations across README, root config, package scripts, and `.plans`.
 - Visual checks at 1440, 1024, and 375 for HiFi comparison, chapter/steward/member node treatments, anonymous density, mycelial edges, filter color comfort, non-color cues, accessible legend, edge-density behavior, connection clarity, live-mode copy, and mobile add-node flow.
+- Modern CSS/Web UI follow-up checks, when implemented later: text-scale screenshots, reduced-motion verification, unsupported-feature fallback proof, and focused route/browser checks for any scroll spy, View Transition, scroll-state, or dialog-light-dismiss changes.

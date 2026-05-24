@@ -22,6 +22,7 @@ Build the next public Greenpill Network website experience in `packages/website`
 - Add controlled Live Onboarding Mode for workshops and demos so admin-enabled submissions can appear publicly in near real time.
 - Add email magic-link ownership for submitted map nodes so users can request edits without wallet auth or workspace login.
 - Keep visual acceptance proof tied to the high-fidelity artifacts at desktop, tablet, and mobile widths.
+- Track modern CSS/Web UI follow-ups inside this hub rather than creating a competing plan source.
 
 ## Constraints
 
@@ -53,6 +54,10 @@ Build the next public Greenpill Network website experience in `packages/website`
 - Raw magic-link tokens must never be logged or persisted; only hashes may be stored. The public edit page must clear the token from the visible URL before analytics, outbound links, or external navigation can run.
 - Directus/admin access must keep token rows, owner emails, IP/user-agent, and raw request metadata restricted to trusted/admin roles. Standard stewards should only see review-safe update request fields needed to approve or reject edits.
 - Directus/admin review should provide current-vs-proposed comparisons, explicit approve/reject transitions, reviewer metadata, and private notes.
+- Modern CSS/Web UI follow-ups must preserve the existing `DESIGN.md` standard: token-only styling, container-query-first layout, dynamic viewport units, reduced-motion behavior, and multi-width browser proof.
+- Preference-mode follow-ups must explicitly cover `color-scheme`, `prefers-contrast`, `forced-colors`, focus visibility, touch targets, and large-text behavior on map, shell, card, chip, and form-control surfaces.
+- Chromium-first features such as text-scale meta, CSS scroll spy, scroll-state queries, and `closedby="any"` must remain progressive until fallback behavior is proven.
+- Research-only APIs such as overscroll gestures, HTML-in-Canvas, CSS `@function`, CSS `if()`, shape APIs, and `fit-text` must not become production dependencies in this hub.
 
 ## Public Map Recovery Decisions
 

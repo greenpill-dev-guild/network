@@ -135,3 +135,15 @@ The modern-CSS-standard initiative is otherwise complete and on `main`: the `DES
 
 - [ ] **Phase 5 — Remove Tailwind.** `@astrojs/tailwind` is unused (0 utilities, 0 `@apply`) but its integration auto-injects a preflight reset. Removing it blindly gives nav `<ul>`/`<ol>` (header, footer, breadcrumb) their default margins/indent and visibly shifts chrome. **Prerequisite:** add an explicit element reset (lists, headings, fieldset, figure) to the `gp-base` layer in `gp-tokens.css` to replace preflight, then remove `tailwind()` from `packages/website/astro.config.mjs`, delete `tailwind.config.js`, and drop `@astrojs/tailwind` + `tailwindcss` (+ `postcss`/`autoprefixer` if unused) from `packages/website/package.json`. Verify with `bun run ui:verify` **and** a visual pass at 375/1024/1440. Touches the shared `package.json`/lockfile.
 - [ ] **Phase 6 — Author-time stylelint guard.** Add `stylelint` + `stylelint-config-standard` + `postcss-html` (dev deps; shared `package.json`) with a house config: token-only colors, `var(--gp-font-*)` fonts, no pure white/black, no stray viewport `@media` (allowlist the documented chrome + type-scale exceptions), logical properties. Wire `bun run ui:check` scoped to changed files; keep advisory (no hook by default — use the `update-config` skill to opt into one later).
+
+## Modern Web UI Follow-Ups (progressive; keep behind current P0 map/design work)
+
+- [ ] Start from `reports/modern-web-ui-follow-up-2026-05-24.md`.
+- [ ] Audit root font-size and large-text behavior before adding `<meta name="text-scale" content="scale">`.
+- [ ] Audit `color-scheme`, `prefers-contrast`, and `forced-colors` behavior for the site shell, map controls/dialog, chips, cards, focus rings, and form controls before relying on translucent or color-only states.
+- [ ] Evaluate Astro MPA View Transitions with `@view-transition { navigation: auto; }` as progressive enhancement only, with reduced-motion fallback.
+- [ ] Identify long story, library, garden, or chapter surfaces where CSS scroll spy can improve section orientation.
+- [ ] Evaluate scroll-state header behavior only if it reduces visual noise without hiding navigation context.
+- [ ] Add `closedby="any"` to simple dialogs only when existing escape/click fallback behavior and focus behavior remain proven.
+- [ ] Review `packages/website/src/scripts/parallax.ts` against the current CSS-only `GpLayout.astro` background approach; remove or realign it only in a future implementation lane with browser proof.
+- [ ] Keep overscroll gestures, HTML-in-Canvas, CSS `@function`, CSS `if()`, shape APIs, and `fit-text` out of production scope.
