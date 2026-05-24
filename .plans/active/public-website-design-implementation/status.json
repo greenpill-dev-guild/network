@@ -23,7 +23,8 @@
     ".plans carries planning, research, handoffs, readiness, and evolving implementation context.",
     "Runtime contracts that code depends on belong under packages.",
     "This hub owns the public website design package, research inputs, and implementation sequence.",
-    "2026-05-24 modern Web UI follow-up: added reports/modern-web-ui-follow-up-2026-05-24.md and checklist items for text-scale readiness, Astro MPA View Transitions, CSS scroll spy, scroll-state header behavior, closedby dialog polish, and stale parallax/script review. Lane statuses are unchanged."
+    "2026-05-24 modern Web UI follow-up: added reports/modern-web-ui-follow-up-2026-05-24.md and checklist items for text-scale readiness, Astro MPA View Transitions, CSS scroll spy, scroll-state header behavior, closedby dialog polish, and stale parallax/script review. Lane statuses are unchanged.",
+    "2026-05-24 Chrome platform operationalization: added next proof tasks for isolated Chrome DevTools MCP evidence, CWV/navigation evidence fields, and a frozen runtime WebMCP approval spec. Lane statuses are unchanged."
   ],
   "taxonomy": {
     "initiative": "public-experience",
@@ -323,6 +324,13 @@
       "lane": "system",
       "status": "modern_web_ui_followup_recorded",
       "note": "Recorded the cross-repo modern CSS/Web UI audit follow-up inside this existing active hub without changing the current P0 map/design lane statuses or authorizing runtime CSS edits."
+    },
+    {
+      "timestamp": "2026-05-24T00:00:00Z",
+      "actor": "codex",
+      "lane": "platform",
+      "status": "planned",
+      "note": "Operationalized Chrome platform follow-up tasks in plan.todo.md: isolated DevTools MCP proof for the Astro View Transition opt-in, CWV/navigation evidence fields, and frozen WebMCP approval-spec requirements. No lane status changed."
     }
   ]
 }

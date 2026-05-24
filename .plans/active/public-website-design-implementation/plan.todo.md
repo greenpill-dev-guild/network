@@ -145,8 +145,11 @@ The modern-CSS-standard initiative is otherwise complete and on `main`: the `DES
 - [ ] Audit root font-size and large-text behavior before adding `<meta name="text-scale" content="scale">`.
 - [ ] Audit `color-scheme`, `prefers-contrast`, and `forced-colors` behavior for the site shell, map controls/dialog, chips, cards, focus rings, and form controls before relying on translucent or color-only states.
 - [ ] Evaluate Astro MPA View Transitions with `@view-transition { navigation: auto; }` as progressive enhancement only, with reduced-motion fallback.
+- [ ] Run isolated Chrome DevTools MCP proof for `/` after the Astro MPA View Transition opt-in: route URL, viewport, screenshot or DOM/accessibility snapshot, console/page errors, useful network notes, `/llms.txt`, reduced-motion behavior, and `list_webmcp_tools`.
+- [ ] Normalize the public-site CWV evidence contract before any RUM work: record LCP, INP, CLS, route label, `navigationType`, reduced-motion state, and whether the navigation used the MPA View Transition path. Future SPA/workspace soft-navigation fields stay plan-only until that surface exists.
 - [ ] Identify long story, library, garden, or chapter surfaces where CSS scroll spy can improve section orientation.
 - [ ] Evaluate scroll-state header behavior only if it reduces visual noise without hiding navigation context.
 - [ ] Add `closedby="any"` to simple dialogs only when existing escape/click fallback behavior and focus behavior remain proven.
 - [ ] Review `packages/website/src/scripts/parallax.ts` against the current CSS-only `GpLayout.astro` background approach; remove or realign it only in a future implementation lane with browser proof.
+- [ ] Keep runtime WebMCP frozen. Any public map/list/search candidate needs an approval spec with candidate visible tools, forbidden tools, confirmation rules, privacy boundary, schema tests, wrong-tool/wrong-argument evals, and proof commands before implementation.
 - [ ] Keep overscroll gestures, HTML-in-Canvas, CSS `@function`, CSS `if()`, shape APIs, and `fit-text` out of production scope.
