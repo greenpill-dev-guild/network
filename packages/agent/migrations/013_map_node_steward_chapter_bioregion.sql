@@ -10,6 +10,9 @@ create index if not exists map_node_submissions_chapter_slug_idx
   on intake.map_node_submissions (chapter_slug)
   where chapter_slug is not null;
 
+drop view if exists public.public_map_nodes;
+drop view if exists intake.public_map_nodes;
+
 create or replace view intake.public_map_nodes as
 select
   id,
