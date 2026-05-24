@@ -35,7 +35,7 @@
         "dev:admin"
       ],
       "dependsOn": [
-        "postgres"
+        "db-migrate"
       ],
       "env": {
         "DIRECTUS_PUBLIC_URL": "http://localhost:3302",
@@ -64,7 +64,7 @@
         "dev:agent"
       ],
       "dependsOn": [
-        "postgres"
+        "db-migrate"
       ],
       "env": {
         "PORT": "3303",
@@ -74,6 +74,27 @@
       "urls": [
         "http://localhost:3303/health"
       ]
+    },
+    {
+      "id": "db-migrate",
+      "name": "database migrations",
+      "kind": "database",
+      "ports": [],
+      "command": [
+        "bun",
+        "run",
+        "db:migrate"
+      ],
+      "dependsOn": [
+        "postgres"
+      ],
+      "mode": "oneshot",
+      "env": {
+        "DATABASE_URL": "postgres://greenpill:greenpill@127.0.0.1:3304/greenpill_network",
+        "DIRECT_DATABASE_URL": "postgres://greenpill:greenpill@127.0.0.1:3304/greenpill_network"
+      },
+      "autostart": false,
+      "urls": []
     },
     {
       "id": "postgres",
