@@ -72,6 +72,12 @@ const bodyClasses = [
 </html>
 
 <style is:global>
+  @media (prefers-reduced-motion: no-preference) {
+    @view-transition {
+      navigation: auto;
+    }
+  }
+
   html {
     background: var(--gp-green-950);
     overflow-x: clip;
