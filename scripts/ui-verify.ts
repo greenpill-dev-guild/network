@@ -397,10 +397,6 @@ const sourceTokenFiles = new Set([
   'packages/website/src/pages/design-system.astro',
 ]);
 
-const sourceRawValueAllowedFiles = new Set([
-  'packages/website/src/components/page-sections/HomeMap.astro',
-]);
-
 function sourceFinding(file: string, line: number, code: string, sev: Severity, text: string, msg: string): SourceFinding {
   return { channel: 'source', code, sev, file, line, text, msg };
 }
@@ -419,12 +415,13 @@ function loadSourceBaseline(): SourceBaselineEntry[] {
     });
 }
 
-function matchesSourceBaseline(hit: SourceFinding, baseline: SourceBaselineEntry[]): boolean {
-  return baseline.some((entry) => entry.file === hit.file && entry.code === hit.code && hit.text.includes(entry.needle));
+function isHomeMapDataColor(rel: string, text: string): boolean {
+  if (rel !== 'packages/website/src/components/page-sections/HomeMap.astro') return false;
+  return /\bcolor:\s*['"]#[0-9A-Fa-f]{3,8}['"]/.test(text) || /\?\?\s*['"]#[0-9A-Fa-f]{3,8}['"]/.test(text);
 }
 
-function shouldSkipRawDesignValue(rel: string): boolean {
-  return sourceTokenFiles.has(rel) || sourceRawValueAllowedFiles.has(rel);
+function shouldSkipRawDesignValue(rel: string, text: string): boolean {
+  return sourceTokenFiles.has(rel) || isHomeMapDataColor(rel, text);
 }
 
 function collectLineSourceFindings(rel: string, scan: string): SourceFinding[] {
@@ -447,7 +444,7 @@ function collectLineSourceFindings(rel: string, scan: string): SourceFinding[] {
       findings.push(sourceFinding(rel, line, 'HARDCODED_FONT_SIZE', 'hard', text, `${rel}:${line} hardcodes font-size; use gp typography tokens or clamp() display tokens`));
     }
 
-    if (!shouldSkipRawDesignValue(rel) && /#[0-9A-Fa-f]{3,8}|rgba\(|linear-gradient\(/.test(text)) {
+    if (!shouldSkipRawDesignValue(rel, text) && /#[0-9A-Fa-f]{3,8}|rgba\(|linear-gradient\(/.test(text)) {
       findings.push(sourceFinding(rel, line, 'RAW_DESIGN_VALUE', 'hard', text, `${rel}:${line} uses a raw design value; use gp tokens, color-mix from tokens, or baseline an intentional exception`));
     }
   }
@@ -487,8 +484,19 @@ async function writeSourceBaseline(): Promise<void> {
 async function auditSourceCss(): Promise<Violation[]> {
   const findings = await collectSourceFindings();
   const baseline = loadSourceBaseline();
-  const stale = baseline.filter((entry) => !findings.some((hit) => entry.file === hit.file && entry.code === hit.code && hit.text.includes(entry.needle)));
-  const unapproved = findings.filter((hit) => !matchesSourceBaseline(hit, baseline));
+  const remaining = baseline.map((entry) => ({ ...entry, matched: false }));
+  const unapproved: SourceFinding[] = [];
+
+  for (const hit of findings) {
+    const match = remaining.find((entry) => !entry.matched && entry.file === hit.file && entry.code === hit.code && hit.text.includes(entry.needle));
+    if (match) {
+      match.matched = true;
+    } else {
+      unapproved.push(hit);
+    }
+  }
+
+  const stale = remaining.filter((entry) => !entry.matched);
   return [
     ...unapproved.map(({ file: _file, line: _line, text: _text, ...violation }) => violation),
     ...stale.map((entry) => ({
