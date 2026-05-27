@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { createHash, createHmac } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import {
   createAgentApp,
 } from '@greenpill-network/agent/app';
@@ -61,6 +64,9 @@ import {
   toPublicOperationalContentSnapshot,
 } from '@greenpill-network/shared/public-content';
 
+const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const agentAppSourcePath = join(rootDir, 'packages/agent/src/app.ts');
+
 test('agent package exposes stable public route contracts', () => {
   assert.equal(MAP_NODE_SUBMISSIONS_ROUTE, '/map-nodes');
   assert.equal(PUBLIC_MAP_NODES_ROUTE, '/map-nodes/public');
@@ -78,6 +84,29 @@ test('agent package exposes stable public route contracts', () => {
     buildPublicChapterImpactUrl('nigeria', 'https://agent.greenpill.network/'),
     'https://agent.greenpill.network/impact/chapters/nigeria'
   );
+});
+
+test('agent app registers non-health public routes through exported constants', async () => {
+  const source = await readFile(agentAppSourcePath, 'utf8');
+  const directPublicRoutes =
+    source.match(/app\.(?:get|post|put|patch|delete)\(\s*(['"`])\/(?!(?:health|ready)\1)[^'"`]*\1/g) ?? [];
+
+  assert.deepEqual(directPublicRoutes, []);
+  for (const routeConstant of [
+    'CHAPTER_IMPACT_ROUTE',
+    'MAP_NODE_SUBMISSIONS_ROUTE',
+    'PUBLIC_MAP_NODES_ROUTE',
+    'MAP_NODE_EDIT_LINK_ROUTE',
+    'MAP_NODE_EDIT_SESSION_ROUTE',
+    'MAP_NODE_UPDATE_REQUESTS_ROUTE',
+    'PUBLIC_MAP_STATE_ROUTE',
+    'PUBLIC_COUNTS_ROUTE',
+    'PUBLIC_OPERATIONAL_CONTENT_ROUTE',
+    'NEWSLETTER_SUBSCRIBE_ROUTE',
+    'RESEND_WEBHOOK_ROUTE',
+  ]) {
+    assert.match(source, new RegExp(`app\\.(?:get|post)\\(${routeConstant},`));
+  }
 });
 
 const RESEND_TEST_WEBHOOK_SECRET = `whsec_${Buffer.from('test-resend-webhook-secret').toString('base64')}`;

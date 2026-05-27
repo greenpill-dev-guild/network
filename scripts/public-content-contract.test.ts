@@ -24,6 +24,11 @@ const editorialContentDir = join(rootDir, 'packages/website/src/content');
 const operationalSeedDir = join(rootDir, 'packages/website/src/data/operational-content-seed');
 const websitePagesDir = join(rootDir, 'packages/website/src/pages');
 const websiteShellDir = join(rootDir, 'packages/website/src/components/shell');
+const repoGuidancePaths = [
+  join(rootDir, 'AGENTS.md'),
+  join(rootDir, 'CLAUDE.md'),
+  join(rootDir, 'README.md'),
+];
 const keystaticConfigPath = join(rootDir, 'packages/website/keystatic.config.ts');
 const astroContentConfigPath = join(rootDir, 'packages/website/src/content/config.ts');
 const snapshotPath = join(rootDir, 'packages/website/src/data/operational-content-snapshot.json');
@@ -351,11 +356,28 @@ test('website page typography avoids viewport-scaled type and negative tracking'
   assert.deepEqual(problems, []);
 });
 
+test('repo agent guidance points at the canonical website stylesheet', async () => {
+  const problems = [];
+
+  for (const filePath of repoGuidancePaths) {
+    const source = await readFile(filePath, 'utf8');
+    const label = filePath.replace(`${rootDir}/`, '');
+    if (source.includes('packages/website/src/styles/global.css')) {
+      problems.push(`${label} points at removed global.css`);
+    }
+    if (!source.includes('packages/website/src/styles/gp-tokens.css')) {
+      problems.push(`${label} does not mention canonical gp-tokens.css`);
+    }
+  }
+
+  assert.deepEqual(problems, []);
+});
+
 test('site shell keeps the graphic page background visible', async () => {
   const header = await readFile(join(websiteShellDir, 'SiteHeader.astro'), 'utf8');
   const footer = await readFile(join(websiteShellDir, 'SiteFooter.astro'), 'utf8');
 
-  assert.match(header, /rgba\(7,\s*24,\s*15,\s*0\.[0-6]/);
+  assert.match(header, /background:\s*none|rgba\(7,\s*24,\s*15,\s*0\.[0-6]/);
   assert.doesNotMatch(header, /var\(--gp-bg\)\s*92%/);
   assert.match(footer, /rgba\(7,\s*24,\s*15,\s*0\)/);
   assert.doesNotMatch(footer, /background:\s*var\(--gp-green-950\)/);

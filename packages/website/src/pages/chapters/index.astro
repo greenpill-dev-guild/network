@@ -56,9 +56,10 @@ function stewardNamesFor(chapter: typeof all[number]) {
     .filter(Boolean);
 }
 
-function imageFor(chapter: typeof all[number]) {
+function approvedImageFor(chapter: typeof all[number]) {
   const media = chapter.data.media ?? {};
   const seo = chapter.data.seo ?? {};
+  if (media.reviewStatus !== 'approved') return '';
   return media.image || chapter.data.image || media.ogImage || seo.ogImage || '';
 }
 
@@ -138,7 +139,7 @@ const hero = chaptersIndex.hero ?? {};
           <div class="gp-chapters-grid is-directory" data-chapter-grid>
             {directory.map((chapter) => {
               const stewardNames = stewardNamesFor(chapter);
-              const chapterImage = imageFor(chapter);
+              const chapterImage = approvedImageFor(chapter);
               return (
                 <a
                   class="gp-chapters-card is-directory"

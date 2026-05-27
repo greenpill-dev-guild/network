@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { checkDatabaseConnection } from './db.js';
 import {
+  CHAPTER_IMPACT_ROUTE,
   MAP_NODE_EDIT_LINK_ROUTE,
   MAP_NODE_EDIT_SESSION_ROUTE,
   MAP_NODE_SUBMISSIONS_ROUTE,
@@ -169,7 +170,7 @@ export function createAgentApp({
     return context.json(response.body, response.status as any);
   });
 
-  app.get('/impact/chapters/:slug', async (context) => {
+  app.get(CHAPTER_IMPACT_ROUTE, async (context) => {
     try {
       const chapterSlug = context.req.param('slug');
       const payload = await impactRepository.getChapterImpact(chapterSlug);
