@@ -45,3 +45,22 @@ The first measured lane is the `ai-native-dev-workflow` scaffold-hardening pass.
 | Human judgment callouts | The scaffold-hardening lane is the first measured lane; public website adoption remains future work and must use public-safe proof when touched. |
 | Follow-up rule updates | `None` for repeated agent failures. Local eval wording was tightened so commands are copy-runnable and conditions live outside command text. |
 | Outcome | completed |
+
+### 2026-05-26 - Agentic Flow Hardening
+
+| Field | Value |
+|---|---|
+| Date | 2026-05-26 |
+| Feature | `ai-native-dev-workflow` with `public-website-design-implementation` as the first measured adoption surface |
+| Repo | Greenpill Network |
+| Agent role | Codex repo-hardening implementer |
+| Human goal | Implement the Syntax-inspired hardening plan without runtime behavior changes or new validation dependencies. |
+| Context packet | Repo audit findings, approved Agentic Flow Hardening Plan, existing `.plans` contract, website design guardrails, public API route tests, and workspace scaffold boundary. |
+| Assigned scope | `.plans` artifacts, root guidance, route-constant guardrail test, stylesheet guidance check, and workspace/auth decision-pack planning. |
+| Files touched | `AGENTS.md`, `CLAUDE.md`, `README.md`, `packages/agent/src/app.ts`, `scripts/agent-contract.test.ts`, `scripts/public-content-contract.test.ts`, `.plans/active/ai-native-dev-workflow/**`, `.plans/backlog/workspace-auth-routing-decision-pack/**`. |
+| Commands run | `bun run plans:validate`, `bun run test:plans`, `bun run test:agent`, `bun run test:content`, `bun run ui:check` |
+| Failures or retries | None in the required validation suite; one ad hoc `rg` lookaround check failed because the default regex engine does not support lookahead, and it was replaced with focused source review. |
+| Verification cost | Source-only guidance and contract tests; no browser proof because no rendered website UI changes. |
+| Human judgment callouts | `public-website-design-implementation` is the first measured adoption surface, but no public UI implementation was changed in this pass. Workspace/auth code remains blocked until its decision pack is reviewed. |
+| Follow-up rule updates | Public route rule and canonical stylesheet guidance were added to repo guidance and backed by focused tests. |
+| Outcome | completed; `bun run plans:validate`, `bun run test:plans`, `bun run test:agent`, `bun run test:content`, and `bun run ui:check` passed. |

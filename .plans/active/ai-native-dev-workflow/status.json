@@ -10,7 +10,7 @@
     "overall_status": "active",
     "priority": "p1",
     "created_at": "2026-05-24",
-    "updated_at": "2026-05-24"
+    "updated_at": "2026-05-26"
   },
   "links": {
     "brief": "brief.md",
@@ -22,7 +22,8 @@
     "status.json is authoritative for hub state.",
     ".plans carries planning truth; packages carry runtime contracts.",
     "This repo uses manual plan updates plus validation in v1.",
-    "This hub is process infrastructure only until a lane explicitly scopes package changes."
+    "This hub is process infrastructure only until a lane explicitly scopes package changes.",
+    "The 2026-05-26 hardening pass documents agentic house rules, public-route guardrails, and the workspace/auth decision boundary without runtime behavior changes."
   ],
   "taxonomy": {
     "initiative": "public-experience",
@@ -97,6 +98,13 @@
       "lane": "platform",
       "status": "completed",
       "note": "Closed scaffold-hardening lane with filled ledger, scorecard, adversarial review, closeout gate, and copy-runnable validation command evidence. UI/content stay blocked until future adoption explicitly scopes website or content changes."
+    },
+    {
+      "timestamp": "2026-05-26",
+      "actor": "codex",
+      "lane": "platform",
+      "status": "completed",
+      "note": "Added agentic house rules, public-route and stylesheet guardrail tests, and split out workspace/auth routing into its own backlog decision pack. No public API wire shapes, dependencies, or workspace runtime code changed."
     }
   ]
 }

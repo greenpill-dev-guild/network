@@ -29,6 +29,6 @@
 
 ## Week 6 - Retrospective
 
-- [ ] Compare scorecards across the selected feature and baseline feature.
-- [ ] Update only the guidance that proved useful.
-- [ ] Record what should not become process.
+- [x] Compare scorecards across the selected feature and baseline feature: scaffold hardening is the baseline; `public-website-design-implementation` is the first measured adoption surface.
+- [x] Update only the guidance that proved useful: stylesheet home, public route contract rule, dependency-free validation default, and workspace/auth decision boundary.
+- [x] Record what should not become process: no new validation dependency, no parallel truth surface, no workspace runtime scaffold before auth/routing decisions.

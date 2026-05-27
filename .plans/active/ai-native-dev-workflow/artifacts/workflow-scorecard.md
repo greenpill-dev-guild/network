@@ -45,3 +45,21 @@ Use this to measure whether AI-native workflow changes reduce cognitive debt ins
 | Rework caused by tool/model failure | None observed. |
 | Rule updates created | `None` for repeated agent failures; local eval command format tightened. |
 | Net judgment | Green: the hub now protects public-safe proof boundaries without touching runtime surfaces. |
+
+### 2026-05-26 - Agentic Flow Hardening
+
+| Metric | Value |
+|---|---|
+| Date | 2026-05-26 |
+| Repo | Greenpill Network |
+| Feature or lane | `ai-native-dev-workflow` / hardening pass; `public-website-design-implementation` as first measured adoption surface |
+| Cycle time | One focused implementation pass after plan-mode approval. |
+| Agent runs | 1 Codex implementation pass. |
+| Human review findings | Gaps identified: stale stylesheet guidance, implicit public-route rule, dependency-free validation policy not explicit, and workspace/auth boundary not decision-packed. |
+| Tests added or updated | Route-constant source guardrail and repo guidance stylesheet guardrail. |
+| Validation commands | `bun run plans:validate`; `bun run test:plans`; `bun run test:agent`; `bun run test:content`; `bun run ui:check` |
+| Regressions caught before merge | None in the required validation suite. |
+| Rework caused by unclear intent | Low: plan mode resolved scope, validation strategy, plan home, and workspace/auth handling before implementation. |
+| Rework caused by tool/model failure | None affecting implementation; one unsupported `rg` lookaround was replaced with focused source review. |
+| Rule updates created | Agentic house rules artifact, public API contract rule, canonical stylesheet rule, and workspace/auth no-code-before-decision rule. |
+| Net judgment | Green: the repo now has clearer agentic house rules, a workspace/auth stop sign, and source-level tests for the two drift risks this pass targeted. |
