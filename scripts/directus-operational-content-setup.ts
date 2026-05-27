@@ -1001,13 +1001,11 @@ async function getAvailableCollectionNames(client) {
 }
 
 async function ensureRelation(client, relation) {
-  const params = new URLSearchParams();
-  params.set('filter[collection][_eq]', relation.collection_many);
-  params.set('filter[field][_eq]', relation.field_many);
-  params.set('limit', '1');
-
-  const existing = await client.request(`/relations?${params.toString()}`);
-  const item = existing?.data?.[0];
+  const existing = await client.request('/relations?limit=-1');
+  const item = (existing?.data ?? []).find((candidate) => (
+    candidate?.collection === relation.collection_many &&
+    candidate?.field === relation.field_many
+  ));
   const payload = {
     collection_many: relation.collection_many,
     field_many: relation.field_many,
@@ -1018,6 +1016,14 @@ async function ensureRelation(client, relation) {
 
   if (item) {
     const currentMeta = item.meta ?? {};
+    if (
+      !item.meta &&
+      item.related_collection === relation.collection_one &&
+      item.field === relation.field_many &&
+      !relation.field_one
+    ) {
+      return item;
+    }
     if (
       currentMeta.one_collection !== relation.collection_one ||
       currentMeta.one_field !== relation.field_one ||
