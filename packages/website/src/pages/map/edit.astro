@@ -55,7 +55,7 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
 
           const field = (name) => form.elements.namedItem(name);
           const isLocalHost = ['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(window.location.hostname);
-          const agentBaseUrl = isLocalHost ? 'http://127.0.0.1:8787' : 'https://agent.greenpill.network';
+          const agentBaseUrl = isLocalHost ? 'http://127.0.0.1:3303' : 'https://agent.greenpill.network';
           let nodeId = '';
           let initialPublicFields = null;
 

@@ -35,7 +35,7 @@
         "dev:admin"
       ],
       "dependsOn": [
-        "db-migrate"
+        "content-seed"
       ],
       "env": {
         "DIRECTUS_PUBLIC_URL": "http://localhost:3302",
@@ -64,16 +64,62 @@
         "dev:agent"
       ],
       "dependsOn": [
-        "db-migrate"
+        "content-seed"
       ],
       "env": {
         "PORT": "3303",
         "AGENT_PORT": "3303",
-        "AGENT_HOST": "127.0.0.1"
+        "AGENT_HOST": "127.0.0.1",
+        "DATABASE_URL": "postgres://greenpill:greenpill@127.0.0.1:3304/greenpill_network",
+        "DIRECT_DATABASE_URL": "postgres://greenpill:greenpill@127.0.0.1:3304/greenpill_network"
       },
       "urls": [
         "http://localhost:3303/health"
       ]
+    },
+    {
+      "id": "directus-bootstrap",
+      "name": "Directus roles and studio setup",
+      "kind": "support-ui",
+      "ports": [],
+      "command": [
+        "bun",
+        "run",
+        "directus:local:bootstrap"
+      ],
+      "dependsOn": [
+        "directus"
+      ],
+      "mode": "oneshot",
+      "env": {
+        "DIRECTUS_PUBLIC_URL": "http://localhost:3302",
+        "DIRECTUS_ADMIN_EMAIL": "admin@greenpill.network",
+        "DIRECTUS_ADMIN_PASSWORD": "directus-local-password"
+      },
+      "urls": []
+    },
+    {
+      "id": "content-seed",
+      "name": "operational content seed",
+      "kind": "database",
+      "ports": [],
+      "command": [
+        "bun",
+        "--no-env-file",
+        "scripts/operational-content.ts",
+        "--migrate",
+        "--allow-existing"
+      ],
+      "dependsOn": [
+        "db-migrate"
+      ],
+      "mode": "oneshot",
+      "env": {
+        "DATABASE_URL": "postgres://greenpill:greenpill@127.0.0.1:3304/greenpill_network",
+        "DIRECT_DATABASE_URL": "postgres://greenpill:greenpill@127.0.0.1:3304/greenpill_network"
+      },
+      "autostart": false,
+      "urls": []
     },
     {
       "id": "db-migrate",

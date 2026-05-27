@@ -145,7 +145,7 @@ DevTools MCP is useful as an advisory proof lane now. It caught two issues that 
 1. Console/network failure:
 
 ```text
-GET http://127.0.0.1:8787/map/state [net::ERR_CONNECTION_REFUSED]
+GET http://127.0.0.1:3303/map/state [net::ERR_CONNECTION_REFUSED]
 ```
 
 This comes from homepage progressive enhancement expecting the local agent service. It may be expected during website-only preview, but it is still a real browser console error and Lighthouse best-practices failure.

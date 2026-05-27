@@ -33,15 +33,15 @@ bun run db:migrate
 bun run dev:agent
 ```
 
-The local agent defaults to `http://127.0.0.1:8787` when using `.env.example`.
+The local agent defaults to `http://127.0.0.1:3303` when using `.env.example`.
 
 Useful checks:
 
 ```sh
-curl http://127.0.0.1:8787/health
-curl http://127.0.0.1:8787/ready
-curl http://127.0.0.1:8787/impact/chapters/nigeria
-curl http://127.0.0.1:8787/content/public-snapshot
+curl http://127.0.0.1:3303/health
+curl http://127.0.0.1:3303/ready
+curl http://127.0.0.1:3303/impact/chapters/nigeria
+curl http://127.0.0.1:3303/content/public-snapshot
 ```
 
 `/content/public-snapshot` reads only published operational content from the

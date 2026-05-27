@@ -158,7 +158,7 @@ const isExternalHref = (href = '') => /^https?:\/\//.test(href);
 
     const clean = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
     const isLocalHost = ['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(window.location.hostname);
-    const agentBaseUrl = isLocalHost ? 'http://127.0.0.1:8787' : 'https://agent.greenpill.network';
+    const agentBaseUrl = isLocalHost ? 'http://127.0.0.1:3303' : 'https://agent.greenpill.network';
 
     const setStatus = (message: string, state: 'idle' | 'submitting' | 'success' | 'error') => {
       status.textContent = message;

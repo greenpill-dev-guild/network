@@ -367,7 +367,7 @@ async function runSmoke(): Promise<void> {
     await client.send('Page.enable', {}, sessionId);
     await client.send('Network.enable', {}, sessionId);
     await client.send('Fetch.enable', {
-      patterns: [{ urlPattern: '*://127.0.0.1:8787/*', requestStage: 'Request' }],
+      patterns: [{ urlPattern: '*://127.0.0.1:3303/*', requestStage: 'Request' }],
     }, sessionId);
 
     await client.send('Page.navigate', {
@@ -442,7 +442,7 @@ async function runSmoke(): Promise<void> {
       "document.querySelector('#map-edit-success') && !document.querySelector('#map-edit-success').hidden"
     );
 
-    assert.equal(agentRequests[0].url, 'http://127.0.0.1:8787/map-nodes/edit-session');
+    assert.equal(agentRequests[0].url, 'http://127.0.0.1:3303/map-nodes/edit-session');
     assert.equal(updateRequests.length, 1, 'changed submit should create exactly one update request');
     const updateBody = JSON.parse(updateRequests[0].postData || '{}');
     assert.equal(updateBody.token, 'browser-token');

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun run --cwd ../.. build:packages && bun --env-file=../../.env.local --watch src/server.ts",
+    "dev": "bun run --cwd ../.. build:packages && bun ../../scripts/run-agent-dev.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "bun run --cwd ../.. build:packages && node --env-file-if-exists=../../.env.local dist/server.js",

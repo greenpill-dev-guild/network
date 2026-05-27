@@ -1,35 +1,46 @@
 ---
-name: dev-surface
-description: Use when working in Greenpill Network and needing to start, reuse, open, inspect, validate, or clean up this repo's local development surfaces through the shared dev-surfaces workbench.
+name: greenpill-network-dev-surface
+description: Use when working in Greenpill Network and needing the Astro website, local Postgres, Directus, content bootstrap, or agent/API.
 ---
 
 # Greenpill Network Dev Surface
 
-Use the global workbench CLI instead of starting duplicate servers manually:
+Inside this repo, use the repo-native command:
 
 ```sh
-dev-surfaces status
-dev-surfaces up greenpill-network
-dev-surfaces open greenpill-network
-dev-surfaces logs greenpill-network:<surface>
-dev-surfaces down greenpill-network
+bun install
+# configure .env.local if needed
+bun run dev
 ```
 
-Stable fallback path: `/Users/afo/Code/dev-surfaces/bin/dev-surfaces.js`.
+`bun run dev` runs `scripts/dev.mjs`. It starts local Postgres, waits for it, runs migrations, seeds operational content, starts the Astro website, starts Directus, runs Directus bootstrap, starts the agent/API, streams logs, and cleans up Directus/Postgres on Ctrl-C.
 
-## Surfaces
+Expected ports:
 
-- `website`: Astro website on `3301`
-- `directus`: Directus admin/CMS on `3302`
-- `agent`: agent/API on `3303`
-- `db-migrate`: one-shot local database migrations for Directus/agent schemas
-- `postgres`: Postgres on `3304`
+- `3301`: Astro website
+- `3302`: Directus admin/CMS
+- `3303`: agent/API
+- `3304`: Postgres
 
-## Validation Notes
+Useful native commands:
 
-- Website review should start the Astro dev server promptly and return the local URL.
-- Keep the public website, Directus/Postgres, and agent API boundaries distinct.
-- `directus` and `agent` depend on `db-migrate`, which depends on `postgres`; the workbench starts the database and applies local migrations first even though the UI ports remain lower in the public convention.
-- After changing local port docs or dev scripts, run `dev-surfaces doctor`.
+```sh
+bun run dev
+bun run dev:website
+bun run dev:admin
+bun run dev:agent
+bun run db:local:up
+bun run db:local:down
+```
 
-Never kill unknown port occupants. If a port is busy and not owned by dev-surfaces, report the PID/command and ask for direction.
+For cross-repo orchestration from anywhere, use the global workbench:
+
+```sh
+dev launch greenpill-network
+dev launch greenpill-network:website
+dev status greenpill-network
+dev health greenpill-network
+dev stop greenpill-network
+```
+
+Do not call `.dev-surfaces/run.mjs`; this repo should not have that wrapper.

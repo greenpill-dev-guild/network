@@ -525,7 +525,7 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
     const latToY = (lat: number) => ((90 - lat) / 180) * VIEW_H;
 
     const isLocalHost = ['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(window.location.hostname);
-    const agentBaseUrl = isLocalHost ? 'http://127.0.0.1:8787' : 'https://agent.greenpill.network';
+    const agentBaseUrl = isLocalHost ? 'http://127.0.0.1:3303' : 'https://agent.greenpill.network';
 
     const membersGroup = root.querySelector('[data-home-map-members]') as SVGGElement | null;
     const dynamicThreadsGroup = root.querySelector('[data-home-map-dynamic-threads]') as SVGGElement | null;

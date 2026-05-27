@@ -18,8 +18,9 @@ Canonical package boundaries:
 
 Run installs and validation from the repo root.
 
+- `bun run dev` - preferred repo-native full local stack: website `3301`, Directus `3302`, agent/API `3303`, and Postgres `3304`.
 - `bun install --frozen-lockfile` - install the checked-in workspace dependency graph.
-- `bun run dev` or `bun run dev:website` - run the Astro dev server and local Keystatic authoring UI.
+- `bun run dev:website` - run only the Astro dev server and local Keystatic authoring UI.
 - `bun run build` or `bun run build:website` - build the static website into `packages/website/dist/`.
 - `bun run preview` or `bun run preview:website` - preview the built website.
 - `bun run dev:agent` - run the local Hono agent server.
@@ -31,6 +32,7 @@ Run installs and validation from the repo root.
 - `bun run directus:content:setup` - apply Directus roles, policies, and permissions for operational content and intake moderation after Directus boots.
 - `bun run directus:content-access` - assign Directus users to chapter or guild editing scopes from a TSV file.
 - `bun run directus:studio:setup` - apply steward-friendly Directus Data Studio collection and field metadata.
+- `bun run directus:local:bootstrap` - wait for local Directus, then apply local roles/permissions and Data Studio metadata; this local path ignores root `.env.local` to avoid production Directus admin settings.
 - `bun run directus:steward:smoke` - create a temporary steward user and verify scoped Directus editing behavior.
 - `bun run test:agent`, `bun run test:chapter-impact`, `bun run test:content`, `bun run test:map-nodes`, `bun run plans:validate` - focused contract checks.
 
@@ -69,6 +71,15 @@ Website source and config live under `packages/website`:
 Generated public JSON routes include `/locations.json` and `/impact-sources.json`, derived from the approved operational content snapshot. Keep those outputs public-safe.
 
 The agent package owns private runtime concerns. `/health` is process health, `/ready` checks `DATABASE_URL`, `/content/public-snapshot` exposes the approved operational snapshot, and the impact/map-node routes preserve public/private projection contracts.
+
+Every new public agent route must have an exported route constant, a shared public payload contract in `packages/shared`, a public-safe normalizer or assertion, and a focused contract test. Do not add ad hoc website fetch shapes, public database access, or route-local privacy filters.
+
+For local stack proof after `bun run dev` is running, validate
+`http://localhost:3302/server/ping`, `http://localhost:3303/ready`, and
+`http://localhost:3303/content/public-snapshot` before assuming Directus,
+Postgres, and the API are connected. The repo-native dev path seeds missing
+published operational content and runs the local Directus bootstrap so the admin
+UI is useful, not just reachable.
 
 The admin package owns the self-hosted Directus deployment surface. Directus may
 manage `directus_*` system tables, roles, permissions, and Data Studio views, but

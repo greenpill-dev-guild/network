@@ -537,7 +537,7 @@ async function runSmoke(): Promise<void> {
     await client.send('Page.enable', {}, sessionId);
     await client.send('Network.enable', {}, sessionId);
     await client.send('Fetch.enable', {
-      patterns: [{ urlPattern: '*://127.0.0.1:8787/*', requestStage: 'Request' }],
+      patterns: [{ urlPattern: '*://127.0.0.1:3303/*', requestStage: 'Request' }],
     }, sessionId);
 
     await client.send('Page.navigate', { url: `${staticServer.origin}/` }, sessionId);

@@ -32,6 +32,50 @@ bun install --frozen-lockfile
 
 The root workspace owns the lockfile. Run installs from the repo root, not from an individual package.
 
+## Local Development
+
+For day-to-day local work, run the full repo environment from the repo root:
+
+```sh
+bun run dev
+```
+
+`bun run dev` runs the repo-native full-stack coordinator. It starts local
+Postgres, runs migrations, seeds operational content, starts Directus and
+bootstrap metadata, then starts the website and agent/API:
+
+- Public Astro website: `http://localhost:3301`
+- Directus admin/CMS: `http://localhost:3302`
+- Agent/API: `http://localhost:3303`
+- Local Postgres: `127.0.0.1:3304`
+
+`directus` and `agent` depend on local migrations, which depend on Postgres, so
+the coordinator brings the heavier infrastructure up first even though the UI
+ports stay lower in the project block. The same startup path also seeds missing
+published operational content into local Postgres without overwriting existing
+Directus-owned records, then waits for Directus and applies the local roles,
+permissions, and Data Studio metadata.
+
+Stop the stack with Ctrl-C in the foreground terminal. The coordinator cleans
+up Directus and Postgres with the repo's native Docker commands.
+
+Useful local checks:
+
+```sh
+curl http://localhost:3301/
+curl http://localhost:3302/server/ping
+curl http://localhost:3302/server/health
+curl http://localhost:3303/health
+curl http://localhost:3303/ready
+curl http://localhost:3303/content/public-snapshot
+curl http://localhost:3303/map/state
+```
+
+For cross-repo orchestration, `dev launch greenpill-network` calls this same
+native repo command under workbench ownership. Read workbench logs with
+`dev logs greenpill-network:<target>` only when diagnosing a workbench-launched
+target.
+
 ## Website
 
 ```sh
@@ -40,7 +84,10 @@ bun run build:website
 bun run preview:website
 ```
 
-`bun run dev`, `bun run build`, and `bun run preview` delegate to the website package. The production static build emits to `packages/website/dist/`.
+`bun run dev:website`, `bun run build`, and `bun run preview` delegate to the
+website package. Root `bun run dev` starts the full local environment: website,
+Directus, agent/API, local Postgres, migrations, local content seed, and local
+Directus bootstrap. The production static build emits to `packages/website/dist/`.
 
 Keystatic is enabled only during local website development for editorial and site-composition authoring. It does not expose operational collections such as chapters, chapter initiatives, people, guilds, projects, or themes. There is no deployed Keystatic server, CMS API route, or public database connection in the website package.
 
@@ -62,6 +109,11 @@ Public assets live in `packages/website/public/`. Generated public JSON routes i
 - `/locations.json` from the approved operational content snapshot.
 - `/impact-sources.json` from approved snapshot chapter impact source bindings.
 
+Website-wide design tokens and base styles live in
+`packages/website/src/styles/gp-tokens.css`; UI changes should start from that
+file, `packages/website/DESIGN.md`, and the existing primitives under
+`packages/website/src/components/ui/`.
+
 Useful operational content commands:
 
 ```sh
@@ -69,6 +121,7 @@ bun run content:snapshot
 bun run content:migrate
 bun run directus:content:setup
 bun run directus:studio:setup
+bun run directus:local:bootstrap
 ```
 
 `content:snapshot` validates current operational content and refreshes the
@@ -80,7 +133,12 @@ then it only inserts missing rows without overwriting Directus-owned conflicts.
 editor, steward moderator, trusted publisher, and operator access model through
 the Directus API. `directus:studio:setup` applies the Data Studio labels,
 field ordering, interfaces, displays, and hidden technical collections that make
-the same schema usable for steward editing.
+the same schema usable for steward editing. `directus:local:bootstrap` waits for
+the local Directus health endpoint, then runs both setup steps. It intentionally
+ignores root `.env.local` so production Directus admin URLs or tokens cannot be
+used by the local bootstrap path by accident; pass explicit `DIRECTUS_*`
+environment variables from the shell only when you intentionally need an
+override.
 
 The current public site deployment can remain on GitHub Pages. Because this is a monorepo, do not use the branch/folder picker to look for `packages/website/dist`; GitHub Pages branch publishing only supports the repository root or `/docs`. In repository settings, set Pages source to **GitHub Actions**. The `.github/workflows/github-pages.yml` workflow installs from the checked-in Bun lockfile, runs `bun run build:website`, and publishes `packages/website/dist`.
 
@@ -95,18 +153,28 @@ bun run db:migrate
 bun run dev:agent
 ```
 
-The local agent defaults to `http://127.0.0.1:8787` with the values in `.env.example`.
+The local agent defaults to `http://127.0.0.1:3303` with the values in
+`.env.example`. `bun run dev:agent` loads root `.env.local` as defaults while
+letting launcher-provided environment variables win, so `bun run dev` can keep
+the agent pointed at the local Postgres target on `3304`. If an older
+`.env.local` still points `DATABASE_URL` at the deprecated `54329` local port,
+update it to `3304`.
 
 Useful checks:
 
 ```sh
-curl http://127.0.0.1:8787/health
-curl http://127.0.0.1:8787/ready
-curl http://127.0.0.1:8787/impact/chapters/nigeria
-curl http://127.0.0.1:8787/content/public-snapshot
+curl http://127.0.0.1:3303/health
+curl http://127.0.0.1:3303/ready
+curl http://127.0.0.1:3303/impact/chapters/nigeria
+curl http://127.0.0.1:3303/content/public-snapshot
 ```
 
 `/health` is process-level health. `/ready` checks `DATABASE_URL` connectivity. `/content/public-snapshot` exposes only published public-safe operational content, including approved chapter initiatives for chapter detail pages. `/impact/chapters/:slug`, `POST /map-nodes`, `GET /map-nodes/public`, `/map/state`, and the map-node edit-link/update-request routes remain behind the agent privacy boundary.
+
+Public route contract rule: every new public agent route needs an exported route
+constant, a shared public payload contract in `packages/shared`, a public-safe
+normalizer or assertion, and a focused contract test. Keep privacy filtering in
+shared contracts instead of one-off route or website fetch logic.
 
 Public map-node submissions require an owner email. The agent stores that email only in `intake.map_node_private_contacts` so future owner updates can use one-use email magic links. Configure email sending on the agent with `RESEND_API_KEY`, `MAP_NODE_EMAIL_FROM`, `MAP_NODE_EMAIL_REPLY_TO`, and `MAP_NODE_EDIT_BASE_URL`; do not expose those values to the static website, Keystatic, generated JSON, or browser bundles. Map magic-link replies should route to the monitored map mailbox on the verified sending subdomain, currently `Greenpill Network <map@mail.greenpill.network>`. Missing or failing email provider configuration still returns the same neutral public edit-link response.
 
@@ -130,6 +198,7 @@ Astro website.
 ```sh
 bun run db:local:up
 bun run db:migrate
+bun run content:migrate -- --allow-existing
 bun run dev:admin
 bun run directus:content:setup
 bun run directus:studio:setup
@@ -139,9 +208,16 @@ The local Directus service runs at `http://localhost:3302` and connects to the
 same local Postgres database as the agent. Use it for steward moderation,
 authenticated operational content edits, owner-update review, and internal data
 review only; keep public intake and public API traffic behind the agent routes.
+Default local bootstrap credentials are `admin@greenpill.network` /
+`directus-local-password` unless overridden before first boot.
 Standard steward moderators see review-safe map-node submission/update fields.
 Token rows, owner emails, IP/user-agent fields, rate-limit metadata, and raw
 request metadata are reserved for trusted publisher/operator access.
+
+When using `bun run dev` or `dev launch greenpill-network`, the local content
+seed and Directus setup steps run as part of the registered stack. When running
+repo scripts manually, run `bun run directus:local:bootstrap` after Directus is
+listening to apply the same role and studio metadata.
 
 Invite stewards without using the Directus UI by preparing a local TSV file with
 `email`, `name`, `location`, and optional `role` columns:

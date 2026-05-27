@@ -44,20 +44,33 @@ DIRECTUS_MAX_PAYLOAD_SIZE=25mb
 ```
 
 The local Directus container connects to the existing local agent database at
-`postgres://greenpill:greenpill@host.docker.internal:54329/greenpill_network`.
+`postgres://greenpill:greenpill@host.docker.internal:3304/greenpill_network`.
 This keeps the admin pilot pointed at the same `intake`, `impact`, `workspace`,
 `content`, and `audit` schema boundaries as the agent.
 
-After Directus has booted, apply the Greenpill operational content access model:
+After Directus has booted, apply the local operational content access model and
+Data Studio metadata in one step:
+
+```sh
+bun run directus:local:bootstrap
+```
+
+Or run the pieces separately:
 
 ```sh
 bun run directus:content:setup
+bun run directus:studio:setup
 ```
 
 This script logs in as the configured Directus admin, verifies the `content`
 collections are visible through the configured Postgres search path, and
 creates/updates the Steward Editor, Steward Moderator, Trusted Publisher, and
 Operator roles/policies/permissions.
+
+`directus:local:bootstrap` uses `--no-env-file` for the setup steps so a root
+`.env.local` with production Directus admin settings cannot be applied to the
+local bootstrap by accident. Export `DIRECTUS_*` values explicitly in the shell
+if you intentionally need to override the local defaults.
 
 ## Fly Deployment
 

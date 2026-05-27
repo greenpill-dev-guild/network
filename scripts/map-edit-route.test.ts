@@ -257,7 +257,7 @@ test('invalid edit-session token clears the URL and shows only invalid-link copy
   await runDomLoaded(harness);
 
   assert.equal(fetches.length, 1);
-  assert.equal(fetches[0].url, 'http://127.0.0.1:8787/map-nodes/edit-session');
+  assert.equal(fetches[0].url, 'http://127.0.0.1:3303/map-nodes/edit-session');
   assert.deepEqual(JSON.parse(fetches[0].init.body), { token: 'bad-token' });
   assert.equal(visible(harness.elements.get('map-edit-invalid')), true);
   assert.equal(harness.elements.get('map-edit-failure').hidden, true);
@@ -350,7 +350,7 @@ test('changed submit posts only editable public fields plus token to update-requ
   assert.equal(fetches.length, 2);
   assert.equal(
     fetches[1].url,
-    'http://127.0.0.1:8787/map-nodes/11111111-1111-4111-8111-111111111111/update-requests'
+    'http://127.0.0.1:3303/map-nodes/11111111-1111-4111-8111-111111111111/update-requests'
   );
   const body = JSON.parse(fetches[1].init.body);
   assert.deepEqual(Object.keys(body).sort(), [
