@@ -66,6 +66,7 @@ interface WebMcpRouteProbe {
   navigatorModelContext: boolean;
   registerToolType: string;
   declarativeTools: Array<{ name: string; description: string }>;
+  testingTools: Array<{ name: string; description: string }>;
 }
 interface WebMcpDiscovery {
   status: 'not_configured' | 'detected' | 'error';
@@ -80,17 +81,37 @@ function existsExecutable(p: string | undefined): p is string {
   try { accessSync(p, constants.X_OK); return true; } catch { return false; }
 }
 
+function versionParts(entry: string): number[] {
+  const match = entry.match(/(\d+(?:\.\d+)+)/);
+  return match ? match[1].split('.').map((part) => Number.parseInt(part, 10)) : [];
+}
+
+function compareVersionEntriesDesc(a: string, b: string): number {
+  const aParts = versionParts(a);
+  const bParts = versionParts(b);
+  for (let index = 0; index < Math.max(aParts.length, bParts.length); index += 1) {
+    const diff = (bParts[index] || 0) - (aParts[index] || 0);
+    if (diff !== 0) return diff;
+  }
+  return b.localeCompare(a);
+}
+
 function discoverCachedChromium(): string[] {
   const home = homedir();
   const found: string[] = [];
   const tryGlob = (base: string, leaf: (entry: string) => string) => {
     try {
-      for (const entry of readdirSync(base)) {
+      for (const entry of readdirSync(base).sort(compareVersionEntriesDesc)) {
         const candidate = leaf(entry);
         if (existsExecutable(candidate)) found.push(candidate);
       }
     } catch { /* base dir absent */ }
   };
+  const cft = join(home, '.cache/chrome-for-testing/chrome');
+  tryGlob(cft, (e) => join(cft, e, 'chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'));
+  tryGlob(cft, (e) => join(cft, e, 'chrome-mac-x64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'));
+  tryGlob(cft, (e) => join(cft, e, 'chrome-linux64/chrome'));
+
   const pw = join(home, 'Library/Caches/ms-playwright');
   tryGlob(pw, (e) => join(pw, e, 'chrome-headless-shell-mac-arm64/chrome-headless-shell'));
   tryGlob(pw, (e) => join(pw, e, 'chrome-headless-shell-mac-x64/chrome-headless-shell'));
@@ -107,13 +128,13 @@ function findChromeBinary(): string {
   const candidates = [
     process.env.CHROME_BIN,
     process.env.CHROMIUM_BIN,
+    ...discoverCachedChromium(),
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
     '/Applications/Chromium.app/Contents/MacOS/Chromium',
     '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
     '/usr/bin/google-chrome',
     '/usr/bin/chromium',
     '/usr/bin/chromium-browser',
-    ...discoverCachedChromium(),
   ].filter(Boolean) as string[];
   for (const candidate of candidates) {
     if (existsExecutable(candidate)) return candidate;
@@ -184,6 +205,7 @@ async function launchChrome(chromeBinary: string): Promise<{ close: () => Promis
     ...(isHeadlessShell ? [] : ['--headless=new']),
     '--disable-gpu', '--disable-dev-shm-usage', '--no-first-run',
     '--no-default-browser-check', '--force-color-profile=srgb',
+    '--enable-features=WebMCPTesting,DevToolsWebMCPSupport',
     '--remote-debugging-port=0', `--user-data-dir=${userDataDir}`, 'about:blank',
   ];
   const chrome = spawn(chromeBinary, args, { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -706,8 +728,15 @@ async function probeWebMcpRoute(client: CdpClient, origin: string, route: string
     await client.send('Page.navigate', { url }, sessionId);
     await waitForExpression(client, sessionId, "location.href !== 'about:blank' && document.readyState === 'complete'", 12000);
     const probe = await evaluate(client, sessionId, `
-      (() => {
+      (async () => {
         const modelContext = navigator.modelContext || null;
+        const testing = navigator.modelContextTesting || null;
+        const testingTools = typeof testing?.listTools === 'function'
+          ? await Promise.resolve(testing.listTools()).then((tools) => tools.map((tool) => ({
+              name: tool.name || '',
+              description: tool.description || ''
+            }))).catch(() => [])
+          : [];
         const declarativeTools = [...document.querySelectorAll('form[toolname], form[tooldescription]')].map((form) => ({
           name: form.getAttribute('toolname') || '',
           description: form.getAttribute('tooldescription') || ''
@@ -715,13 +744,15 @@ async function probeWebMcpRoute(client: CdpClient, origin: string, route: string
         return {
           navigatorModelContext: Boolean(modelContext),
           registerToolType: typeof modelContext?.registerTool,
-          declarativeTools
+          declarativeTools,
+          testingTools
         };
       })()
     `).catch((error) => ({
       navigatorModelContext: false,
       registerToolType: 'undefined',
       declarativeTools: [],
+      testingTools: [],
       error: error instanceof Error ? error.message : String(error),
     }));
     return {
@@ -729,6 +760,7 @@ async function probeWebMcpRoute(client: CdpClient, origin: string, route: string
       navigatorModelContext: Boolean(probe.navigatorModelContext),
       registerToolType: String(probe.registerToolType || 'undefined'),
       declarativeTools: Array.isArray(probe.declarativeTools) ? probe.declarativeTools : [],
+      testingTools: Array.isArray(probe.testingTools) ? probe.testingTools : [],
     };
   } finally {
     await client.send('Target.closeTarget', { targetId: target.targetId }).catch(() => {});
@@ -745,13 +777,14 @@ async function discoverWebMcp(client: CdpClient, origin: string, routes: string[
     const hasRuntimeSignal = routeProbes.some((probe) => (
       probe.navigatorModelContext ||
       probe.registerToolType !== 'undefined' ||
-      probe.declarativeTools.length > 0
+      probe.declarativeTools.length > 0 ||
+      probe.testingTools.length > 0
     ));
     const hasSourceSignal = sourceSignals.length > 0;
     return {
       status: hasRuntimeSignal || hasSourceSignal ? 'detected' : 'not_configured',
       message: hasRuntimeSignal || hasSourceSignal
-        ? 'WebMCP signal detected; verify strategy, visibility, schema, confirmation, and forbidden-action rules before shipping runtime tools.'
+        ? 'WebMCP signal detected; verify expected tools, visibility, schema, confirmation, and forbidden-action rules before expanding runtime tools.'
         : 'No WebMCP runtime or declarative tool signals detected.',
       sourceSignals,
       routeProbes,

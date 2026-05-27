@@ -1,6 +1,8 @@
 # Network WebMCP Strategy
 
-Status: strategy only. Do not ship runtime WebMCP tools in v1.
+Status: approved public read-only runtime pilot. Keep the implementation limited to `packages/website/src/scripts/webmcp.ts`.
+
+Related operating guide: `docs/agentic-mcp-tooling-runbook.md`.
 
 ## Candidate Visible Tools
 
@@ -8,6 +10,11 @@ Status: strategy only. Do not ship runtime WebMCP tools in v1.
 - Public map and listings: explain visible filters, selected-node details, public JSON route status, and route-to-route navigation.
 - Public contribution paths: focus or prefill visible public forms only when the form is already on screen.
 - Local development diagnostics: report visible route, layout, accessibility, console, `/llms.txt`, and WebMCP discovery status from the browser-proof lane.
+
+## Implemented Pilot Tools
+
+- `describe_greenpill_network_page`: read-only summary of the current visible public page, headings, visible controls, reduced-motion state, and optional visible links.
+- `summarize_greenpill_network_map`: read-only summary of the currently visible public homepage map state, active filters, selected public node details, and visible public map nodes.
 
 ## Forbidden Tools
 
@@ -35,6 +42,6 @@ Status: strategy only. Do not ship runtime WebMCP tools in v1.
 - A Chrome DevTools MCP or Puppeteer WebMCP pass must prove `list_webmcp_tools` / tool discovery returns only expected visible tools and `execute_webmcp_tool` cannot access forbidden state.
 - Candidate tools need deterministic tests for schema validation, strict code-side input handling, graceful errors, and post-action UI state before any origin-trial or production exposure.
 
-## Runtime Approval Spec (Frozen)
+## Runtime Expansion Spec
 
-Before any runtime implementation request, write an approval-ready spec that lists candidate visible tools, forbidden tools, confirmation rules, the public/private privacy boundary, input and output schema tests, wrong-tool and wrong-argument evals, and the exact proof commands. This document is still strategy-only; do not add runtime `navigator.modelContext.registerTool`, `toolname`, or `tooldescription` without explicit user approval.
+Before expanding beyond the current read-only pilot, write an approval-ready spec that lists candidate visible tools, forbidden tools, confirmation rules, the public/private privacy boundary, input and output schema tests, wrong-tool and wrong-argument evals, and the exact proof commands. Do not add form submission, edits, invitations, imports, publishes, Directus/admin access, private snapshot access, or hidden background behavior as WebMCP tools.

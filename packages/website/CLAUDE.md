@@ -48,6 +48,10 @@ bun run ui:verify /your-route
 
 For local human/agent walkthroughs, WebMCP validation, and DevTools MCP proof, prefer Brave with an isolated/non-default profile. Keep `ui:check` / `ui:verify` Chrome/Chromium-compatible for contributors and CI unless a task explicitly requires Brave-only WebMCP validation.
 
+Runtime WebMCP is approved only for the public read-only pilot in `src/scripts/webmcp.ts`. Keep tools scoped to visible public page/map state and do not expose private Directus data, pending intake, steward notes, edit links, emails, credentials, writes, or background-only actions.
+
+Use `../../docs/agentic-mcp-tooling-runbook.md` as the operating map for MCP, WebMCP, DevTools MCP, repo browser proof, and design tooling during the June website improvement pass.
+
 ## House component pattern
 
 New components are `.astro` with a scoped `<style>` block, `gp-`-prefixed classes, and `var(--gp-*)` values only. Template off `src/components/ui/Button.astro`, `Card.astro`, `Chip.astro`. Pages wrap content in `Container.astro` inside `GpLayout.astro` (which sets `body.gp-root` and the container context).
