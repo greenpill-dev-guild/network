@@ -40,7 +40,8 @@
     "directus:users:invite": "bun --env-file-if-exists=.env.local scripts/directus-users.ts invite",
     "plans:scaffold": "bun --no-env-file scripts/plan-hub.ts scaffold",
     "plans:validate": "bun --no-env-file scripts/plan-hub.ts validate",
-    "agentic:check": "bun run plans:validate && bun run ui:check",
+    "agentic:guidance": "DISABLE_TELEMETRY=1 bun --bun modern-web-guidance search \"agentic frontend CSS accessibility browser validation DevTools MCP\" && DISABLE_TELEMETRY=1 bun --bun modern-web-guidance retrieve accessibility",
+    "agentic:check": "bun run agentic:guidance && bun run plans:validate && bun run ui:check",
     "agentic:browser-proof": "bun run ui:verify",
     "agentic:verify": "bun run ui:verify",
     "test:agent": "bun run build:packages && bun test scripts/agent-contract.test.ts",
@@ -64,6 +65,7 @@
     "@greenpill-network/shared": "workspace:*",
     "@types/node": "^22",
     "axe-core": "^4.11.4",
+    "modern-web-guidance": "^0.0.169",
     "typescript": "^6.0.3"
   }
 }
