@@ -49,6 +49,17 @@ Run installs and validation from the repo root.
 - `bun run ui:check` - source-only website CSS guardrails; no build, browser, or screenshots.
 - `bun run ui:verify <route>` - heavier website build + rendered browser proof at 375 / 1024 / 1440.
 
+## Linear-Spawned Issue Contract
+
+Linear (workspace `greenpill-dev-guild`; teams Product `PRD` / Research `RESR`) is the durable backlog — never open GitHub Issues for backlog work. Codex work is labeled `agent:codex` (distinct from `agent:claude` interactive and `agent:routine` cron writes). The Linear MCP is wired into the Codex environment for read/query and state transitions.
+
+When dispatched from a Linear issue, **that issue is your spec** — read it in full, plus this file and any `.plans/<feature>/` lane it references.
+
+- **Codex-ready gate.** Implement only if the issue gives all of: clear **acceptance criteria**, a named **surface / `package:*`** (`website` / `agent` / `admin` / `shared` / `workspace`), and **validation** (explicit, or the relevant commands above). If anything is missing, the scope is ambiguous, or it needs a cross-package or architecture decision — **stop and comment on the issue; do not guess.** A vague issue is a no-op.
+- **Executor, not orchestrator.** Implement only the scoped unit, in the smallest package boundary. Don't expand past the acceptance criteria or make sequencing decisions that belong to the human.
+- **Branch + PR.** Work on the integration branch named in the issue; the PR body must link it (`Closes PRD-NNN` / `Linear: PRD-NNN`). One issue per PR; never self-merge.
+- **Before the PR**, run the matching validation — `bun run typecheck`, the focused `bun run test:*` for the surface, `bun run agentic:check` for website/UI work, then `bun run build` — and produce evidence (passing output / rendered proof), not "should work." Honor the Privacy Boundary below.
+
 ## Architecture Notes
 
 The public website remains static. Keystatic is enabled only during local website dev for editorial and site-composition content; there is no deployed Keystatic server or public website database connection.
