@@ -20,6 +20,12 @@
       ],
       "urls": [
         "http://localhost:3301/"
+      ],
+      "health": [
+        {
+          "type": "http",
+          "url": "http://localhost:3301/"
+        }
       ]
     },
     {
@@ -49,6 +55,16 @@
       ],
       "urls": [
         "http://localhost:3302/"
+      ],
+      "health": [
+        {
+          "type": "http",
+          "url": "http://localhost:3302/server/ping"
+        },
+        {
+          "type": "http",
+          "url": "http://localhost:3302/server/health"
+        }
       ]
     },
     {
@@ -75,6 +91,24 @@
       },
       "urls": [
         "http://localhost:3303/health"
+      ],
+      "health": [
+        {
+          "type": "http",
+          "url": "http://localhost:3303/health"
+        },
+        {
+          "type": "http",
+          "url": "http://localhost:3303/ready"
+        },
+        {
+          "type": "http",
+          "url": "http://localhost:3303/content/public-snapshot"
+        },
+        {
+          "type": "http",
+          "url": "http://localhost:3303/map/state"
+        }
       ]
     },
     {
@@ -160,7 +194,14 @@
         "run",
         "db:local:down"
       ],
-      "urls": []
+      "urls": [],
+      "health": [
+        {
+          "type": "tcp",
+          "host": "127.0.0.1",
+          "port": 3304
+        }
+      ]
     }
   ]
 }
