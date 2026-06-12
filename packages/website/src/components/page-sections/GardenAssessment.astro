@@ -657,8 +657,10 @@ const questionCount = QUESTIONS.length;
     text-transform: uppercase;
   }
 
-  .gp-ga-result :global(.gp-ga-result-title) {
-    outline: none;
+  .gp-ga-result :global(.gp-ga-result-title:focus-visible) {
+    outline: 2px solid var(--gp-primary);
+    outline-offset: 6px;
+    border-radius: var(--gp-radius-sm);
   }
 
   .gp-ga-result :global(.gp-ga-result-body) {
