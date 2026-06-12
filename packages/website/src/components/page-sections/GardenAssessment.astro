@@ -1,0 +1,747 @@
+---
+import Button from '../ui/Button.astro';
+import Text from '../ui/Text.astro';
+
+// Local-only Garden Step 3 self-assessment. Seven questions, five
+// contribution paths. Answers and the computed result live ONLY in this
+// browser's localStorage — no account, no email, no backend, no analytics.
+interface Props {
+  stewardCallHref?: string;
+}
+
+const { stewardCallHref = 'https://calendar.app.google/gia7UpaSVKwwEKxy5' } = Astro.props;
+
+type PathId = 'learn' | 'local' | 'build' | 'story' | 'steward';
+
+const QUESTIONS: Array<{
+  id: string;
+  prompt: string;
+  options: Array<{ path: PathId; label: string }>;
+}> = [
+  {
+    id: 'q1',
+    prompt: 'What pulls you toward regeneration right now?',
+    options: [
+      { path: 'learn', label: 'Understanding the ideas — regen, public goods, coordination' },
+      { path: 'local', label: 'Doing something practical where I live' },
+      { path: 'build', label: 'Building tools and open-source infrastructure' },
+      { path: 'story', label: 'Documenting the work so it travels' },
+      { path: 'steward', label: 'Helping people and groups work together' },
+    ],
+  },
+  {
+    id: 'q2',
+    prompt: 'Pick the Saturday that sounds best.',
+    options: [
+      { path: 'local', label: 'A cleanup, planting day, or local meetup' },
+      { path: 'learn', label: 'A book, a podcast queue, and good coffee' },
+      { path: 'story', label: 'Interviewing someone and writing it up' },
+      { path: 'build', label: 'A build day shipping something small but real' },
+      { path: 'steward', label: 'Hosting the gathering and making intros' },
+    ],
+  },
+  {
+    id: 'q3',
+    prompt: 'What is the strongest thing you bring today?',
+    options: [
+      { path: 'build', label: 'Technical skills: code, design, or data' },
+      { path: 'story', label: 'Writing, media, or translation' },
+      { path: 'local', label: 'Local knowledge and neighbors who trust me' },
+      { path: 'steward', label: 'Organizing, facilitation, and follow-through' },
+      { path: 'learn', label: 'Curiosity — I am here to absorb' },
+    ],
+  },
+  {
+    id: 'q4',
+    prompt: 'Impact feels most real to you when…',
+    options: [
+      { path: 'local', label: 'Your own place visibly improves' },
+      { path: 'build', label: 'Something you made gets real users' },
+      { path: 'story', label: 'A story changes what someone does next' },
+      { path: 'steward', label: 'A group pulls off what no one could alone' },
+      { path: 'learn', label: 'A complex system finally makes sense' },
+    ],
+  },
+  {
+    id: 'q5',
+    prompt: 'How do you like to work with others?',
+    options: [
+      { path: 'build', label: 'In a small crew, shipping iteratively' },
+      { path: 'local', label: 'Side by side, in person, hands dirty' },
+      { path: 'steward', label: 'Across groups, aligning and unblocking' },
+      { path: 'learn', label: 'Solo for now — reading at my own pace' },
+      { path: 'story', label: 'One-on-one conversations worth retelling' },
+    ],
+  },
+  {
+    id: 'q6',
+    prompt: 'Which Greenpill surface would you open first?',
+    options: [
+      { path: 'local', label: 'The chapters map' },
+      { path: 'learn', label: 'The Library — books, podcast, guides' },
+      { path: 'story', label: 'The field stories' },
+      { path: 'build', label: 'The Dev Guild repos' },
+      { path: 'steward', label: 'A call with a steward' },
+    ],
+  },
+  {
+    id: 'q7',
+    prompt: 'Six months from now, you would love to say…',
+    options: [
+      { path: 'learn', label: '“I actually understand this space now.”' },
+      { path: 'local', label: '“My city has a real regen crew.”' },
+      { path: 'build', label: '“We shipped tools the network uses.”' },
+      { path: 'story', label: '“My stories brought new people in.”' },
+      { path: 'steward', label: '“I helped people find their place.”' },
+    ],
+  },
+];
+
+const RESULTS: Array<{
+  path: PathId;
+  name: string;
+  title: string;
+  body: string;
+  secondaryLabel: string;
+  primaryCta: { label: string; href: string; external?: boolean };
+  ghostCta?: { label: string; href: string; external?: boolean };
+}> = [
+  {
+    path: 'learn',
+    name: 'Learn',
+    title: 'Start in the Library.',
+    body: 'Read the books, queue the podcast, and follow the public guides. The knowledge commons is free, and understanding the ideas is a real contribution.',
+    secondaryLabel: 'Learn — browse the Library',
+    primaryCta: { label: 'Browse the Library', href: '/library' },
+  },
+  {
+    path: 'local',
+    name: 'Local',
+    title: 'Find your people on the ground.',
+    body: 'Browse the chapter directory for activity near you, then put yourself on the network map so nearby regens can find you.',
+    secondaryLabel: 'Local — find a chapter near you',
+    primaryCta: { label: 'Browse chapters', href: '/chapters' },
+    ghostCta: { label: 'Add yourself to the map', href: '/#join-map' },
+  },
+  {
+    path: 'build',
+    name: 'Build',
+    title: 'Build with the Dev Guild.',
+    body: 'Open tooling, real deployments, and a public repo trail. Bring code, design, or data skills to the guild shipping the network’s stack.',
+    secondaryLabel: 'Build — visit the Dev Guild',
+    primaryCta: { label: 'Visit the Dev Guild', href: '/guilds/dev-guild' },
+  },
+  {
+    path: 'story',
+    name: 'Story',
+    title: 'Help tell the network’s story.',
+    body: 'Read how chapters document their field work, then bring your own reporting, writing, or translation to the commons.',
+    secondaryLabel: 'Story — read the field stories',
+    primaryCta: { label: 'Read the stories', href: '/stories' },
+    ghostCta: { label: 'Visit the Writers Guild', href: '/guilds/writers-guild' },
+  },
+  {
+    path: 'steward',
+    name: 'Steward',
+    title: 'Talk to a steward.',
+    body: 'You sound ready for a human conversation — book a call to talk chapters, guilds, partnerships, or where your coordination skills land best.',
+    secondaryLabel: 'Steward — book a call',
+    primaryCta: { label: 'Book a steward call', href: stewardCallHref, external: true },
+  },
+];
+
+const questionCount = QUESTIONS.length;
+---
+
+<div class="gp-ga" id="assessment" data-garden-assessment>
+  <p class="gp-ga-privacy">
+    <span class="gp-ga-privacy-mark" aria-hidden="true"></span>
+    Answers are saved only in this browser. Nothing is sent anywhere.
+  </p>
+
+  <form class="gp-ga-form" data-ga-form action="#assessment" method="get">
+    <ol class="gp-ga-questions">
+      {QUESTIONS.map((question, index) => (
+        <li>
+          <fieldset class="gp-ga-q">
+            <legend class="gp-ga-q-legend">
+              <span class="gp-ga-q-num" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+              <span class="gp-ga-q-prompt">{question.prompt}</span>
+            </legend>
+            <div class="gp-ga-options">
+              {question.options.map((option) => {
+                const inputId = `ga-${question.id}-${option.path}`;
+                return (
+                  <label class="gp-ga-option" for={inputId}>
+                    <input type="radio" id={inputId} name={question.id} value={option.path} />
+                    <span>{option.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+        </li>
+      ))}
+    </ol>
+
+    <div class="gp-ga-form-foot">
+      <p class="gp-ga-progress" data-ga-progress aria-live="polite">0 of {questionCount} answered</p>
+      <div class="gp-ga-form-actions">
+        <button type="button" class="gp-ga-reset" data-ga-reset hidden>Reset answers</button>
+        <Button type="submit" data-ga-submit disabled>See your path</Button>
+      </div>
+    </div>
+
+    <noscript>
+      <p class="gp-ga-noscript">
+        The assessment needs JavaScript to score answers on your device. Without it, head straight for
+        <a href="/library">the Library</a>, <a href="/chapters">chapters</a>,
+        <a href="/guilds/dev-guild">the Dev Guild</a>, or <a href="/stories">stories</a>.
+      </p>
+    </noscript>
+  </form>
+
+  <div class="gp-ga-result-wrap" data-ga-result-wrap hidden role="region" aria-label="Your assessment result">
+    {RESULTS.map((result) => (
+      <article
+        class="gp-ga-result"
+        data-ga-result={result.path}
+        data-ga-name={result.name}
+        data-ga-secondary-label={result.secondaryLabel}
+        hidden
+      >
+        <p class="gp-ga-result-kicker">Your path · {result.name}</p>
+        <Text as="h4" variant="h3" class="gp-ga-result-title">{result.title}</Text>
+        <Text variant="body" class="gp-ga-result-body">{result.body}</Text>
+        <div class="gp-ga-result-ctas">
+          <Button
+            href={result.primaryCta.href}
+            target={result.primaryCta.external ? '_blank' : undefined}
+            rel={result.primaryCta.external ? 'noopener noreferrer' : undefined}
+          >
+            {result.primaryCta.label}
+          </Button>
+          {result.ghostCta && (
+            <Button
+              href={result.ghostCta.href}
+              variant="ghost"
+              target={result.ghostCta.external ? '_blank' : undefined}
+              rel={result.ghostCta.external ? 'noopener noreferrer' : undefined}
+            >
+              {result.ghostCta.label}
+            </Button>
+          )}
+        </div>
+      </article>
+    ))}
+
+    <p class="gp-ga-secondary" data-ga-secondary hidden>
+      Close second: <a data-ga-secondary-link href="/garden#assessment"></a>
+    </p>
+
+    <div class="gp-ga-result-foot">
+      <p class="gp-ga-saved" data-ga-saved></p>
+      <button type="button" class="gp-ga-reset" data-ga-retake>Retake the assessment</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  (() => {
+    const STORAGE_KEY = 'greenpill.gardenAssessment.v1';
+    const PATH_ORDER = ['learn', 'local', 'build', 'story', 'steward'] as const;
+    type PathId = (typeof PATH_ORDER)[number];
+
+    const root = document.querySelector('[data-garden-assessment]') as HTMLElement | null;
+    if (!root) return;
+
+    const form = root.querySelector('[data-ga-form]') as HTMLFormElement | null;
+    const progressEl = root.querySelector('[data-ga-progress]') as HTMLElement | null;
+    const submitButton = root.querySelector('[data-ga-submit]') as HTMLButtonElement | null;
+    const resetButton = root.querySelector('[data-ga-reset]') as HTMLButtonElement | null;
+    const resultWrap = root.querySelector('[data-ga-result-wrap]') as HTMLElement | null;
+    const resultPanels = Array.from(root.querySelectorAll('[data-ga-result]')) as HTMLElement[];
+    const secondaryEl = root.querySelector('[data-ga-secondary]') as HTMLElement | null;
+    const secondaryLink = root.querySelector('[data-ga-secondary-link]') as HTMLAnchorElement | null;
+    const savedEl = root.querySelector('[data-ga-saved]') as HTMLElement | null;
+    const retakeButton = root.querySelector('[data-ga-retake]') as HTMLButtonElement | null;
+    if (!form || !resultWrap) return;
+
+    const questionNames = Array.from(
+      new Set(
+        (Array.from(form.querySelectorAll('input[type="radio"]')) as HTMLInputElement[]).map((input) => input.name)
+      )
+    );
+    const questionCount = questionNames.length;
+    const isPath = (value: unknown): value is PathId => PATH_ORDER.includes(value as PathId);
+
+    const readAnswers = () => {
+      const answers: Record<string, PathId> = {};
+      for (const name of questionNames) {
+        const checked = form.querySelector(`input[name="${name}"]:checked`) as HTMLInputElement | null;
+        if (checked && isPath(checked.value)) answers[name] = checked.value;
+      }
+      return answers;
+    };
+
+    const loadStored = (): { answers?: Record<string, unknown>; updatedAt?: string } | null => {
+      try {
+        const raw = window.localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' ? parsed : null;
+      } catch {
+        return null;
+      }
+    };
+
+    const save = (answers: Record<string, PathId>, result: { primary: PathId; secondary: PathId | null } | null) => {
+      try {
+        window.localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ version: 1, answers, result, updatedAt: new Date().toISOString() })
+        );
+      } catch {
+        // Private-mode or full storage: the assessment still works, it just
+        // will not survive a refresh.
+      }
+    };
+
+    const clearStored = () => {
+      try {
+        window.localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        // Ignore: nothing to clear or storage unavailable.
+      }
+    };
+
+    const computeResult = (answers: Record<string, PathId>) => {
+      const scores = new Map<PathId, number>(PATH_ORDER.map((path) => [path, 0]));
+      for (const value of Object.values(answers)) {
+        scores.set(value, (scores.get(value) ?? 0) + 1);
+      }
+      const ranked = [...PATH_ORDER].sort((a, b) => (scores.get(b) ?? 0) - (scores.get(a) ?? 0));
+      const primary = ranked[0];
+      const secondary = (scores.get(ranked[1]) ?? 0) === (scores.get(primary) ?? 0) ? ranked[1] : null;
+      return { primary, secondary };
+    };
+
+    const syncProgress = () => {
+      const answered = Object.keys(readAnswers()).length;
+      if (progressEl) progressEl.textContent = `${answered} of ${questionCount} answered`;
+      if (submitButton) submitButton.disabled = answered < questionCount;
+      if (resetButton) resetButton.hidden = answered === 0;
+    };
+
+    const showForm = () => {
+      resultWrap.hidden = true;
+      form.hidden = false;
+      syncProgress();
+    };
+
+    const showResult = (result: { primary: PathId; secondary: PathId | null }, updatedAt?: string) => {
+      let focusTarget: HTMLElement | null = null;
+      for (const panel of resultPanels) {
+        const active = panel.dataset.gaResult === result.primary;
+        panel.hidden = !active;
+        if (active) focusTarget = panel.querySelector('.gp-ga-result-title');
+      }
+      if (secondaryEl && secondaryLink) {
+        const secondaryPanel = result.secondary
+          ? resultPanels.find((panel) => panel.dataset.gaResult === result.secondary)
+          : undefined;
+        if (secondaryPanel) {
+          secondaryLink.textContent = secondaryPanel.dataset.gaSecondaryLabel || secondaryPanel.dataset.gaName || '';
+          const href = (secondaryPanel.querySelector('a') as HTMLAnchorElement | null)?.getAttribute('href');
+          if (href) secondaryLink.setAttribute('href', href);
+          secondaryEl.hidden = false;
+        } else {
+          secondaryEl.hidden = true;
+        }
+      }
+      if (savedEl) {
+        const stamp = updatedAt ? new Date(updatedAt) : new Date();
+        savedEl.textContent = Number.isNaN(stamp.getTime())
+          ? 'Saved on this device.'
+          : `Saved on this device · ${stamp.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}`;
+      }
+      form.hidden = true;
+      resultWrap.hidden = false;
+      return focusTarget;
+    };
+
+    const resetAll = () => {
+      clearStored();
+      form.reset();
+      showForm();
+    };
+
+    form.addEventListener('change', () => {
+      const answers = readAnswers();
+      save(answers, null);
+      syncProgress();
+    });
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const answers = readAnswers();
+      if (Object.keys(answers).length < questionCount) {
+        syncProgress();
+        return;
+      }
+      const result = computeResult(answers);
+      save(answers, result);
+      const focusTarget = showResult(result);
+      if (focusTarget) {
+        focusTarget.setAttribute('tabindex', '-1');
+        focusTarget.focus();
+      }
+    });
+
+    resetButton?.addEventListener('click', resetAll);
+    retakeButton?.addEventListener('click', () => {
+      resetAll();
+      const firstOption = form.querySelector('input[type="radio"]') as HTMLInputElement | null;
+      firstOption?.focus();
+    });
+
+    // Restore the latest local state: re-check saved answers, and if the
+    // assessment was completed, show the recomputed result after refresh.
+    const stored = loadStored();
+    if (stored?.answers && typeof stored.answers === 'object') {
+      for (const [name, value] of Object.entries(stored.answers)) {
+        if (!questionNames.includes(name) || !isPath(value)) continue;
+        const input = form.querySelector(`input[name="${name}"][value="${value}"]`) as HTMLInputElement | null;
+        if (input) input.checked = true;
+      }
+      const answers = readAnswers();
+      if (Object.keys(answers).length === questionCount) {
+        showResult(computeResult(answers), typeof stored.updatedAt === 'string' ? stored.updatedAt : undefined);
+      }
+    }
+    syncProgress();
+
+    // Agent/test-legible readiness marker: listeners are attached and any
+    // stored state has been restored.
+    root.dataset.gaReady = 'true';
+  })();
+</script>
+
+<style>
+  .gp-ga {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-lg);
+    margin-top: var(--gp-space-sm);
+    scroll-margin-block-start: calc(var(--gp-header-height) + var(--gp-space-lg));
+  }
+
+  .gp-ga-privacy {
+    display: flex;
+    align-items: center;
+    gap: var(--gp-space-sm);
+    margin: 0;
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-mono);
+    font-size: var(--gp-label-sm);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1.3;
+    text-transform: uppercase;
+  }
+
+  .gp-ga-privacy-mark {
+    inline-size: var(--gp-space-sm);
+    block-size: var(--gp-space-sm);
+    flex: none;
+    border-radius: 50%;
+    background: var(--gp-info);
+  }
+
+  .gp-ga-form[hidden],
+  .gp-ga-result-wrap[hidden],
+  .gp-ga-result[hidden],
+  .gp-ga-secondary[hidden],
+  .gp-ga-reset[hidden] {
+    display: none;
+  }
+
+  .gp-ga-questions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-lg);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .gp-ga-q {
+    margin: 0;
+    padding: var(--gp-space-lg);
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-lg);
+    background: var(--gp-card);
+    min-width: 0;
+  }
+
+  .gp-ga-q-legend {
+    display: flex;
+    align-items: baseline;
+    gap: var(--gp-space-sm);
+    padding: 0;
+    margin-bottom: var(--gp-space-md);
+    color: var(--gp-fg);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-body-md);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .gp-ga-q-num {
+    flex: none;
+    color: var(--gp-primary);
+    font-family: var(--gp-font-mono);
+    font-size: var(--gp-label-sm);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  .gp-ga-options {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--gp-space-sm);
+  }
+
+  @container (min-width: 860px) {
+    .gp-ga-options {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .gp-ga-option {
+    display: flex;
+    align-items: center;
+    gap: var(--gp-space-sm);
+    min-height: 44px;
+    padding-block: var(--gp-space-sm);
+    padding-inline: var(--gp-space-md);
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-pill);
+    background: transparent;
+    color: var(--gp-fg-muted);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-body-sm);
+    font-weight: 600;
+    line-height: 1.3;
+    cursor: pointer;
+    min-width: 0;
+    transition: border-color 180ms cubic-bezier(0.4, 0, 0.2, 1), background 180ms cubic-bezier(0.4, 0, 0.2, 1), color 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .gp-ga-option:hover {
+    border-color: color-mix(in srgb, var(--gp-primary) 42%, transparent);
+    color: var(--gp-fg);
+  }
+
+  .gp-ga-option:has(input:checked) {
+    border-color: var(--gp-primary);
+    background: color-mix(in srgb, var(--gp-primary) 12%, transparent);
+    color: var(--gp-fg);
+  }
+
+  .gp-ga-option input {
+    flex: none;
+    inline-size: var(--gp-space-md);
+    block-size: var(--gp-space-md);
+    margin: 0;
+    accent-color: var(--gp-primary);
+    cursor: pointer;
+  }
+
+  .gp-ga-form-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--gp-space-md);
+    margin-top: var(--gp-space-md);
+  }
+
+  .gp-ga-progress {
+    margin: 0;
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-mono);
+    font-size: var(--gp-label-sm);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .gp-ga-form-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--gp-space-md);
+  }
+
+  /* Incomplete state: dim the submit until all seven are answered. Scoped
+     here because the shared Button keeps its lime fill in submitting states
+     by design (DESIGN.md form patterns). */
+  .gp-ga-form-actions :global(.gp-button:disabled) {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  .gp-ga-reset {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 18px;
+    border: 1px solid var(--gp-border);
+    border-radius: var(--gp-radius-pill);
+    background: transparent;
+    color: var(--gp-fg-muted);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-body-sm);
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 180ms cubic-bezier(0.4, 0, 0.2, 1), border-color 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .gp-ga-reset:hover {
+    border-color: color-mix(in srgb, var(--gp-primary) 42%, transparent);
+    color: var(--gp-fg);
+  }
+
+  .gp-ga-noscript {
+    margin: var(--gp-space-md) 0 0;
+    color: var(--gp-fg-muted);
+    font-size: var(--gp-body-sm);
+    line-height: 1.55;
+  }
+
+  .gp-ga-noscript a {
+    color: var(--gp-primary);
+  }
+
+  .gp-ga-result-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-md);
+    padding: var(--gp-space-xl);
+    border: 1px solid color-mix(in srgb, var(--gp-primary) 32%, transparent);
+    border-radius: var(--gp-radius-lg);
+    background: var(--gp-card-elev);
+    min-width: 0;
+  }
+
+  .gp-ga-result {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-md);
+    min-width: 0;
+  }
+
+  .gp-ga-result-kicker {
+    margin: 0;
+    color: var(--gp-primary);
+    font-family: var(--gp-font-mono);
+    font-size: var(--gp-label-sm);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .gp-ga-result :global(.gp-ga-result-title:focus-visible) {
+    outline: 2px solid var(--gp-primary);
+    outline-offset: 6px;
+    border-radius: var(--gp-radius-sm);
+  }
+
+  .gp-ga-result :global(.gp-ga-result-body) {
+    color: var(--gp-fg-muted);
+    max-width: 56ch;
+  }
+
+  .gp-ga-result-ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gp-space-md);
+    margin-top: var(--gp-space-xs);
+  }
+
+  .gp-ga-secondary {
+    margin: 0;
+    color: var(--gp-fg-muted);
+    font-size: var(--gp-body-sm);
+    line-height: 1.55;
+  }
+
+  .gp-ga-secondary a {
+    color: var(--gp-primary);
+    white-space: nowrap;
+  }
+
+  .gp-ga-result-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--gp-space-md);
+    padding-top: var(--gp-space-md);
+    border-top: 1px solid var(--gp-border-soft);
+  }
+
+  .gp-ga-saved {
+    margin: 0;
+    /* fg-muted, not fg-dim: this stamp sits on the elevated result card and
+       small text must hold 4.5:1 there (DESIGN.md contrast rule). */
+    color: var(--gp-fg-muted);
+    font-family: var(--gp-font-mono);
+    font-size: var(--gp-label-sm);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1.3;
+    text-transform: uppercase;
+  }
+
+  @container (max-width: 640px) {
+    .gp-ga-q {
+      padding: var(--gp-space-md);
+    }
+
+    .gp-ga-result-wrap {
+      padding: var(--gp-space-lg);
+    }
+
+    .gp-ga-form-foot,
+    .gp-ga-result-foot {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .gp-ga-form-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .gp-ga-form-actions :global(.gp-button),
+    .gp-ga-result-ctas :global(.gp-button) {
+      width: 100%;
+    }
+
+    .gp-ga-reset {
+      justify-content: center;
+    }
+
+    .gp-ga-result-ctas {
+      flex-direction: column;
+    }
+  }
+</style>

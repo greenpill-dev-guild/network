@@ -167,7 +167,9 @@ const nodeTypeFilters = [
   { id: 'steward', label: 'Stewards' },
   { id: 'member', label: 'Members' },
 ] as const;
-const statsA11y = `World map of ${chapterCount} active chapters, public stewards, and public-safe member nodes.`;
+// Honest in the sparse state: chapters always render at build time, while
+// steward/member nodes appear only when approved public submissions exist.
+const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved steward and member nodes appear as people join the public map.`;
 ---
 
 <figure class="gp-home-map" aria-labelledby="gp-home-map-title">
@@ -254,10 +256,16 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
 
     {/* Count-free legend. The homepage should explain node identity without
         surfacing member/steward counts while real participation is still
-        growing. */}
+        growing. Steward/member entries start hidden and appear only when at
+        least one node of that type is actually on the map, so a chapter-only
+        sparse state never implies visible stewards or members. */}
     <div class="gp-home-map-legend" aria-hidden="true">
       {nodeTypeFilters.map((type) => (
-        <span class={`gp-home-map-legend-item is-${type.id}`}>
+        <span
+          class={`gp-home-map-legend-item is-${type.id}`}
+          data-legend-type={type.id}
+          hidden={type.id !== 'chapter'}
+        >
           <span class={`gp-home-map-legend-mark is-${type.id}`} aria-hidden="true"></span>
           <span class="gp-home-map-legend-label">{type.label}</span>
         </span>
@@ -303,9 +311,15 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
         ))}
       </div>
 
-      <div class="gp-home-map-filter-tabs">
-        <button type="button" data-filter-toggle="theme" aria-expanded="false">Themes</button>
-        <button type="button" data-filter-toggle="type" aria-expanded="false">Types</button>
+      <div class="gp-home-map-control-row">
+        <div class="gp-home-map-filter-tabs">
+          <button type="button" data-filter-toggle="theme" aria-expanded="false">Themes</button>
+          <button type="button" data-filter-toggle="type" aria-expanded="false">Types</button>
+        </div>
+        <button type="button" class="gp-home-map-add-self" data-home-map-open aria-haspopup="dialog">
+          <span aria-hidden="true">+</span>
+          <span>Add yourself</span>
+        </button>
       </div>
     </div>
   </div>
@@ -554,6 +568,7 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
     const themeFilterButtons = Array.from(scope.querySelectorAll('[data-theme-filter]')) as HTMLButtonElement[];
     const filterToggleButtons = Array.from(scope.querySelectorAll('[data-filter-toggle]')) as HTMLButtonElement[];
     const filterPanels = Array.from(scope.querySelectorAll('[data-filter-panel]')) as HTMLElement[];
+    const legendItems = Array.from(scope.querySelectorAll('[data-legend-type]')) as HTMLElement[];
     const activeTypes = new Set(['chapter', 'steward', 'member']);
     const activeThemes = new Set(themeFilterButtons.map((button) => clean(button.dataset.themeFilter)).filter(Boolean));
     const allThemeCount = activeThemes.size;
@@ -916,6 +931,24 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
       if (selectedNode?.classList.contains('is-filtered-out')) closeSelected();
       const focusedNode = root.querySelector('.gp-home-map-node-link.is-adj.is-filtered-out');
       if (focusedNode) clearFocus();
+
+      // Honest legend: steward/member legend rows appear only once at least
+      // one node of that type actually exists on the map, so the chapter-only
+      // sparse state never implies visible stewards or members.
+      legendItems.forEach((item) => {
+        const type = clean(item.dataset.legendType);
+        if (!type || type === 'chapter') return;
+        item.hidden = !root.querySelector(`.gp-home-map-node-link.is-${type}`);
+      });
+
+      // Filter affordance: a toggle shows a dot while its filter set is
+      // narrowed, so closed panels still signal that the map view is filtered.
+      filterToggleButtons.forEach((button) => {
+        const narrowed = button.dataset.filterToggle === 'theme'
+          ? allThemeCount > 0 && activeThemes.size < allThemeCount
+          : activeTypes.size < typeFilterButtons.length;
+        button.classList.toggle('is-filtering', narrowed);
+      });
     };
 
     filterToggleButtons.forEach((button) => {
@@ -1495,6 +1528,19 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
         openAddDialog(trigger);
       });
     });
+
+    // Footer/global "add yourself" CTAs deep-link to /(hash)join-map and open
+    // the same public-safe dialog. The hash is removed from the visible URL
+    // right away so reloads and copied links do not re-trigger the dialog.
+    const ADD_NODE_HASH = '#join-map';
+    const openAddDialogFromHash = () => {
+      if (window.location.hash !== ADD_NODE_HASH) return;
+      history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+      openAddDialog();
+    };
+    window.addEventListener('hashchange', openAddDialogFromHash);
+    openAddDialogFromHash();
+
     addClose?.addEventListener('click', closeAddDialog);
     addDialog?.addEventListener('close', () => lastAddTrigger?.focus());
     addDialog?.addEventListener('cancel', (event) => {
@@ -1953,6 +1999,11 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
     white-space: nowrap;
   }
 
+  /* The class display wins over the UA [hidden] rule, so hide explicitly. */
+  .gp-home-map-legend-item[hidden] {
+    display: none;
+  }
+
   .gp-home-map-legend-mark {
     width: 11px;
     height: 11px;
@@ -2217,6 +2268,55 @@ const statsA11y = `World map of ${chapterCount} active chapters, public stewards
   .gp-home-map-filter-tabs button:hover,
   .gp-home-map-filter-tabs button:focus-visible,
   .gp-home-map-filter-tabs button.is-active {
+    background: var(--gp-map-member);
+    color: var(--gp-green-900);
+    outline: none;
+  }
+
+  /* Narrowed-filter indicator — the dot stays visible after the panel closes
+     so a filtered map never reads as the full network. */
+  .gp-home-map-filter-tabs button.is-filtering::after {
+    content: '';
+    width: 6px;
+    height: 6px;
+    flex: none;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .gp-home-map-control-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-width: 100%;
+  }
+
+  /* On-map participation CTA — same public-safe dialog as the hero CTA. */
+  .gp-home-map-add-self {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 48px;
+    padding: 8px 16px;
+    border: 1px solid color-mix(in srgb, var(--gp-map-member) 45%, transparent);
+    border-radius: var(--gp-radius-pill);
+    background: color-mix(in srgb, var(--gp-green-950) 72%, transparent);
+    color: var(--gp-map-member);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-label-md);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: background 160ms ease, color 160ms ease;
+  }
+
+  .gp-home-map-add-self:hover,
+  .gp-home-map-add-self:focus-visible {
     background: var(--gp-map-member);
     color: var(--gp-green-900);
     outline: none;

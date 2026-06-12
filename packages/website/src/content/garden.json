@@ -10,8 +10,8 @@
       "surfaceType": "email",
       "kicker": "Step 1 · Stay in the loop",
       "title": "Subscribe to field notes",
-      "body": "A monthly public digest with chapter updates, new resources, podcast highlights, and upcoming calls.",
-      "meta": "Monthly · public updates · no account",
+      "body": "An occasional public digest with chapter updates, new resources, podcast highlights, and upcoming calls. Unsubscribe any time.",
+      "meta": "Public updates · unsubscribe anytime · no account",
       "friction": "Lowest friction",
       "cta": {
         "label": "Subscribe",
@@ -26,7 +26,7 @@
       "surfaceType": "telegram",
       "kicker": "Step 2 · Lurk or chat",
       "title": "Join the public conversation",
-      "body": "Drop into the shared Greenpill chat and listen before you contribute. The public site should route newcomers without forcing an immediate commitment.",
+      "body": "Drop into the shared Greenpill chat and listen before you contribute. Lurk as long as you like — nobody is keeping score.",
       "meta": "Public conversation · listen first",
       "friction": "Light friction",
       "cta": {
@@ -42,13 +42,13 @@
       "surfaceType": "assessment",
       "kicker": "Step 3 · Match yourself",
       "title": "Take the Regen Assessment",
-      "body": "Answer a short set of questions about what you bring, what you want to learn, and whether a chapter, guild, or story path is the best fit.",
-      "meta": "Self-guided · public · no account",
+      "body": "Seven quick questions about what you bring and what you want to grow. Your answers stay on this device — no account, no email, nothing sent anywhere.",
+      "meta": "7 questions · saved on this device · no account",
       "friction": "Medium friction",
       "cta": {
-        "label": "Start assessment",
-        "href": "https://forms.gle/1JNLcvExXLekgzt59",
-        "kind": "form"
+        "label": "Start the assessment",
+        "href": "/garden#assessment",
+        "kind": "internal"
       }
     },
     {
@@ -148,14 +148,14 @@
   "assessmentPreview": {
     "kicker": "Self-assessment",
     "title": "Map your next contribution",
-    "body": "The public page can preview assessment topics; real answers belong in the future private/workspace flow.",
-    "meta": "No private answers in public content",
+    "body": "Seven questions, five contribution paths. Answers are saved only in this browser and can be reset at any time.",
+    "meta": "Local-only · no answers leave this device",
     "image": "",
     "imageAlt": "",
     "cta": {
-      "label": "Start assessment",
-      "href": "https://forms.gle/1JNLcvExXLekgzt59",
-      "kind": "form"
+      "label": "Start the assessment",
+      "href": "/garden#assessment",
+      "kind": "internal"
     }
   },
   "stewardCallPreview": {

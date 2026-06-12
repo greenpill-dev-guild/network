@@ -220,6 +220,9 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
                 <Text variant="mono">Hosted by Kevin Owocki and guests</Text>
                 <Text variant="h3">{podcast.title || 'The Greenpill Podcast'}</Text>
                 <Text variant="body-sm">{podcast.description}</Text>
+                {podcast.secondaryDescription && (
+                  <Text variant="body-sm">{podcast.secondaryDescription}</Text>
+                )}
                 <div class="gp-home-podcast-cta">
                   <Button href={podcastHref} variant="ghost">Listen on Apple Podcasts</Button>
                   <ArrowLink href={podcast.youtubeLink || 'https://www.youtube.com/@Green_Pill_Podcast'} size="sm">Watch on YouTube</ArrowLink>
@@ -747,17 +750,23 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
     max-width: 60ch;
   }
 
+  /* Compact tiles — dot + name on one row, blurb beneath. The section keeps
+     all seven communities while taking roughly half its former height. */
   .gp-home-eco-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: clamp(12px, 1.4vw, 18px);
+    gap: var(--gp-space-sm);
   }
 
   .gp-home-eco-tile {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: clamp(var(--gp-space-lg), 2vw, var(--gp-space-xl));
+    display: grid;
+    grid-template-columns: var(--gp-space-sm) minmax(0, 1fr);
+    column-gap: var(--gp-space-sm);
+    row-gap: var(--gp-space-xs);
+    align-content: center;
+    padding-block: var(--gp-space-sm);
+    padding-inline: var(--gp-space-md);
+    min-height: 64px;
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-lg);
     background: var(--gp-card);
@@ -773,31 +782,35 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
   }
 
   .gp-home-eco-mark {
-    width: 12px;
-    height: 12px;
+    grid-row: 1;
+    align-self: center;
+    inline-size: var(--gp-space-sm);
+    block-size: var(--gp-space-sm);
     border-radius: 50%;
     background: var(--gp-primary);
-    box-shadow: 0 0 12px rgba(184, 232, 53, 0.5);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--gp-primary) 35%, transparent);
     flex: none;
   }
 
   .gp-home-eco-tile:hover .gp-home-eco-mark {
-    box-shadow: 0 0 18px rgba(184, 232, 53, 0.85);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--gp-primary) 70%, transparent);
   }
 
   .gp-home-eco-name {
+    grid-column: 2;
     color: var(--gp-secondary);
     font-family: var(--gp-font-display);
-    font-size: 22px;
+    font-size: var(--gp-title-md);
     font-weight: 500;
     line-height: 1.15;
   }
 
   .gp-home-eco-blurb {
+    grid-column: 2;
     color: var(--gp-fg-muted);
     font-family: var(--gp-font-body);
-    font-size: 13px;
-    line-height: 1.45;
+    font-size: var(--gp-caption);
+    line-height: 1.4;
   }
 
   /* Garden ramp */

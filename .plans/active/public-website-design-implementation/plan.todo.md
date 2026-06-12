@@ -38,7 +38,7 @@
 - [x] Change add-node theme selection from exactly four to one to four themes.
 - [x] Add browser proof for the Home add-node flow against mocked agent responses: moderated pending, live approved member, allowlisted steward, selected details, and private-field DOM/storage guards.
 - [ ] Add HiFi comparison proof at 375, 1024, and 1440 for chapter/member/steward node treatments, real mycelial edges, selected-node details, filter legibility, and mobile readability.
-- [ ] Add a live-mode operator preflight/runbook covering `/map/state.intakeMode`, live refresh, allowlisted steward behavior, disable-live path, and post-session review.
+- [x] Add a live-mode operator preflight/runbook covering `/map/state.intakeMode`, live refresh, allowlisted steward behavior, disable-live path, and post-session review. See `reports/local-live-map-e2e-runbook-2026-06-11.md` and `bun run test:home-map:live-e2e`.
 - [ ] Complete Steward Sync Week 1: Directus/admin onboarding, role assignment, chapter content update workflow, and public map profile opt-ins.
 - [ ] Complete Steward Sync Week 2: steward self-add rehearsal with allowlisted emails in controlled live mode.
 - [ ] Prepare June 10 live member self-add session; this is map participation, not a public-note feature.
