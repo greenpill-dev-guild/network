@@ -244,7 +244,9 @@ if (!sql) {
 
 const mapStateUrl = endpoint(options.agentBaseUrl, PUBLIC_MAP_STATE_ROUTE);
 const submissionUrl = endpoint(options.agentBaseUrl, MAP_NODE_SUBMISSIONS_ROUTE);
-let previousLiveMode = false;
+// null until the real prior mode is read, so an early failure (for example an
+// unreachable agent) never "restores" an already-live local session to false.
+let previousLiveMode: boolean | null = null;
 
 try {
   if (options.disableLive) {
@@ -316,7 +318,9 @@ try {
 } finally {
   if (!options.keepLive && !options.disableLive) {
     await deleteE2eSubmissions(sql).catch(() => {});
-    await setLiveMode(sql, previousLiveMode).catch(() => {});
+    if (previousLiveMode !== null) {
+      await setLiveMode(sql, previousLiveMode).catch(() => {});
+    }
   }
   await sql.end({ timeout: 3 }).catch(() => {});
 }

@@ -451,8 +451,8 @@ const questionCount = QUESTIONS.length;
   }
 
   .gp-ga-privacy-mark {
-    width: 8px;
-    height: 8px;
+    inline-size: var(--gp-space-sm);
+    block-size: var(--gp-space-sm);
     flex: none;
     border-radius: 50%;
     background: var(--gp-info);
@@ -521,9 +521,10 @@ const questionCount = QUESTIONS.length;
   .gp-ga-option {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--gp-space-sm);
     min-height: 44px;
-    padding: 10px 16px;
+    padding-block: var(--gp-space-sm);
+    padding-inline: var(--gp-space-md);
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-pill);
     background: transparent;
@@ -550,8 +551,8 @@ const questionCount = QUESTIONS.length;
 
   .gp-ga-option input {
     flex: none;
-    width: 16px;
-    height: 16px;
+    inline-size: var(--gp-space-md);
+    block-size: var(--gp-space-md);
     margin: 0;
     accent-color: var(--gp-primary);
     cursor: pointer;
@@ -671,7 +672,7 @@ const questionCount = QUESTIONS.length;
   .gp-ga-result-ctas {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: var(--gp-space-md);
     margin-top: var(--gp-space-xs);
   }
 
@@ -699,7 +700,9 @@ const questionCount = QUESTIONS.length;
 
   .gp-ga-saved {
     margin: 0;
-    color: var(--gp-fg-dim);
+    /* fg-muted, not fg-dim: this stamp sits on the elevated result card and
+       small text must hold 4.5:1 there (DESIGN.md contrast rule). */
+    color: var(--gp-fg-muted);
     font-family: var(--gp-font-mono);
     font-size: var(--gp-label-sm);
     font-weight: 700;
