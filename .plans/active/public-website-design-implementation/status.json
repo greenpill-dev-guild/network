@@ -10,7 +10,7 @@
     "overall_status": "active",
     "priority": "p0",
     "created_at": "2026-05-17T23:16:40.923Z",
-    "updated_at": "2026-05-24T00:00:00Z"
+    "updated_at": "2026-06-11T05:41:16Z"
   },
   "links": {
     "brief": "brief.md",
@@ -24,7 +24,8 @@
     "Runtime contracts that code depends on belong under packages.",
     "This hub owns the public website design package, research inputs, and implementation sequence.",
     "2026-05-24 modern Web UI follow-up: added reports/modern-web-ui-follow-up-2026-05-24.md and checklist items for text-scale readiness, Astro MPA View Transitions, CSS scroll spy, scroll-state header behavior, closedby dialog polish, and stale parallax/script review. Lane statuses are unchanged.",
-    "2026-05-24 Chrome platform operationalization: added next proof tasks for isolated Chrome DevTools MCP evidence, CWV/navigation evidence fields, and a frozen runtime WebMCP approval spec. Lane statuses are unchanged."
+    "2026-05-24 Chrome platform operationalization: added next proof tasks for isolated Chrome DevTools MCP evidence, CWV/navigation evidence fields, and a frozen runtime WebMCP approval spec. Lane statuses are unchanged.",
+    "2026-06-11 local live map e2e: added a repo-native local rehearsal command and runbook for live member/steward submissions, /map/state proof, private-field guards, and disable-live cleanup. Visual HiFi proof and steward-sync onboarding remain open."
   ],
   "taxonomy": {
     "initiative": "public-experience",
@@ -331,6 +332,13 @@
       "lane": "platform",
       "status": "planned",
       "note": "Operationalized Chrome platform follow-up tasks in plan.todo.md: isolated DevTools MCP proof for the Astro View Transition opt-in, CWV/navigation evidence fields, and frozen WebMCP approval-spec requirements. No lane status changed."
+    },
+    {
+      "timestamp": "2026-06-11T05:41:16Z",
+      "actor": "codex",
+      "lane": "platform",
+      "status": "implemented_local",
+      "note": "Added the local live map e2e rehearsal path: bun run test:home-map:live-e2e toggles local live mode, submits a member and allowlisted steward through the real agent/database, checks /map/state for live mode, public nodes, steward-to-chapter edge, and private-field guards, then restores the prior mode unless --keep-live is used. Added --disable-live and the local runbook reports/local-live-map-e2e-runbook-2026-06-11.md. Remaining launch work is visual HiFi proof, steward/admin onboarding, profile opt-ins, and session facilitation."
     }
   ]
 }

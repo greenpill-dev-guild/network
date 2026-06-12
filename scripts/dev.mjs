@@ -12,6 +12,8 @@ const repoRoot = path.resolve(__dirname, "..");
 
 const localDatabaseUrl = "postgres://greenpill:greenpill@127.0.0.1:3304/greenpill_network";
 const directusDatabaseUrl = "postgres://greenpill:greenpill@host.docker.internal:3304/greenpill_network";
+const localMapNodeStewardEmailAllowlist =
+  "local-steward@example.org=nigeria,steward@example.org=nigeria";
 
 const dbEnv = {
   DATABASE_URL: localDatabaseUrl,
@@ -31,6 +33,8 @@ const agentEnv = {
   ...dbEnv,
   AGENT_HOST: "127.0.0.1",
   AGENT_PORT: "3303",
+  MAP_NODE_STEWARD_EMAIL_ALLOWLIST:
+    process.env.MAP_NODE_STEWARD_EMAIL_ALLOWLIST || localMapNodeStewardEmailAllowlist,
   PORT: "3303",
 };
 

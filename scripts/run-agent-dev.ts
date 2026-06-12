@@ -8,6 +8,7 @@ const agentDir = resolve(rootDir, 'packages/agent');
 const envFile = resolve(rootDir, '.env.local');
 
 const localDatabaseUrl = 'postgres://greenpill:greenpill@127.0.0.1:3304/greenpill_network';
+const localMapNodeStewardEmailAllowlist = 'local-steward@example.org=nigeria,steward@example.org=nigeria';
 const deprecatedLocalPort = ['543', '29'].join('');
 const deprecatedLocalDatabaseUrls = new Set([
   `postgres://greenpill:greenpill@localhost:${deprecatedLocalPort}/greenpill_network`,
@@ -59,6 +60,7 @@ loadLocalEnvDefaults();
 
 process.env.AGENT_HOST ||= '127.0.0.1';
 process.env.AGENT_PORT ||= '3303';
+process.env.MAP_NODE_STEWARD_EMAIL_ALLOWLIST ||= localMapNodeStewardEmailAllowlist;
 process.env.PORT ||= process.env.AGENT_PORT;
 
 if (!process.env.DATABASE_URL || deprecatedLocalDatabaseUrls.has(process.env.DATABASE_URL)) {

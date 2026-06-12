@@ -186,6 +186,36 @@ public submissions cannot self-claim steward, organizer, or coordinator roles.
 Pair this with Live Onboarding Mode when steward nodes should appear publicly
 during the session.
 
+Local live-map rehearsal:
+
+```sh
+bun run dev
+bun run test:home-map:live-e2e
+```
+
+`bun run dev` seeds the local Postgres database, boots Directus, starts the
+agent on `3303`, and gives the local agent a safe default steward allowlist for
+`local-steward@example.org=nigeria`. In a second terminal,
+`test:home-map:live-e2e` turns local Live Onboarding Mode on, submits one member
+and one allowlisted steward through `POST /map-nodes`, verifies that `/map/state`
+reports live mode, public member/steward nodes, a steward-to-chapter edge, and no
+private email/raw-note leakage, then restores the previous live-mode setting.
+
+For a manual call rehearsal where the homepage should stay live, run:
+
+```sh
+bun run test:home-map:live-e2e --keep-live
+```
+
+Open `http://localhost:3301/` and use the Home map add-node flow. Use a
+non-allowlisted email for a public member node, or the local allowlisted
+`local-steward@example.org` address for a steward node linked to Nigeria. When
+the rehearsal is over, run:
+
+```sh
+bun run test:home-map:live-e2e --disable-live
+```
+
 Resend delivery webhooks post to `https://agent.greenpill.network/webhooks/resend` and require `RESEND_WEBHOOK_SECRET`. Set `RESEND_WEBHOOK_RECIPIENT_HASH_SECRET` so recipient hashes are keyed rather than dictionary-searchable. Subscribe only to operational email events such as `email.sent`, `email.delivered`, `email.delivery_delayed`, `email.failed`, `email.bounced`, `email.complained`, `email.suppressed`, and `email.received`; do not enable open/click tracking for map magic-link emails. The webhook route verifies Svix signatures and stores provider metadata only, not message bodies, subjects, sender addresses, raw recipient addresses, or free-form provider diagnostic messages.
 
 Run `bun run db:cleanup:map-node-edit-flow` from a private environment with `DATABASE_URL` set to delete expired edit-token rows after their grace period and scrub retained private edit-link/update-request metadata.

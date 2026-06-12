@@ -256,7 +256,7 @@ test('public map-state combines chapter anchors and approved submitted nodes saf
   assert.equal(payload.intakeMode, 'live');
   assert.equal(payload.nodes.some((node) => node.type === 'chapter'), true);
   assert.equal(payload.nodes.some((node) => node.type === 'steward'), true);
-  assert.equal(payload.nodes.some((node) => node.source === 'generated-density'), false);
+  assert.equal(payload.nodes.some((node) => String(node.source) === 'generated-density'), false);
   assert.equal(payload.nodes.find((node) => node.type === 'steward')?.bioregion, '');
   assert.equal(payload.counts.chapterNodes, 1);
   assert.equal(payload.counts.approvedSubmittedNodes, 1);
@@ -372,7 +372,7 @@ test('public map-state includes real opt-in stewards without anonymous density',
 
   const stewardEdges = payload.edges.filter((edge) => edge.kind === 'shared-theme');
   assert.equal(payload.nodes.filter((node) => node.type === 'steward').length, stewardNodes.length);
-  assert.equal(payload.nodes.some((node) => node.source === 'generated-density'), false);
+  assert.equal(payload.nodes.some((node) => String(node.source) === 'generated-density'), false);
   assert.equal(payload.counts.approvedSubmittedNodes, stewardNodes.length);
   assert.equal(stewardEdges.length > 0, true);
   assert.equal(payload.edges.some((edge) => edge.kind === 'steward-steward'), false);
