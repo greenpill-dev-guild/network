@@ -155,7 +155,7 @@
     {
       "label": "Podcast archive",
       "value": "296 episodes",
-      "source": "Libsyn RSS snapshot",
+      "source": "Libsyn RSS snapshot 2026-06-11",
       "href": "https://rss.libsyn.com/shows/400481/destinations/3304589.xml"
     },
     {
@@ -199,12 +199,12 @@
     "kenya"
   ],
   "featuredStorySlugs": [
-    "greenpill-2025-year-in-review",
-    "dev-guild-regenerative-stack",
-    "greenpill-2026-thesis",
     "greenpill-nigeria-water-cup",
-    "greenpill-earth-week",
-    "greenpill-garden-season-one"
+    "dev-guild-regenerative-stack",
+    "greenpill-brasil-gg20-climate-milestones",
+    "greenpill-phangan-environmental-monitoring",
+    "greensofa-taiwan-public-goods-tooling",
+    "greenpill-nigeria-tech-and-sun-round"
   ],
   "featuredResourceSlugs": [
     "greenpill-podcast",

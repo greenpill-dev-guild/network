@@ -747,17 +747,22 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
     max-width: 60ch;
   }
 
+  /* Compact tiles — dot + name on one row, blurb beneath. The section keeps
+     all seven communities while taking roughly half its former height. */
   .gp-home-eco-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: clamp(12px, 1.4vw, 18px);
+    gap: 10px;
   }
 
   .gp-home-eco-tile {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: clamp(var(--gp-space-lg), 2vw, var(--gp-space-xl));
+    display: grid;
+    grid-template-columns: 10px minmax(0, 1fr);
+    column-gap: 10px;
+    row-gap: 3px;
+    align-content: center;
+    padding: 12px 16px;
+    min-height: 64px;
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-lg);
     background: var(--gp-card);
@@ -773,31 +778,35 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
   }
 
   .gp-home-eco-mark {
-    width: 12px;
-    height: 12px;
+    grid-row: 1;
+    align-self: center;
+    width: 9px;
+    height: 9px;
     border-radius: 50%;
     background: var(--gp-primary);
-    box-shadow: 0 0 12px rgba(184, 232, 53, 0.5);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--gp-primary) 35%, transparent);
     flex: none;
   }
 
   .gp-home-eco-tile:hover .gp-home-eco-mark {
-    box-shadow: 0 0 18px rgba(184, 232, 53, 0.85);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--gp-primary) 70%, transparent);
   }
 
   .gp-home-eco-name {
+    grid-column: 2;
     color: var(--gp-secondary);
     font-family: var(--gp-font-display);
-    font-size: 22px;
+    font-size: var(--gp-title-md);
     font-weight: 500;
     line-height: 1.15;
   }
 
   .gp-home-eco-blurb {
+    grid-column: 2;
     color: var(--gp-fg-muted);
     font-family: var(--gp-font-body);
-    font-size: 13px;
-    line-height: 1.45;
+    font-size: var(--gp-caption);
+    line-height: 1.4;
   }
 
   /* Garden ramp */

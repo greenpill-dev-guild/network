@@ -8,6 +8,7 @@ import Meta from '../../components/ui/Meta.astro';
 import Overline from '../../components/ui/Overline.astro';
 import SectionHeader from '../../components/ui/SectionHeader.astro';
 import Text from '../../components/ui/Text.astro';
+import GardenAssessment from '../../components/page-sections/GardenAssessment.astro';
 
 const fallbackSteps = [
   {
@@ -30,9 +31,9 @@ const fallbackSteps = [
     level: 3,
     kicker: 'Signal',
     title: 'Take the Regen Assessment',
-    body: 'Answer a short set of questions about what you bring, what you want to learn, and whether a chapter, guild, or story path is the best fit.',
-    meta: 'Self-guided · public · no account',
-    cta: { label: 'Start assessment', href: 'https://forms.gle/1JNLcvExXLekgzt59', kind: 'form' },
+    body: 'Seven quick questions about what you bring and what you want to grow. Your answers stay on this device — no account, no email, nothing sent anywhere.',
+    meta: '7 questions · saved on this device · no account',
+    cta: { label: 'Start the assessment', href: '#assessment', kind: 'internal' },
   },
   {
     level: 4,
@@ -47,6 +48,8 @@ const fallbackSteps = [
 const title = garden.title || 'Greenpill Garden';
 const summary = garden.summary || 'A participation ramp for people moving from reading about regeneration to joining chapters, contributing skills, and coordinating real-world public goods.';
 const steps = garden.steps.length > 0 ? garden.steps : fallbackSteps;
+const stewardCallHref =
+  steps.find((step) => (step.level ?? 0) === 4)?.cta?.href || 'https://calendar.app.google/gia7UpaSVKwwEKxy5';
 const stickyCta = garden.stickyCta?.label ? garden.stickyCta : { label: 'Start with Step 1', href: '#step-1' };
 const seoTitle = garden.seo.title || `${title} · Greenpill Network`;
 const seoDescription = garden.seo.description || summary;
@@ -124,6 +127,8 @@ const isExternalHref = (href = '') => /^https?:\/\//.test(href);
                         aria-live="polite"
                       ></p>
                     </form>
+                  ) : level === 3 ? (
+                    <GardenAssessment stewardCallHref={stewardCallHref} />
                   ) : step.cta?.label && stepHref && (
                     <div class="gp-garden-step-action">
                       <Button
@@ -359,7 +364,7 @@ const isExternalHref = (href = '') => /^https?:\/\//.test(href);
   }
 
   .gp-garden-subscribe-status[data-state='error'] {
-    color: var(--gp-danger, #ff8a7a);
+    color: var(--gp-error);
   }
 
   @container (max-width: 980px) {
