@@ -41,9 +41,9 @@
     "plans:scaffold": "bun --no-env-file scripts/plan-hub.ts scaffold",
     "plans:validate": "bun --no-env-file scripts/plan-hub.ts validate",
     "agentic:guidance": "DISABLE_TELEMETRY=1 bun --bun modern-web-guidance search \"agentic frontend CSS accessibility browser validation DevTools MCP\" && DISABLE_TELEMETRY=1 bun --bun modern-web-guidance retrieve accessibility",
-    "agentic:check": "bun run agentic:guidance && bun run plans:validate && bun run ui:check",
-    "agentic:browser-proof": "bun run ui:verify",
-    "agentic:verify": "bun run ui:verify",
+    "agentic:check": "bun run agentic:guidance && bun run check:browser-verification-policy && bun run plans:validate && bun run ui:check",
+    "agentic:browser-proof": "bun scripts/require-authenticated-browser-qa.mjs && bun run ui:verify",
+    "agentic:verify": "bun scripts/require-authenticated-browser-qa.mjs && bun run ui:verify",
     "test:agent": "bun run build:packages && bun test scripts/agent-contract.test.ts",
     "test:chapter-impact": "bun run build:packages && bun test scripts/chapter-impact-contract.test.ts",
     "test:content": "bun run build:packages && bun test scripts/public-content-contract.test.ts",
@@ -57,7 +57,8 @@
     "test:plans": "bun test scripts/plan-hub.test.ts",
     "ui:check": "UI_VERIFY_SOURCE_ONLY=1 bun --no-env-file scripts/ui-verify.ts",
     "ui:verify": "bun run build:website && bun --no-env-file scripts/ui-verify.ts",
-    "ui:verify:required": "UI_VERIFY_REQUIRED=1 bun run ui:verify"
+    "ui:verify:required": "UI_VERIFY_REQUIRED=1 bun run ui:verify",
+    "check:browser-verification-policy": "bun scripts/check-browser-verification-policy.mjs"
   },
   "author": "",
   "license": "ISC",
