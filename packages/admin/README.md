@@ -169,6 +169,16 @@ fly secrets set --app network-admin \
 The sender defaults to `Greenpill Network <no-reply@mail.greenpill.network>`.
 Change `EMAIL_FROM` in `packages/admin/fly.toml` if the verified sender differs.
 
+The production Directus image copies `packages/admin/templates` into
+`/directus/templates`. The `user-invitation.liquid` template adds Greenpill
+steward context to the default Directus invite link so invite emails are not
+blank or context-free.
+
+The Directus `/users/invite` API only receives the user, role, and optional
+invite URL. For event-specific context, send the copy in
+[`STEWARD_SYNC_INVITE.md`](./STEWARD_SYNC_INVITE.md) before or after running the
+invite script.
+
 ## Production Boundary
 
 Directus may create and manage its `directus_*` system tables in the connected
@@ -225,7 +235,11 @@ Before a steward sync:
 4. Invite stewards with `bun run directus:users:invite -- --input stewards.tsv`.
 5. Assign chapters or guilds with
    `bun run directus:content-access -- assign --input assignments.tsv`.
-6. Run `bun run directus:steward:smoke` against representative assigned and
+6. Pre-create one draft chapter update request per participating chapter with
+   `bun scripts/directus-steward-sync-prep.ts --input assignments.tsv`.
+7. Send [`STEWARD_SYNC_INVITE.md`](./STEWARD_SYNC_INVITE.md) alongside the
+   Directus system invite so stewards know what to prepare.
+8. Run `bun run directus:steward:smoke` against representative assigned and
    unassigned scopes.
 
 For local rehearsal, prefer `bun run directus:local:bootstrap` after

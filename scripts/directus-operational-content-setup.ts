@@ -27,6 +27,8 @@ export const DIRECTUS_STEWARD_ACCESS_COLLECTIONS = Object.freeze([
 
 export const DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS = Object.freeze([
   'chapter_update_requests',
+  'chapter_update_request_links',
+  'chapter_update_request_proof_signals',
 ]);
 
 const WORKFLOW_FIELDS = Object.freeze([
@@ -343,6 +345,11 @@ const CHAPTER_UPDATE_REQUEST_READ_FIELDS = Object.freeze([
   'chapter_slug',
   'title',
   'summary',
+  'proposed_summary',
+  'proposed_primary_link',
+  'proposed_image',
+  'proposed_image_alt',
+  'proposed_image_credit',
   'requested_changes',
   'request_status',
   'reviewer_notes',
@@ -356,6 +363,11 @@ const CHAPTER_UPDATE_REQUEST_BASE_WRITE_FIELDS = Object.freeze([
   'chapter_slug',
   'title',
   'summary',
+  'proposed_summary',
+  'proposed_primary_link',
+  'proposed_image',
+  'proposed_image_alt',
+  'proposed_image_credit',
   'requested_changes',
   'request_status',
 ]);
@@ -366,6 +378,36 @@ const CHAPTER_UPDATE_REQUEST_PUBLISHER_WRITE_FIELDS = Object.freeze([
   'reviewed_by',
   'reviewed_at',
 ]);
+
+const CHAPTER_UPDATE_REQUEST_LINK_FIELDS = Object.freeze([
+  'id',
+  'update_request_id',
+  'chapter_slug',
+  'sort_order',
+  'label',
+  'url',
+  'subtext',
+  'handle',
+  'action',
+  'icon',
+  'kind',
+  'created_at',
+  'updated_at',
+]);
+
+const CHAPTER_UPDATE_REQUEST_PROOF_SIGNAL_FIELDS = Object.freeze([
+  'id',
+  'update_request_id',
+  'chapter_slug',
+  'sort_order',
+  'label',
+  'value',
+  'source',
+  'href',
+  'created_at',
+  'updated_at',
+]);
+const SYSTEM_MANAGED_CHILD_FIELDS = Object.freeze(['id', 'created_at', 'updated_at']);
 
 function assignmentFields(collection) {
   const baseCollection = baseCollectionName(collection);
@@ -410,6 +452,8 @@ function chapterUpdateRequestStatusFilter(statuses) {
 function buildStewardWorkflowPermissions(collectionNames = []) {
   const collections = new Map(collectionNames.map((collection) => [baseCollectionName(collection), collection]));
   const chapterUpdateRequests = collections.get('chapter_update_requests');
+  const chapterUpdateRequestLinks = collections.get('chapter_update_request_links');
+  const chapterUpdateRequestProofSignals = collections.get('chapter_update_request_proof_signals');
   const permissions = [];
 
   if (chapterUpdateRequests) {
@@ -443,6 +487,56 @@ function buildStewardWorkflowPermissions(collectionNames = []) {
         validation: chapterUpdateRequestStatusFilter(CHAPTER_UPDATE_REQUEST_STATUSES),
         presets: null,
         fields: CHAPTER_UPDATE_REQUEST_PUBLISHER_WRITE_FIELDS,
+      }
+    );
+  }
+
+  for (const collection of [chapterUpdateRequestLinks, chapterUpdateRequestProofSignals].filter(Boolean)) {
+    const fields = baseCollectionName(collection) === 'chapter_update_request_proof_signals'
+      ? CHAPTER_UPDATE_REQUEST_PROOF_SIGNAL_FIELDS
+      : CHAPTER_UPDATE_REQUEST_LINK_FIELDS;
+    const writeFields = fields.filter((field) => !SYSTEM_MANAGED_CHILD_FIELDS.includes(field));
+
+    permissions.push(
+      {
+        role: 'Greenpill Trusted Publisher',
+        policy: 'Greenpill Trusted Publisher',
+        collection,
+        action: 'read',
+        permissions: null,
+        validation: null,
+        presets: null,
+        fields,
+      },
+      {
+        role: 'Greenpill Trusted Publisher',
+        policy: 'Greenpill Trusted Publisher',
+        collection,
+        action: 'create',
+        permissions: null,
+        validation: null,
+        presets: null,
+        fields: writeFields,
+      },
+      {
+        role: 'Greenpill Trusted Publisher',
+        policy: 'Greenpill Trusted Publisher',
+        collection,
+        action: 'update',
+        permissions: null,
+        validation: null,
+        presets: null,
+        fields: writeFields,
+      },
+      {
+        role: 'Greenpill Trusted Publisher',
+        policy: 'Greenpill Trusted Publisher',
+        collection,
+        action: 'delete',
+        permissions: null,
+        validation: null,
+        presets: null,
+        fields,
       }
     );
   }
@@ -1219,6 +1313,8 @@ async function ensureStewardAccessRelations(client, collectionNames) {
   const projects = collections.get('projects');
   const guildAssignments = collections.get('guild_editor_assignments');
   const chapterUpdateRequests = collections.get('chapter_update_requests');
+  const chapterUpdateRequestLinks = collections.get('chapter_update_request_links');
+  const chapterUpdateRequestProofSignals = collections.get('chapter_update_request_proof_signals');
 
   if (chapters && chapterAssignments) {
     await ensureRelation(client, {
@@ -1262,6 +1358,40 @@ async function ensureStewardAccessRelations(client, collectionNames) {
     await ensureAliasField(client, chapters, 'update_requests', {
       options: { template: '{{ title }}' },
       display_options: { template: '{{ title }}' },
+    });
+  }
+
+  if (chapterUpdateRequests && chapterUpdateRequestLinks) {
+    await ensureRelation(client, {
+      collection_many: chapterUpdateRequestLinks,
+      field_many: 'update_request_id',
+      collection_one: chapterUpdateRequests,
+      field_one: 'links',
+    });
+    await ensureAliasField(client, chapterUpdateRequests, 'links', {
+      hidden: false,
+      readonly: false,
+      sort: 20,
+      note: 'Structured public links requested by the steward.',
+      options: { template: '{{ label }}' },
+      display_options: { template: '{{ label }}' },
+    });
+  }
+
+  if (chapterUpdateRequests && chapterUpdateRequestProofSignals) {
+    await ensureRelation(client, {
+      collection_many: chapterUpdateRequestProofSignals,
+      field_many: 'update_request_id',
+      collection_one: chapterUpdateRequests,
+      field_one: 'proof_signals',
+    });
+    await ensureAliasField(client, chapterUpdateRequests, 'proof_signals', {
+      hidden: false,
+      readonly: false,
+      sort: 21,
+      note: 'Structured public proof signals requested by the steward.',
+      options: { template: '{{ label }}' },
+      display_options: { template: '{{ label }}' },
     });
   }
 

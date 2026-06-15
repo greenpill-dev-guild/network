@@ -78,9 +78,24 @@ const STEWARD_WORKFLOW_COLLECTION_META = Object.freeze({
     icon: 'edit_document',
     note: 'Steward-requested edits to live chapter profiles. Use this when a published chapter should stay online during review.',
     display_template: '{{ title }}',
+    preview_url: 'https://greenpill.network/chapters/{{ chapter_slug }}',
     archive_field: 'request_status',
     archive_value: 'archived',
     unarchive_value: 'draft',
+  },
+  chapter_update_request_links: {
+    hidden: true,
+    singleton: false,
+    icon: 'link',
+    note: 'Structured public links attached to chapter update requests.',
+    display_template: '{{ label }}',
+  },
+  chapter_update_request_proof_signals: {
+    hidden: true,
+    singleton: false,
+    icon: 'fact_check',
+    note: 'Structured public proof signals attached to chapter update requests.',
+    display_template: '{{ label }}',
   },
 });
 
@@ -149,7 +164,20 @@ const fieldMeta = ({
 });
 
 const input = (sort, note = null, width = 'half', options = null) => fieldMeta({ sort, note, width, options });
+const requiredInput = (sort, note = null, width = 'half', options = null) => fieldMeta({
+  sort,
+  note,
+  width,
+  options,
+  required: true,
+});
 const textarea = (sort, note = null) => fieldMeta({ sort, note, interface: 'input-multiline' });
+const requiredTextarea = (sort, note = null) => fieldMeta({
+  sort,
+  note,
+  interface: 'input-multiline',
+  required: true,
+});
 const tags = (sort, note = null, width = 'full') => fieldMeta({
   sort,
   note,
@@ -178,7 +206,7 @@ const url = (sort, note = null, width = 'half') => fieldMeta({
   interface: 'input',
   options: { iconRight: 'link' },
 });
-const relation = (sort, note, template = '{{ name }}') => fieldMeta({
+const relation = (sort, note, template = '{{ name }}', required = false) => fieldMeta({
   sort,
   note,
   width: 'half',
@@ -187,6 +215,7 @@ const relation = (sort, note, template = '{{ name }}') => fieldMeta({
   display: 'related-values',
   display_options: { template },
   special: ['m2o'],
+  required,
 });
 const workflow = (sort = 900) => ({
   publication_status: fieldMeta({
@@ -337,8 +366,8 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
   },
   chapter_update_requests: {
     id: fieldMeta({ sort: 1, width: 'half', interface: 'input', readonly: true, hidden: true }),
-    chapter_slug: relation(2, 'Chapter this request changes. Assigned stewards can create requests only for their chapter.'),
-    title: input(3, 'Short internal review title, for example "Refresh Nigeria chapter links".', 'half'),
+    chapter_slug: relation(2, 'Chapter this request changes. Assigned stewards can create requests only for their chapter.', '{{ name }}', true),
+    title: requiredInput(3, 'Short internal review title, for example "Refresh Nigeria chapter links".', 'half'),
     request_status: fieldMeta({
       sort: 4,
       width: 'half',
@@ -346,14 +375,78 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
       interface: 'select-dropdown',
       options: { choices: REQUEST_STATUS_CHOICES },
       display: 'labels',
+      required: true,
     }),
-    summary: textarea(5, 'Plain-language summary of what should change and why.'),
-    requested_changes: json(6, 'Structured change notes. Recommended keys: summary, links, proofSignals, media, impactSources. Keep private notes out.'),
-    reviewer_notes: textarea(7, 'Publisher review notes. Use this for requested changes or final review context.'),
-    reviewed_by: input(8, 'Reviewer or publisher identifier.', 'half'),
-    reviewed_at: fieldMeta({ sort: 9, width: 'half', interface: 'datetime' }),
-    created_at: fieldMeta({ sort: 10, width: 'half', interface: 'datetime', readonly: true, hidden: true }),
-    updated_at: fieldMeta({ sort: 11, width: 'half', interface: 'datetime', readonly: true, hidden: true }),
+    summary: requiredTextarea(5, 'Plain-language summary of what should change and why.'),
+    proposed_summary: textarea(6, 'Optional replacement text for the public chapter summary. Leave blank if the current summary should stay.'),
+    proposed_primary_link: url(7, 'Optional replacement main public link for the chapter.', 'half'),
+    proposed_image: url(8, 'Optional replacement public image URL.', 'half'),
+    proposed_image_alt: textarea(9, 'Required if proposing a new image. Describe the image for screen readers.'),
+    proposed_image_credit: input(10, 'Optional public credit for the proposed image.', 'half'),
+    links: fieldMeta({
+      sort: 11,
+      note: 'Add public links one row at a time. Prefer this over raw JSON for website, social, program, and contact links.',
+      interface: 'list-o2m',
+      display: 'related-values',
+      display_options: { template: '{{ label }}' },
+      options: { template: '{{ label }}' },
+      readonly: false,
+      hidden: false,
+      width: 'full',
+      special: ['o2m'],
+    }),
+    proof_signals: fieldMeta({
+      sort: 12,
+      note: 'Add public proof signals one row at a time, such as program count, active members, cohorts, or public source-backed impact.',
+      interface: 'list-o2m',
+      display: 'related-values',
+      display_options: { template: '{{ label }}' },
+      options: { template: '{{ label }}' },
+      readonly: false,
+      hidden: false,
+      width: 'full',
+      special: ['o2m'],
+    }),
+    requested_changes: json(13, 'Advanced fallback JSON for unusual changes that do not fit the structured fields above. Keep private notes out.'),
+    reviewer_notes: textarea(14, 'Publisher review notes. Use this for requested changes or final review context.'),
+    reviewed_by: input(15, 'Reviewer or publisher identifier.', 'half'),
+    reviewed_at: fieldMeta({ sort: 16, width: 'half', interface: 'datetime' }),
+    created_at: fieldMeta({ sort: 17, width: 'half', interface: 'datetime', readonly: true, hidden: true }),
+    updated_at: fieldMeta({ sort: 18, width: 'half', interface: 'datetime', readonly: true, hidden: true }),
+  },
+  chapter_update_request_links: {
+    id: fieldMeta({ sort: 1, width: 'half', interface: 'input', readonly: true, hidden: true }),
+    update_request_id: relation(2, 'Parent chapter update request.', '{{ title }}', true),
+    chapter_slug: fieldMeta({ sort: 3, width: 'half', interface: 'input', readonly: true, hidden: true, required: true }),
+    sort_order: number(4, 'Lower numbers appear first.', 'half'),
+    label: requiredInput(5, 'Public label, for example "Chapter website" or "Water Cup updates".', 'half'),
+    url: fieldMeta({
+      sort: 6,
+      width: 'half',
+      note: 'Public URL. Use a complete https:// link.',
+      interface: 'input',
+      options: { iconRight: 'link' },
+      required: true,
+    }),
+    kind: input(7, 'Optional link type, for example website, social, event, program, or contact.', 'half'),
+    subtext: input(8, 'Optional supporting text shown near the link.', 'half'),
+    handle: input(9, 'Optional public social handle.', 'half'),
+    action: input(10, 'Optional action label, for example "Join" or "Learn more".', 'half'),
+    icon: input(11, 'Optional icon token if the website supports one.', 'half'),
+    created_at: fieldMeta({ sort: 12, width: 'half', interface: 'datetime', readonly: true, hidden: true }),
+    updated_at: fieldMeta({ sort: 13, width: 'half', interface: 'datetime', readonly: true, hidden: true }),
+  },
+  chapter_update_request_proof_signals: {
+    id: fieldMeta({ sort: 1, width: 'half', interface: 'input', readonly: true, hidden: true }),
+    update_request_id: relation(2, 'Parent chapter update request.', '{{ title }}', true),
+    chapter_slug: fieldMeta({ sort: 3, width: 'half', interface: 'input', readonly: true, hidden: true, required: true }),
+    sort_order: number(4, 'Lower numbers appear first.', 'half'),
+    label: requiredInput(5, 'Public label, for example "Education program" or "Active contributors".', 'half'),
+    value: requiredInput(6, 'Public value, for example "10 weeks" or "25 contributors".', 'half'),
+    source: input(7, 'Optional public source name.', 'half'),
+    href: url(8, 'Optional public source URL.', 'half'),
+    created_at: fieldMeta({ sort: 9, width: 'half', interface: 'datetime', readonly: true, hidden: true }),
+    updated_at: fieldMeta({ sort: 10, width: 'half', interface: 'datetime', readonly: true, hidden: true }),
   },
   chapter_editor_assignments: {
     id: fieldMeta({ sort: 1, width: 'half', interface: 'input', readonly: true, hidden: true }),

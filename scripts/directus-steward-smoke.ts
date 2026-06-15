@@ -166,6 +166,7 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
   const initiativeSlug = `directus-smoke-initiative-${id}`;
   const projectSlug = `directus-smoke-project-${id}`;
   let updateRequestId: string | null = null;
+  let unassignedUpdateRequestId: string | null = null;
   const cleanup = {
     userId: null,
     chapterAssignmentId: null,
@@ -280,6 +281,50 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
     if (!updateRequestId) throw new Error('Directus did not return a chapter update request id.');
     cleanup.updateRequestCreated = true;
 
+    await steward.request('/items/chapter_update_request_links', {
+      method: 'POST',
+      body: {
+        update_request_id: updateRequestId,
+        label: 'Directus smoke public link',
+        url: 'https://greenpill.network',
+        kind: 'website',
+      },
+    });
+
+    await steward.request('/items/chapter_update_request_proof_signals', {
+      method: 'POST',
+      body: {
+        update_request_id: updateRequestId,
+        label: 'Directus smoke proof signal',
+        value: '1 request',
+        href: 'https://greenpill.network',
+      },
+    });
+
+    const unassignedUpdateRequest = await admin.request('/items/chapter_update_requests', {
+      method: 'POST',
+      body: {
+        chapter_slug: options.unassignedChapter,
+        title: 'Directus Smoke Unassigned Chapter Update',
+        summary: 'Temporary unassigned chapter update request smoke test.',
+        request_status: 'draft',
+      },
+    });
+    unassignedUpdateRequestId = unassignedUpdateRequest?.data?.id;
+    if (!unassignedUpdateRequestId) {
+      throw new Error('Directus did not return an unassigned chapter update request id.');
+    }
+
+    await expectRejected('unassigned chapter update request link create', () => steward.request('/items/chapter_update_request_links', {
+      method: 'POST',
+      body: {
+        update_request_id: unassignedUpdateRequestId,
+        label: 'Blocked Directus smoke public link',
+        url: 'https://greenpill.network',
+        kind: 'website',
+      },
+    }));
+
     await steward.request(`/items/chapter_update_requests/${encodePathSegment(updateRequestId)}`, {
       method: 'PATCH',
       body: {
@@ -338,6 +383,9 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
     };
   } finally {
     if (!options.keep) {
+      if (unassignedUpdateRequestId) {
+        await deleteIfPresent(admin, `/items/chapter_update_requests/${encodePathSegment(unassignedUpdateRequestId)}`);
+      }
       if (updateRequestId) {
         await deleteIfPresent(admin, `/items/chapter_update_requests/${encodePathSegment(updateRequestId)}`);
       }

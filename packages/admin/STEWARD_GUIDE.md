@@ -18,6 +18,21 @@ or website build is published.
 Standard stewards cannot publish, edit unrelated chapters or guilds, view
 private intake/contact data, or change Directus configuration.
 
+## Steward Starter Checklist
+
+Before the steward sync, have these public-safe details ready:
+
+- Current chapter summary or a better short public summary.
+- Primary public link.
+- Public website, social, program, event, or contact links.
+- Proof signals with public sources when available.
+- Public image URL, alt text, and image credit if proposing a new image.
+- Local initiatives, programs, events, campaigns, cleanups, education series, or
+  Water Cup-style work.
+
+Keep private emails, private chat logs, raw notes, wallet-only contact details,
+or unapproved claims out of Directus fields that publish to the website.
+
 ## Account Setup
 
 1. Open the Directus invite email from Greenpill Network.
@@ -52,7 +67,8 @@ content-access assignment TSV and rerun `directus:content-access`.
 5. If the chapter row is editable, update the draft fields and set
    `publication_status` to `pending_review` when ready.
 6. If the chapter row is already published and not editable, create a
-   `Chapter Update Request` instead.
+   `Chapter Update Request` instead. For syncs, the operator may pre-create
+   this draft so you can open it directly.
 
 ## Updating A Published Chapter
 
@@ -64,38 +80,59 @@ Create a request with:
 - `chapter_slug`: your chapter.
 - `title`: short internal title.
 - `summary`: what should change and why.
-- `requested_changes`: structured notes for the publisher.
+- `proposed_summary`: optional replacement public summary.
+- `proposed_primary_link`: optional replacement primary public link.
+- `proposed_image`, `proposed_image_alt`, `proposed_image_credit`: optional
+  replacement public image details.
+- `links`: public links to add or update.
+- `proof_signals`: public proof signals to add or update.
 - `request_status`: use `draft` while editing, then `pending_review`.
 
-Recommended `requested_changes` shape:
+Use the structured link rows instead of raw JSON for normal public links:
 
 ```json
 {
-  "summary": "Replace stale chapter summary with current Water Cup and education work.",
-  "links": [
-    {
-      "label": "Water Cup updates",
-      "url": "https://example.org/public-update",
-      "subtext": "Public program thread"
-    }
-  ],
-  "proofSignals": [
-    {
-      "label": "Education program",
-      "value": "10 weeks",
-      "href": "https://example.org/source"
-    }
-  ],
-  "media": {
-    "image": "https://example.org/photo.jpg",
-    "imageAlt": "Chapter members gathered at a public event.",
-    "imageCredit": "Greenpill chapter"
-  }
+  "label": "Water Cup updates",
+  "url": "https://example.org/public-update",
+  "subtext": "Public program thread",
+  "kind": "program"
 }
 ```
 
-Keep private emails, private chat logs, raw notes, wallet-only contact details,
-or unapproved claims out of the request.
+Use structured proof signal rows for source-backed public claims:
+
+```json
+{
+  "label": "Education program",
+  "value": "10 weeks",
+  "source": "Public program recap",
+  "href": "https://example.org/source"
+}
+```
+
+Use `requested_changes` only as an advanced fallback for unusual edits that do
+not fit the structured fields above.
+
+## Status Flow
+
+Chapter update requests move through this flow:
+
+1. `draft`: steward is still editing.
+2. `pending_review`: steward is ready for publisher review.
+3. `needs_changes`: publisher has asked the steward to revise.
+4. `accepted` or `declined`: publisher completed review.
+5. Publisher applies accepted changes to the chapter record.
+6. The published snapshot or website build is refreshed.
+
+Accepted update requests do not publish the website by themselves. They are the
+review handoff that tells a trusted publisher what to apply.
+
+## Previewing Changes
+
+Directus shows a preview link back to the current public chapter page. This is a
+reference preview, not a proposed-change preview. For now, a trusted publisher
+must apply accepted changes to a local or staging snapshot to verify the final
+public page before publishing.
 
 ## Adding Chapter Initiatives
 
@@ -119,13 +156,15 @@ publisher.
 ## Steward Sync Agenda
 
 1. Confirm everyone has accepted their invite and can log in.
-2. Explain the workflow: draft, pending review, trusted publish, website update.
+2. Explain the workflow: draft, pending review, needs changes or accepted,
+   publisher applies changes, website update.
 3. Show the `Published chapter reference` bookmark.
-4. Walk through chapter basics and fields stewards should avoid changing.
-5. Create a sample `Chapter Update Request` for a published chapter.
-6. Create a sample `Chapter Initiative`.
-7. Show how to move work to `pending_review`.
-8. Explain what publishers will do after the call.
+4. Open a pre-created `Chapter Update Request` draft.
+5. Walk through chapter basics and fields stewards should avoid changing.
+6. Add proposed summary, link, proof signal, and media details.
+7. Create a sample `Chapter Initiative`.
+8. Show how to move work to `pending_review`.
+9. Explain what publishers will do after the call.
 
 ## Operator Prep Checklist
 
@@ -133,14 +172,23 @@ publisher.
 2. Run Directus content setup and Studio setup.
 3. Invite stewards from a TSV.
 4. Assign each steward to a chapter or guild.
-5. Run the steward smoke test.
-6. Prepare one demo chapter and one demo initiative for screen sharing.
+5. Pre-create one `Chapter Update Request` draft per participating chapter:
+
+   ```sh
+   bun scripts/directus-steward-sync-prep.ts --input assignments.tsv
+   ```
+
+6. Send contextual sync copy from `STEWARD_SYNC_INVITE.md` alongside the
+   Directus system invite.
+7. Run the steward smoke test.
+8. Prepare one demo chapter and one demo initiative for screen sharing.
 
 Recommended local validation:
 
 ```sh
 bun run db:migrate
 bun run directus:local:bootstrap
+bun scripts/directus-steward-sync-prep.ts --input assignments.tsv --dry-run
 bun --no-env-file scripts/directus-steward-smoke.ts
 ```
 

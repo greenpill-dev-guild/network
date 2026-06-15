@@ -129,6 +129,11 @@ const CHAPTER_UPDATE_REQUEST_READ_FIELDS = [
   'chapter_slug',
   'title',
   'summary',
+  'proposed_summary',
+  'proposed_primary_link',
+  'proposed_image',
+  'proposed_image_alt',
+  'proposed_image_credit',
   'requested_changes',
   'request_status',
   'reviewer_notes',
@@ -141,9 +146,44 @@ const CHAPTER_UPDATE_REQUEST_WRITE_FIELDS = [
   'chapter_slug',
   'title',
   'summary',
+  'proposed_summary',
+  'proposed_primary_link',
+  'proposed_image',
+  'proposed_image_alt',
+  'proposed_image_credit',
   'requested_changes',
   'request_status',
 ];
+const CHAPTER_UPDATE_REQUEST_LINK_FIELDS = [
+  'id',
+  'update_request_id',
+  'chapter_slug',
+  'sort_order',
+  'label',
+  'url',
+  'subtext',
+  'handle',
+  'action',
+  'icon',
+  'kind',
+  'created_at',
+  'updated_at',
+];
+const CHAPTER_UPDATE_REQUEST_PROOF_SIGNAL_FIELDS = [
+  'id',
+  'update_request_id',
+  'chapter_slug',
+  'sort_order',
+  'label',
+  'value',
+  'source',
+  'href',
+  'created_at',
+  'updated_at',
+];
+const SYSTEM_MANAGED_CHILD_FIELDS = ['id', 'created_at', 'updated_at'];
+const CHILD_CREATE_PRESET_FIELDS = ['chapter_slug'];
+const CHILD_IMMUTABLE_UPDATE_FIELDS = ['chapter_slug', 'update_request_id'];
 
 function contentFields(collection: string, { read = false, update = false } = {}) {
   const fields = OPERATIONAL_COLLECTION_FIELDS[baseCollectionName(collection)] ?? [];
@@ -163,6 +203,20 @@ function chapterUpdateRequestFields({ read = false, update = false } = {}) {
   return update
     ? fields.filter((field) => field !== 'chapter_slug')
     : fields;
+}
+
+function chapterUpdateRequestChildFields(collection: string, { read = false, update = false } = {}) {
+  const fields = baseCollectionName(collection) === 'chapter_update_request_proof_signals'
+    ? CHAPTER_UPDATE_REQUEST_PROOF_SIGNAL_FIELDS
+    : CHAPTER_UPDATE_REQUEST_LINK_FIELDS;
+  if (read) return fields;
+
+  const blocked = new Set([
+    ...SYSTEM_MANAGED_CHILD_FIELDS,
+    ...CHILD_CREATE_PRESET_FIELDS,
+    ...(update ? CHILD_IMMUTABLE_UPDATE_FIELDS : []),
+  ]);
+  return fields.filter((field) => !blocked.has(field));
 }
 
 const statusFilter = (statuses) => ({
@@ -359,6 +413,8 @@ async function resolveCollections(client) {
     chapterAssignments: accessCollections.get('chapter_editor_assignments')!,
     guildAssignments: accessCollections.get('guild_editor_assignments')!,
     chapterUpdateRequests: workflowCollections.get('chapter_update_requests')!,
+    chapterUpdateRequestLinks: workflowCollections.get('chapter_update_request_links')!,
+    chapterUpdateRequestProofSignals: workflowCollections.get('chapter_update_request_proof_signals')!,
   };
 }
 
@@ -519,6 +575,50 @@ export function buildScopedPolicyPermissions(collections, kind: AssignmentKind, 
     const chapterScope = { slug: { _eq: slug } };
     const initiativeScope = { chapter_slug: { _eq: slug } };
     const updateRequestScope = { chapter_slug: { _eq: slug } };
+    const updateRequestChildScope = {
+      _and: [
+        {
+          chapter_slug: {
+            _eq: slug,
+          },
+        },
+        {
+          update_request_id: {
+            request_status: {
+              _in: CHAPTER_UPDATE_REQUEST_UPDATE_STATUSES,
+            },
+          },
+        },
+      ],
+    };
+    const updateRequestChildCreatePermissionScope = {
+      _and: [
+        {
+          chapter_slug: {
+            _eq: slug,
+          },
+        },
+        {
+          update_request_id: {
+            _nnull: true,
+          },
+        },
+      ],
+    };
+    const updateRequestChildCreateValidation = {
+      _and: [
+        {
+          chapter_slug: {
+            _eq: slug,
+          },
+        },
+        {
+          update_request_id: {
+            _nnull: true,
+          },
+        },
+      ],
+    };
     return [
       {
         policy: policyId,
@@ -592,6 +692,49 @@ export function buildScopedPolicyPermissions(collections, kind: AssignmentKind, 
         presets: null,
         fields: chapterUpdateRequestFields({ update: true }),
       },
+      ...[collections.chapterUpdateRequestLinks, collections.chapterUpdateRequestProofSignals].filter(Boolean).flatMap((collection) => {
+        const readFields = chapterUpdateRequestChildFields(collection, { read: true });
+        const createFields = chapterUpdateRequestChildFields(collection);
+        const updateFields = chapterUpdateRequestChildFields(collection, { update: true });
+        return [
+          {
+            policy: policyId,
+            collection,
+            action: 'read',
+            permissions: updateRequestChildScope,
+            validation: null,
+            presets: null,
+            fields: readFields,
+          },
+          {
+            policy: policyId,
+            collection,
+            action: 'create',
+            permissions: updateRequestChildCreatePermissionScope,
+            validation: updateRequestChildCreateValidation,
+            presets: { chapter_slug: slug },
+            fields: createFields,
+          },
+          {
+            policy: policyId,
+            collection,
+            action: 'update',
+            permissions: updateRequestChildScope,
+            validation: updateRequestChildScope,
+            presets: null,
+            fields: updateFields,
+          },
+          {
+            policy: policyId,
+            collection,
+            action: 'delete',
+            permissions: updateRequestChildScope,
+            validation: null,
+            presets: null,
+            fields: readFields,
+          },
+        ];
+      }),
     ];
   }
 
