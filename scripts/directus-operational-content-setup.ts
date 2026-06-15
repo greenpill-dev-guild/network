@@ -25,6 +25,10 @@ export const DIRECTUS_STEWARD_ACCESS_COLLECTIONS = Object.freeze([
   'guild_editor_assignments',
 ]);
 
+export const DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS = Object.freeze([
+  'chapter_update_requests',
+]);
+
 const WORKFLOW_FIELDS = Object.freeze([
   'publication_status',
   'published_at',
@@ -320,6 +324,49 @@ const MAP_NODE_EDIT_TOKEN_TRUSTED_FIELDS = Object.freeze([
   'created_at',
 ]);
 
+const CHAPTER_UPDATE_REQUEST_STATUSES = Object.freeze([
+  'draft',
+  'pending_review',
+  'needs_changes',
+  'accepted',
+  'declined',
+  'archived',
+]);
+
+const CHAPTER_UPDATE_REQUEST_CREATE_STATUSES = Object.freeze([
+  'draft',
+  'pending_review',
+]);
+
+const CHAPTER_UPDATE_REQUEST_READ_FIELDS = Object.freeze([
+  'id',
+  'chapter_slug',
+  'title',
+  'summary',
+  'requested_changes',
+  'request_status',
+  'reviewer_notes',
+  'reviewed_by',
+  'reviewed_at',
+  'created_at',
+  'updated_at',
+]);
+
+const CHAPTER_UPDATE_REQUEST_BASE_WRITE_FIELDS = Object.freeze([
+  'chapter_slug',
+  'title',
+  'summary',
+  'requested_changes',
+  'request_status',
+]);
+
+const CHAPTER_UPDATE_REQUEST_PUBLISHER_WRITE_FIELDS = Object.freeze([
+  ...CHAPTER_UPDATE_REQUEST_BASE_WRITE_FIELDS,
+  'reviewer_notes',
+  'reviewed_by',
+  'reviewed_at',
+]);
+
 function assignmentFields(collection) {
   const baseCollection = baseCollectionName(collection);
   const ownerField = baseCollection === 'guild_editor_assignments' ? 'guild_slug' : 'chapter_slug';
@@ -350,6 +397,57 @@ function assignmentOwnerFilter(collection) {
     };
   }
   return null;
+}
+
+function chapterUpdateRequestStatusFilter(statuses) {
+  return {
+    request_status: {
+      _in: statuses,
+    },
+  };
+}
+
+function buildStewardWorkflowPermissions(collectionNames = []) {
+  const collections = new Map(collectionNames.map((collection) => [baseCollectionName(collection), collection]));
+  const chapterUpdateRequests = collections.get('chapter_update_requests');
+  const permissions = [];
+
+  if (chapterUpdateRequests) {
+    permissions.push(
+      {
+        role: 'Greenpill Trusted Publisher',
+        policy: 'Greenpill Trusted Publisher',
+        collection: chapterUpdateRequests,
+        action: 'read',
+        permissions: null,
+        validation: null,
+        presets: null,
+        fields: CHAPTER_UPDATE_REQUEST_READ_FIELDS,
+      },
+      {
+        role: 'Greenpill Trusted Publisher',
+        policy: 'Greenpill Trusted Publisher',
+        collection: chapterUpdateRequests,
+        action: 'create',
+        permissions: null,
+        validation: chapterUpdateRequestStatusFilter(CHAPTER_UPDATE_REQUEST_CREATE_STATUSES),
+        presets: { request_status: 'draft' },
+        fields: CHAPTER_UPDATE_REQUEST_PUBLISHER_WRITE_FIELDS,
+      },
+      {
+        role: 'Greenpill Trusted Publisher',
+        policy: 'Greenpill Trusted Publisher',
+        collection: chapterUpdateRequests,
+        action: 'update',
+        permissions: null,
+        validation: chapterUpdateRequestStatusFilter(CHAPTER_UPDATE_REQUEST_STATUSES),
+        presets: null,
+        fields: CHAPTER_UPDATE_REQUEST_PUBLISHER_WRITE_FIELDS,
+      }
+    );
+  }
+
+  return permissions;
 }
 
 function buildStewardAccessAssignmentPermissions(collectionNames = []) {
@@ -653,7 +751,8 @@ function buildIntakeModerationPermissions(collectionNames = []) {
 export function buildDirectusOperationalPermissionPlan(
   collectionNames = DIRECTUS_OPERATIONAL_COLLECTIONS,
   intakeCollectionNames = [],
-  stewardAccessCollectionNames = []
+  stewardAccessCollectionNames = [],
+  stewardWorkflowCollectionNames = []
 ) {
   const collections = [...collectionNames];
   const editorStatuses = ['draft', 'pending_review'];
@@ -766,6 +865,7 @@ export function buildDirectusOperationalPermissionPlan(
       ...permissions,
       ...buildIntakeModerationPermissions(intakeCollectionNames),
       ...buildStewardAccessAssignmentPermissions(stewardAccessCollectionNames),
+      ...buildStewardWorkflowPermissions(stewardWorkflowCollectionNames),
       ...buildStewardUserContextPermissions(),
     ],
   };
@@ -995,6 +1095,14 @@ function resolveStewardAccessCollectionNames(availableCollectionNames) {
   );
 }
 
+function resolveStewardWorkflowCollectionNames(availableCollectionNames) {
+  return resolveSchemaCollectionNames(
+    availableCollectionNames,
+    'content',
+    DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS
+  );
+}
+
 async function getAvailableCollectionNames(client) {
   const response = await client.request('/collections?limit=-1');
   return (response?.data ?? []).map((collection) => collection.collection).filter(Boolean);
@@ -1110,6 +1218,7 @@ async function ensureStewardAccessRelations(client, collectionNames) {
   const guilds = collections.get('guilds');
   const projects = collections.get('projects');
   const guildAssignments = collections.get('guild_editor_assignments');
+  const chapterUpdateRequests = collections.get('chapter_update_requests');
 
   if (chapters && chapterAssignments) {
     await ensureRelation(client, {
@@ -1140,6 +1249,19 @@ async function ensureStewardAccessRelations(client, collectionNames) {
       field_many: 'chapter_slug',
       collection_one: chapters,
       field_one: 'initiatives',
+    });
+  }
+
+  if (chapters && chapterUpdateRequests) {
+    await ensureRelation(client, {
+      collection_many: chapterUpdateRequests,
+      field_many: 'chapter_slug',
+      collection_one: chapters,
+      field_one: 'update_requests',
+    });
+    await ensureAliasField(client, chapters, 'update_requests', {
+      options: { template: '{{ title }}' },
+      display_options: { template: '{{ title }}' },
     });
   }
 
@@ -1193,14 +1315,17 @@ export async function applyDirectusOperationalContentAccess(options: {
   const operationalCollections = resolveOperationalCollectionNames(available);
   const intakeCollections = resolveIntakeCollectionNames(available);
   const stewardAccessCollections = resolveStewardAccessCollectionNames(available);
+  const stewardWorkflowCollections = resolveStewardWorkflowCollectionNames(available);
   await ensureStewardAccessRelations(client, [
     ...operationalCollections,
     ...stewardAccessCollections,
+    ...stewardWorkflowCollections,
   ]);
   const plan = buildDirectusOperationalPermissionPlan(
     operationalCollections,
     intakeCollections,
-    stewardAccessCollections
+    stewardAccessCollections,
+    stewardWorkflowCollections
   );
 
   const roles = new Map();
@@ -1225,6 +1350,7 @@ export async function applyDirectusOperationalContentAccess(options: {
     ...operationalCollections,
     ...intakeCollections,
     ...stewardAccessCollections,
+    ...stewardWorkflowCollections,
   ]);
 
   for (const permission of plan.permissions) {
@@ -1247,6 +1373,7 @@ export async function applyDirectusOperationalContentAccess(options: {
       ...operationalCollections,
       ...intakeCollections,
       ...stewardAccessCollections,
+      ...stewardWorkflowCollections,
     ],
     roles: [...roles.keys()],
     policies: [...policies.keys()],

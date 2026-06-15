@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import {
   DIRECTUS_STEWARD_ACCESS_COLLECTIONS,
+  DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS,
   createDirectusClient,
 } from './directus-operational-content-setup.ts';
 
@@ -26,6 +27,8 @@ type AssignOptions = {
 const DEFAULT_STEWARD_ROLE = 'Greenpill Steward Editor';
 const DEFAULT_OPERATOR_ROLE = 'Greenpill Operator';
 const EDITOR_STATUSES = ['draft', 'pending_review'];
+const CHAPTER_UPDATE_REQUEST_CREATE_STATUSES = ['draft', 'pending_review'];
+const CHAPTER_UPDATE_REQUEST_UPDATE_STATUSES = ['draft', 'pending_review', 'needs_changes'];
 
 const OPERATIONAL_COLLECTION_FIELDS = Object.freeze({
   chapters: [
@@ -121,6 +124,26 @@ const OPERATIONAL_COLLECTION_FIELDS = Object.freeze({
 
 const WORKFLOW_READ_FIELDS = ['publication_status', 'published_at', 'reviewed_at', 'reviewed_by', 'created_at', 'updated_at', 'data'];
 const SCOPED_EDITOR_IMMUTABLE_UPDATE_FIELDS = ['slug', 'chapter_slug', 'guild_slug'];
+const CHAPTER_UPDATE_REQUEST_READ_FIELDS = [
+  'id',
+  'chapter_slug',
+  'title',
+  'summary',
+  'requested_changes',
+  'request_status',
+  'reviewer_notes',
+  'reviewed_by',
+  'reviewed_at',
+  'created_at',
+  'updated_at',
+];
+const CHAPTER_UPDATE_REQUEST_WRITE_FIELDS = [
+  'chapter_slug',
+  'title',
+  'summary',
+  'requested_changes',
+  'request_status',
+];
 
 function contentFields(collection: string, { read = false, update = false } = {}) {
   const fields = OPERATIONAL_COLLECTION_FIELDS[baseCollectionName(collection)] ?? [];
@@ -135,8 +158,21 @@ function contentCreateFields(collection: string, lockedFields: string[] = []) {
   return contentFields(collection).filter((field) => !lockedFields.includes(field));
 }
 
+function chapterUpdateRequestFields({ read = false, update = false } = {}) {
+  const fields = read ? CHAPTER_UPDATE_REQUEST_READ_FIELDS : CHAPTER_UPDATE_REQUEST_WRITE_FIELDS;
+  return update
+    ? fields.filter((field) => field !== 'chapter_slug')
+    : fields;
+}
+
 const statusFilter = (statuses) => ({
   publication_status: {
+    _in: statuses,
+  },
+});
+
+const requestStatusFilter = (statuses) => ({
+  request_status: {
     _in: statuses,
   },
 });
@@ -308,6 +344,12 @@ async function resolveCollections(client) {
       resolveSchemaCollectionName(available, 'content', collection),
     ])
   );
+  const workflowCollections = new Map(
+    DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS.map((collection) => [
+      collection,
+      resolveSchemaCollectionName(available, 'content', collection),
+    ])
+  );
 
   return {
     chapters: resolveSchemaCollectionName(available, 'content', 'chapters'),
@@ -316,6 +358,7 @@ async function resolveCollections(client) {
     projects: resolveSchemaCollectionName(available, 'content', 'projects'),
     chapterAssignments: accessCollections.get('chapter_editor_assignments')!,
     guildAssignments: accessCollections.get('guild_editor_assignments')!,
+    chapterUpdateRequests: workflowCollections.get('chapter_update_requests')!,
   };
 }
 
@@ -475,6 +518,7 @@ export function buildScopedPolicyPermissions(collections, kind: AssignmentKind, 
   if (kind === 'chapter') {
     const chapterScope = { slug: { _eq: slug } };
     const initiativeScope = { chapter_slug: { _eq: slug } };
+    const updateRequestScope = { chapter_slug: { _eq: slug } };
     return [
       {
         policy: policyId,
@@ -520,6 +564,33 @@ export function buildScopedPolicyPermissions(collections, kind: AssignmentKind, 
         validation: statusFilter(EDITOR_STATUSES),
         presets: null,
         fields: contentFields(collections.chapterInitiatives, { update: true }),
+      },
+      {
+        policy: policyId,
+        collection: collections.chapterUpdateRequests,
+        action: 'read',
+        permissions: andFilter(requestStatusFilter(CHAPTER_UPDATE_REQUEST_UPDATE_STATUSES), updateRequestScope),
+        validation: null,
+        presets: null,
+        fields: chapterUpdateRequestFields({ read: true }),
+      },
+      {
+        policy: policyId,
+        collection: collections.chapterUpdateRequests,
+        action: 'create',
+        permissions: andFilter(requestStatusFilter(CHAPTER_UPDATE_REQUEST_CREATE_STATUSES), updateRequestScope),
+        validation: requestStatusFilter(CHAPTER_UPDATE_REQUEST_CREATE_STATUSES),
+        presets: { request_status: 'draft', chapter_slug: slug },
+        fields: chapterUpdateRequestFields().filter((field) => field !== 'chapter_slug'),
+      },
+      {
+        policy: policyId,
+        collection: collections.chapterUpdateRequests,
+        action: 'update',
+        permissions: andFilter(requestStatusFilter(CHAPTER_UPDATE_REQUEST_UPDATE_STATUSES), updateRequestScope),
+        validation: requestStatusFilter(CHAPTER_UPDATE_REQUEST_UPDATE_STATUSES),
+        presets: null,
+        fields: chapterUpdateRequestFields({ update: true }),
       },
     ];
   }

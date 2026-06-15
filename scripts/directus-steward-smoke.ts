@@ -139,6 +139,17 @@ async function expectForbidden(label: string, action: () => Promise<unknown>) {
   throw new Error(`${label} unexpectedly succeeded.`);
 }
 
+async function expectRejected(label: string, action: () => Promise<unknown>, statuses = [400, 403]) {
+  try {
+    await action();
+  } catch (error) {
+    const message = String(error instanceof Error ? error.message : error);
+    if (statuses.some((status) => message.includes(` failed with ${status}:`))) return;
+    throw error;
+  }
+  throw new Error(`${label} unexpectedly succeeded.`);
+}
+
 async function deleteIfPresent(client, path: string) {
   await client.request(path, {
     method: 'DELETE',
@@ -154,12 +165,14 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
   const token = tokenValue();
   const initiativeSlug = `directus-smoke-initiative-${id}`;
   const projectSlug = `directus-smoke-project-${id}`;
+  let updateRequestId: string | null = null;
   const cleanup = {
     userId: null,
     chapterAssignmentId: null,
     guildAssignmentId: null,
     initiativeCreated: false,
     projectCreated: false,
+    updateRequestCreated: false,
   };
 
   await assertContentExists(admin, 'chapters', options.chapter);
@@ -252,6 +265,47 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
       },
     }));
 
+    const updateRequest = await steward.request('/items/chapter_update_requests', {
+      method: 'POST',
+      body: {
+        title: 'Directus Smoke Chapter Update',
+        summary: 'Temporary scoped chapter update request smoke test.',
+        requested_changes: {
+          summary: 'Temporary scoped update request.',
+        },
+        request_status: 'draft',
+      },
+    });
+    updateRequestId = updateRequest?.data?.id;
+    if (!updateRequestId) throw new Error('Directus did not return a chapter update request id.');
+    cleanup.updateRequestCreated = true;
+
+    await steward.request(`/items/chapter_update_requests/${encodePathSegment(updateRequestId)}`, {
+      method: 'PATCH',
+      body: {
+        request_status: 'pending_review',
+      },
+    });
+
+    await expectRejected('chapter update request needs_changes create', () => steward.request('/items/chapter_update_requests', {
+      method: 'POST',
+      body: {
+        title: 'Blocked Directus Smoke Chapter Update Status',
+        summary: 'Temporary blocked scoped chapter update request status.',
+        request_status: 'needs_changes',
+      },
+    }));
+
+    await expectForbidden('unassigned chapter update request create', () => steward.request('/items/chapter_update_requests', {
+      method: 'POST',
+      body: {
+        chapter_slug: options.unassignedChapter,
+        title: 'Blocked Directus Smoke Chapter Update',
+        summary: 'Temporary blocked scoped chapter update request.',
+        request_status: 'draft',
+      },
+    }));
+
     await steward.request('/items/projects', {
       method: 'POST',
       body: {
@@ -280,9 +334,13 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
       guild: options.guild,
       initiativeSlug,
       projectSlug,
+      updateRequestId,
     };
   } finally {
     if (!options.keep) {
+      if (updateRequestId) {
+        await deleteIfPresent(admin, `/items/chapter_update_requests/${encodePathSegment(updateRequestId)}`);
+      }
       await deleteIfPresent(admin, `/items/chapter_initiatives/${encodePathSegment(initiativeSlug)}`);
       await deleteIfPresent(admin, `/items/projects/${encodePathSegment(projectSlug)}`);
       if (cleanup.chapterAssignmentId) {
@@ -307,6 +365,7 @@ async function main() {
   console.log(`Assigned guild: ${result.guild}`);
   console.log(`Temporary initiative: ${result.initiativeSlug}`);
   console.log(`Temporary project: ${result.projectSlug}`);
+  console.log(`Temporary chapter update request: ${result.updateRequestId}`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {

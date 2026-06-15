@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import {
   DIRECTUS_OPERATIONAL_COLLECTIONS,
   DIRECTUS_STEWARD_ACCESS_COLLECTIONS,
+  DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS,
   createDirectusClient,
 } from './directus-operational-content-setup.ts';
 
@@ -28,6 +29,7 @@ const OPERATIONAL_COLLECTION_META = Object.freeze({
     icon: 'location_city',
     note: 'Chapter profiles. Stewards can edit assigned draft or review-ready records.',
     display_template: '{{ name }}',
+    preview_url: 'https://greenpill.network/chapters/{{ slug }}',
   },
   chapter_initiatives: {
     hidden: false,
@@ -69,10 +71,32 @@ const ACCESS_COLLECTION_META = Object.freeze({
   },
 });
 
+const STEWARD_WORKFLOW_COLLECTION_META = Object.freeze({
+  chapter_update_requests: {
+    hidden: false,
+    singleton: false,
+    icon: 'edit_document',
+    note: 'Steward-requested edits to live chapter profiles. Use this when a published chapter should stay online during review.',
+    display_template: '{{ title }}',
+    archive_field: 'request_status',
+    archive_value: 'archived',
+    unarchive_value: 'draft',
+  },
+});
+
 const PUBLICATION_STATUS_CHOICES = Object.freeze([
   { text: 'Draft', value: 'draft' },
   { text: 'Pending Review', value: 'pending_review' },
   { text: 'Published', value: 'published' },
+  { text: 'Archived', value: 'archived' },
+]);
+
+const REQUEST_STATUS_CHOICES = Object.freeze([
+  { text: 'Draft', value: 'draft' },
+  { text: 'Pending Review', value: 'pending_review' },
+  { text: 'Needs Changes', value: 'needs_changes' },
+  { text: 'Accepted', value: 'accepted' },
+  { text: 'Declined', value: 'declined' },
   { text: 'Archived', value: 'archived' },
 ]);
 
@@ -311,6 +335,26 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
     seo: json(16, 'Optional SEO controls.'),
     ...workflow(),
   },
+  chapter_update_requests: {
+    id: fieldMeta({ sort: 1, width: 'half', interface: 'input', readonly: true, hidden: true }),
+    chapter_slug: relation(2, 'Chapter this request changes. Assigned stewards can create requests only for their chapter.'),
+    title: input(3, 'Short internal review title, for example "Refresh Nigeria chapter links".', 'half'),
+    request_status: fieldMeta({
+      sort: 4,
+      width: 'half',
+      note: 'Stewards use Draft while editing and Pending Review when ready. Publishers use Needs Changes, Accepted, Declined, or Archived.',
+      interface: 'select-dropdown',
+      options: { choices: REQUEST_STATUS_CHOICES },
+      display: 'labels',
+    }),
+    summary: textarea(5, 'Plain-language summary of what should change and why.'),
+    requested_changes: json(6, 'Structured change notes. Recommended keys: summary, links, proofSignals, media, impactSources. Keep private notes out.'),
+    reviewer_notes: textarea(7, 'Publisher review notes. Use this for requested changes or final review context.'),
+    reviewed_by: input(8, 'Reviewer or publisher identifier.', 'half'),
+    reviewed_at: fieldMeta({ sort: 9, width: 'half', interface: 'datetime' }),
+    created_at: fieldMeta({ sort: 10, width: 'half', interface: 'datetime', readonly: true, hidden: true }),
+    updated_at: fieldMeta({ sort: 11, width: 'half', interface: 'datetime', readonly: true, hidden: true }),
+  },
   chapter_editor_assignments: {
     id: fieldMeta({ sort: 1, width: 'half', interface: 'input', readonly: true, hidden: true }),
     chapter_slug: relation(2, 'Chapter this user can edit.'),
@@ -365,17 +409,21 @@ function encodePathSegment(segment) {
 
 export function buildDirectusStudioMetadataPlan(
   operationalCollectionNames = DIRECTUS_OPERATIONAL_COLLECTIONS,
-  accessCollectionNames = DIRECTUS_STEWARD_ACCESS_COLLECTIONS
+  accessCollectionNames = DIRECTUS_STEWARD_ACCESS_COLLECTIONS,
+  workflowCollectionNames = DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS
 ) {
   const collections = [
     ...operationalCollectionNames,
     ...accessCollectionNames,
+    ...workflowCollectionNames,
   ];
 
   return {
     collections: collections.map((collection) => {
       const base = cleanCollectionName(collection);
-      const meta = OPERATIONAL_COLLECTION_META[base] ?? ACCESS_COLLECTION_META[base];
+      const meta = OPERATIONAL_COLLECTION_META[base] ??
+        ACCESS_COLLECTION_META[base] ??
+        STEWARD_WORKFLOW_COLLECTION_META[base];
       if (!meta) throw new Error(`Missing Directus Studio collection metadata for ${base}.`);
       return {
         collection,
@@ -408,6 +456,74 @@ export function buildDirectusStudioMetadataPlan(
       }));
     }),
   };
+}
+
+const STUDIO_BOOKMARKS = Object.freeze([
+  {
+    role: 'Greenpill Steward Editor',
+    collection: 'chapters',
+    bookmark: 'Published chapter reference',
+    icon: 'visibility',
+    color: '#2f7d32',
+    filter: { publication_status: { _eq: 'published' } },
+    fields: ['name', 'city', 'country', 'publication_status', 'updated_at'],
+  },
+  {
+    role: 'Greenpill Steward Editor',
+    collection: 'chapter_initiatives',
+    bookmark: 'My draft initiatives',
+    icon: 'local_activity',
+    color: '#6a6a00',
+    filter: { publication_status: { _in: ['draft', 'pending_review'] } },
+    fields: ['title', 'chapter_slug', 'publication_status', 'updated_at'],
+  },
+  {
+    role: 'Greenpill Steward Editor',
+    collection: 'chapter_update_requests',
+    bookmark: 'My chapter change requests',
+    icon: 'edit_document',
+    color: '#7d4f00',
+    filter: { request_status: { _in: ['draft', 'pending_review', 'needs_changes'] } },
+    fields: ['title', 'chapter_slug', 'request_status', 'updated_at'],
+  },
+  {
+    role: 'Greenpill Trusted Publisher',
+    collection: 'chapter_update_requests',
+    bookmark: 'Pending chapter reviews',
+    icon: 'rate_review',
+    color: '#005c8a',
+    filter: { request_status: { _eq: 'pending_review' } },
+    fields: ['title', 'chapter_slug', 'request_status', 'updated_at'],
+  },
+]);
+
+export function buildDirectusStudioBookmarkPlan(collectionNames = [
+  ...DIRECTUS_OPERATIONAL_COLLECTIONS,
+  ...DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS,
+]) {
+  const collectionByBase = new Map(collectionNames.map((collection) => [cleanCollectionName(collection), collection]));
+
+  return STUDIO_BOOKMARKS
+    .filter((bookmark) => collectionByBase.has(bookmark.collection))
+    .map((bookmark) => ({
+      role: bookmark.role,
+      collection: collectionByBase.get(bookmark.collection),
+      bookmark: bookmark.bookmark,
+      icon: bookmark.icon,
+      color: bookmark.color,
+      filter: bookmark.filter,
+      layout: 'tabular',
+      layout_query: {
+        tabular: {
+          fields: bookmark.fields,
+        },
+      },
+      layout_options: {
+        tabular: {
+          widths: {},
+        },
+      },
+    }));
 }
 
 async function getAvailableCollectionNames(client) {
@@ -463,6 +579,79 @@ async function patchFieldMeta(client, fieldPlan, relationKeys) {
   });
 }
 
+async function getRoleIdsByName(client, roleNames) {
+  const response = await client.request('/roles?limit=-1&fields=id,name');
+  const roleIds = new Map();
+  const wanted = new Set(roleNames);
+  for (const role of response?.data ?? []) {
+    if (wanted.has(role.name)) {
+      roleIds.set(role.name, role.id);
+    }
+  }
+  return roleIds;
+}
+
+async function upsertBookmarkPreset(client, bookmarkPlan, roleIds) {
+  const roleId = roleIds.get(bookmarkPlan.role);
+  if (!roleId) {
+    console.warn(`Skipped Directus bookmark "${bookmarkPlan.bookmark}" because role was not found: ${bookmarkPlan.role}`);
+    return null;
+  }
+
+  const params = new URLSearchParams();
+  params.set('filter[role][_eq]', roleId);
+  params.set('filter[collection][_eq]', bookmarkPlan.collection);
+  params.set('filter[bookmark][_eq]', bookmarkPlan.bookmark);
+  params.set('limit', '1');
+
+  const payload = {
+    bookmark: bookmarkPlan.bookmark,
+    role: roleId,
+    user: null,
+    collection: bookmarkPlan.collection,
+    search: null,
+    layout: bookmarkPlan.layout,
+    layout_query: bookmarkPlan.layout_query,
+    layout_options: bookmarkPlan.layout_options,
+    refresh_interval: null,
+    filter: bookmarkPlan.filter,
+    icon: bookmarkPlan.icon,
+    color: bookmarkPlan.color,
+  };
+
+  const existing = await client.request(`/presets?${params.toString()}`);
+  const item = existing?.data?.[0];
+  if (item?.id) {
+    const updated = await client.request(`/presets/${encodePathSegment(item.id)}`, {
+      method: 'PATCH',
+      body: payload,
+    });
+    return updated?.data ?? item;
+  }
+
+  const created = await client.request('/presets', {
+    method: 'POST',
+    body: payload,
+  });
+  return created?.data;
+}
+
+async function applyDirectusStudioBookmarks(client, collectionNames) {
+  const bookmarks = buildDirectusStudioBookmarkPlan(collectionNames);
+  const roleIds = await getRoleIdsByName(client, [...new Set(bookmarks.map((bookmark) => bookmark.role))]);
+  let applied = 0;
+
+  for (const bookmark of bookmarks) {
+    const result = await upsertBookmarkPreset(client, bookmark, roleIds);
+    if (result) {
+      applied += 1;
+      console.log(`Bookmark: ${bookmark.role} / ${bookmark.collection} / ${bookmark.bookmark}`);
+    }
+  }
+
+  return applied;
+}
+
 export async function applyDirectusStudioMetadata(options: {
   client?: Awaited<ReturnType<typeof createDirectusClient>>;
   [key: string]: any;
@@ -471,7 +660,8 @@ export async function applyDirectusStudioMetadata(options: {
   const available = await getAvailableCollectionNames(client);
   const operationalCollections = resolveSchemaCollectionNames(available, 'content', DIRECTUS_OPERATIONAL_COLLECTIONS);
   const accessCollections = resolveSchemaCollectionNames(available, 'content', DIRECTUS_STEWARD_ACCESS_COLLECTIONS);
-  const plan = buildDirectusStudioMetadataPlan(operationalCollections, accessCollections);
+  const workflowCollections = resolveSchemaCollectionNames(available, 'content', DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS);
+  const plan = buildDirectusStudioMetadataPlan(operationalCollections, accessCollections, workflowCollections);
   const relationKeys = await getRelationKeys(client);
 
   for (const collection of plan.collections) {
@@ -484,10 +674,16 @@ export async function applyDirectusStudioMetadata(options: {
     console.log(`Field metadata: ${field.collection}.${field.field}`);
   }
 
+  const bookmarks = await applyDirectusStudioBookmarks(client, [
+    ...operationalCollections,
+    ...workflowCollections,
+  ]);
+
   return {
     url: client.url,
     collections: plan.collections.length,
     fields: plan.fields.length,
+    bookmarks,
   };
 }
 
@@ -496,6 +692,7 @@ async function main() {
   console.log(`Configured Directus Studio metadata at ${result.url}`);
   console.log(`Collections: ${result.collections}`);
   console.log(`Fields: ${result.fields}`);
+  console.log(`Bookmarks: ${result.bookmarks}`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {

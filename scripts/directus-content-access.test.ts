@@ -50,7 +50,8 @@ test('operational permission plan keeps base steward role read-only for operatio
   const plan = buildDirectusOperationalPermissionPlan(
     ['themes', 'people', 'chapters', 'chapter_initiatives', 'guilds', 'projects'],
     [],
-    ['chapter_editor_assignments', 'guild_editor_assignments']
+    ['chapter_editor_assignments', 'guild_editor_assignments'],
+    ['chapter_update_requests']
   );
 
   const stewardPermissions = plan.permissions.filter((permission) => permission.policy === 'Greenpill Steward Editor');
@@ -74,12 +75,34 @@ test('operational permission plan keeps base steward role read-only for operatio
     'chapter_editor_assignments',
     'guild_editor_assignments',
   ]);
+
+  const publisherRequestReview = plan.permissions.find(
+    (permission) => permission.collection === 'chapter_update_requests' &&
+      permission.action === 'update' &&
+      permission.policy === 'Greenpill Trusted Publisher'
+  );
+  const publisherRequestCreate = plan.permissions.find(
+    (permission) => permission.collection === 'chapter_update_requests' &&
+      permission.action === 'create' &&
+      permission.policy === 'Greenpill Trusted Publisher'
+  );
+  assert.deepEqual(publisherRequestCreate?.validation, {
+    request_status: {
+      _in: ['draft', 'pending_review'],
+    },
+  });
+  assert.deepEqual(publisherRequestReview?.validation, {
+    request_status: {
+      _in: ['draft', 'pending_review', 'needs_changes', 'accepted', 'declined', 'archived'],
+    },
+  });
 });
 
 test('scoped chapter and guild policies use static parent filters', () => {
   const collections = {
     chapters: 'chapters',
     chapterInitiatives: 'chapter_initiatives',
+    chapterUpdateRequests: 'chapter_update_requests',
     guilds: 'guilds',
     projects: 'projects',
   };
@@ -136,6 +159,35 @@ test('scoped chapter and guild policies use static parent filters', () => {
   assert.deepEqual(initiativeUpdate?.validation, {
     publication_status: {
       _in: ['draft', 'pending_review'],
+    },
+  });
+
+  const updateRequestCreate = chapterPermissions.find(
+    (permission) => permission.collection === 'chapter_update_requests' && permission.action === 'create'
+  );
+  assert.deepEqual(updateRequestCreate?.permissions._and[1], {
+    chapter_slug: {
+      _eq: 'brasil',
+    },
+  });
+  assert.equal(updateRequestCreate?.fields.includes('chapter_slug'), false);
+  assert.deepEqual(updateRequestCreate?.presets, {
+    request_status: 'draft',
+    chapter_slug: 'brasil',
+  });
+  assert.deepEqual(updateRequestCreate?.validation, {
+    request_status: {
+      _in: ['draft', 'pending_review'],
+    },
+  });
+
+  const updateRequestUpdate = chapterPermissions.find(
+    (permission) => permission.collection === 'chapter_update_requests' && permission.action === 'update'
+  );
+  assert.equal(updateRequestUpdate?.fields.includes('chapter_slug'), false);
+  assert.deepEqual(updateRequestUpdate?.validation, {
+    request_status: {
+      _in: ['draft', 'pending_review', 'needs_changes'],
     },
   });
 
