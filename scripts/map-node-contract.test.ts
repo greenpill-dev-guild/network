@@ -1081,3 +1081,51 @@ test('home map location picker is pin-first with a bundled city autocomplete', a
   // The either/or mode toggle is gone — pin map and city field show together.
   assert.doesNotMatch(component, /data-location-mode-toggle/);
 });
+
+test('home map clusters co-located people: zoom/fan on desktop, list sheet on mobile', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+
+  // Cluster layer + mobile list sheet exist in the rendered markup.
+  assert.match(component, /data-home-map-clusters/);
+  assert.match(component, /data-home-map-cluster-sheet/);
+  assert.match(component, /data-cluster-sheet-list/);
+
+  // Overlapping pins collapse into a count bubble that is a real, labelled button.
+  assert.match(component, /const recomputeClustersNow = \(\)/);
+  assert.match(component, /const groupPins =/);
+  assert.match(component, /renderClusterBubble/);
+  assert.match(component, /group\.setAttribute\('role', 'button'\)/);
+  assert.match(component, /Activate to expand/);
+
+  // Clustered pins are hidden AND removed from the tab order + accessibility tree.
+  assert.match(component, /el\.classList\.toggle\('is-clustered', clustered\)/);
+  assert.match(component, /el\.setAttribute\('tabindex', clustered \? '-1' : '0'\)/);
+  assert.match(component, /setAttribute\('aria-hidden', 'true'\)/);
+
+  // Desktop: coincident groups fan out with leaders; spread-out groups zoom.
+  assert.match(component, /const groupIsCoincident =/);
+  assert.match(component, /fanOutCluster\(members, center, viaKeyboard\)/);
+  assert.match(component, /framePoints\(members\.map\(\(m\) => m\.center\)/);
+  assert.match(component, /gp-home-map-cluster-leader/);
+  assert.match(component, /gp-home-map-cluster-sat/);
+
+  // Mobile (touch / narrow): a bottom-sheet list instead of fan-out.
+  assert.match(component, /isTouchMap\(\)\) \{\s*openClusterSheet/);
+  assert.match(component, /gp-home-map-cluster-sheet-item/);
+
+  // Keyboard: Enter/Space activate the bubble and satellites.
+  assert.match(component, /event\.key === 'Enter' \|\| event\.key === ' '/);
+
+  // Astro-scope every JS-created styled element, or the scoped CSS misses it.
+  assert.match(component, /applyScope\(text\)/);
+  assert.match(component, /applyScope\(button\)/);
+  assert.match(component, /applyScope\(leader\)/);
+
+  // One-shot motion only — no idle/looping cluster animation; reduced-motion safe.
+  assert.match(component, /@keyframes gpMapClusterPop/);
+  assert.doesNotMatch(component, /gpMapClusterPop[^;]*infinite/);
+  assert.match(component, /reducedMotionPref\(\)/);
+});

@@ -227,6 +227,10 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           build time so the map renders and degrades gracefully when the agent
           is unavailable. */}
       <g class="gp-home-map-members" data-home-map-members></g>
+
+      {/* Cluster bubbles + fan-out satellites for co-located people pins.
+          Rendered client-side above the people layer; empty at build time. */}
+      <g class="gp-home-map-clusters" data-home-map-clusters></g>
     </svg>
 
     {/* Visible counts reflect the current filtered map view. Chapters render
@@ -299,6 +303,26 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         </p>
       </div>
       <p class="gp-home-map-selected-live gp-home-map-sr" data-selected-live aria-live="polite"></p>
+    </div>
+
+    {/* Mobile cluster list — on touch/narrow viewports, tapping a cluster bubble
+        opens this bottom sheet listing the co-located people. Desktop fans out
+        on the map instead. Populated by the inline script. */}
+    <div
+      class="gp-home-map-cluster-sheet"
+      data-home-map-cluster-sheet
+      hidden
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby="gp-home-map-cluster-sheet-title"
+    >
+      <div class="gp-home-map-cluster-sheet-head">
+        <p class="gp-home-map-cluster-sheet-title" id="gp-home-map-cluster-sheet-title" data-cluster-sheet-title>People here</p>
+        <button type="button" class="gp-home-map-cluster-sheet-close" data-cluster-sheet-close aria-label="Close people list">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <ul class="gp-home-map-cluster-sheet-list" data-cluster-sheet-list></ul>
     </div>
 
     <div class="gp-home-map-controls" data-home-map-controls aria-label="Map controls">
@@ -750,6 +774,10 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const MIN_VIEW_BOX_WIDTH = 46;
     const viewBoxAspect = VIEW_W / VIEW_H;
     let currentViewBox: MapViewBox = { ...FULL_VIEW_BOX };
+    // Cluster recompute hook — assigned once the clustering module initializes.
+    // Declared here (before setMapViewBox) so the viewBox setter can poke it
+    // without a temporal-dead-zone error during the initial render.
+    let clusterDirty: () => void = () => {};
 
     const formatViewBox = (box: MapViewBox) => (
       `${box.x.toFixed(2)} ${box.y.toFixed(2)} ${box.width.toFixed(2)} ${box.height.toFixed(2)}`
@@ -773,6 +801,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       svgEl?.setAttribute('viewBox', formatViewBox(currentViewBox));
       root.classList.toggle('is-zoomed', currentViewBox.width < VIEW_W - 0.5);
       syncSelectedOverlay();
+      clusterDirty();
     };
 
     const setMapViewBoxCentered = (cx: number, cy: number, width: number) => {
@@ -1902,6 +1931,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         markSelectedThreads(selectedId);
         renderSelectedEdgeList(selectedId);
       }
+      clusterDirty();
     };
 
     filterToggleButtons.forEach((button) => {
@@ -2186,6 +2216,293 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       }
       applyMapFilters();
     };
+
+    // ---- Close-together clustering ------------------------------------------
+    // Same-city people share an identical coordinate, so their pins stack into an
+    // unreadable blob. They collapse into one count bubble while overlapping.
+    // Desktop: clicking zooms into a spread-out group, or fans out exact overlaps
+    // with leader lines. Touch/narrow: a bottom-sheet list. Client-only — no
+    // /map/state change. One-shot motion only; honours reduced-motion.
+    const clustersGroup = root.querySelector('[data-home-map-clusters]') as SVGGElement | null;
+    const clusterSheet = root.querySelector('[data-home-map-cluster-sheet]') as HTMLElement | null;
+    const clusterSheetList = root.querySelector('[data-cluster-sheet-list]') as HTMLElement | null;
+    const clusterSheetTitle = root.querySelector('[data-cluster-sheet-title]') as HTMLElement | null;
+    const clusterSheetCloseBtn = root.querySelector('[data-cluster-sheet-close]') as HTMLButtonElement | null;
+
+    const CLUSTER_COLLAPSE_PX = 26; // pins closer than this (screen px) merge
+    const CLUSTER_FAN_RADIUS_PX = 34; // fan-out satellite ring radius (screen px)
+
+    type ClusterMember = { el: Element; key: string; center: { x: number; y: number } };
+    let activeFan: ClusterMember[] | null = null;
+    let clusterReturnFocus: HTMLElement | null = null;
+    let clusterRecomputeTimer = 0;
+
+    const reducedMotionPref = () =>
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const pxToViewBox = (px: number) => px / clientScaleForBox(currentViewBox);
+    const pxToViewBoxAt = (px: number, width: number) =>
+      px / clientScaleForBox({ x: 0, y: 0, width, height: width / viewBoxAspect });
+    const pointDistance = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+      Math.hypot(a.x - b.x, a.y - b.y);
+
+    const visiblePeoplePins = (): ClusterMember[] => {
+      if (!membersGroup) return [];
+      const out: ClusterMember[] = [];
+      membersGroup.querySelectorAll('.gp-home-map-node-link:not(.is-filtered-out)').forEach((el) => {
+        const center = nodeCenter(el);
+        const key = el.getAttribute('data-node-id') || '';
+        if (center && key) out.push({ el, key, center });
+      });
+      return out;
+    };
+
+    // Greedy single-link grouping by current-zoom screen distance.
+    const groupPins = (pins: ClusterMember[]): ClusterMember[][] => {
+      const threshold = pxToViewBox(CLUSTER_COLLAPSE_PX);
+      const used = new Set<number>();
+      const groups: ClusterMember[][] = [];
+      for (let i = 0; i < pins.length; i += 1) {
+        if (used.has(i)) continue;
+        const group = [pins[i]];
+        used.add(i);
+        for (let j = i + 1; j < pins.length; j += 1) {
+          if (used.has(j)) continue;
+          if (group.some((m) => pointDistance(m.center, pins[j].center) <= threshold)) {
+            group.push(pins[j]);
+            used.add(j);
+          }
+        }
+        groups.push(group);
+      }
+      return groups;
+    };
+
+    const centroidOf = (members: ClusterMember[]) => ({
+      x: members.reduce((s, m) => s + m.center.x, 0) / members.length,
+      y: members.reduce((s, m) => s + m.center.y, 0) / members.length,
+    });
+
+    // A group is "coincident" when it would still collapse even fully zoomed in —
+    // same-city pins on an identical coordinate that zoom can't separate. Those
+    // fan out instead of zooming.
+    const groupIsCoincident = (members: ClusterMember[]) => {
+      const c = centroidOf(members);
+      const maxSpread = members.reduce((m, p) => Math.max(m, pointDistance(p.center, c)), 0);
+      return maxSpread <= pxToViewBoxAt(CLUSTER_COLLAPSE_PX, MIN_VIEW_BOX_WIDTH);
+    };
+
+    const clusterPlaceLabel = (members: ClusterMember[]) => {
+      const counts = new Map<string, number>();
+      members.forEach((m) => {
+        const place = clean(m.el.getAttribute('data-node-place'));
+        if (place) counts.set(place, (counts.get(place) ?? 0) + 1);
+      });
+      let best = '';
+      let bestN = 0;
+      counts.forEach((n, place) => {
+        if (n > bestN) {
+          bestN = n;
+          best = place;
+        }
+      });
+      return best;
+    };
+
+    const setPinClustered = (el: Element, clustered: boolean) => {
+      el.classList.toggle('is-clustered', clustered);
+      el.setAttribute('tabindex', clustered ? '-1' : '0');
+      if (clustered) el.setAttribute('aria-hidden', 'true');
+      else el.removeAttribute('aria-hidden');
+    };
+
+    const clearClusters = () => {
+      clustersGroup?.replaceChildren();
+      membersGroup?.querySelectorAll('.is-clustered').forEach((el) => setPinClustered(el, false));
+    };
+
+    const collapseFan = () => {
+      if (!activeFan) return;
+      activeFan = null;
+      root.classList.remove('is-cluster-fanning');
+    };
+
+    const closeClusterSheet = () => {
+      if (!clusterSheet || clusterSheet.hidden) return;
+      clusterSheet.hidden = true;
+      root.classList.remove('is-cluster-sheet-open');
+      if (clusterReturnFocus && document.contains(clusterReturnFocus)) clusterReturnFocus.focus();
+      clusterReturnFocus = null;
+    };
+
+    const openClusterSheet = (members: ClusterMember[], viaKeyboard: boolean) => {
+      if (!clusterSheet || !clusterSheetList) return;
+      collapseFan();
+      clusterReturnFocus = (document.activeElement as HTMLElement) || null;
+      const place = clusterPlaceLabel(members);
+      if (clusterSheetTitle) {
+        clusterSheetTitle.textContent = `${members.length} people${place ? ` near ${place}` : ''}`;
+      }
+      clusterSheetList.replaceChildren();
+      members.forEach((m) => {
+        const li = document.createElement('li');
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `gp-home-map-cluster-sheet-item is-${m.el.getAttribute('data-node-type') || 'member'}`;
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'gp-home-map-cluster-sheet-name';
+        nameSpan.textContent = m.el.getAttribute('data-node-name') || 'Map node';
+        const metaSpan = document.createElement('span');
+        metaSpan.className = 'gp-home-map-cluster-sheet-meta';
+        metaSpan.textContent = [clean(m.el.getAttribute('data-node-role')), clean(m.el.getAttribute('data-node-place'))]
+          .filter(Boolean)
+          .join(' · ');
+        applyScope(li);
+        applyScope(button);
+        applyScope(nameSpan);
+        applyScope(metaSpan);
+        button.append(nameSpan, metaSpan);
+        button.addEventListener('click', () => {
+          closeClusterSheet();
+          openMemberNode(m.el, m.key, false);
+        });
+        li.append(button);
+        clusterSheetList.append(li);
+      });
+      clusterSheet.hidden = false;
+      root.classList.add('is-cluster-sheet-open');
+      if (viaKeyboard) (clusterSheetList.querySelector('button') as HTMLButtonElement | null)?.focus();
+    };
+
+    const fanOutCluster = (members: ClusterMember[], center: { x: number; y: number }, viaKeyboard: boolean) => {
+      if (!clustersGroup) return;
+      clustersGroup.replaceChildren();
+      activeFan = members;
+      root.classList.add('is-cluster-fanning');
+      const radius = Math.max(pxToViewBox(CLUSTER_FAN_RADIUS_PX), 2.4);
+      const animate = !reducedMotionPref();
+      members.forEach((m, i) => {
+        const angle = (i / members.length) * Math.PI * 2 - Math.PI / 2;
+        const sx = center.x + Math.cos(angle) * radius;
+        const sy = center.y + Math.sin(angle) * radius;
+        const leader = document.createElementNS(SVG_NS, 'line');
+        leader.setAttribute('class', 'gp-home-map-cluster-leader');
+        leader.setAttribute('x1', center.x.toFixed(2));
+        leader.setAttribute('y1', center.y.toFixed(2));
+        leader.setAttribute('x2', sx.toFixed(2));
+        leader.setAttribute('y2', sy.toFixed(2));
+        applyScope(leader);
+        clustersGroup.append(leader);
+        const sat = document.createElementNS(SVG_NS, 'g');
+        applyScope(sat);
+        sat.setAttribute('class', `gp-home-map-cluster-sat is-${m.el.getAttribute('data-node-type') || 'member'}${animate ? ' is-appearing' : ''}`);
+        sat.setAttribute('role', 'button');
+        sat.setAttribute('tabindex', '0');
+        const name = m.el.getAttribute('data-node-name') || 'Map node';
+        sat.setAttribute('aria-label', `${name}. Open node.`);
+        const title = document.createElementNS(SVG_NS, 'title');
+        title.textContent = name;
+        sat.append(title);
+        sat.append(makeCircle('gp-home-map-cluster-sat-hit', sx, sy, NODE_HIT_RADIUS));
+        sat.append(makeCircle('gp-home-map-cluster-sat-dot', sx, sy, 1.3));
+        const pick = (vk: boolean) => {
+          collapseFan();
+          openMemberNode(m.el, m.key, vk);
+        };
+        sat.addEventListener('click', () => pick(sat.matches(':focus-visible')));
+        sat.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            pick(true);
+          }
+        });
+        clustersGroup.append(sat);
+      });
+      if (viaKeyboard) (clustersGroup.querySelector('.gp-home-map-cluster-sat') as SVGGElement | null)?.focus?.();
+    };
+
+    const expandCluster = (members: ClusterMember[], center: { x: number; y: number }, viaKeyboard: boolean) => {
+      if (isTouchMap()) {
+        openClusterSheet(members, viaKeyboard);
+        return;
+      }
+      if (groupIsCoincident(members)) {
+        fanOutCluster(members, center, viaKeyboard);
+        return;
+      }
+      // Spread-out group: zoom to frame it; the viewBox change recomputes and
+      // dissolves the cluster as the pins separate.
+      framePoints(members.map((m) => m.center), { padding: 16 });
+    };
+
+    const renderClusterBubble = (members: ClusterMember[]) => {
+      if (!clustersGroup) return;
+      const center = centroidOf(members);
+      const place = clusterPlaceLabel(members);
+      const group = document.createElementNS(SVG_NS, 'g');
+      applyScope(group);
+      group.setAttribute('class', `gp-home-map-cluster${reducedMotionPref() ? '' : ' is-appearing'}`);
+      group.setAttribute('role', 'button');
+      group.setAttribute('tabindex', '0');
+      group.setAttribute('data-home-map-cluster', '');
+      group.setAttribute('aria-label', `${members.length} people${place ? ` near ${place}` : ''}. Activate to expand.`);
+      const radius = Math.min(4.4, 2.9 + members.length * 0.12);
+      group.append(makeCircle('gp-home-map-cluster-halo', center.x, center.y, radius + 1.4));
+      group.append(makeCircle('gp-home-map-cluster-bubble', center.x, center.y, radius));
+      const text = document.createElementNS(SVG_NS, 'text');
+      text.setAttribute('class', 'gp-home-map-cluster-count');
+      text.setAttribute('x', center.x.toFixed(2));
+      text.setAttribute('y', center.y.toFixed(2));
+      text.textContent = members.length > 99 ? '99+' : String(members.length);
+      applyScope(text);
+      group.append(text);
+      const expand = (viaKeyboard: boolean) => expandCluster(members, center, viaKeyboard);
+      group.addEventListener('click', () => expand(group.matches(':focus-visible')));
+      group.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          expand(true);
+        }
+      });
+      clustersGroup.append(group);
+    };
+
+    const recomputeClustersNow = () => {
+      if (!clustersGroup || !membersGroup) return;
+      collapseFan();
+      clearClusters();
+      groupPins(visiblePeoplePins()).forEach((group) => {
+        if (group.length < 2) return;
+        group.forEach((m) => setPinClustered(m.el, true));
+        renderClusterBubble(group);
+      });
+    };
+
+    const scheduleClusterRecompute = () => {
+      window.clearTimeout(clusterRecomputeTimer);
+      clusterRecomputeTimer = window.setTimeout(recomputeClustersNow, 90);
+    };
+    clusterDirty = scheduleClusterRecompute;
+
+    clusterSheetCloseBtn?.addEventListener('click', closeClusterSheet);
+    // Clicking the map outside an open fan collapses it back to the bubble.
+    root.addEventListener('pointerdown', (event) => {
+      if (!activeFan) return;
+      if ((event.target as Element | null)?.closest('.gp-home-map-cluster-sat')) return;
+      collapseFan();
+      recomputeClustersNow();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      if (clusterSheet && !clusterSheet.hidden) {
+        closeClusterSheet();
+        return;
+      }
+      if (activeFan) {
+        collapseFan();
+        recomputeClustersNow();
+        (clustersGroup?.querySelector('[data-home-map-cluster]') as SVGGElement | null)?.focus?.();
+      }
+    });
 
     const toMember = (
       raw: Record<string, any>,
@@ -3256,6 +3573,163 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   .gp-home-map-node-link.is-place.is-pending .gp-home-map-node-ring {
     stroke-dasharray: 0.8 0.8;
     opacity: 0.9;
+  }
+
+  /* ---- Close-together clustering --------------------------------------- */
+  /* Co-located people pins collapse into a count bubble while overlapping; the
+     underlying pins are hidden but keep their geometry for framing/selection. */
+  .gp-home-map-node-link.is-clustered {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .gp-home-map-cluster,
+  .gp-home-map-cluster-sat {
+    cursor: pointer;
+  }
+  .gp-home-map-cluster-halo {
+    fill: var(--gp-map-member);
+    opacity: 0.18;
+  }
+  .gp-home-map-cluster-bubble {
+    fill: color-mix(in srgb, var(--gp-map-member) 88%, var(--gp-off-white));
+    stroke: var(--gp-green-950);
+    stroke-width: 0.5;
+  }
+  .gp-home-map-cluster-count {
+    fill: var(--gp-green-950);
+    font-family: var(--gp-font-mono);
+    font-size: 3.1px;
+    font-weight: 700;
+    text-anchor: middle;
+    dominant-baseline: central;
+    pointer-events: none;
+  }
+  .gp-home-map-cluster:hover .gp-home-map-cluster-halo,
+  .gp-home-map-cluster:focus-visible .gp-home-map-cluster-halo {
+    opacity: 0.4;
+  }
+  .gp-home-map-cluster:focus-visible .gp-home-map-cluster-bubble {
+    stroke: var(--gp-primary);
+    stroke-width: 0.9;
+  }
+  .gp-home-map-cluster.is-appearing,
+  .gp-home-map-cluster-sat.is-appearing {
+    animation: gpMapClusterPop 240ms cubic-bezier(0.22, 1, 0.36, 1) 1;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  /* Fan-out: leader lines + satellite pins around a coincident group. */
+  .gp-home-map-cluster-leader {
+    stroke: color-mix(in srgb, var(--gp-map-member) 60%, transparent);
+    stroke-width: 0.3;
+  }
+  .gp-home-map-cluster-sat-hit {
+    fill: transparent;
+  }
+  .gp-home-map-cluster-sat-dot {
+    fill: var(--gp-map-member);
+    stroke: var(--gp-green-950);
+    stroke-width: 0.5;
+  }
+  .gp-home-map-cluster-sat.is-steward .gp-home-map-cluster-sat-dot {
+    fill: var(--gp-map-steward);
+  }
+  .gp-home-map-cluster-sat:hover .gp-home-map-cluster-sat-dot,
+  .gp-home-map-cluster-sat:focus-visible .gp-home-map-cluster-sat-dot {
+    stroke: var(--gp-primary);
+    stroke-width: 0.9;
+  }
+  @keyframes gpMapClusterPop {
+    from { opacity: 0; transform: scale(0.6); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  /* Mobile cluster list — bottom sheet over the lower map canvas. */
+  .gp-home-map-cluster-sheet {
+    position: absolute;
+    inset-inline: var(--gp-space-sm);
+    inset-block-end: var(--gp-space-sm);
+    z-index: 6;
+    max-height: 62%;
+    display: flex;
+    flex-direction: column;
+    padding: var(--gp-space-md);
+    border-radius: var(--gp-radius-lg);
+    border: 1px solid color-mix(in srgb, var(--gp-map-member) 30%, transparent);
+    background: var(--gp-map-pop-bg);
+    box-shadow: var(--gp-map-pop-shadow);
+  }
+  .gp-home-map-cluster-sheet[hidden] {
+    display: none;
+  }
+  .gp-home-map-cluster-sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gp-space-sm);
+    margin-block-end: var(--gp-space-sm);
+  }
+  .gp-home-map-cluster-sheet-title {
+    margin: 0;
+    font-family: var(--gp-font-display);
+    color: var(--gp-secondary);
+    font-size: var(--gp-body-md);
+  }
+  .gp-home-map-cluster-sheet-close {
+    flex: none;
+    inline-size: 44px;
+    block-size: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-pill);
+    background: var(--gp-map-control-bg);
+    color: var(--gp-fg-muted);
+    font-size: var(--gp-body-md);
+    cursor: pointer;
+  }
+  .gp-home-map-cluster-sheet-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-2xs);
+  }
+  .gp-home-map-cluster-sheet-item {
+    inline-size: 100%;
+    min-height: 44px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: var(--gp-space-2xs) var(--gp-space-sm);
+    border: 1px solid transparent;
+    border-radius: var(--gp-radius-md);
+    background: color-mix(in srgb, var(--gp-off-white) 4%, transparent);
+    color: var(--gp-fg);
+    text-align: start;
+    cursor: pointer;
+  }
+  .gp-home-map-cluster-sheet-item:hover,
+  .gp-home-map-cluster-sheet-item:focus-visible {
+    border-color: color-mix(in srgb, var(--gp-map-member) 50%, transparent);
+    outline: none;
+  }
+  .gp-home-map-cluster-sheet-name {
+    font-weight: 650;
+  }
+  .gp-home-map-cluster-sheet-meta {
+    font-size: var(--gp-label-sm);
+    color: var(--gp-fg-muted);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .gp-home-map-cluster.is-appearing,
+    .gp-home-map-cluster-sat.is-appearing {
+      animation: none;
+    }
   }
 
   /* Hover/focus highlight — a node's connected lines brighten to a clearer
