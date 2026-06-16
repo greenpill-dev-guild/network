@@ -639,18 +639,48 @@ export function containsPrivateMapStateField(value: unknown, seen: Set<object> =
   });
 }
 
+function isPublicPersonMapNodeType(type: unknown): boolean {
+  const normalizedType = cleanString(type);
+  return normalizedType === 'member' || normalizedType === 'steward';
+}
+
 export function assertPublicMapStatePayload<T>(payload: T): T {
   if (containsPrivateMapStateField(payload)) {
     throw new Error('Public map-state payload contains private fields');
   }
 
   const nodes = Array.isArray((payload as UnknownRecord)?.nodes) ? (payload as UnknownRecord).nodes : [];
+  const nodesById = new Map<string, UnknownRecord>();
+  for (const node of nodes) {
+    const id = cleanString(node?.id);
+    if (id) nodesById.set(id, node);
+  }
+
   const hasPendingNode = nodes.some((node: UnknownRecord) => (
     cleanString(node?.status).toLowerCase() === 'pending' ||
     cleanString(node?.source).toLowerCase().includes('pending')
   ));
   if (hasPendingNode) {
     throw new Error('Public map-state payload contains pending nodes');
+  }
+
+  const edges = Array.isArray((payload as UnknownRecord)?.edges) ? (payload as UnknownRecord).edges : [];
+  for (const edge of edges) {
+    const fromId = cleanString(edge?.from);
+    const toId = cleanString(edge?.to);
+    if (!fromId || !toId || fromId === toId) {
+      throw new Error('Public map-state payload contains invalid edge endpoints');
+    }
+
+    const fromNode = nodesById.get(fromId);
+    const toNode = nodesById.get(toId);
+    if (!fromNode || !toNode) {
+      throw new Error('Public map-state payload contains edge with unknown endpoint');
+    }
+
+    if (!isPublicPersonMapNodeType(fromNode.type) || !isPublicPersonMapNodeType(toNode.type)) {
+      throw new Error('Public map-state payload contains non-person edge endpoint');
+    }
   }
 
   return payload;

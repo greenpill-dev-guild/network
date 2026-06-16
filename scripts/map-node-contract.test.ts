@@ -447,6 +447,59 @@ test('public map-state guard rejects pending and private route payloads', () => 
   );
 });
 
+test('public map-state guard rejects non-person relationship edge endpoints', () => {
+  const nodes = [
+    { id: 'chapter:nigeria', type: 'chapter', status: 'approved', source: 'chapter-content' },
+    { id: 'submission:member-1', type: 'member', status: 'approved', source: 'approved-submission' },
+    { id: 'submission:member-2', type: 'member', status: 'approved', source: 'approved-submission' },
+  ];
+
+  assert.throws(
+    () => assertPublicMapStatePayload({
+      nodes,
+      edges: [{
+        id: 'edge:chapter:nigeria:submission:member-1',
+        from: 'chapter:nigeria',
+        to: 'submission:member-1',
+        kind: 'shared-theme',
+        theme: 'public',
+        weight: 1,
+        source: 'generated-theme-match',
+      }],
+    }),
+    /non-person edge endpoint/
+  );
+
+  assert.throws(
+    () => assertPublicMapStatePayload({
+      nodes,
+      edges: [{
+        id: 'edge:missing:submission:member-1',
+        from: 'submission:missing',
+        to: 'submission:member-1',
+        kind: 'shared-theme',
+        theme: 'public',
+        weight: 1,
+        source: 'generated-theme-match',
+      }],
+    }),
+    /unknown endpoint/
+  );
+
+  assert.doesNotThrow(() => assertPublicMapStatePayload({
+    nodes,
+    edges: [{
+      id: 'edge:submission:member-1:submission:member-2',
+      from: 'submission:member-1',
+      to: 'submission:member-2',
+      kind: 'shared-theme',
+      theme: 'public',
+      weight: 1,
+      source: 'generated-theme-match',
+    }],
+  }));
+});
+
 test('public map-state normalizes unsafe intake mode values', () => {
   const payload = toPublicMapStatePayload({
     intakeMode: 'review-bypass',
@@ -932,10 +985,22 @@ test('map-node edit flow has an operator cleanup command', async () => {
     new URL('../scripts/map-node-edit-flow-cleanup.ts', import.meta.url),
     'utf8'
   );
+  const deliveryScript = await readFile(
+    new URL('../scripts/map-node-edit-link-delivery.ts', import.meta.url),
+    'utf8'
+  );
+  const deliveryClaimSql = await readFile(
+    new URL('../packages/agent/migrations/017_map_node_edit_link_delivery_claims.sql', import.meta.url),
+    'utf8'
+  );
 
   assert.equal(
     packageJson.scripts['db:cleanup:map-node-edit-flow'],
     'bun run build:packages && bun --no-env-file --env-file-if-exists=.env.local scripts/map-node-edit-flow-cleanup.ts'
+  );
+  assert.equal(
+    packageJson.scripts['db:deliver:map-node-edit-links'],
+    'bun run build:packages && bun --no-env-file --env-file-if-exists=.env.local scripts/map-node-edit-link-delivery.ts'
   );
   assert.equal(
     packageJson.scripts['test:map-edit:browser'],
@@ -943,6 +1008,10 @@ test('map-node edit flow has an operator cleanup command', async () => {
   );
   assert.match(cleanupScript, /cleanupEditFlow/);
   assert.match(cleanupScript, /DATABASE_URL is required/);
+  assert.match(deliveryScript, /deliverQueuedEditLinks/);
+  assert.match(deliveryScript, /DATABASE_URL is required/);
+  assert.match(deliveryClaimSql, /add column if not exists delivery_claimed_at timestamptz/);
+  assert.match(deliveryClaimSql, /map_node_edit_tokens_delivery_queue_idx/);
 });
 
 test('home map tints resting lines faintly and reserves full theme colour for selection', async () => {

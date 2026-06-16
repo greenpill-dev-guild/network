@@ -67,11 +67,28 @@ export type SubmittedPendingMapNode = Omit<OptimisticPendingMapNode, 'source'> &
 
 export type SubmittedMapNode = SubmittedPendingMapNode | PublicMapNode;
 
-interface EditLinkEmailContext {
+interface QueuedEditLinkEmailContext {
   attemptId: string;
-  token: string;
   email: string;
   node: EditablePublicMapNode;
+}
+
+interface EditLinkEmailContext extends QueuedEditLinkEmailContext {
+  token: string;
+}
+
+type EditLinkRequestOptions = {
+  env?: Record<string, string | undefined>;
+  fetchImpl?: FetchLike;
+  deferProviderSend?: boolean;
+  createSqlForDeferredDelivery?: (options?: { max?: number }) => SqlLike | null;
+};
+
+export interface QueuedMapNodeEditLinkDeliveryResult {
+  queued: number;
+  delivered: number;
+  failed: number;
+  skipped: number;
 }
 
 export const MAP_NODE_EDIT_LINK_NEUTRAL_RESPONSE = Object.freeze({
@@ -88,6 +105,7 @@ export const MAP_NODE_EDIT_TOKEN_TTL_MINUTES = 30;
 export const MAP_NODE_EDIT_LINK_COOLDOWN_MINUTES = 15;
 export const MAP_NODE_EDIT_LINK_DAILY_IP_LIMIT = 30;
 export const MAP_NODE_EDIT_LINK_DAILY_EMAIL_LIMIT = 10;
+export const MAP_NODE_EDIT_LINK_STALE_DELIVERY_CLAIM_MINUTES = 10;
 export const RESEND_EMAILS_ENDPOINT = 'https://api.resend.com/emails';
 export const MAP_NODE_STEWARD_EMAIL_ALLOWLIST_ENV = 'MAP_NODE_STEWARD_EMAIL_ALLOWLIST';
 export const MAP_NODE_THEME_MIN_COUNT = 1;
@@ -373,10 +391,7 @@ function normalizeSubmissionInput(
 export function getRequestMeta(context: {
   req: { header(name: string): string | undefined };
 }): RequestMeta {
-  const forwardedFor = cleanString(context.req.header('x-forwarded-for'));
-  const ipAddress = cleanIpAddress(context.req.header('fly-client-ip'))
-    || cleanIpAddress(context.req.header('x-real-ip'))
-    || cleanIpAddress(forwardedFor.split(',')[0]);
+  const ipAddress = cleanIpAddress(context.req.header('fly-client-ip'));
 
   return {
     ipAddress,
@@ -651,6 +666,11 @@ function editLinkConfig(env: Record<string, string | undefined> = process.env) {
   };
 }
 
+function canSendEditLinkEmail(env: Record<string, string | undefined> = process.env): boolean {
+  const config = editLinkConfig(env);
+  return Boolean(config.apiKey && config.from && buildEditUrl(config.baseUrl, 'preview-token'));
+}
+
 function buildEditUrl(baseUrl: string, token: string): string {
   try {
     const url = new URL(baseUrl);
@@ -718,6 +738,139 @@ async function sendEditLinkEmail({
   } catch {
     return { status: 'send_failed', error: 'resend_fetch_failed', providerMessageId: '' };
   }
+}
+
+async function recordEditLinkEmailDelivery(
+  sql: SqlLike,
+  queuedContext: QueuedEditLinkEmailContext,
+  {
+    env,
+    fetchImpl,
+  }: {
+    env: Record<string, string | undefined>;
+    fetchImpl: FetchLike;
+  }
+): Promise<'sent' | 'failed' | 'skipped'> {
+  const rawToken = createRawEditToken();
+  const tokenHash = hashMapNodeEditToken(rawToken);
+  const [claimed] = await sql`
+    update intake.map_node_edit_tokens
+    set
+      token_hash = ${tokenHash},
+      expires_at = now() + interval '30 minutes',
+      provider_status = 'delivery_claimed',
+      provider_error = null,
+      provider_message_id = null,
+      delivery_claimed_at = now()
+    where id = ${queuedContext.attemptId}::uuid
+      and (
+        provider_status = 'queued'
+        or (
+          provider_status = 'delivery_claimed'
+          and delivery_claimed_at < now() - ${MAP_NODE_EDIT_LINK_STALE_DELIVERY_CLAIM_MINUTES} * interval '1 minute'
+        )
+      )
+      and normalized_email = ${queuedContext.email}
+      and consumed_at is null
+      and expires_at > now()
+    returning id::text
+  `;
+  if (!claimed?.id) return 'skipped';
+
+  const contextToSend: EditLinkEmailContext = {
+    ...queuedContext,
+    token: rawToken,
+  };
+  const result = await sendEditLinkEmail({
+    email: contextToSend.email,
+    node: contextToSend.node,
+    token: contextToSend.token,
+    env,
+    fetchImpl,
+  });
+  await sql`
+    update intake.map_node_edit_tokens
+    set
+      provider_status = ${result.status},
+      provider_error = ${result.error || null},
+      provider_message_id = ${result.providerMessageId || null},
+      delivery_claimed_at = null
+    where id = ${contextToSend.attemptId}::uuid
+  `;
+  return result.status === 'sent' ? 'sent' : 'failed';
+}
+
+async function recordEditLinkEmailDeliveries(
+  sql: SqlLike,
+  sendContexts: QueuedEditLinkEmailContext[],
+  {
+    env,
+    fetchImpl,
+  }: {
+    env: Record<string, string | undefined>;
+    fetchImpl: FetchLike;
+  }
+): Promise<QueuedMapNodeEditLinkDeliveryResult> {
+  const result = {
+    queued: sendContexts.length,
+    delivered: 0,
+    failed: 0,
+    skipped: 0,
+  };
+  for (const contextToSend of sendContexts) {
+    const status = await recordEditLinkEmailDelivery(sql, contextToSend, { env, fetchImpl });
+    if (status === 'sent') result.delivered += 1;
+    else if (status === 'failed') result.failed += 1;
+    else result.skipped += 1;
+  }
+  return result;
+}
+
+function reportDeferredEditLinkDeliveryError(error: unknown): void {
+  console.warn('map_node_edit_link_delivery_failed', {
+    errorName: error instanceof Error ? error.name : 'UnknownError',
+  });
+}
+
+function scheduleEditLinkEmailDeliveries(
+  sql: SqlLike,
+  sendContexts: QueuedEditLinkEmailContext[],
+  {
+    env,
+    fetchImpl,
+    createSqlForDeferredDelivery,
+  }: {
+    env: Record<string, string | undefined>;
+    fetchImpl: FetchLike;
+    createSqlForDeferredDelivery?: (options?: { max?: number }) => SqlLike | null;
+  }
+) {
+  if (sendContexts.length === 0) return;
+
+  const run = async () => {
+    let deliverySql = sql;
+    let shouldEndDeliverySql = false;
+    if (createSqlForDeferredDelivery) {
+      const freshSql = createSqlForDeferredDelivery({ max: 1 });
+      if (!freshSql) return;
+      deliverySql = freshSql;
+      shouldEndDeliverySql = freshSql !== sql;
+    }
+
+    try {
+      await recordEditLinkEmailDeliveries(deliverySql, sendContexts, { env, fetchImpl });
+    } catch (error) {
+      reportDeferredEditLinkDeliveryError(error);
+    } finally {
+      if (shouldEndDeliverySql) {
+        await deliverySql.end({ timeout: 3 }).catch(() => {});
+      }
+    }
+  };
+
+  setTimeout(() => {
+    void run();
+  }, 0);
 }
 
 function providerStatusForAttempt({
@@ -809,10 +962,9 @@ export async function createMapNodeEditLinkRequest(
   {
     env = process.env,
     fetchImpl = globalThis.fetch,
-  }: {
-    env?: Record<string, string | undefined>;
-    fetchImpl?: FetchLike;
-  } = {}
+    deferProviderSend = true,
+    createSqlForDeferredDelivery,
+  }: EditLinkRequestOptions = {}
 ): Promise<typeof MAP_NODE_EDIT_LINK_NEUTRAL_RESPONSE> {
   const normalizedEmail = normalizeOwnerEmail(email);
   if (!isValidOwnerEmail(normalizedEmail)) {
@@ -829,12 +981,8 @@ export async function createMapNodeEditLinkRequest(
     userAgent: cleanString(requestMeta.userAgent),
     rateLimitKey: cleanString(requestMeta.rateLimitKey) || 'anonymous',
   };
-  const providerConfigured = Boolean(
-    editLinkConfig(env).apiKey &&
-    editLinkConfig(env).from &&
-    buildEditUrl(editLinkConfig(env).baseUrl, 'preview-token')
-  );
-  let sendContext: EditLinkEmailContext | null = null;
+  const providerConfigured = canSendEditLinkEmail(env);
+  let sendContext: QueuedEditLinkEmailContext | null = null;
 
   await sql.begin(async (tx) => {
     const lookupNodeId = normalizeLookupNodeId(requestedNodeId);
@@ -848,8 +996,7 @@ export async function createMapNodeEditLinkRequest(
       lookupNodeId,
       normalizedEmail,
     });
-    const rawToken = !limited && submission && providerConfigured ? createRawEditToken() : '';
-    const tokenHash = rawToken ? hashMapNodeEditToken(rawToken) : null;
+    const queuedForDelivery = Boolean(!limited && submission && providerConfigured);
     const providerStatus = providerStatusForAttempt({
       limited,
       matched: Boolean(submission),
@@ -868,13 +1015,13 @@ export async function createMapNodeEditLinkRequest(
         rate_limit_key,
         request_metadata
       )
-      values (
-        ${canonicalRequestedNodeId},
-        ${submission?.id ?? null},
-        ${normalizedEmail},
-        ${tokenHash},
-        now() + interval '30 minutes',
-        ${providerStatus},
+        values (
+          ${canonicalRequestedNodeId},
+          ${submission?.id ?? null},
+          ${normalizedEmail},
+          ${null},
+          now() + interval '30 minutes',
+          ${providerStatus},
         ${meta.ipAddress || null},
         ${meta.userAgent || null},
         ${meta.rateLimitKey || null},
@@ -883,7 +1030,7 @@ export async function createMapNodeEditLinkRequest(
       returning id::text
     `;
 
-    if (rawToken && attempt?.id && submission) {
+    if (queuedForDelivery && attempt?.id && submission) {
       const publicNode = toEditablePublicMapNode({
         id: submission.id,
         displayName: submission.displayName,
@@ -899,7 +1046,6 @@ export async function createMapNodeEditLinkRequest(
       if (publicNode && !containsPrivateMapNodeField(publicNode)) {
         sendContext = {
           attemptId: attempt.id,
-          token: rawToken,
           email: normalizedEmail,
           node: publicNode,
         };
@@ -907,31 +1053,24 @@ export async function createMapNodeEditLinkRequest(
     }
   });
 
-  const contextToSend = sendContext as EditLinkEmailContext | null;
-  if (contextToSend) {
-    const result = await sendEditLinkEmail({
-      email: contextToSend.email,
-      node: contextToSend.node,
-      token: contextToSend.token,
+  const sendContexts = sendContext ? [sendContext] : [];
+  if (deferProviderSend) {
+    scheduleEditLinkEmailDeliveries(sql, sendContexts, {
       env,
       fetchImpl,
+      createSqlForDeferredDelivery,
     });
-    await sql`
-      update intake.map_node_edit_tokens
-      set
-        provider_status = ${result.status},
-        provider_error = ${result.error || null},
-        provider_message_id = ${result.providerMessageId || null}
-      where id = ${contextToSend.attemptId}::uuid
-    `;
+  } else {
+    await recordEditLinkEmailDeliveries(sql, sendContexts, { env, fetchImpl });
   }
 
   return MAP_NODE_EDIT_LINK_NEUTRAL_RESPONSE;
 }
 
-// Standalone recovery caps how many links one request can fan out, so a single
-// email request can never be turned into an unbounded email amplifier.
-export const MAP_NODE_EDIT_LINK_REQUEST_MAX_MATCHES = 3;
+// Standalone recovery intentionally sends at most one link. That keeps the
+// public request write envelope fixed whether an email matches zero, one, or
+// several approved nodes.
+export const MAP_NODE_EDIT_LINK_REQUEST_MAX_MATCHES = 1;
 
 // Email-keyed rate limit for the standalone (no node id) recovery path. The
 // cooldown keys on email + IP (the per-node path keys the cooldown on node id);
@@ -999,12 +1138,12 @@ async function findEditableSubmissionsByEmail(
   return Array.isArray(rows) ? rows : [];
 }
 
-// Standalone email-keyed recovery. Looks up approved/public nodes by owner email
-// and emails a fresh manage link for each (capped). The response is ALWAYS the
-// same neutral message — it never reveals whether the email matched, how many
-// nodes, or any node detail. A no-match request still records an attempt row so
-// the write path does not fork. Tokens stay hash-only; matches feed the same
-// 30-minute edit tokens as the per-node path.
+// Standalone email-keyed recovery. Looks up the most recently updated approved
+// public node by owner email and queues one manage link. The response is ALWAYS
+// the same neutral message — it never reveals whether the email matched, how
+// many nodes exist, or any node detail. A no-match request still records one
+// attempt row so the write path does not fork. Tokens stay hash-only; delivery
+// generates the same 30-minute edit tokens as the per-node path.
 export async function createMapNodeEditLinkRequestByEmail(
   sql: SqlLike,
   email: string,
@@ -1012,10 +1151,9 @@ export async function createMapNodeEditLinkRequestByEmail(
   {
     env = process.env,
     fetchImpl = globalThis.fetch,
-  }: {
-    env?: Record<string, string | undefined>;
-    fetchImpl?: FetchLike;
-  } = {}
+    deferProviderSend = true,
+    createSqlForDeferredDelivery,
+  }: EditLinkRequestOptions = {}
 ): Promise<typeof MAP_NODE_EDIT_LINK_NEUTRAL_RESPONSE> {
   const normalizedEmail = normalizeOwnerEmail(email);
   if (!isValidOwnerEmail(normalizedEmail)) {
@@ -1027,11 +1165,8 @@ export async function createMapNodeEditLinkRequestByEmail(
     userAgent: cleanString(requestMeta.userAgent),
     rateLimitKey: cleanString(requestMeta.rateLimitKey) || 'anonymous',
   };
-  const config = editLinkConfig(env);
-  const providerConfigured = Boolean(
-    config.apiKey && config.from && buildEditUrl(config.baseUrl, 'preview-token')
-  );
-  const sendContexts: EditLinkEmailContext[] = [];
+  const providerConfigured = canSendEditLinkEmail(env);
+  let sendContext: QueuedEditLinkEmailContext | null = null;
 
   await sql.begin(async (tx) => {
     const limited = await getEditLinkRequestLimitStatus(tx, {
@@ -1047,87 +1182,155 @@ export async function createMapNodeEditLinkRequestByEmail(
     // Record an attempt even when nothing matched, so a no-match request writes
     // the same kind of row a match does and does not become observable by its
     // absence.
-    const attempts = submissions.length > 0 ? submissions : [null];
-    for (const submission of attempts) {
-      const rawToken = !limited && submission && providerConfigured ? createRawEditToken() : '';
-      const tokenHash = rawToken ? hashMapNodeEditToken(rawToken) : null;
-      const providerStatus = providerStatusForAttempt({
-        limited,
-        matched: Boolean(submission),
-        providerConfigured,
-      });
-      const [attempt] = await tx`
-        insert into intake.map_node_edit_tokens (
-          requested_node_id,
-          submission_id,
-          normalized_email,
-          token_hash,
-          expires_at,
-          provider_status,
-          request_ip,
-          request_user_agent,
-          rate_limit_key,
-          request_metadata
-        )
-        values (
-          ${submission?.id ?? ''},
-          ${submission?.id ?? null},
-          ${normalizedEmail},
-          ${tokenHash},
-          now() + interval '30 minutes',
-          ${providerStatus},
-          ${meta.ipAddress || null},
-          ${meta.userAgent || null},
-          ${meta.rateLimitKey || null},
-          ${toSqlJson(tx, { source: 'public-edit-link-email-request' })}
-        )
-        returning id::text
-      `;
+    const submission = submissions[0] ?? null;
+    const queuedForDelivery = Boolean(!limited && submission && providerConfigured);
+    const providerStatus = providerStatusForAttempt({
+      limited,
+      matched: Boolean(submission),
+      providerConfigured,
+    });
+    const [attempt] = await tx`
+      insert into intake.map_node_edit_tokens (
+        requested_node_id,
+        submission_id,
+        normalized_email,
+        token_hash,
+        expires_at,
+        provider_status,
+        request_ip,
+        request_user_agent,
+        rate_limit_key,
+        request_metadata
+      )
+      values (
+        ${submission?.id ?? ''},
+        ${submission?.id ?? null},
+        ${normalizedEmail},
+        ${null},
+        now() + interval '30 minutes',
+        ${providerStatus},
+        ${meta.ipAddress || null},
+        ${meta.userAgent || null},
+        ${meta.rateLimitKey || null},
+        ${toSqlJson(tx, { source: 'public-edit-link-email-request' })}
+      )
+      returning id::text
+    `;
 
-      if (rawToken && attempt?.id && submission) {
-        const publicNode = toEditablePublicMapNode({
-          id: submission.id,
-          displayName: submission.displayName,
-          placeName: submission.placeName,
-          city: submission.city,
-          region: submission.region,
-          country: submission.country,
-          lat: submission.lat,
-          long: submission.long,
-          themes: submission.themes,
-          publicNote: submission.publicNote,
-        });
-        if (publicNode && !containsPrivateMapNodeField(publicNode)) {
-          sendContexts.push({
-            attemptId: attempt.id,
-            token: rawToken,
-            email: normalizedEmail,
-            node: publicNode,
-          });
-        }
+    if (queuedForDelivery && attempt?.id && submission) {
+      const publicNode = toEditablePublicMapNode({
+        id: submission.id,
+        displayName: submission.displayName,
+        placeName: submission.placeName,
+        city: submission.city,
+        region: submission.region,
+        country: submission.country,
+        lat: submission.lat,
+        long: submission.long,
+        themes: submission.themes,
+        publicNote: submission.publicNote,
+      });
+      if (publicNode && !containsPrivateMapNodeField(publicNode)) {
+        sendContext = {
+          attemptId: attempt.id,
+          email: normalizedEmail,
+          node: publicNode,
+        };
       }
     }
   });
 
-  for (const contextToSend of sendContexts) {
-    const result = await sendEditLinkEmail({
-      email: contextToSend.email,
-      node: contextToSend.node,
-      token: contextToSend.token,
+  const sendContexts = sendContext ? [sendContext] : [];
+  if (deferProviderSend) {
+    scheduleEditLinkEmailDeliveries(sql, sendContexts, {
       env,
       fetchImpl,
+      createSqlForDeferredDelivery,
     });
-    await sql`
-      update intake.map_node_edit_tokens
-      set
-        provider_status = ${result.status},
-        provider_error = ${result.error || null},
-        provider_message_id = ${result.providerMessageId || null}
-      where id = ${contextToSend.attemptId}::uuid
-    `;
+  } else {
+    await recordEditLinkEmailDeliveries(sql, sendContexts, { env, fetchImpl });
   }
 
   return MAP_NODE_EDIT_LINK_NEUTRAL_RESPONSE;
+}
+
+function queuedEditLinkEmailContextFromRow(row: UnknownRecord): QueuedEditLinkEmailContext | null {
+  const attemptId = cleanString(row.attemptId);
+  const email = normalizeOwnerEmail(row.email ?? row.normalizedEmail ?? row.normalized_email);
+  if (!attemptId || !isValidOwnerEmail(email)) return null;
+
+  const publicNode = toEditablePublicMapNode({
+    id: row.submissionId ?? row.id,
+    displayName: row.displayName,
+    placeName: row.placeName,
+    city: row.city,
+    region: row.region,
+    country: row.country,
+    lat: row.lat,
+    long: row.long,
+    themes: row.themes,
+    publicNote: row.publicNote,
+  });
+  if (!publicNode || containsPrivateMapNodeField(publicNode)) return null;
+
+  return { attemptId, email, node: publicNode };
+}
+
+export async function deliverQueuedMapNodeEditLinks(
+  sql: SqlLike,
+  {
+    limit = 20,
+    env = process.env,
+    fetchImpl = globalThis.fetch,
+  }: {
+    limit?: number;
+    env?: Record<string, string | undefined>;
+    fetchImpl?: FetchLike;
+  } = {}
+): Promise<QueuedMapNodeEditLinkDeliveryResult> {
+  if (!canSendEditLinkEmail(env)) {
+    return { queued: 0, delivered: 0, failed: 0, skipped: 0 };
+  }
+
+  const numericLimit = Number(limit);
+  const cappedLimit = Math.min(
+    100,
+    Math.max(1, Number.isFinite(numericLimit) ? Math.trunc(numericLimit) : 20)
+  );
+  const rows = await sql`
+    select
+      t.id::text as "attemptId",
+      t.normalized_email::text as email,
+      s.id::text as "submissionId",
+      s.display_name as "displayName",
+      s.place_name as "placeName",
+      s.city,
+      s.region,
+      s.country,
+      s.latitude::float8 as lat,
+      s.longitude::float8 as long,
+      s.themes,
+      s.public_note as "publicNote"
+    from intake.map_node_edit_tokens t
+    join intake.map_node_submissions s on s.id = t.submission_id
+    where (
+        t.provider_status = 'queued'
+        or (
+          t.provider_status = 'delivery_claimed'
+          and t.delivery_claimed_at < now() - ${MAP_NODE_EDIT_LINK_STALE_DELIVERY_CLAIM_MINUTES} * interval '1 minute'
+        )
+      )
+      and t.normalized_email is not null
+      and t.consumed_at is null
+      and t.expires_at > now()
+      and s.status = 'approved'
+    order by t.created_at asc
+    limit ${cappedLimit}
+  `;
+  const sendContexts = rows
+    .map((row) => queuedEditLinkEmailContextFromRow(row))
+    .filter((context): context is QueuedEditLinkEmailContext => Boolean(context));
+  return recordEditLinkEmailDeliveries(sql, sendContexts, { env, fetchImpl });
 }
 
 export async function getMapNodeEditSession(sql: SqlLike, token: string): Promise<EditablePublicMapNode> {
@@ -1364,12 +1567,14 @@ export function createMapNodeRepository({
       return withSql(createSql, (sql) => createMapNodeEditLinkRequest(sql, nodeId, email, requestMeta, {
         env,
         fetchImpl,
+        createSqlForDeferredDelivery: createSql,
       }));
     },
     requestEditLinkByEmail(email, requestMeta) {
       return withSql(createSql, (sql) => createMapNodeEditLinkRequestByEmail(sql, email, requestMeta, {
         env,
         fetchImpl,
+        createSqlForDeferredDelivery: createSql,
       }));
     },
     getEditSession(token) {
@@ -1380,6 +1585,13 @@ export function createMapNodeRepository({
     },
     cleanupEditFlow() {
       return withSql(createSql, cleanupMapNodeEditFlow);
+    },
+    deliverQueuedEditLinks(options?: { limit?: number }) {
+      return withSql(createSql, (sql) => deliverQueuedMapNodeEditLinks(sql, {
+        env,
+        fetchImpl,
+        ...options,
+      }));
     },
     listPublic() {
       return withSql(createSql, listPublicMapNodes);
