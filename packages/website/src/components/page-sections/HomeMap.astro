@@ -509,6 +509,30 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         <button type="submit" class="gp-home-map-addnode-submit" data-walkthrough-submit hidden>Plant me on the map →</button>
       </div>
     </form>
+
+    {/* Standalone recovery: a returning owner who cannot find/select their pin
+        (cache cleared, new device) requests a manage link by email alone. The
+        confirmation is the same whether or not the email matches. */}
+    <div class="gp-home-map-addnode-manage" data-home-map-manage>
+      <p class="gp-home-map-addnode-manage-lead">Already added yourself and lost access?</p>
+      <button
+        type="button"
+        class="gp-home-map-addnode-manage-toggle"
+        data-manage-toggle
+        aria-expanded="false"
+        aria-controls="gp-home-map-manage-form"
+      >Email me a manage link</button>
+      <form class="gp-home-map-addnode-manage-form" id="gp-home-map-manage-form" data-manage-form hidden novalidate>
+        <label class="gp-home-map-addnode-manage-field" for="gp-home-map-manage-email">
+          <span>Your private email</span>
+          <input id="gp-home-map-manage-email" type="email" name="email" inputmode="email" autocomplete="email" required placeholder="you@example.org" />
+        </label>
+        <button type="submit" class="gp-home-map-addnode-manage-submit">Send manage link</button>
+        <p class="gp-home-map-addnode-manage-status" data-manage-status role="status" aria-live="polite" hidden>
+          If that email matches a published node, we've emailed a manage link.
+        </p>
+      </form>
+    </div>
   </dialog>
 </figure>
 
@@ -3072,6 +3096,42 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     openAddDialogFromHash();
 
     addClose?.addEventListener('click', closeAddDialog);
+
+    // Standalone recovery entry — request a manage link by email alone. Mirrors
+    // the per-node "Edit this node" form: validate, show the same neutral
+    // confirmation immediately, clear the input, and fire-and-forget the request
+    // so the UI never reflects whether the email matched a published node.
+    const manageToggle = scope.querySelector('[data-manage-toggle]') as HTMLButtonElement | null;
+    const manageForm = scope.querySelector('[data-manage-form]') as HTMLFormElement | null;
+    const manageStatus = scope.querySelector('[data-manage-status]') as HTMLElement | null;
+    const manageEmail = manageForm?.elements.namedItem('email') as HTMLInputElement | null;
+
+    manageToggle?.addEventListener('click', () => {
+      if (!manageForm) return;
+      const willOpen = manageForm.hidden;
+      manageForm.hidden = !willOpen;
+      manageToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      if (willOpen) manageEmail?.focus();
+    });
+
+    manageForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const email = clean(manageEmail?.value).toLowerCase();
+      if (manageEmail) manageEmail.value = email;
+      if (!email || !manageEmail?.checkValidity()) {
+        manageEmail?.reportValidity();
+        return;
+      }
+      // Terminal, neutral confirmation first; clear the input so no email lingers.
+      if (manageEmail) manageEmail.value = '';
+      if (manageStatus) manageStatus.hidden = false;
+      void fetch(`${agentBaseUrl}/map-nodes/edit-link-request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      }).catch(() => {});
+    });
+
     addDialog?.addEventListener('close', () => lastAddTrigger?.focus());
     addDialog?.addEventListener('cancel', (event) => {
       event.preventDefault();
@@ -5112,6 +5172,85 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     justify-content: space-between;
     gap: 12px;
     padding-top: 0;
+  }
+
+  /* Standalone recovery entry at the dialog footer. */
+  .gp-home-map-addnode-manage {
+    margin-block-start: var(--gp-space-md);
+    padding-block-start: var(--gp-space-md);
+    border-block-start: 1px solid var(--gp-border-soft);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--gp-space-xs);
+  }
+  .gp-home-map-addnode-manage-lead {
+    margin: 0;
+    font-size: var(--gp-label-sm);
+    color: var(--gp-fg-muted);
+  }
+  .gp-home-map-addnode-manage-toggle {
+    min-height: 44px;
+    padding: 10px 16px;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-pill);
+    background: transparent;
+    color: var(--gp-fg);
+    font: inherit;
+    font-weight: 750;
+    cursor: pointer;
+  }
+  .gp-home-map-addnode-manage-toggle:hover,
+  .gp-home-map-addnode-manage-toggle:focus-visible {
+    border-color: color-mix(in srgb, var(--gp-map-member) 50%, transparent);
+    outline: none;
+  }
+  .gp-home-map-addnode-manage-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-xs);
+    inline-size: 100%;
+  }
+  .gp-home-map-addnode-manage-form[hidden] {
+    display: none;
+  }
+  .gp-home-map-addnode-manage-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-2xs);
+  }
+  .gp-home-map-addnode-manage-field span {
+    font-size: var(--gp-label-sm);
+    color: var(--gp-fg-muted);
+  }
+  .gp-home-map-addnode-manage-field input {
+    min-height: 44px;
+    padding: 10px 14px;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-md);
+    background: color-mix(in srgb, var(--gp-off-white) 4%, transparent);
+    color: var(--gp-fg);
+    font: inherit;
+  }
+  .gp-home-map-addnode-manage-submit {
+    align-self: flex-start;
+    min-height: 44px;
+    padding: 10px 18px;
+    border: 0;
+    border-radius: var(--gp-radius-pill);
+    background: var(--gp-map-member);
+    color: var(--gp-green-950);
+    font: inherit;
+    font-weight: 850;
+    cursor: pointer;
+  }
+  .gp-home-map-addnode-manage-status {
+    margin: 0;
+    font-size: var(--gp-label-sm);
+    color: var(--gp-fg);
+  }
+  .gp-home-map-addnode-manage-status[hidden] {
+    display: none;
   }
 
   .gp-home-map-addnode-back,
