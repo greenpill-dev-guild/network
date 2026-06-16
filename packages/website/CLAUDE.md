@@ -30,7 +30,7 @@ The live site is 100% on the `--gp-*` token system + `src/components/ui` primiti
 13. **No-wrap rules (silent mobile breakers).** Inline CTAs (text + arrow): `white-space:nowrap` on the whole link. Chips: `nowrap` on the body. Overlines/bylines: each `·`-separated segment is its own `nowrap` span (the row wraps as a unit — see `Meta.astro`). Breadcrumbs collapse middle crumbs to `…`.
 14. **Mobile heights use `dvh`/`svh`/`lvh`**, never `vh`, so content isn't cut off behind mobile browser chrome.
 15. **8px spacing** via `--gp-space-*`; `xs` (4px) only for micro-adjustments, never section spacing.
-16. **Focus + motion are global — never override.** `:focus-visible` lime ring and reduced-motion are wired in `gp-tokens.css`. No transform-on-press, no scroll/entrance animations on static content; only the map node pulse loops.
+16. **Focus + motion are global — never override.** `:focus-visible` lime ring and reduced-motion are wired in `gp-tokens.css`. No transform-on-press, no scroll/entrance animations on static content, and no idle or looping animation in the map.
 17. **Logical properties** (`margin-inline`, `inset-inline`, `text-align:start`) over physical left/right — the site ships translated content.
 18. **Agent-legible / accessible markup.** Semantic `<button>`/`<a>` (never div+onclick); `<label for>` on every input; `cursor:pointer` on actionables; one `<main>` landmark per page; stable layout (no load-time shift). Agents and screen readers read the accessibility tree.
 

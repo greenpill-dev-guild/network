@@ -16,6 +16,7 @@ import {
 import {
   assertPublicMapStatePayload,
   containsPrivateMapStateField,
+  PUBLIC_MAP_THEMES,
   toPublicAggregateCountsPayload,
   toPublicMapStatePayload,
 } from '@greenpill-network/shared/map-state';
@@ -262,7 +263,9 @@ test('public map-state combines chapter anchors and approved submitted nodes saf
   assert.equal(payload.counts.approvedSubmittedNodes, 1);
   assert.equal(payload.counts.byType.steward, 1);
   assert.equal(payload.counts.byTheme.public > 1, true);
-  assert.equal(payload.edges.some((edge) => edge.kind === 'steward-chapter'), true);
+  // Relationships are person-to-person only: a lone steward with no peers has no
+  // edges, and chapters never carry relationship threads (no steward-chapter edge).
+  assert.equal(payload.edges.length, 0);
   assert.equal(containsPrivateMapStateField(payload), false);
   assert.equal(JSON.stringify(payload).includes('private@example.com'), false);
   assert.equal(JSON.stringify(payload).includes('private submission context'), false);
@@ -333,7 +336,10 @@ test('public map-state generates person-first relationship edges', () => {
 
   assert.equal(payload.edges.some((edge) => edge.kind === 'chapter-theme'), false);
   assert.equal(payload.nodes.some((node) => node.type === 'steward'), true);
-  assert.equal(payload.edges.some((edge) => edge.kind === 'steward-chapter'), true);
+  // No edge ever connects to a chapter anchor — the relationship web is person-to-person.
+  assert.equal(payload.edges.some((edge) => (
+    edge.from.startsWith('chapter:') || edge.to.startsWith('chapter:')
+  )), false);
   assert.equal(payload.edges.some((edge) => (
     edge.kind === 'shared-theme' &&
     [edge.from, edge.to].sort().join(':') === 'submission:member-1:submission:member-2'
@@ -705,6 +711,8 @@ test('home map grows live: reconciles, polls visibly, and redraws after submit',
   // post-approval duplicates, using the shared (testable) helper.
   assert.match(component, /reconcileLocalPendingNodes/);
   assert.match(component, /removeInjectedMember/);
+  assert.match(component, /const approvedKeys = new Set<string>\(\)/);
+  assert.match(component, /member\.approved && !approvedKeys\.has\(member\.key\)/);
 
   // A successful submit re-pulls /map/state so server-generated relationship
   // edges redraw without a manual reload.
@@ -720,6 +728,63 @@ test('home map grows live: reconciles, polls visibly, and redraws after submit',
 
   // /map/state stays the canonical public source, fetched no-store.
   assert.match(component, /\$\{agentBaseUrl\}\/map\/state`, \{ cache: 'no-store' \}/);
+
+  // Visible legend counts should reflect the current filtered map view instead
+  // of disappearing when a type is empty or filtered out.
+  assert.match(component, /data-home-map-type-count=\{type\.id\}/);
+  assert.match(component, /visibleCounts: Record<string, number>/);
+  assert.match(component, /count\.textContent = String\(visibleCounts\[type\] \?\? 0\)/);
+});
+
+test('home map thread motion is one-shot and poll-stable', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  const cssRule = (selector: string) => {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return component.match(new RegExp(`${escaped}\\s*{([\\s\\S]*?)\\n  }`))?.[1] ?? '';
+  };
+
+  const baseThreadRule = cssRule('.gp-home-map-thread');
+  const enteringThreadRule = cssRule('.gp-home-map-thread.is-entering');
+  const adjacentThreadRule = cssRule('.gp-home-map-thread.is-adj');
+  const revealingThreadRule = cssRule('.gp-home-map-thread.is-adj.is-revealing');
+
+  assert.match(baseThreadRule, /stroke-dashoffset:\s*0/);
+  assert.match(baseThreadRule, /animation:\s*none/);
+  assert.doesNotMatch(baseThreadRule, /gpMapThreadGrow/);
+  assert.match(enteringThreadRule, /gpMapThreadGrow/);
+  assert.match(adjacentThreadRule, /animation:\s*none/);
+  assert.doesNotMatch(adjacentThreadRule, /gpMapAdjacentThread/);
+  assert.match(revealingThreadRule, /gpMapAdjacentThread/);
+  assert.doesNotMatch(component, /gpMapNodeRipple/);
+  assert.doesNotMatch(component, /gp-home-map-node-ripple/);
+  assert.doesNotMatch(component, /animation:\s*[^;{}]*infinite/);
+
+  assert.match(component, /let lastDynamicThreadSignature = ''/);
+  assert.match(component, /if \(signature === lastDynamicThreadSignature\) return/);
+  assert.match(component, /animationName === 'gpMapThreadGrow'/);
+  assert.match(component, /animationName === 'gpMapAdjacentThread'/);
+  assert.match(component, /activeFocusNodeId !== id/);
+  assert.match(component, /markThreadRevealing/);
+  assert.match(component, /data-home-map-dynamic-thread-hits/);
+  assert.match(component, /registerEdgeHit/);
+  assert.match(component, /edgeMetaById/);
+  assert.match(component, /data-home-map-edge-tooltip/);
+
+  const renderStart = component.indexOf('const renderDynamicThreads =');
+  const renderEnd = component.indexOf('const renderLocalPending =', renderStart);
+  const renderBlock = component.slice(renderStart, renderEnd);
+  const appendIndex = renderBlock.indexOf('dynamicThreadsGroup.append(path)');
+  const newPathGuardIndex = renderBlock.lastIndexOf('if (!existingPath)', appendIndex);
+  assert.ok(appendIndex !== -1, 'new dynamic threads must still append once');
+  assert.ok(newPathGuardIndex !== -1, 'dynamic threads should append only inside the new-path branch');
+  assert.match(renderBlock, /const existingPath = existingThreads\.get\(spec\.edgeId\)/);
+  assert.doesNotMatch(renderBlock.slice(appendIndex + 1), /dynamicThreadsGroup\.append\(path\)/);
+  assert.match(renderBlock, /dynamicThreadHitsGroup\.append\(hit\)/);
+  assert.match(renderBlock, /data-kind/);
+  assert.match(renderBlock, /data-source/);
 });
 
 test('home map focus cards are anchored near nodes, not bottom-left panels', async () => {
@@ -729,7 +794,10 @@ test('home map focus cards are anchored near nodes, not bottom-left panels', asy
   );
 
   assert.match(component, /data-focus-themes/);
-  assert.match(component, /data-focus-connections/);
+  // The hover card is informational only — the connection summary was removed.
+  // Relationship detail comes from hovering edges/nodes and the on-map web.
+  assert.doesNotMatch(component, /data-focus-connections/);
+  assert.doesNotMatch(component, /relationshipSummary/);
   assert.match(component, /focusEl\.style\.left = `\$\{xPct\}%`/);
   assert.match(component, /focusEl\.style\.top = `\$\{yPct\}%`/);
   assert.match(component, /focusEl\.style\.transform = `translate/);
@@ -741,6 +809,113 @@ test('home map focus cards are anchored near nodes, not bottom-left panels', asy
   const focusCss = component.slice(focusCssStart, controlsCssStart);
   assert.doesNotMatch(focusCss, /bottom:\s*12px/);
   assert.doesNotMatch(focusCss, /left:\s*12px/);
+});
+
+test('home map selected nodes stay on the map without scroll jumps', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+
+  const canvasStart = component.indexOf('<div class="gp-home-map-canvas"');
+  const controlsStart = component.indexOf('<div class="gp-home-map-controls"', canvasStart);
+  const selectedStart = component.indexOf('class="gp-home-map-selected" data-home-map-selected', canvasStart);
+  assert.ok(canvasStart !== -1, 'HomeMap must render the map canvas');
+  assert.ok(selectedStart > canvasStart && selectedStart < controlsStart, 'selected-node region must live inside the map canvas');
+  assert.match(component, /role="region" aria-label="Selected map node"/);
+  assert.doesNotMatch(component, /scrollIntoView/);
+  assert.match(component, /positionSelectedCard/);
+  assert.match(component, /syncSelectedOverlay/);
+  assert.match(component, /root\.classList\.add\('has-selected-node'\)/);
+  assert.match(component, /root\.addEventListener\('click'/);
+  assert.match(component, /focusTarget as HTMLElement\)\.focus\(\{ preventScroll: true \}\)/);
+
+  const styleStart = component.indexOf('<style>');
+  const selectedCssStart = component.indexOf('/* Selected-node card', styleStart);
+  const addNodeCssStart = component.indexOf('/* Find-your-people walkthrough', selectedCssStart);
+  const selectedCss = component.slice(selectedCssStart, addNodeCssStart);
+  assert.match(selectedCss, /position:\s*absolute/);
+  assert.match(selectedCss, /inset-inline-start:\s*var\(--gp-selected-x/);
+  assert.doesNotMatch(selectedCss, /position:\s*relative/);
+});
+
+test('home map mobile touch mode supports bounded zoom and compact connection rows', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+
+  assert.match(component, /data-home-map-zoom-controls/);
+  assert.match(component, /const FULL_VIEW_BOX: MapViewBox = \{ x: 0, y: 0, width: VIEW_W, height: VIEW_H \}/);
+  assert.match(component, /const MIN_VIEW_BOX_WIDTH = 46/);
+  assert.match(component, /const clampViewBox = \(box: MapViewBox\)/);
+  assert.match(component, /setMapViewBoxCentered/);
+  assert.match(component, /resetMapView/);
+  assert.match(component, /gesturePointers = new Map<number, PointerEvent>/);
+  assert.match(component, /pointerDistance/);
+  assert.match(component, /suppressNextNodeClick/);
+  assert.match(component, /data-selected-edge-list/);
+  assert.match(component, /renderSelectedEdgeList/);
+  assert.match(component, /frameConnectedNode\(connectedEl\)/);
+  assert.match(component, /selectedBottomPaddingForView/);
+  assert.match(component, /@container \(max-width: 720px\)/);
+  assert.match(component, /\.gp-home-map-thread\.is-entering\s*{[\s\S]*?animation:\s*none/);
+  assert.match(component, /\.gp-home-map-selected-edge-list:not\(\[hidden\]\)\s*{[\s\S]*?display:\s*block/);
+  assert.match(component, /\.gp-home-map-canvas\.has-selected-node \.gp-home-map-controls\s*{[\s\S]*?--gp-map-selected-clearance/);
+  assert.match(component, /\.gp-home-map-selected-edge-items\s*{[\s\S]*?overflow-x:\s*auto/);
+});
+
+test('home map uses shared semantic theme colours and derived aliases', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+
+  assert.deepEqual(
+    PUBLIC_MAP_THEMES.map((theme) => [theme.id, theme.color]),
+    [
+      ['water', '#2BA7FF'],
+      ['opensrc', '#00D5E8'],
+      ['impact', '#34D399'],
+      ['trees', '#75D063'],
+      ['food', '#C6D84F'],
+      ['energy', '#FFD84D'],
+      ['education', '#12C7B4'],
+      ['events', '#FF9F1C'],
+      ['funding', '#FF6B35'],
+      ['currency', '#EF476F'],
+      ['mutual', '#F472B6'],
+      ['stories', '#D946EF'],
+      ['ai', '#B067FF'],
+      ['desci', '#536DFE'],
+      ['gov', '#7C9CFF'],
+      ['public', '#B9A6C9'],
+    ]
+  );
+  assert.match(component, /const canonicalThemeInfo = Object\.fromEntries/);
+  assert.match(component, /mapThemes\.map\(\(theme\) => \[theme\.id, \{ label: theme\.label, color: theme\.color \}\]\)/);
+  assert.match(component, /'public-goods': \{ target: 'public'/);
+  assert.match(component, /'local-regeneration': \{ target: 'trees'/);
+  assert.match(component, /'knowledge-commons': \{ target: 'education'/);
+  assert.match(component, /'coordination-tools': \{ target: 'opensrc'/);
+});
+
+test('home map land silhouette comes from derived Natural Earth rings', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  const landData = await readFile(
+    new URL('../packages/website/src/data/world-land-rings.ts', import.meta.url),
+    'utf8'
+  );
+
+  assert.match(component, /WORLD_LAND_RINGS/);
+  assert.doesNotMatch(component, /const CONTINENTS/);
+  assert.match(component, /const COLS = 160/);
+  assert.match(component, /const ROWS = 80/);
+  assert.match(landData, /Natural Earth 110m Land v4\.0\.0/);
+  assert.match(landData, /public domain/);
 });
 
 test('map-node edit flow has an operator cleanup command', async () => {
@@ -760,4 +935,149 @@ test('map-node edit flow has an operator cleanup command', async () => {
   );
   assert.match(cleanupScript, /cleanupEditFlow/);
   assert.match(cleanupScript, /DATABASE_URL is required/);
+});
+
+test('home map tints resting lines faintly and reserves full theme colour for selection', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  const cssRule = (selector: string) => {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return component.match(new RegExp(`${escaped}\\s*{([\\s\\S]*?)\\n  }`))?.[1] ?? '';
+  };
+
+  // Resting lines carry a faint MUTED theme tint — the per-edge --thread-color
+  // mixed toward the neutral base and held at low opacity, so the map is alive
+  // but calm rather than fully grey.
+  const restThread = cssRule('.gp-home-map-thread');
+  assert.match(component, /--gp-map-thread:/);
+  assert.match(restThread, /color-mix\([^;]*--thread-color/);
+  assert.match(restThread, /--gp-map-thread/);
+
+  // Hover/focus brightens the SAME tint (still rides --thread-color, lifted toward
+  // off-white) rather than desaturating to white — but stays short of full colour.
+  const adjThread = cssRule('.gp-home-map-thread.is-adj');
+  assert.match(adjThread, /color-mix\([^;]*--thread-color/);
+  assert.match(adjThread, /--gp-off-white/);
+
+  // Full saturation only rides the selection-specific class, pinned at select time
+  // and cleared on deselect (so hovering another node never fully colourises).
+  assert.match(cssRule('.gp-home-map-thread.is-selected-adj'), /stroke:\s*var\(--thread-color/);
+  assert.match(component, /markSelectedThreads/);
+  assert.match(component, /classList\.toggle\('is-selected-adj'/);
+
+  // New live connections still arrive as a one-shot comet, then settle.
+  const entering = cssRule('.gp-home-map-thread.is-entering');
+  assert.match(entering, /gpMapThreadGrow/);
+});
+
+test('home map renders selected multi-theme strands in a separate one-shot overlay', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+
+  // Strands derive shared themes client-side (no payload change) and live in
+  // their own SVG group so they cannot affect the base thread / edge-hit sets.
+  assert.match(component, /data-home-map-selection-strands/);
+  assert.match(component, /renderSelectionStrands/);
+  assert.match(component, /sharedThemesForEdge/);
+  assert.match(component, /buildSelectionStrandSpecs/);
+  // One-shot grow only — no idle loop anywhere on the map.
+  assert.match(component, /@keyframes gpMapStrandGrow/);
+  assert.doesNotMatch(component, /animation:\s*[^;{}]*infinite/);
+  // A signature guard stops polls/filter passes from re-triggering the grow.
+  assert.match(component, /lastSelectionStrandSignature/);
+});
+
+test('home map selected surface carries public links and no connection summary', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+
+  // Public profile/chapter links are consumed from existing public node fields.
+  assert.match(component, /data-selected-links/);
+  assert.match(component, /renderNodeLinks/);
+  assert.match(component, /const cleanHref/);
+  assert.match(component, /chapterHref/);
+  assert.match(component, /data-node-profile-url/);
+  // External profile links open safely in a new tab.
+  assert.match(component, /rel = 'noopener noreferrer'/);
+
+  // No connection-summary text on any surface (desktop discovers via hover).
+  assert.doesNotMatch(component, /data-selected-connections/);
+  assert.doesNotMatch(component, /No public connections yet/);
+
+  // Mobile connection rows gain an open-link control + non-wrapping theme carousel.
+  assert.match(component, /gp-home-map-selected-edge-open/);
+  assert.match(component, /gp-home-map-selected-edge-themes/);
+  assert.match(component, /peekCarousel/);
+});
+
+test('home map chapters open an inspect card and carry one link (progressive enhancement)', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+
+  // Chapters keep their <a href> so they still navigate with JS disabled...
+  assert.match(component, /class="gp-home-map-node-link is-chapter"/);
+  assert.match(component, /href=\{c\.href\}/);
+  // ...but with JS the activation is intercepted to open the inspect card instead
+  // of navigating the whole page away (kinder to stray taps on touch).
+  assert.match(component, /classList\.contains\('is-chapter'\)/);
+  assert.match(component, /openChapterNode/);
+
+  // One external link per node: a chapter's single link is its own page; a steward's
+  // chapter affiliation is an in-map jump button (selectChapterBySlug), not a link.
+  assert.match(component, /Visit chapter/);
+  assert.match(component, /is-chapter-jump/);
+  assert.match(component, /selectChapterBySlug/);
+});
+
+test('home map defers live arrivals while a node is selected and re-reveals on deselect', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+
+  // Connections that poll in while a node is selected are held back (invisible)
+  // rather than flashed across the focused view.
+  assert.match(component, /is-pending-reveal/);
+  assert.match(component, /deferReveal = Boolean\(selectedFocusTarget\)/);
+
+  // On deselect the held-back lines comet in and the resting web softly re-reveals.
+  assert.match(component, /revealDefaultState\(\)/);
+  assert.match(component, /markThreadEntering/);
+  assert.match(component, /is-resettling/);
+  assert.match(component, /@keyframes gpMapThreadResettle/);
+
+  // The re-reveal is one-shot — no idle loop anywhere.
+  assert.doesNotMatch(component, /gpMapThreadResettle[\s\S]*?infinite/);
+});
+
+test('home map location picker is pin-first with a bundled city autocomplete', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+
+  // The pin (coordinates) is placed by tap/drag — pointer-driven, not a lone click.
+  assert.match(component, /placeFromPointer/);
+  assert.match(component, /addEventListener\('pointerdown'/);
+  assert.match(component, /addEventListener\('pointermove'/);
+
+  // A native datalist suggests bundled cities, and the list spans continents.
+  assert.match(component, /data-location-datalist/);
+  assert.match(component, /list="gp-home-map-cities"/);
+  assert.match(component, /label: 'Manila'/);
+  assert.match(component, /label: 'Mexico City'/);
+
+  // Free-text override: any typed place becomes the label once a pin gives coords,
+  // so a diverse set of locations all work (no force-match to a tiny list).
+  assert.match(component, /placeInput\.value = raw/);
+  // The either/or mode toggle is gone — pin map and city field show together.
+  assert.doesNotMatch(component, /data-location-mode-toggle/);
 });

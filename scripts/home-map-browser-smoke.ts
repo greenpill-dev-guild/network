@@ -48,8 +48,31 @@ const approvedSteward = Object.freeze({
   long: 3.3792,
   role: 'steward',
   chapterSlug: 'nigeria',
+  // Public profile URL is an existing public node field; the desktop popover and
+  // mobile rows surface it as an actionable link (new tab) — no payload change.
+  profileUrl: 'https://example.org/trusted-steward',
   themes: ['public', 'events'],
   publicNote: 'Steward public note.',
+  status: 'approved',
+  source: 'approved-submission',
+});
+
+// A second approved member so the steward has two person-to-person edges with
+// distinct themes — needed to prove the map renders more than one edge colour.
+const approvedMemberEvents = Object.freeze({
+  id: 'submission:approved-member-2',
+  sourceId: 'approved-member-2',
+  type: 'member',
+  name: 'Events Browser Member',
+  place: 'Berlin',
+  city: 'Berlin',
+  region: '',
+  country: 'Germany',
+  lat: 52.52,
+  long: 13.405,
+  role: 'member',
+  themes: ['public', 'events'],
+  publicNote: 'Events member public note.',
   status: 'approved',
   source: 'approved-submission',
 });
@@ -337,18 +360,11 @@ function mapStateForPhase(phase: MapStatePhase) {
     ? []
     : phase === 'live-member'
       ? [approvedMember]
-      : [approvedMember, approvedSteward];
+      : [approvedMember, approvedSteward, approvedMemberEvents];
+  // Person-to-person relationships only — no steward→chapter edge. Two edges with
+  // distinct themes (public + events) so the steward lights up multiple colours.
   const edges = phase === 'live-steward'
     ? [
-      {
-        id: 'edge:submission:approved-steward-1:chapter:nigeria:public',
-        from: 'submission:approved-steward-1',
-        to: 'chapter:nigeria',
-        kind: 'steward-chapter',
-        theme: 'public',
-        weight: 2,
-        source: 'source-backed',
-      },
       {
         id: 'edge:submission:approved-member-1:submission:approved-steward-1:public',
         from: 'submission:approved-member-1',
@@ -356,6 +372,15 @@ function mapStateForPhase(phase: MapStatePhase) {
         kind: 'shared-theme',
         theme: 'public',
         weight: 1,
+        source: 'generated-theme-match',
+      },
+      {
+        id: 'edge:submission:approved-member-2:submission:approved-steward-1:events',
+        from: 'submission:approved-member-2',
+        to: 'submission:approved-steward-1',
+        kind: 'shared-theme',
+        theme: 'events',
+        weight: 2,
         source: 'generated-theme-match',
       },
     ]
@@ -418,11 +443,10 @@ function submitNodeExpression({
       form.dispatchEvent(new Event('input', { bubbles: true }));
       const svg = document.querySelector('[data-location-map] svg');
       const rect = svg.getBoundingClientRect();
-      svg.dispatchEvent(new MouseEvent('click', {
-        bubbles: true,
-        clientX: rect.left + rect.width * ${xRatio},
-        clientY: rect.top + rect.height * ${yRatio},
-      }));
+      const pinX = rect.left + rect.width * ${xRatio};
+      const pinY = rect.top + rect.height * ${yRatio};
+      svg.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 31, pointerType: 'mouse', clientX: pinX, clientY: pinY }));
+      svg.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 31, pointerType: 'mouse', clientX: pinX, clientY: pinY }));
       form.dispatchEvent(new Event('input', { bubbles: true }));
       document.querySelector('[data-walkthrough-next]').click();
       form.requestSubmit();
@@ -543,16 +567,29 @@ async function runSmoke(): Promise<void> {
     await client.send('Page.navigate', { url: `${staticServer.origin}/` }, sessionId);
     await waitForExpression(client, sessionId, "document.querySelector('[data-home-map]')");
     await waitForExpression(client, sessionId, "document.querySelector('[data-home-map-open]')");
+    // Desktop viewport so the desktop section exercises the desktop popover and
+    // its container-query layout (wide map container), not the mobile sheet. The
+    // mobile section overrides to 375 later.
+    await client.send('Emulation.setDeviceMetricsOverride', {
+      width: 1280,
+      height: 900,
+      deviceScaleFactor: 1,
+      mobile: false,
+    }, sessionId);
     assert.equal(
       await evaluate(client, sessionId, "Boolean(document.querySelector('[data-node-id=\"chapter:nigeria\"]'))"),
       true,
-      'expected the Nigeria chapter anchor to exist for steward-chapter proof'
+      'expected the Nigeria chapter anchor to render as a geographic pin (chapters carry no relationship edges)'
     );
-    assert.equal(
-      await evaluate(client, sessionId, "document.querySelector('.gp-home-map-legend') && !document.querySelector('[data-home-map-stat-count]')"),
-      true,
-      'map should render a count-free identity legend, not steward/member counts'
-    );
+    const initialLegendCounts = await evaluate(client, sessionId, `
+      (() => Object.fromEntries(
+        [...document.querySelectorAll('[data-home-map-type-count]')]
+          .map((node) => [node.dataset.homeMapTypeCount, Number(node.textContent.trim())])
+      ))()
+    `);
+    assert.equal(initialLegendCounts.chapter > 0, true, 'chapter count should render from public chapter anchors');
+    assert.equal(initialLegendCounts.steward, 0, 'steward count should render as 0 before live steward nodes appear');
+    assert.equal(initialLegendCounts.member, 0, 'member count should render as 0 before live member nodes appear');
     await waitForExpression(client, sessionId, `
       (() => {
         const button = document.querySelector('[data-theme-choice="public"]');
@@ -615,11 +652,210 @@ async function runSmoke(): Promise<void> {
       sessionId,
       "Boolean(document.querySelector('[data-node-id=\"submission:approved-steward-1\"].is-steward'))"
     );
+    // Both person-to-person threads (member↔steward, member2↔steward) must render
+    // — chapters carry no edges.
     await waitForExpression(
       client,
       sessionId,
-      "Boolean(document.querySelector('.gp-home-map-thread[data-from=\"submission:approved-steward-1\"][data-to=\"chapter:nigeria\"], .gp-home-map-thread[data-from=\"chapter:nigeria\"][data-to=\"submission:approved-steward-1\"]'))"
+      "document.querySelectorAll('[data-home-map-dynamic-threads] .gp-home-map-thread').length === 2"
     );
+    const liveLegendCounts = await evaluate(client, sessionId, `
+      (() => Object.fromEntries(
+        [...document.querySelectorAll('[data-home-map-type-count]')]
+          .map((node) => [node.dataset.homeMapTypeCount, Number(node.textContent.trim())])
+      ))()
+    `);
+    assert.equal(
+      liveLegendCounts.member,
+      3,
+      'member count should include the local pending member and both approved live members'
+    );
+    assert.equal(liveLegendCounts.steward, 1, 'steward count should update when a live steward appears');
+
+    const settledThreadProof = await evaluate(client, sessionId, `
+      (async () => {
+        const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        const threadSelector = '[data-home-map-dynamic-threads] .gp-home-map-thread';
+        const beforeThreads = [...document.querySelectorAll(threadSelector)];
+        beforeThreads.forEach((thread, index) => {
+          thread.dataset.motionProofId = \`thread-proof-\${index}\`;
+        });
+        const snapshot = (thread) => {
+          const computed = getComputedStyle(thread);
+          return {
+            edgeId: thread.dataset.edgeId || '',
+            proofId: thread.dataset.motionProofId || '',
+            parentIndex: [...thread.parentNode.children].indexOf(thread),
+            animationName: computed.animationName,
+            dashOffset: Number.parseFloat(computed.strokeDashoffset) || 0,
+            entering: thread.classList.contains('is-entering'),
+            revealing: thread.classList.contains('is-revealing'),
+          };
+        };
+        const before = beforeThreads.map(snapshot);
+        await wait(4300);
+        const after = [...document.querySelectorAll(threadSelector)].map(snapshot);
+        return { before, after };
+      })()
+    `);
+    assert.equal(settledThreadProof.before.length, 2, 'expected exactly two source-backed browser-smoke edges');
+    assert.deepEqual(
+      settledThreadProof.after.map((thread) => [thread.edgeId, thread.proofId, thread.parentIndex]),
+      settledThreadProof.before.map((thread) => [thread.edgeId, thread.proofId, thread.parentIndex]),
+      'polling must not replace, move, or re-tag existing dynamic thread DOM nodes'
+    );
+    for (const thread of settledThreadProof.after) {
+      assert.equal(thread.animationName, 'none', 'settled idle threads should not have an active grow/reveal animation');
+      assert.equal(thread.dashOffset, 0, 'settled idle threads should stay fully drawn');
+      assert.equal(thread.entering, false, 'settled idle threads should not keep the entering class');
+      assert.equal(thread.revealing, false, 'settled idle threads should not keep the reveal class');
+    }
+
+    const focusThreadProof = await evaluate(client, sessionId, `
+      (async () => {
+        const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        const root = document.querySelector('[data-home-map]');
+        const svg = document.querySelector('.gp-home-map-svg');
+        const member = document.querySelector('[data-node-id="submission:approved-member-1"]');
+        const dot = member?.querySelector('.gp-home-map-node-dot');
+        const threads = () => [...document.querySelectorAll('[data-home-map-dynamic-threads] .gp-home-map-thread')];
+        if (!root || !svg || !member || !dot) return { missing: true };
+        const rect = svg.getBoundingClientRect();
+        const cx = Number(dot.getAttribute('cx'));
+        const cy = Number(dot.getAttribute('cy'));
+        const scale = Math.min(rect.width / 200, rect.height / 100);
+        const offsetX = (rect.width - 200 * scale) / 2;
+        const offsetY = (rect.height - 100 * scale) / 2;
+        const clientX = rect.left + offsetX + cx * scale;
+        const clientY = rect.top + offsetY + cy * scale;
+        root.dispatchEvent(new PointerEvent('pointermove', {
+          bubbles: true,
+          clientX,
+          clientY,
+          pointerType: 'mouse',
+        }));
+        await wait(80);
+        const focused = threads().map((thread) => ({
+          edgeId: thread.dataset.edgeId || '',
+          adjacent: thread.classList.contains('is-adj'),
+          dim: thread.classList.contains('is-dim'),
+          animationName: getComputedStyle(thread).animationName,
+        }));
+        await wait(2300);
+        const focusedSettled = threads().map((thread) => ({
+          edgeId: thread.dataset.edgeId || '',
+          adjacent: thread.classList.contains('is-adj'),
+          dim: thread.classList.contains('is-dim'),
+          animationName: getComputedStyle(thread).animationName,
+          revealing: thread.classList.contains('is-revealing'),
+        }));
+        root.dispatchEvent(new PointerEvent('pointermove', {
+          bubbles: true,
+          clientX: rect.left - 20,
+          clientY: rect.top - 20,
+          pointerType: 'mouse',
+        }));
+        root.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+        await wait(80);
+        const idleAgain = threads().map((thread) => ({
+          adjacent: thread.classList.contains('is-adj'),
+          dim: thread.classList.contains('is-dim'),
+          animationName: getComputedStyle(thread).animationName,
+        }));
+        const beforeClickScrollY = window.scrollY;
+        member.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await wait(80);
+        const selectedRegion = document.querySelector('[data-home-map-selected]');
+        const selectedRect = selectedRegion?.getBoundingClientRect();
+        const canvasRect = root.getBoundingClientRect();
+        const selectedStyle = selectedRegion ? getComputedStyle(selectedRegion) : null;
+        const loopingAnimations = [...root.querySelectorAll('*')]
+          .filter((el) => getComputedStyle(el).animationIterationCount === 'infinite')
+          .map((el) => el.className?.toString() || el.tagName);
+        const selected = threads().map((thread) => ({
+          edgeId: thread.dataset.edgeId || '',
+          adjacent: thread.classList.contains('is-adj'),
+          dim: thread.classList.contains('is-dim'),
+        }));
+        return {
+          missing: false,
+          focused,
+          focusedSettled,
+          idleAgain,
+          selected,
+          selectedCardOpen: Boolean(selectedRegion && !selectedRegion.hidden),
+          selectedCardText: selectedRegion?.textContent || '',
+          selectedCardRole: selectedRegion?.getAttribute('role') || '',
+          selectedCardPosition: selectedStyle?.position || '',
+          selectedCardInCanvas: Boolean(selectedRegion && root.contains(selectedRegion)),
+          selectedCardInsideStage: Boolean(
+            selectedRect &&
+            selectedRect.left >= canvasRect.left - 1 &&
+            selectedRect.right <= canvasRect.right + 1 &&
+            selectedRect.top >= canvasRect.top - 1 &&
+            selectedRect.bottom <= canvasRect.bottom + 1
+          ),
+          scrollUnchanged: window.scrollY === beforeClickScrollY,
+          loopingAnimations,
+        };
+      })()
+    `);
+    assert.equal(focusThreadProof.missing, false, 'expected member node and map geometry for focus proof');
+    assert.equal(focusThreadProof.focused.filter((thread) => thread.adjacent).length, 1, 'member hover should reveal only its adjacent edge');
+    assert.equal(focusThreadProof.focused.filter((thread) => thread.dim).length, 1, 'member hover should dim non-adjacent edges');
+    assert.match(
+      focusThreadProof.focused.find((thread) => thread.adjacent)?.animationName || '',
+      /gpMapAdjacentThread/,
+      'adjacent edge should reveal once when focus starts'
+    );
+    assert.equal(focusThreadProof.focusedSettled.filter((thread) => thread.adjacent).length, 1);
+    assert.equal(
+      focusThreadProof.focusedSettled.find((thread) => thread.adjacent)?.animationName,
+      'none',
+      'adjacent edge should stay locked without restarting reveal across polling'
+    );
+    assert.equal(
+      focusThreadProof.focusedSettled.find((thread) => thread.adjacent)?.revealing,
+      false,
+      'adjacent edge should drop the one-shot reveal class after settling'
+    );
+    assert.equal(focusThreadProof.idleAgain.some((thread) => thread.adjacent || thread.dim), false, 'hover away should return threads to subtle idle state');
+    assert.equal(focusThreadProof.selectedCardOpen, true, 'clicking the member should open the on-map selected-node card');
+    assert.equal(focusThreadProof.selectedCardRole, 'region', 'selected node surface should be an interactive named region');
+    assert.equal(focusThreadProof.selectedCardPosition, 'absolute', 'desktop selected node surface should be pinned inside the map');
+    assert.equal(focusThreadProof.selectedCardInCanvas, true, 'selected node surface should live inside the map canvas');
+    assert.equal(focusThreadProof.selectedCardInsideStage, true, 'desktop selected node card should stay within the visible map stage');
+    assert.equal(focusThreadProof.scrollUnchanged, true, 'desktop node selection must not scroll the page');
+    assert.match(focusThreadProof.selectedCardText, /Live Browser Member/);
+    assert.match(focusThreadProof.selectedCardText, /Member node/);
+    assert.equal(focusThreadProof.selected.filter((thread) => thread.adjacent).length, 1, 'selected member should keep its adjacent edge locked');
+    assert.deepEqual(focusThreadProof.loopingAnimations, [], 'map should not contain looping node or thread animations');
+
+    const edgeTooltipProof = await evaluate(client, sessionId, `
+      (() => {
+        const hit = document.querySelector('.gp-home-map-thread-hit.is-adj[data-edge-id="edge:submission:approved-member-1:submission:approved-steward-1:public"]');
+        const canvas = document.querySelector('[data-home-map]');
+        const tooltip = document.querySelector('[data-home-map-edge-tooltip]');
+        if (!hit || !canvas || !tooltip) return { missing: true };
+        const rect = canvas.getBoundingClientRect();
+        hit.dispatchEvent(new PointerEvent('pointerenter', {
+          bubbles: true,
+          clientX: rect.left + rect.width * 0.44,
+          clientY: rect.top + rect.height * 0.5,
+          pointerType: 'mouse',
+        }));
+        return {
+          missing: false,
+          hidden: tooltip.getAttribute('aria-hidden'),
+          text: tooltip.textContent || '',
+        };
+      })()
+    `);
+    assert.equal(edgeTooltipProof.missing, false, 'expected an adjacent invisible edge hit path for the selected member');
+    assert.equal(edgeTooltipProof.hidden, 'false', 'desktop edge hover should show the connection tooltip');
+    assert.match(edgeTooltipProof.text, /Steward ↔ Member/);
+    assert.match(edgeTooltipProof.text, /Public Goods/);
+    assert.match(edgeTooltipProof.text, /Trusted Browser Steward/);
 
     const stewardVisual = await evaluate(client, sessionId, `
       (() => {
@@ -645,19 +881,363 @@ async function runSmoke(): Promise<void> {
       sessionId,
       "document.querySelector('[data-home-map-selected]') && !document.querySelector('[data-home-map-selected]').hidden"
     );
-    const selectedPanel = await evaluate(client, sessionId, `
+    const selectedCard = await evaluate(client, sessionId, `
       (() => {
         const selected = document.querySelector('[data-home-map-selected]');
+        const links = [...selected.querySelectorAll('[data-selected-links] a.gp-home-map-selected-link')];
+        const chapterJump = selected.querySelector('[data-selected-links] button.gp-home-map-selected-link.is-chapter-jump');
+        const edgeList = selected.querySelector('[data-selected-edge-list]');
+        const chapterLink = links.find((a) => (a.getAttribute('href') || '').startsWith('/chapters/'));
         return {
           text: selected?.innerText || '',
           bioregionHidden: document.querySelector('[data-selected-bioregion]')?.hidden,
+          profileNewTab: links.some((a) => a.target === '_blank' && a.getAttribute('href') === 'https://example.org/trusted-steward'),
+          chapterHref: chapterLink ? chapterLink.getAttribute('href') : '',
+          chapterJumpIsButton: Boolean(chapterJump),
+          chapterJumpText: chapterJump ? chapterJump.textContent : '',
+          edgeListVisible: Boolean(edgeList) && getComputedStyle(edgeList).display !== 'none',
         };
       })()
     `);
-    assert.match(selectedPanel.text, /Trusted Browser Steward/);
-    assert.match(selectedPanel.text, /Steward public note/);
-    assert.match(selectedPanel.text, /connected to/i);
-    assert.equal(selectedPanel.bioregionHidden, true, 'empty deferred bioregion should not be a selected-panel centerpiece');
+    assert.match(selectedCard.text, /Trusted Browser Steward/);
+    // Desktop popover is light — name, role, links, themes. No connection list
+    // and no connection summary; relationships read on the map + by hovering.
+    assert.equal(selectedCard.edgeListVisible, false, 'desktop selected popover must not show the connection list');
+    assert.doesNotMatch(selectedCard.text, /No public connections yet/);
+    // One external link only: the profile (new tab). A steward's chapter is an
+    // in-map jump BUTTON (opens the chapter node), not a second external link.
+    assert.equal(selectedCard.profileNewTab, true, 'steward popover should expose a public profile link that opens in a new tab');
+    assert.equal(selectedCard.chapterHref, '', 'steward popover must not carry a second external chapter link');
+    assert.equal(selectedCard.chapterJumpIsButton, true, 'steward chapter affiliation should be an in-map jump button');
+    assert.match(selectedCard.chapterJumpText, /→/, 'chapter jump should be labelled with the chapter name');
+    assert.match(selectedCard.text, /Edit this node/);
+    assert.equal(selectedCard.bioregionHidden, true, 'empty deferred bioregion should not be a selected-card centerpiece');
+
+    // The steward is selected, so both its person-to-person edges are adjacent.
+    // Theme colour is the only relationship signal, so they must render in more
+    // than one colour — the map cannot be a monochrome decorative SVG.
+    const stewardEdgeColours = await evaluate(client, sessionId, `
+      (() => {
+        const threads = [...document.querySelectorAll('[data-home-map-dynamic-threads] .gp-home-map-thread.is-adj')];
+        const colours = new Set(threads.map((thread) => getComputedStyle(thread).stroke));
+        return { adjacentCount: threads.length, distinctColours: colours.size, colours: [...colours] };
+      })()
+    `);
+    assert.equal(stewardEdgeColours.adjacentCount, 2, 'selecting the steward should light up its two person-to-person edges');
+    assert.equal(
+      stewardEdgeColours.distinctColours >= 2,
+      true,
+      `the selected steward's adjacent edges should render in more than one theme colour (got ${JSON.stringify(stewardEdgeColours.colours)})`
+    );
+
+    // Desktop bounded drag-pan: zoom controls are visible on desktop now, so a
+    // mouse user can zoom in and drag to pan. Reset → zoom from the centre →
+    // drag centre-toward-centre so clamping at the bounds can't zero the pan.
+    const desktopPanProof = await evaluate(client, sessionId, `
+      (async () => {
+        const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        const root = document.querySelector('[data-home-map]');
+        const svg = document.querySelector('.gp-home-map-svg');
+        const zoomIn = document.querySelector('[data-home-map-zoom="in"]');
+        const reset = document.querySelector('[data-home-map-zoom="reset"]');
+        if (!root || !svg || !zoomIn || !reset) return { missing: true };
+        reset.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await wait(20);
+        zoomIn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        zoomIn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await wait(40);
+        const zoomed = root.classList.contains('is-zoomed');
+        const beforeViewBox = svg.getAttribute('viewBox') || '';
+        const beforeUrl = location.href;
+        const rect = root.getBoundingClientRect();
+        const cx = rect.left + rect.width * 0.5;
+        const cy = rect.top + rect.height * 0.5;
+        root.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 31, pointerType: 'mouse', button: 0, clientX: cx, clientY: cy }));
+        root.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 31, pointerType: 'mouse', clientX: cx - 40, clientY: cy - 18 }));
+        root.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 31, pointerType: 'mouse', clientX: cx - 40, clientY: cy - 18 }));
+        await wait(40);
+        return { missing: false, zoomed, beforeViewBox, afterViewBox: svg.getAttribute('viewBox') || '', beforeUrl, afterUrl: location.href };
+      })()
+    `);
+    assert.equal(desktopPanProof.missing, false, 'expected desktop map + zoom controls for the drag-pan proof');
+    assert.equal(desktopPanProof.zoomed, true, 'desktop zoom-in should zoom the map (zoom controls are visible on desktop)');
+    assert.notEqual(desktopPanProof.afterViewBox, desktopPanProof.beforeViewBox, 'mouse drag should pan the zoomed desktop map (bounded)');
+    assert.equal(desktopPanProof.afterUrl, desktopPanProof.beforeUrl, 'a drag-pan must not navigate the page');
+
+    await client.send('Emulation.setDeviceMetricsOverride', {
+      width: 375,
+      height: 812,
+      deviceScaleFactor: 2,
+      mobile: true,
+    }, sessionId);
+    await client.send('Emulation.setTouchEmulationEnabled', {
+      enabled: true,
+      maxTouchPoints: 2,
+    }, sessionId);
+    await evaluate(client, sessionId, `
+      (async () => {
+        const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        document.querySelector('[data-selected-close]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        document.querySelector('[data-home-map-zoom="reset"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await wait(40);
+        const svg = document.querySelector('.gp-home-map-svg');
+        const rect = svg?.getBoundingClientRect();
+        // A prior desktop drag-pan intentionally suppresses the following SVG
+        // click. Spend that flag on an empty map click before the mobile tap
+        // proof, then the node activation below exercises the real open path.
+        svg?.dispatchEvent(new MouseEvent('click', {
+          bubbles: true,
+          cancelable: true,
+          clientX: rect ? rect.left + rect.width * 0.05 : 0,
+          clientY: rect ? rect.top + rect.height * 0.05 : 0,
+        }));
+        await wait(80);
+        return true;
+      })()
+    `);
+    await waitForExpression(client, sessionId, "document.querySelector('[data-node-id=\"submission:approved-member-1\"]')");
+    await waitForExpression(client, sessionId, "document.querySelector('.gp-home-map-thread-hit[data-edge-id=\"edge:submission:approved-member-1:submission:approved-steward-1:public\"]')");
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const mobileProof = await evaluate(client, sessionId, `
+      (async () => {
+        const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        const root = document.querySelector('[data-home-map]');
+        const svg = document.querySelector('.gp-home-map-svg');
+        const member = document.querySelector('[data-node-id="submission:approved-member-1"]');
+        const thread = document.querySelector('[data-home-map-dynamic-threads] .gp-home-map-thread');
+        if (!root || !svg || !member || !thread) return { missing: true };
+        // Let any in-flight deselect re-reveal (gpMapThreadResettle, ~620ms, from
+        // the desktop flow's card close) settle before sampling the idle state.
+        await wait(700);
+        // Snapshot the idle thread state as primitives BEFORE any tap —
+        // getComputedStyle returns a live object, and the first thread becomes
+        // adjacent once its node is selected.
+        const idleStyle = getComputedStyle(thread);
+        const idleAnimation = idleStyle.animationName;
+        const idleOpacity = Number.parseFloat(idleStyle.opacity);
+        const fullViewBox = svg.getAttribute('viewBox') || '';
+        const selectedIsOpen = () => Boolean(document.querySelector('[data-home-map-selected]') && !document.querySelector('[data-home-map-selected]').hidden);
+        const activateNode = async (node) => {
+          const rect = node.getBoundingClientRect();
+          const clientX = rect.left + rect.width / 2;
+          const clientY = rect.top + rect.height / 2;
+          node.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true, pointerId: 71, pointerType: 'touch', clientX, clientY }));
+          node.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true, pointerId: 71, pointerType: 'touch', clientX, clientY }));
+          node.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true, cancelable: true, clientX, clientY }));
+          await wait(80);
+          if (!selectedIsOpen()) {
+            node.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
+            await wait(80);
+          }
+        };
+
+        const beforeTapScrollY = window.scrollY;
+        await activateNode(member);
+        await wait(120);
+        const afterTapViewBox = svg.getAttribute('viewBox') || '';
+        const bar = document.querySelector('[data-home-map-selected]');
+        const edgeList = document.querySelector('[data-selected-edge-list]');
+        const firstRow = document.querySelector('[data-selected-edge-row]');
+        const rowCount = document.querySelectorAll('[data-selected-edge-row]').length;
+        const barRect = bar?.getBoundingClientRect();
+        const controlsRect = document.querySelector('[data-home-map-controls]')?.getBoundingClientRect();
+        const rootRectAfterTap = root.getBoundingClientRect();
+        const memberRectAfterTap = member.querySelector('.gp-home-map-node-dot')?.getBoundingClientRect();
+        const rectsOverlap = (a, b) => Boolean(a && b && !(a.right <= b.left || a.left >= b.right || a.bottom <= b.top || a.top >= b.bottom));
+        const barStyle = bar ? getComputedStyle(bar) : null;
+        const barOpenAfterTap = Boolean(bar && !bar.hidden);
+        const edgeListHiddenAfterTap = edgeList?.hidden;
+        const barTextBeforeSwap = bar?.innerText || '';
+        const activationDebug = {
+          memberClass: member.getAttribute('class') || '',
+          memberKey: member.dataset.memberKey || '',
+          memberRole: member.getAttribute('role') || '',
+          memberTabIndex: member.getAttribute('tabindex') || '',
+          memberHidden: member.getAttribute('aria-hidden') || '',
+          barExists: Boolean(bar),
+          barHiddenAfterTap: bar ? Boolean(bar.hidden) : null,
+          barTextAfterTap: bar?.innerText || '',
+          rowCount,
+        };
+        firstRow?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await wait(120);
+        const afterRowViewBox = svg.getAttribute('viewBox') || '';
+        const activeRowsAfterRow = document.querySelectorAll('[data-selected-edge-row].is-active').length;
+
+        const stewardNode = document.querySelector('[data-node-id="submission:approved-steward-1"]');
+        if (stewardNode) await activateNode(stewardNode);
+        await wait(120);
+        const barTextAfterSwap = bar?.innerText || '';
+        const rowCountAfterSwap = document.querySelectorAll('[data-selected-edge-row]').length;
+        const barOpenAfterSwap = Boolean(bar && !bar.hidden);
+        const beforePanViewBox = svg.getAttribute('viewBox') || '';
+
+        const rect = root.getBoundingClientRect();
+        const panStartX = rect.left + rect.width * 0.5;
+        const panStartY = rect.top + rect.height * 0.52;
+        root.dispatchEvent(new PointerEvent('pointerdown', {
+          bubbles: true,
+          pointerId: 11,
+          pointerType: 'touch',
+          clientX: panStartX,
+          clientY: panStartY,
+        }));
+        root.dispatchEvent(new PointerEvent('pointermove', {
+          bubbles: true,
+          pointerId: 11,
+          pointerType: 'touch',
+          clientX: panStartX + 44,
+          clientY: panStartY + 18,
+        }));
+        root.dispatchEvent(new PointerEvent('pointerup', {
+          bubbles: true,
+          pointerId: 11,
+          pointerType: 'touch',
+          clientX: panStartX + 44,
+          clientY: panStartY + 18,
+        }));
+        await wait(120);
+        const afterPanViewBox = svg.getAttribute('viewBox') || '';
+
+        const beforePinchViewBox = afterPanViewBox;
+        root.dispatchEvent(new PointerEvent('pointerdown', {
+          bubbles: true,
+          pointerId: 21,
+          pointerType: 'touch',
+          clientX: rect.left + rect.width * 0.42,
+          clientY: rect.top + rect.height * 0.5,
+        }));
+        root.dispatchEvent(new PointerEvent('pointerdown', {
+          bubbles: true,
+          pointerId: 22,
+          pointerType: 'touch',
+          clientX: rect.left + rect.width * 0.58,
+          clientY: rect.top + rect.height * 0.5,
+        }));
+        root.dispatchEvent(new PointerEvent('pointermove', {
+          bubbles: true,
+          pointerId: 21,
+          pointerType: 'touch',
+          clientX: rect.left + rect.width * 0.35,
+          clientY: rect.top + rect.height * 0.5,
+        }));
+        root.dispatchEvent(new PointerEvent('pointermove', {
+          bubbles: true,
+          pointerId: 22,
+          pointerType: 'touch',
+          clientX: rect.left + rect.width * 0.65,
+          clientY: rect.top + rect.height * 0.5,
+        }));
+        root.dispatchEvent(new PointerEvent('pointerup', {
+          bubbles: true,
+          pointerId: 21,
+          pointerType: 'touch',
+          clientX: rect.left + rect.width * 0.35,
+          clientY: rect.top + rect.height * 0.5,
+        }));
+        root.dispatchEvent(new PointerEvent('pointerup', {
+          bubbles: true,
+          pointerId: 22,
+          pointerType: 'touch',
+          clientX: rect.left + rect.width * 0.65,
+          clientY: rect.top + rect.height * 0.5,
+        }));
+        await wait(120);
+        const afterPinchViewBox = svg.getAttribute('viewBox') || '';
+
+        document.querySelector('[data-home-map-zoom="reset"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await wait(80);
+        const afterResetViewBox = svg.getAttribute('viewBox') || '';
+        document.querySelector('[data-selected-close]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await wait(80);
+        const barClosedAfterClose = Boolean(bar?.hidden);
+
+        return {
+          missing: false,
+          fullViewBox,
+          afterTapViewBox,
+          afterRowViewBox,
+          beforePanViewBox,
+          afterPanViewBox,
+          beforePinchViewBox,
+          afterPinchViewBox,
+          afterResetViewBox,
+          idleAnimation,
+          idleOpacity,
+          barOpen: barOpenAfterTap,
+          activationDebug,
+          selectedGeometry: {
+            rootTop: rootRectAfterTap.top,
+            rootBottom: rootRectAfterTap.bottom,
+            barTop: barRect?.top ?? null,
+            barBottom: barRect?.bottom ?? null,
+            memberTop: memberRectAfterTap?.top ?? null,
+            memberBottom: memberRectAfterTap?.bottom ?? null,
+            memberWidth: memberRectAfterTap?.width ?? null,
+            memberHeight: memberRectAfterTap?.height ?? null,
+          },
+          barOpenAfterSwap,
+          barPosition: barStyle?.position || '',
+          barInsideCanvas: Boolean(
+            barRect &&
+            barRect.left >= rootRectAfterTap.left - 1 &&
+            barRect.right <= rootRectAfterTap.right + 1 &&
+            barRect.top >= rootRectAfterTap.top - 1 &&
+            barRect.bottom <= rootRectAfterTap.bottom + 1
+          ),
+          selectedNodeAboveBar: Boolean(
+            barRect &&
+            memberRectAfterTap &&
+            memberRectAfterTap.width > 0 &&
+            memberRectAfterTap.height > 0 &&
+            memberRectAfterTap.top >= rootRectAfterTap.top - 1 &&
+            memberRectAfterTap.bottom <= barRect.top - 6
+          ),
+          controlsOverlap: rectsOverlap(barRect, controlsRect),
+          scrollUnchanged: window.scrollY === beforeTapScrollY,
+          edgeListHidden: edgeListHiddenAfterTap,
+          rowCount,
+          activeRowsAfterRow,
+          barTextBeforeSwap,
+          barTextAfterSwap,
+          rowCountAfterSwap,
+          barClosedAfterClose,
+        };
+      })()
+    `);
+    assert.equal(mobileProof.missing, false, 'expected mobile map proof fixtures to render');
+    assert.equal(mobileProof.idleAnimation, 'none', 'mobile idle threads should not run a prominent grow animation');
+    assert.equal(mobileProof.idleOpacity <= 0.3, true, 'mobile idle edges should stay quiet');
+    assert.equal(mobileProof.barOpen, true, `tapping a node should open the mobile compact selected bar: ${JSON.stringify(mobileProof.activationDebug)}`);
+    assert.equal(mobileProof.barPosition, 'absolute', 'mobile selected bar should be an over-map surface');
+    assert.equal(mobileProof.barInsideCanvas, true, 'mobile selected bar should stay inside the map canvas');
+    assert.equal(
+      mobileProof.selectedNodeAboveBar,
+      true,
+      `selected mobile node should remain visible above the compact bar: ${JSON.stringify(mobileProof.selectedGeometry)}`
+    );
+    assert.equal(mobileProof.controlsOverlap, false, 'mobile selected bar should not overlap map controls at 375px');
+    assert.equal(mobileProof.scrollUnchanged, true, 'opening the mobile selected bar must not scroll the page');
+    assert.equal(
+      mobileProof.edgeListHidden,
+      false,
+      `mobile selected node should show a connection list: ${JSON.stringify({
+        text: mobileProof.barTextBeforeSwap,
+        rowCount: mobileProof.rowCount,
+        activation: mobileProof.activationDebug,
+      })}`
+    );
+    assert.equal(mobileProof.rowCount > 0, true, 'mobile selected bar should render at least one connection chip');
+    assert.equal(mobileProof.activeRowsAfterRow, 1, 'tapping a connection chip should highlight exactly that one edge row');
+    assert.notEqual(mobileProof.afterRowViewBox, mobileProof.afterTapViewBox, 'tapping a connection row should frame the connected node');
+    assert.match(mobileProof.barTextBeforeSwap, /Live Browser Member/);
+    assert.match(mobileProof.barTextAfterSwap, /Trusted Browser Steward/);
+    assert.equal(mobileProof.barOpenAfterSwap, true, 'tapping another node should swap the selected bar without closing it');
+    assert.equal(mobileProof.rowCountAfterSwap > 0, true, 'swapped mobile bar should keep connection chips available');
+    assert.notEqual(mobileProof.afterPanViewBox, mobileProof.beforePanViewBox, 'mobile pan should change the bounded viewBox');
+    assert.notEqual(mobileProof.afterPinchViewBox, mobileProof.beforePinchViewBox, 'mobile pinch should change the bounded viewBox');
+    assert.match(mobileProof.afterResetViewBox, /^0(?:\.00)? 0(?:\.00)? 200(?:\.00)? 100(?:\.00)?$/, 'overview reset should restore the full map viewBox');
+    assert.equal(mobileProof.barClosedAfterClose, true, 'mobile selected bar close button should dismiss the bar');
 
     const publicLeakCheck = await evaluate(client, sessionId, `
       (() => {
@@ -672,7 +1252,7 @@ async function runSmoke(): Promise<void> {
         return needles.filter((needle) => publicDom.includes(needle) || selected.includes(needle) || storage.join('\\n').includes(needle));
       })()
     `);
-    assert.deepEqual(publicLeakCheck, [], 'private emails/raw notes must not appear in public map DOM, selected panel, or local pending storage');
+    assert.deepEqual(publicLeakCheck, [], 'private emails/raw notes must not appear in public map DOM, selected card/bar, or local pending storage');
 
     assert.equal(mapNodePosts.length, 3, 'expected three controlled map-node submissions');
     assert.equal(mapNodePosts[0].themes.length, 1, 'moderated flow should accept one theme');

@@ -489,7 +489,7 @@ Motion is **restrained and purposeful** — used to confirm intent, smooth state
 | `motion.duration.fast` | 120ms | Hover color shifts, link underlines, chip tone changes |
 | `motion.duration.base` | 200ms | Card surface step (`card` → `card-elev`), button press shifts, dropdown open/close |
 | `motion.duration.slow` | 400ms | Modal/overlay entrance, hero photo crossfades, page-level transitions |
-| `motion.duration.pulse` | 2400ms | The mycelial map node pulse cycle (one full breath) |
+| `motion.duration.pulse` | 2400ms | Reserved for deliberate loading/status states with reduced-motion support; do not use for idle map animation |
 
 ### Easing tokens
 
@@ -506,7 +506,6 @@ Motion is **restrained and purposeful** — used to confirm intent, smooth state
 - **Card hover** — surface tone shift (`card` → `card-elev`) at `base / emphasized`. No translate, no scale, no shadow stack.
 - **Filter chip tone change** — at `fast / standard`.
 - **Modal / dropdown / mobile nav slide-down** — at `base / emphasized` (open) and `fast / exit` (close).
-- **Mycelial map node pulse** — `pulse` duration, infinite loop, opacity oscillation only (no scale). Pulse is the *only* idle/infinite animation in the system.
 - **Page transitions** — none by default. Astro's native page navigation behavior is preserved.
 
 ### Where motion is forbidden
@@ -514,7 +513,7 @@ Motion is **restrained and purposeful** — used to confirm intent, smooth state
 - No scale-down or translate-down on button press. The color shift *is* the press affordance.
 - No animated entrance for static content on page load. Content appears instantly when ready.
 - No scroll-triggered animations (parallax, fade-in-on-scroll, etc.). The site is a reading surface.
-- No looping animations beyond the map pulse.
+- No idle or infinite animation in the map; hover, focus, and selection states must be static or one-shot only.
 - No animation on text — no typewriter, no count-up, no character reveal.
 
 ### Reduced motion

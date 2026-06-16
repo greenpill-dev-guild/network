@@ -75,10 +75,10 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
   canonicalPath={homePage.seo?.canonicalPath || '/'}
   noindex={homePage.seo?.noindex}
   activeNav="Home"
+  backgroundMode="plain"
 >
   <main class="gp-home" id="home-top">
     <section class="gp-home-hero">
-      <div class="gp-home-hero-topo" aria-hidden="true"></div>
       <Container size="2xl">
         <div class="gp-home-hero-inner">
           <Text variant="display" class="gp-home-hero-title">{heroTitle}</Text>
@@ -347,17 +347,6 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
     padding: var(--gp-space-3xl) 0 var(--gp-space-4xl);
   }
 
-  .gp-home-hero-topo {
-    position: absolute;
-    inset: 0;
-    background-image: url('/images/hifi/topo-bg.png');
-    background-size: cover;
-    background-position: center;
-    opacity: 0.1;
-    mix-blend-mode: overlay;
-    pointer-events: none;
-  }
-
   .gp-home-hero-inner {
     position: relative;
     z-index: 1;
@@ -401,7 +390,7 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
   /* Section frame */
   .gp-home-section {
     padding: clamp(var(--gp-space-3xl), 7vw, var(--gp-space-4xl)) 0;
-    border-top: 1px solid var(--gp-border-soft);
+    border-top: 0;
   }
 
   .gp-home-section-head {

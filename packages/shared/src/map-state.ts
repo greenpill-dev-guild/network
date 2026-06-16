@@ -140,22 +140,22 @@ export const PUBLIC_COUNT_STATUSES: readonly PublicCountStatus[] = Object.freeze
 ]);
 
 export const PUBLIC_MAP_THEMES: readonly PublicMapTheme[] = Object.freeze([
-  { id: 'trees', label: 'Trees & Biodiversity', color: '#7BC74D', icon: 'tree' },
-  { id: 'food', label: 'Food & Farms', color: '#A8D24A', icon: 'grain' },
-  { id: 'water', label: 'Water & Waste', color: '#3FB6A8', icon: 'wave' },
-  { id: 'energy', label: 'Clean Energy', color: '#F5CB45', icon: 'sun' },
-  { id: 'gov', label: 'Local Governance', color: '#E8B14B', icon: 'gavel' },
-  { id: 'events', label: 'Local Events', color: '#E89455', icon: 'flag' },
-  { id: 'funding', label: 'Grants & Funding', color: '#E07856', icon: 'coin' },
-  { id: 'currency', label: 'Community Currency', color: '#D86A4A', icon: 'currency' },
-  { id: 'mutual', label: 'Mutual Aid', color: '#D87B97', icon: 'heart' },
-  { id: 'stories', label: 'Storytelling', color: '#E0A6B8', icon: 'book' },
-  { id: 'education', label: 'Education', color: '#F0DCA0', icon: 'mortar' },
-  { id: 'opensrc', label: 'Open Source', color: '#5CC2D9', icon: 'fork' },
-  { id: 'desci', label: 'DeSci', color: '#7DAEE0', icon: 'beaker' },
-  { id: 'ai', label: 'AI & Automation', color: '#9B8FD9', icon: 'circuit' },
-  { id: 'impact', label: 'Impact Tracking', color: '#86E0B5', icon: 'pulse' },
-  { id: 'public', label: 'Public Goods', color: '#C9A4E0', icon: 'commons' },
+  { id: 'water', label: 'Water & Waste', color: '#2BA7FF', icon: 'wave' },
+  { id: 'opensrc', label: 'Open Source', color: '#00D5E8', icon: 'fork' },
+  { id: 'impact', label: 'Impact Tracking', color: '#34D399', icon: 'pulse' },
+  { id: 'trees', label: 'Trees & Biodiversity', color: '#75D063', icon: 'tree' },
+  { id: 'food', label: 'Food & Farms', color: '#C6D84F', icon: 'grain' },
+  { id: 'energy', label: 'Clean Energy', color: '#FFD84D', icon: 'sun' },
+  { id: 'education', label: 'Education', color: '#12C7B4', icon: 'mortar' },
+  { id: 'events', label: 'Local Events', color: '#FF9F1C', icon: 'flag' },
+  { id: 'funding', label: 'Grants & Funding', color: '#FF6B35', icon: 'coin' },
+  { id: 'currency', label: 'Community Currency', color: '#EF476F', icon: 'currency' },
+  { id: 'mutual', label: 'Mutual Aid', color: '#F472B6', icon: 'heart' },
+  { id: 'stories', label: 'Storytelling', color: '#D946EF', icon: 'book' },
+  { id: 'ai', label: 'AI & Automation', color: '#B067FF', icon: 'circuit' },
+  { id: 'desci', label: 'DeSci', color: '#536DFE', icon: 'beaker' },
+  { id: 'gov', label: 'Local Governance', color: '#7C9CFF', icon: 'gavel' },
+  { id: 'public', label: 'Public Goods', color: '#B9A6C9', icon: 'commons' },
 ]);
 
 const COUNT_LABELS: Readonly<Record<PublicCountId, string>> = Object.freeze({
@@ -366,6 +366,16 @@ const sharedThemes = (a: PublicMapStateNode, b: PublicMapStateNode): string[] =>
   a.themes.filter((theme) => b.themes.includes(theme))
 );
 
+// Edge colour is the only relationship signal on the public map, so prefer a
+// specific shared theme over the near-ubiquitous `public` (Public Goods) theme;
+// keep `public` only when it is the sole shared theme. Deterministic — the first
+// match preserves node A's theme order.
+const PUBLIC_THEME_SLUG = 'public';
+const firstSpecificTheme = (themes: string[]): string => (
+  themes.find((theme) => theme && theme !== PUBLIC_THEME_SLUG) ?? ''
+);
+const pickSharedTheme = (shared: string[]): string => firstSpecificTheme(shared) || shared[0] || '';
+
 const hasPublicBioregion = (value: unknown): value is string => {
   const bioregion = cleanString(value);
   return Boolean(bioregion) && bioregion.toLowerCase() !== 'bioregion pending';
@@ -376,16 +386,6 @@ export function generatePublicMapEdges(
   { limit = 160, perNodeLimit = 4 }: { limit?: number; perNodeLimit?: number } = {}
 ): PublicMapStateEdge[] {
   const people = nodes.filter((node) => node.type === 'member' || node.type === 'steward');
-  const chaptersBySlug = new Map(
-    nodes
-      .filter((node) => node.type === 'chapter')
-      .flatMap((node) => {
-        const keys = [node.slug, node.sourceId]
-          .map(cleanString)
-          .filter(Boolean);
-        return keys.map((key) => [key, node] as const);
-      })
-  );
   const edges: PublicMapStateEdge[] = [];
   const edgeKeys = new Set<string>();
   const nodeEdgeCounts = new Map<string, number>();
@@ -427,22 +427,9 @@ export function generatePublicMapEdges(
     });
   };
 
-  for (const steward of people.filter((node) => node.type === 'steward')) {
-    const chapterSlug = cleanString(steward.chapterSlug);
-    const chapter = chapterSlug ? chaptersBySlug.get(chapterSlug) : null;
-    if (!chapter) continue;
-    const shared = sharedThemes(steward, chapter);
-    addEdge({
-      from: steward,
-      to: chapter,
-      kind: 'steward-chapter',
-      theme: shared[0] || steward.primaryTheme || chapter.primaryTheme,
-      weight: 2,
-      source: 'source-backed',
-    });
-    if (edges.length >= limit) return edges;
-  }
-
+  // Relationships are person-to-person only (steward↔steward, steward↔member,
+  // member↔member). Chapters stay as geographic anchors with no relationship
+  // threads — there is intentionally no steward→chapter edge.
   const candidates: Array<{
     a: PublicMapStateNode;
     b: PublicMapStateNode;
@@ -484,7 +471,7 @@ export function generatePublicMapEdges(
       from: candidate.a,
       to: candidate.b,
       kind: 'shared-theme',
-      theme: candidate.shared[0],
+      theme: pickSharedTheme(candidate.shared),
       bioregion: candidate.sharedBioregion,
       weight: candidate.shared.length + (candidate.sharedBioregion ? 1 : 0),
     });

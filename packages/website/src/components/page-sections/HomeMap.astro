@@ -1,34 +1,33 @@
 ---
 import { getOperationalChapters } from '../../lib/operational-content';
 import { PUBLIC_MAP_THEMES } from '@greenpill-network/shared/map-state';
+import { WORLD_LAND_RINGS, type WorldLandRing } from '../../data/world-land-rings';
 
 // Add-node walkthrough theme choices use the canonical public theme list.
 const mapThemes = PUBLIC_MAP_THEMES;
 
-// Mirrors artifacts/hifi/hifi/map-themes.jsx labels and hues. Slugs match the
-// content/themes/*.json files. Edge color carries theme meaning; node fill
-// carries node identity (chapter / steward / member).
+// Edge color carries theme meaning; node fill carries node identity. The base
+// IDs come from the shared public map contract; aliases keep older content IDs
+// readable without duplicating the canonical palette.
+const THEME_ALIASES: Record<string, { target: string; label: string }> = {
+  'public-goods': { target: 'public', label: 'Public Goods' },
+  'local-regeneration': { target: 'trees', label: 'Local Regeneration' },
+  'knowledge-commons': { target: 'education', label: 'Knowledge Commons' },
+  'coordination-tools': { target: 'opensrc', label: 'Coordination Tools' },
+};
+
+const canonicalThemeInfo = Object.fromEntries(
+  mapThemes.map((theme) => [theme.id, { label: theme.label, color: theme.color }])
+) as Record<string, { label: string; color: string }>;
+
 const THEME_INFO: Record<string, { label: string; color: string }> = {
-  trees: { label: 'Trees & Biodiversity', color: '#7BC74D' },
-  food: { label: 'Food & Farms', color: '#A8D24A' },
-  water: { label: 'Water & Waste', color: '#3FB6A8' },
-  energy: { label: 'Clean Energy', color: '#F5CB45' },
-  gov: { label: 'Local Governance', color: '#E8B14B' },
-  events: { label: 'Local Events', color: '#E89455' },
-  funding: { label: 'Grants & Funding', color: '#E07856' },
-  currency: { label: 'Community Currency', color: '#D86A4A' },
-  mutual: { label: 'Mutual Aid', color: '#D87B97' },
-  stories: { label: 'Storytelling', color: '#E0A6B8' },
-  education: { label: 'Education', color: '#F0DCA0' },
-  opensrc: { label: 'Open Source', color: '#5CC2D9' },
-  desci: { label: 'DeSci', color: '#7DAEE0' },
-  ai: { label: 'AI & Automation', color: '#9B8FD9' },
-  impact: { label: 'Impact Tracking', color: '#86E0B5' },
-  public: { label: 'Public Goods', color: '#C9A4E0' },
-  'public-goods': { label: 'Public Goods', color: '#C9A4E0' },
-  'local-regeneration': { label: 'Local Regeneration', color: '#7BC74D' },
-  'knowledge-commons': { label: 'Knowledge Commons', color: '#F0DCA0' },
-  'coordination-tools': { label: 'Coordination Tools', color: '#86E0B5' },
+  ...canonicalThemeInfo,
+  ...Object.fromEntries(
+    Object.entries(THEME_ALIASES).map(([alias, config]) => {
+      const target = canonicalThemeInfo[config.target] ?? canonicalThemeInfo.public;
+      return [alias, { label: config.label, color: target?.color ?? '#B8E835' }];
+    })
+  ),
 };
 
 // Equirectangular projection. viewBox = 0..200 (x) × 0..100 (y).
@@ -37,36 +36,7 @@ const VIEW_H = 100;
 const lonToX = (lon: number) => ((lon + 180) / 360) * VIEW_W;
 const latToY = (lat: number) => ((90 - lat) / 180) * VIEW_H;
 
-// Hand-simplified continent silhouettes, copied from
-// artifacts/hifi/hifi/map-world.jsx. Aimed at instantly-recognizable shapes,
-// not geodetic accuracy.
-const CONTINENTS: Array<Array<[number, number]>> = [
-  [[-167,66],[-160,71],[-148,71],[-133,69],[-110,73],[-95,79],[-83,75],[-75,78],[-70,73],[-62,60],[-65,52],[-66,46],[-71,45],[-77,38],[-82,30],[-92,29],[-97,27],[-104,21],[-110,23],[-117,32],[-124,40],[-124,48],[-130,55],[-138,58],[-148,60],[-160,57],[-167,60],[-167,66]],
-  [[-50,82],[-25,82],[-22,78],[-32,68],[-42,60],[-52,62],[-55,72],[-50,82]],
-  [[-24,66.5],[-18,66.5],[-15,64],[-22,63.5],[-24,66.5]],
-  [[-100,18],[-87,21],[-83,16],[-77,9],[-83,8],[-92,14],[-100,18]],
-  [[-77,12],[-66,11],[-58,9],[-50,5],[-35,-6],[-34,-15],[-40,-25],[-50,-30],[-58,-36],[-65,-40],[-68,-50],[-72,-54],[-74,-50],[-73,-42],[-75,-33],[-72,-20],[-77,-8],[-80,-2],[-78,5],[-77,12]],
-  [[-8,55],[-3,58],[2,55],[1,51],[-5,50],[-8,52],[-8,55]],
-  [[-10,54],[-6,55],[-6,52],[-10,52],[-10,54]],
-  [[-10,36],[-5,36],[3,43],[9,44],[12,38],[18,40],[25,35],[28,36],[27,40],[30,46],[35,46],[40,49],[43,55],[35,58],[28,60],[24,65],[22,69],[15,68],[10,63],[5,58],[3,52],[-3,48],[-5,43],[-10,42],[-10,36]],
-  [[20,62],[35,60],[45,58],[60,57],[75,57],[95,57],[115,57],[135,57],[155,60],[170,67],[178,68],[178,78],[160,80],[120,80],[80,82],[50,82],[30,78],[22,70],[20,62]],
-  [[-17,15],[-14,22],[-10,30],[-2,36],[10,33],[20,32],[32,32],[37,31],[40,22],[46,17],[52,12],[51,4],[44,-2],[42,-10],[40,-15],[38,-22],[33,-30],[24,-34],[18,-34],[14,-25],[10,-12],[8,-2],[7,5],[0,5],[-7,5],[-11,7],[-17,15]],
-  [[43,-12],[51,-15],[51,-25],[44,-25],[43,-12]],
-  [[35,30],[38,24],[44,18],[53,18],[56,24],[52,28],[44,30],[35,30]],
-  [[66,24],[72,28],[78,32],[85,28],[90,25],[92,21],[87,15],[80,8],[76,9],[72,18],[68,22],[66,24]],
-  [[75,40],[85,45],[100,50],[120,52],[135,49],[135,42],[130,38],[126,34],[120,30],[118,24],[110,21],[100,22],[95,27],[90,30],[80,32],[75,40]],
-  [[95,22],[100,22],[107,18],[110,12],[108,8],[100,8],[97,12],[97,18],[95,22]],
-  [[95,5],[102,5],[108,1],[120,-1],[133,-3],[140,-3],[140,-8],[125,-9],[110,-7],[100,-3],[97,2],[95,5]],
-  [[109,4],[118,4],[119,-3],[110,-4],[109,4]],
-  [[131,-1],[141,-3],[150,-6],[151,-10],[140,-10],[133,-8],[131,-1]],
-  [[119,18],[123,18],[126,9],[124,5],[120,6],[119,12],[119,18]],
-  [[130,30],[135,33],[141,40],[145,45],[144,44],[140,40],[134,33],[130,30]],
-  [[113,-22],[122,-17],[130,-12],[137,-13],[143,-13],[148,-19],[153,-26],[152,-32],[148,-37],[140,-39],[125,-34],[115,-32],[113,-22]],
-  [[145,-40],[148,-40],[148,-43],[145,-43],[145,-40]],
-  [[166,-37],[175,-39],[178,-46],[170,-47],[166,-44],[166,-37]],
-];
-
-function pointInPolygon(lon: number, lat: number, poly: Array<[number, number]>) {
+function pointInPolygon(lon: number, lat: number, poly: WorldLandRing) {
   let inside = false;
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
     const [xi, yi] = poly[i];
@@ -78,10 +48,10 @@ function pointInPolygon(lon: number, lat: number, poly: Array<[number, number]>)
   return inside;
 }
 
-// Build landmass dot grid once at build time. 120×60 cells → ~7200 candidates,
-// ~25% pass the in-continent test, so ~1700 dots in the final SVG.
-const COLS = 120;
-const ROWS = 60;
+// Build landmass dot grid once at build time. Natural Earth rings stay server
+// side; the browser only receives SVG dots.
+const COLS = 160;
+const ROWS = 80;
 const cellW = VIEW_W / COLS;
 const cellH = VIEW_H / ROWS;
 type LandDot = { cx: number; cy: number };
@@ -91,7 +61,7 @@ for (let row = 0; row < ROWS; row++) {
   for (let col = 0; col < COLS; col++) {
     const lon = -180 + (col + 0.5) * (360 / COLS);
     let inside = false;
-    for (const poly of CONTINENTS) {
+    for (const poly of WORLD_LAND_RINGS) {
       if (pointInPolygon(lon, lat, poly)) {
         inside = true;
         break;
@@ -127,7 +97,7 @@ const chapterNodes: ChapterNode[] = chapters
     const themes = (c.data.themeSlugs || []) as string[];
     const weight = c.data.featuredWeight ?? 0;
     const status = c.data.status || 'active';
-    const size = status !== 'active' ? 1.35 : weight >= 70 ? 1.85 : 1.6;
+    const size = status !== 'active' ? 1 : weight >= 70 ? 1.35 : 1.18;
     const chapterNodeId = `chapter:${c.id}`;
     return {
       id: chapterNodeId,
@@ -210,21 +180,27 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           const growDelay = (idx % 12) * 0.12;
           return (
             <path
-              class="gp-home-map-thread"
+              class="gp-home-map-thread is-entering"
               data-from={edge.fromId}
               data-to={edge.toId}
               data-theme={edge.theme}
               d={edge.d}
               pathLength="1"
               stroke={themeColor(edge.theme)}
-              style={`--thread-color: ${themeColor(edge.theme)}; --thread-grow-delay: ${growDelay}s; --thread-pulse-delay: ${edge.delay}s; animation-delay: ${growDelay}s, ${edge.delay + 1.6}s;`}
+              style={`--thread-color: ${themeColor(edge.theme)}; --thread-grow-delay: ${growDelay}s; animation-delay: ${growDelay}s;`}
             />
           );
         })}
       </g>
       <g class="gp-home-map-threads" data-home-map-dynamic-threads aria-hidden="true"></g>
+      {/* Per-shared-theme parallel strands for the selected node only. Built
+          client-side by intersecting the two endpoints' public themes — no
+          payload change. Kept in its own group so it never affects the base
+          thread/edge-hit sets. */}
+      <g class="gp-home-map-selection-strands" data-home-map-selection-strands aria-hidden="true"></g>
+      <g class="gp-home-map-thread-hits" data-home-map-dynamic-thread-hits aria-hidden="true"></g>
 
-      {/* chapter nodes — dark green anchors */}
+      {/* chapter nodes — lime anchors with stable invisible hit targets */}
       <g class="gp-home-map-chapters">
         {chapterNodes.map((c) => (
           <a
@@ -238,11 +214,10 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
             data-node-themes={c.themes.join(' ')}
           >
             <title>{`${c.name}${c.city ? ` · ${c.city}` : ''}`}</title>
-            <circle class="gp-home-map-node-halo" cx={c.x} cy={c.y} r={c.size + 2.6} />
-            <circle class="gp-home-map-node-ring" cx={c.x} cy={c.y} r={c.size + 0.6} />
-            <circle class="gp-home-map-node-dot" cx={c.x} cy={c.y} r={c.size} />
-            <circle class="gp-home-map-node-ripple is-ripple-a" cx={c.x} cy={c.y} r="0" />
-            <circle class="gp-home-map-node-ripple is-ripple-b" cx={c.x} cy={c.y} r="0" />
+            <circle class="gp-home-map-node-hit" cx={c.x} cy={c.y} r="4.8" />
+            <circle class="gp-home-map-node-halo" cx={c.x} cy={c.y} r={c.size + 1.45} data-base-r={c.size + 1.45} />
+            <circle class="gp-home-map-node-ring" cx={c.x} cy={c.y} r={c.size + 0.45} data-base-r={c.size + 0.45} />
+            <circle class="gp-home-map-node-dot" cx={c.x} cy={c.y} r={c.size} data-base-r={c.size} />
           </a>
         ))}
       </g>
@@ -254,20 +229,20 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       <g class="gp-home-map-members" data-home-map-members></g>
     </svg>
 
-    {/* Count-free legend. The homepage should explain node identity without
-        surfacing member/steward counts while real participation is still
-        growing. Steward/member entries start hidden and appear only when at
-        least one node of that type is actually on the map, so a chapter-only
-        sparse state never implies visible stewards or members. */}
-    <div class="gp-home-map-legend" aria-hidden="true">
+    {/* Visible counts reflect the current filtered map view. Chapters render
+        from the public snapshot; steward/member counts update from /map/state
+        as approved public submissions arrive. */}
+    <div class="gp-home-map-legend" aria-label="Visible map node counts">
       {nodeTypeFilters.map((type) => (
         <span
           class={`gp-home-map-legend-item is-${type.id}`}
           data-legend-type={type.id}
-          hidden={type.id !== 'chapter'}
         >
           <span class={`gp-home-map-legend-mark is-${type.id}`} aria-hidden="true"></span>
           <span class="gp-home-map-legend-label">{type.label}</span>
+          <span class="gp-home-map-legend-count" data-home-map-type-count={type.id}>
+            {type.id === 'chapter' ? chapterCount : 0}
+          </span>
         </span>
       ))}
     </div>
@@ -278,7 +253,52 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       <span class="gp-home-map-focus-name" data-focus-name></span>
       <span class="gp-home-map-focus-meta" data-focus-meta></span>
       <span class="gp-home-map-focus-themes" data-focus-themes></span>
-      <span class="gp-home-map-focus-connections" data-focus-connections></span>
+    </div>
+
+    <div class="gp-home-map-edge-tooltip" data-home-map-edge-tooltip aria-hidden="true">
+      <span class="gp-home-map-edge-tooltip-kicker" data-edge-tooltip-kicker></span>
+      <span class="gp-home-map-edge-tooltip-title" data-edge-tooltip-title></span>
+      <span class="gp-home-map-edge-tooltip-meta" data-edge-tooltip-meta></span>
+    </div>
+
+    {/* Selected-node card/bar — on-map only. Desktop pins near the selected
+        submitted node; mobile anchors as a compact bar over the lower canvas. */}
+    <div class="gp-home-map-selected" data-home-map-selected hidden role="region" aria-label="Selected map node">
+      <button type="button" class="gp-home-map-selected-close" data-selected-close aria-label="Close selected node">
+        <span aria-hidden="true">×</span>
+      </button>
+      <p class="gp-home-map-selected-kicker" data-selected-kicker>Network node</p>
+      <p class="gp-home-map-selected-name" data-selected-name></p>
+      <p class="gp-home-map-selected-place" data-selected-place></p>
+      <p class="gp-home-map-selected-bioregion" data-selected-bioregion></p>
+      <div class="gp-home-map-selected-links" data-selected-links hidden></div>
+      <div class="gp-home-map-selected-themes" data-selected-themes></div>
+      <p class="gp-home-map-selected-note" data-selected-note></p>
+      <div class="gp-home-map-selected-edge-list" data-selected-edge-list hidden>
+        <p class="gp-home-map-selected-edge-title">Connections</p>
+        <div class="gp-home-map-selected-edge-items" data-selected-edge-items></div>
+      </div>
+
+      <div class="gp-home-map-update" data-home-map-update hidden>
+        <button type="button" class="gp-home-map-update-trigger" data-update-trigger>Edit this node</button>
+
+        <form class="gp-home-map-update-form" data-update-form hidden novalidate>
+          <label class="gp-home-map-update-field" for="gp-home-map-update-email">
+            <span>Owner email</span>
+          </label>
+          <input id="gp-home-map-update-email" type="email" name="email" inputmode="email" autocomplete="email" required placeholder="you@example.org" />
+          <div class="gp-home-map-update-actions">
+            <button type="button" class="gp-home-map-update-cancel" data-update-cancel>Cancel</button>
+            <button type="submit" class="gp-home-map-update-submit">Send edit link</button>
+          </div>
+          <p class="gp-home-map-update-error" data-update-error role="alert"></p>
+        </form>
+
+        <p class="gp-home-map-update-success" data-update-success role="status" hidden>
+          If this email matches the node owner, we'll send an edit link.
+        </p>
+      </div>
+      <p class="gp-home-map-selected-live gp-home-map-sr" data-selected-live aria-live="polite"></p>
     </div>
 
     <div class="gp-home-map-controls" data-home-map-controls aria-label="Map controls">
@@ -316,10 +336,22 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           <button type="button" data-filter-toggle="theme" aria-expanded="false">Themes</button>
           <button type="button" data-filter-toggle="type" aria-expanded="false">Types</button>
         </div>
-        <button type="button" class="gp-home-map-add-self" data-home-map-open aria-haspopup="dialog">
-          <span aria-hidden="true">+</span>
-          <span>Add yourself</span>
-        </button>
+        <div class="gp-home-map-zoom-controls" data-home-map-zoom-controls aria-label="Map zoom controls">
+          <button type="button" data-home-map-zoom="out" aria-label="Zoom out">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><line x1="5" y1="12" x2="19" y2="12" /></svg>
+          </button>
+          <button type="button" data-home-map-zoom="reset" aria-label="Reset to full map">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M4 9V5a1 1 0 0 1 1-1h4" />
+              <path d="M20 9V5a1 1 0 0 0-1-1h-4" />
+              <path d="M4 15v4a1 1 0 0 0 1 1h4" />
+              <path d="M20 15v4a1 1 0 0 1-1 1h-4" />
+            </svg>
+          </button>
+          <button type="button" data-home-map-zoom="in" aria-label="Zoom in">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -327,42 +359,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   {/* Theme labels/colors for client-rendered member chips, so the script does
       not need to import the shared map-state module into the browser bundle. */}
   <script type="application/json" data-home-map-theme-info set:html={JSON.stringify(THEME_INFO)}></script>
-
-  {/* Selected-node panel — opens in-flow when a submitted steward/member node is
-      activated. Chapter nodes navigate. The owner-edit affordance appears for
-      approved submitted nodes only. */}
-  <div class="gp-home-map-selected" data-home-map-selected hidden role="region" aria-label="Selected map node">
-    <button type="button" class="gp-home-map-selected-close" data-selected-close aria-label="Close selected node">
-      <span aria-hidden="true">×</span>
-    </button>
-    <p class="gp-home-map-selected-kicker" data-selected-kicker>Network node</p>
-    <p class="gp-home-map-selected-name" data-selected-name></p>
-    <p class="gp-home-map-selected-place" data-selected-place></p>
-    <p class="gp-home-map-selected-bioregion" data-selected-bioregion></p>
-    <div class="gp-home-map-selected-themes" data-selected-themes></div>
-    <p class="gp-home-map-selected-note" data-selected-note></p>
-    <p class="gp-home-map-selected-connections" data-selected-connections></p>
-
-    <div class="gp-home-map-update" data-home-map-update hidden>
-      <button type="button" class="gp-home-map-update-trigger" data-update-trigger>Update this node</button>
-
-      <form class="gp-home-map-update-form" data-update-form hidden novalidate>
-        <label class="gp-home-map-update-field">
-          <span>Owner email</span>
-          <input type="email" name="email" inputmode="email" autocomplete="email" required placeholder="you@example.org" />
-        </label>
-        <div class="gp-home-map-update-actions">
-          <button type="button" class="gp-home-map-update-cancel" data-update-cancel>Cancel</button>
-          <button type="submit" class="gp-home-map-update-submit">Send edit link</button>
-        </div>
-        <p class="gp-home-map-update-error" data-update-error role="alert"></p>
-      </form>
-
-      <p class="gp-home-map-update-success" data-update-success role="status" hidden>
-        If this email matches the node owner, we'll send an edit link.
-      </p>
-    </div>
-  </div>
 
   {/* Find-your-people walkthrough. The visible trigger lives in the homepage
       hero CTA; local pending state is still written only after server accept. */}
@@ -415,37 +411,38 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         <div class="gp-home-map-addnode-location">
           <div class="gp-home-map-addnode-location-head">
             <span>Your place in the world</span>
-            <button type="button" data-location-mode-toggle>or type a city ↗</button>
           </div>
 
           <div class="gp-home-map-addnode-mini-map" data-location-map>
             <div class="gp-home-map-addnode-mini-topo" aria-hidden="true"></div>
-            <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} preserveAspectRatio="xMidYMid meet" aria-label="Click a place on the world map">
+            <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} preserveAspectRatio="xMidYMid meet" aria-label="Tap or drag to place your pin on the world map">
               <g aria-hidden="true">
                 {landDots.map((d) => (
                   <circle cx={d.cx} cy={d.cy} r="0.42" />
                 ))}
               </g>
-              <circle data-location-pin cx="100" cy="50" r="2.2" hidden />
+              <circle data-location-pin cx="100" cy="50" r="2.8" hidden />
             </svg>
-            <span data-location-map-hint>· click to place ·</span>
+            <span data-location-map-hint>· tap or drag to place ·</span>
           </div>
 
-          <label class="gp-home-map-addnode-city" data-location-text hidden>
-            <span>City search</span>
-            <input type="text" name="placeQuery" autocomplete="address-level2" placeholder="Berlin, Bogota, Bali..." />
+          <label class="gp-home-map-addnode-city" data-location-text>
+            <span>City or place name</span>
+            <input type="text" name="placeQuery" autocomplete="address-level2" list="gp-home-map-cities" placeholder="Start typing, or name where your pin is…" />
+            <datalist id="gp-home-map-cities" data-location-datalist></datalist>
           </label>
 
           <input type="hidden" name="place" data-location-place />
           <input type="hidden" name="lat" data-location-lat />
           <input type="hidden" name="long" data-location-long />
 
-          <p class="gp-home-map-addnode-location-status" data-location-status>Click anywhere on the map to drop your pin.</p>
+          <p class="gp-home-map-addnode-location-status" data-location-status>Drop a pin on the map, then name your city — or pick one from the list.</p>
         </div>
 
         <label class="gp-home-map-addnode-note">
-          <span>Public profile intro</span>
-          <textarea name="publicNote" rows="3" maxlength="280" placeholder="What are you working on with the network?"></textarea>
+          <span>Tagline</span>
+          <textarea name="publicNote" rows="2" maxlength="72" placeholder="e.g. compost evangelist turning rooftops into food forests"></textarea>
+          <p class="gp-home-map-addnode-theme-count" data-tagline-count aria-live="polite">0 / 72</p>
         </label>
       </section>
 
@@ -468,7 +465,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
             <button type="button" data-edit-step="themes">Edit</button>
           </div>
           <div>
-            <span>Profile intro</span>
+            <span>Tagline</span>
             <p data-review-note>None yet</p>
             <button type="button" data-edit-step="identity">Edit</button>
           </div>
@@ -499,7 +496,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     saveLocalPendingNode,
   } from '@greenpill-network/shared/map-nodes';
 
-  type DynamicMapNodeType = 'steward' | 'member';
+  type DynamicMapNodeType = 'chapter' | 'steward' | 'member';
 
   type DynamicMapNode = {
     key: string;
@@ -510,6 +507,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     chapterSlug: string;
     bioregion: string;
     publicNote: string;
+    profileUrl: string;
     themes: string[];
     lat: number;
     long: number;
@@ -517,11 +515,37 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     pending: boolean;
   };
 
+  type MapViewBox = {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+
+  type EdgeEndpoint = {
+    id: string;
+    name: string;
+    type: 'chapter' | 'steward' | 'member';
+  };
+
+  type EdgeMeta = {
+    edgeId: string;
+    from: EdgeEndpoint;
+    to: EdgeEndpoint;
+    kind: string;
+    theme: string;
+    themeLabel: string;
+    themeColor: string;
+    source: string;
+    weight: number;
+    bioregion: string;
+  };
+
   (() => {
     const root = document.querySelector('[data-home-map]') as HTMLElement | null;
     if (!root) return;
     // root is the canvas (its .is-focused class drives the SVG focus styles).
-    // The controls, selected panel, update form, and add-node form live in the
+    // The controls, selected card/bar, update form, and add-node form live in the
     // surrounding <figure>, so query those from the figure scope, not root.
     const scope: ParentNode = root.closest('.gp-home-map') ?? document;
     // Astro scopes component <style> via a generated attribute. Elements created
@@ -535,6 +559,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const VIEW_W = 200;
     const VIEW_H = 100;
     const SVG_NS = 'http://www.w3.org/2000/svg';
+    const NODE_HIT_RADIUS = 4.8;
     const lonToX = (lon: number) => ((lon + 180) / 360) * VIEW_W;
     const latToY = (lat: number) => ((90 - lat) / 180) * VIEW_H;
 
@@ -543,12 +568,19 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     const membersGroup = root.querySelector('[data-home-map-members]') as SVGGElement | null;
     const dynamicThreadsGroup = root.querySelector('[data-home-map-dynamic-threads]') as SVGGElement | null;
+    const dynamicThreadHitsGroup = root.querySelector('[data-home-map-dynamic-thread-hits]') as SVGGElement | null;
+    const selectionStrandsGroup = root.querySelector('[data-home-map-selection-strands]') as SVGGElement | null;
+    const svgEl = root.querySelector('.gp-home-map-svg') as SVGSVGElement | null;
     const focusEl = root.querySelector('[data-home-map-focus]') as HTMLElement | null;
     const focusRole = root.querySelector('[data-focus-role]') as HTMLElement | null;
     const focusName = root.querySelector('[data-focus-name]') as HTMLElement | null;
     const focusMeta = root.querySelector('[data-focus-meta]') as HTMLElement | null;
     const focusThemes = root.querySelector('[data-focus-themes]') as HTMLElement | null;
-    const focusConnections = root.querySelector('[data-focus-connections]') as HTMLElement | null;
+    const edgeTooltip = root.querySelector('[data-home-map-edge-tooltip]') as HTMLElement | null;
+    const edgeTooltipKicker = root.querySelector('[data-edge-tooltip-kicker]') as HTMLElement | null;
+    const edgeTooltipTitle = root.querySelector('[data-edge-tooltip-title]') as HTMLElement | null;
+    const edgeTooltipMeta = root.querySelector('[data-edge-tooltip-meta]') as HTMLElement | null;
+    const zoomButtons = Array.from(scope.querySelectorAll('[data-home-map-zoom]')) as HTMLButtonElement[];
 
     // Theme labels/colors for member chips, serialized from SSR.
     const themeInfo: Record<string, { label: string; color: string }> = (() => {
@@ -563,17 +595,35 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const themeColor = (slug: string) => themeInfo[slug]?.color ?? '#B8E835';
     const clean = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
     const publicBioregion = (value: unknown) => clean(value);
+    // Public profile/social/chapter links only; reject javascript:/data: and other
+    // unsafe schemes so a link can only ever be http(s) or a same-site path.
+    const cleanHref = (value: unknown) => {
+      const href = clean(value);
+      return /^https?:\/\//i.test(href) || href.startsWith('/') ? href : '';
+    };
+    const chapterHref = (slug: unknown) => {
+      const cleaned = clean(slug).replace(/^\/+|\/+$/g, '');
+      return cleaned ? `/chapters/${cleaned}` : '';
+    };
 
     const typeFilterButtons = Array.from(scope.querySelectorAll('[data-type-filter]')) as HTMLButtonElement[];
     const themeFilterButtons = Array.from(scope.querySelectorAll('[data-theme-filter]')) as HTMLButtonElement[];
     const filterToggleButtons = Array.from(scope.querySelectorAll('[data-filter-toggle]')) as HTMLButtonElement[];
     const filterPanels = Array.from(scope.querySelectorAll('[data-filter-panel]')) as HTMLElement[];
     const legendItems = Array.from(scope.querySelectorAll('[data-legend-type]')) as HTMLElement[];
+    const legendCountByType = new Map(
+      Array.from(scope.querySelectorAll('[data-home-map-type-count]')).map((el) => [
+        clean((el as HTMLElement).dataset.homeMapTypeCount),
+        el as HTMLElement,
+      ])
+    );
     const activeTypes = new Set(['chapter', 'steward', 'member']);
     const activeThemes = new Set(themeFilterButtons.map((button) => clean(button.dataset.themeFilter)).filter(Boolean));
     const allThemeCount = activeThemes.size;
     let openFilterPanel = '';
     let applyMapFilters = () => {};
+    let syncSelectedOverlay = () => {};
+    let selectedBottomPaddingForView = () => 0;
 
     const filterTypeFor = (value: unknown): 'chapter' | 'steward' | 'member' => {
       const type = clean(value).toLowerCase();
@@ -595,6 +645,53 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const toFiniteNumber = (value: unknown) => {
       const num = typeof value === 'number' ? value : Number(value);
       return Number.isFinite(num) ? num : null;
+    };
+
+    const baseRadius = (circle: SVGCircleElement | null) => {
+      const num = Number(circle?.getAttribute('data-base-r') || circle?.getAttribute('r'));
+      return Number.isFinite(num) ? num : 0;
+    };
+
+    const scaleNodeCircle = (circle: SVGCircleElement | null, scale: number) => {
+      const base = baseRadius(circle);
+      if (!base) return;
+      circle.setAttribute('r', Math.max(0.12, base * scale).toFixed(2));
+    };
+
+    const densityScaleFor = (nearestDistance: number, totalVisible: number) => {
+      const totalScale = totalVisible >= 40 ? 0.72 : totalVisible >= 24 ? 0.82 : totalVisible >= 14 ? 0.9 : 1;
+      const neighborScale = nearestDistance < 2.4
+        ? 0.58
+        : nearestDistance < 4.2
+          ? 0.68
+          : nearestDistance < 6.2
+            ? 0.78
+            : nearestDistance < 8.5
+              ? 0.9
+              : 1;
+      return Math.min(totalScale, neighborScale);
+    };
+
+    const applyNodeDensityScale = () => {
+      const nodes = Array.from(root.querySelectorAll('.gp-home-map-node-link:not(.is-filtered-out)'))
+        .map((node) => {
+          const dot = node.querySelector('.gp-home-map-node-dot') as SVGCircleElement | null;
+          const x = toFiniteNumber(dot?.getAttribute('cx'));
+          const y = toFiniteNumber(dot?.getAttribute('cy'));
+          return x === null || y === null ? null : { node, x, y };
+        })
+        .filter(Boolean) as Array<{ node: Element; x: number; y: number }>;
+
+      nodes.forEach((entry) => {
+        const nearest = nodes.reduce((min, other) => {
+          if (other.node === entry.node) return min;
+          return Math.min(min, Math.hypot(entry.x - other.x, entry.y - other.y));
+        }, Number.POSITIVE_INFINITY);
+        const scale = densityScaleFor(nearest, nodes.length);
+        scaleNodeCircle(entry.node.querySelector('.gp-home-map-node-dot') as SVGCircleElement | null, scale);
+        scaleNodeCircle(entry.node.querySelector('.gp-home-map-node-ring') as SVGCircleElement | null, scale);
+        scaleNodeCircle(entry.node.querySelector('.gp-home-map-node-halo') as SVGCircleElement | null, scale);
+      });
     };
 
     const seedForEdge = (value: string) => Array.from(value).reduce((acc, char) => (
@@ -649,36 +746,393 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       return d;
     };
 
+    const FULL_VIEW_BOX: MapViewBox = { x: 0, y: 0, width: VIEW_W, height: VIEW_H };
+    const MIN_VIEW_BOX_WIDTH = 46;
+    const viewBoxAspect = VIEW_W / VIEW_H;
+    let currentViewBox: MapViewBox = { ...FULL_VIEW_BOX };
+
+    const formatViewBox = (box: MapViewBox) => (
+      `${box.x.toFixed(2)} ${box.y.toFixed(2)} ${box.width.toFixed(2)} ${box.height.toFixed(2)}`
+    );
+
+    const clampViewBox = (box: MapViewBox): MapViewBox => {
+      const width = Math.min(VIEW_W, Math.max(MIN_VIEW_BOX_WIDTH, box.width));
+      const height = width / viewBoxAspect;
+      const maxX = VIEW_W - width;
+      const maxY = VIEW_H - height;
+      return {
+        x: Math.min(Math.max(0, box.x), maxX),
+        y: Math.min(Math.max(0, box.y), maxY),
+        width,
+        height,
+      };
+    };
+
+    const setMapViewBox = (box: MapViewBox) => {
+      currentViewBox = clampViewBox(box);
+      svgEl?.setAttribute('viewBox', formatViewBox(currentViewBox));
+      root.classList.toggle('is-zoomed', currentViewBox.width < VIEW_W - 0.5);
+      syncSelectedOverlay();
+    };
+
+    const setMapViewBoxCentered = (cx: number, cy: number, width: number) => {
+      const height = width / viewBoxAspect;
+      setMapViewBox({
+        x: cx - width / 2,
+        y: cy - height / 2,
+        width,
+        height,
+      });
+    };
+
+    const resetMapView = () => setMapViewBox(FULL_VIEW_BOX);
+
+    const zoomMapBy = (factor: number) => {
+      const centerX = currentViewBox.x + currentViewBox.width / 2;
+      const centerY = currentViewBox.y + currentViewBox.height / 2;
+      setMapViewBoxCentered(centerX, centerY, currentViewBox.width * factor);
+    };
+
+    const isTouchMap = () => (
+      window.matchMedia('(pointer: coarse)').matches || root.getBoundingClientRect().width <= 520
+    );
+
+    const nodeCenter = (node: Element) => {
+      const dot = node.querySelector('.gp-home-map-node-dot') as SVGCircleElement | null;
+      const x = toFiniteNumber(dot?.getAttribute('cx'));
+      const y = toFiniteNumber(dot?.getAttribute('cy'));
+      return x === null || y === null ? null : { x, y };
+    };
+
+    // Anchored framing: fit a set of viewBox-space points (node centres) into the
+    // view so a selection or relationship is clearly framed, not just centred.
+    const framePoints = (
+      points: Array<{ x: number; y: number }>,
+      { padding = 16, minWidth = MIN_VIEW_BOX_WIDTH }: { padding?: number; minWidth?: number } = {}
+    ) => {
+      if (!points.length) return;
+      const xs = points.map((p) => p.x);
+      const ys = points.map((p) => p.y);
+      const minX = Math.min(...xs) - padding;
+      const maxX = Math.max(...xs) + padding;
+      const minY = Math.min(...ys) - padding;
+      const maxY = Math.max(...ys) + padding;
+      const width = Math.max(minWidth, maxX - minX, (maxY - minY) * viewBoxAspect);
+      const height = width / viewBoxAspect;
+      const bottomInsetShift = selectedBottomPaddingForView() > 0
+        ? Math.min(selectedBottomPaddingForView() * 0.26, height * 0.32)
+        : 0;
+      setMapViewBoxCentered((minX + maxX) / 2, (minY + maxY) / 2 + bottomInsetShift, width);
+    };
+
+    // Frame a node with its visible adjacent endpoints (its neighbourhood) — used
+    // when a node is selected, so you see the node in the context of its web.
+    const frameNodeNeighbourhood = (node: Element) => {
+      const id = node.getAttribute('data-node-id') || '';
+      const points: Array<{ x: number; y: number }> = [];
+      const self = nodeCenter(node);
+      if (self) points.push(self);
+      const seen = new Set<string>();
+      root.querySelectorAll<SVGPathElement>('.gp-home-map-thread:not(.is-filtered-out)').forEach((thread) => {
+        const from = thread.getAttribute('data-from');
+        const to = thread.getAttribute('data-to');
+        if (from !== id && to !== id) return;
+        const otherId = from === id ? to : from;
+        if (!otherId || seen.has(otherId)) return;
+        seen.add(otherId);
+        const other = root.querySelector(`.gp-home-map-node-link:not(.is-filtered-out)[data-node-id="${CSS.escape(otherId)}"]`);
+        const center = other ? nodeCenter(other) : null;
+        if (center) points.push(center);
+      });
+      framePoints(points, { padding: points.length > 1 ? 14 : 30 });
+    };
+
+    // Frame the single connected (far) endpoint — used when a connection row is
+    // tapped, so the view travels to that node. Distinct centre from the
+    // neighbourhood frame above, so node-tap and row-tap never coincide.
+    const frameConnectedNode = (node: Element) => {
+      const center = nodeCenter(node);
+      if (center) framePoints([center], { padding: 30 });
+    };
+
+    const svgPointForBox = (event: PointerEvent | MouseEvent, box: MapViewBox) => {
+      if (!svgEl) return null;
+      const rect = svgEl.getBoundingClientRect();
+      const scale = Math.min(rect.width / box.width, rect.height / box.height);
+      if (!Number.isFinite(scale) || scale <= 0) return null;
+      const renderedWidth = box.width * scale;
+      const renderedHeight = box.height * scale;
+      const offsetX = (rect.width - renderedWidth) / 2;
+      const offsetY = (rect.height - renderedHeight) / 2;
+      const x = box.x + (event.clientX - rect.left - offsetX) / scale;
+      const y = box.y + (event.clientY - rect.top - offsetY) / scale;
+      if (
+        x < box.x ||
+        x > box.x + box.width ||
+        y < box.y ||
+        y > box.y + box.height
+      ) return null;
+      return { x, y };
+    };
+
+    const svgPointForEvent = (event: PointerEvent | MouseEvent) => svgPointForBox(event, currentViewBox);
+
+    const clientScaleForBox = (box: MapViewBox) => {
+      if (!svgEl) return 1;
+      const rect = svgEl.getBoundingClientRect();
+      const scale = Math.min(rect.width / box.width, rect.height / box.height);
+      return Number.isFinite(scale) && scale > 0 ? scale : 1;
+    };
+
+    zoomButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const action = clean(button.dataset.homeMapZoom);
+        if (action === 'reset') resetMapView();
+        if (action === 'in') zoomMapBy(0.74);
+        if (action === 'out') zoomMapBy(1.35);
+      });
+    });
+
     // ---- Hover / focus card (lightweight, pointer-events:none) -------------
-    const clearFocus = () => {
+    let selectedFocusTarget: Element | null = null;
+    let activeFocusNodeId = '';
+    let selectedEdgeId = '';
+    const edgeMetaById = new Map<string, EdgeMeta>();
+    const edgeHitById = new Map<string, SVGPathElement>();
+
+    const settleThreadMotion = (thread: SVGPathElement, className: 'is-entering' | 'is-revealing') => {
+      const duration = className === 'is-entering' ? 2200 : 1100;
+      window.setTimeout(() => thread.classList.remove(className), duration);
+    };
+
+    const markThreadRevealing = (thread: SVGPathElement) => {
+      thread.classList.remove('is-revealing');
+      void thread.getBoundingClientRect();
+      thread.classList.add('is-revealing');
+      settleThreadMotion(thread, 'is-revealing');
+    };
+
+    // Replays the one-shot arrival comet — used to reveal connections that were
+    // held back (is-pending-reveal) while a node was selected. Decision 8.
+    const markThreadEntering = (thread: SVGPathElement) => {
+      thread.classList.remove('is-pending-reveal', 'is-entering');
+      void thread.getBoundingClientRect();
+      thread.classList.add('is-entering');
+      settleThreadMotion(thread, 'is-entering');
+    };
+
+    const registerThread = (thread: SVGPathElement) => {
+      if (thread.dataset.threadRegistered === 'true') return;
+      thread.dataset.threadRegistered = 'true';
+      thread.addEventListener('animationend', (event) => {
+        const animationName = (event as AnimationEvent).animationName;
+        if (animationName === 'gpMapThreadGrow') thread.classList.remove('is-entering');
+        if (animationName === 'gpMapAdjacentThread') thread.classList.remove('is-revealing');
+      });
+      if (thread.classList.contains('is-entering')) settleThreadMotion(thread, 'is-entering');
+    };
+
+    const ENDPOINT_ROLE_LABELS: Record<string, string> = { chapter: 'Chapter', steward: 'Steward', member: 'Member' };
+    const endpointRoleLabel = (type: string) => (
+      ENDPOINT_ROLE_LABELS[type] || (type ? type.charAt(0).toUpperCase() + type.slice(1) : 'Node')
+    );
+    // Relationship type, named from the two endpoint roles (steward first). The
+    // web is person-to-person — there is no steward-chapter kind.
+    const edgePairLabel = (edge: EdgeMeta) => {
+      const order: Record<string, number> = { steward: 0, member: 1, chapter: 2 };
+      const [a, b] = [edge.from.type, edge.to.type].sort((x, y) => (order[x] ?? 9) - (order[y] ?? 9));
+      return `${endpointRoleLabel(a)} ↔ ${endpointRoleLabel(b)}`;
+    };
+
+    const oppositeEndpoint = (edge: EdgeMeta, nodeId: string): EdgeEndpoint => (
+      edge.from.id === nodeId ? edge.to : edge.from
+    );
+
+    const visibleThreadForEdge = (edgeId: string) => (
+      root.querySelector(`.gp-home-map-thread[data-edge-id="${CSS.escape(edgeId)}"]:not(.is-filtered-out)`) as SVGPathElement | null
+    );
+
+    const connectedEdgesFor = (nodeId: string) => (
+      Array.from(edgeMetaById.values())
+        .filter((edge) => edge.from.id === nodeId || edge.to.id === nodeId)
+        .filter((edge) => Boolean(visibleThreadForEdge(edge.edgeId)))
+    );
+
+    const positionEdgeTooltip = (event: PointerEvent | MouseEvent) => {
+      if (!edgeTooltip) return;
+      const rootRect = root.getBoundingClientRect();
+      const tooltipRect = edgeTooltip.getBoundingClientRect();
+      const padding = 10;
+      const rawX = event.clientX - rootRect.left + 14;
+      const rawY = event.clientY - rootRect.top + 14;
+      const x = Math.min(Math.max(padding, rawX), Math.max(padding, rootRect.width - tooltipRect.width - padding));
+      const y = Math.min(Math.max(padding, rawY), Math.max(padding, rootRect.height - tooltipRect.height - padding));
+      edgeTooltip.style.left = `${x}px`;
+      edgeTooltip.style.top = `${y}px`;
+    };
+
+    const showEdgeTooltip = (edgeId: string, event: PointerEvent | MouseEvent) => {
+      const edge = edgeMetaById.get(edgeId);
+      if (!edge || !edgeTooltip || !edgeTooltipKicker || !edgeTooltipTitle || !edgeTooltipMeta || isTouchMap()) return;
+      edgeTooltipKicker.textContent = edgePairLabel(edge);
+      edgeTooltipTitle.textContent = `${edge.from.name} → ${edge.to.name}`;
+      edgeTooltipMeta.textContent = edge.themeLabel + (edge.bioregion ? ` · ${edge.bioregion}` : '');
+      edgeTooltip.style.setProperty('--edge-color', edge.themeColor);
+      edgeTooltip.setAttribute('aria-hidden', 'false');
+      positionEdgeTooltip(event);
+    };
+
+    const hideEdgeTooltip = () => {
+      if (!edgeTooltip) return;
+      edgeTooltip.setAttribute('aria-hidden', 'true');
+    };
+
+    const applyEdgeHighlight = (edgeId: string) => {
+      selectedEdgeId = edgeId;
+      root.querySelectorAll('.gp-home-map-thread, .gp-home-map-thread-hit').forEach((edge) => {
+        edge.classList.toggle('is-edge-selected', clean((edge as HTMLElement).dataset.edgeId) === edgeId);
+      });
+      scope.querySelectorAll('[data-selected-edge-row]').forEach((row) => {
+        const selected = clean((row as HTMLElement).dataset.selectedEdgeRow) === edgeId;
+        row.classList.toggle('is-active', selected);
+        row.setAttribute('aria-pressed', selected ? 'true' : 'false');
+      });
+    };
+
+    const clearEdgeHighlight = () => {
+      selectedEdgeId = '';
+      root.querySelectorAll('.gp-home-map-thread, .gp-home-map-thread-hit').forEach((edge) => {
+        edge.classList.remove('is-edge-selected');
+      });
+      scope.querySelectorAll('[data-selected-edge-row]').forEach((row) => {
+        row.classList.remove('is-active');
+        row.setAttribute('aria-pressed', 'false');
+      });
+    };
+
+    const syncEdgeHitState = (thread: SVGPathElement) => {
+      const edgeId = clean(thread.dataset.edgeId);
+      const hit = edgeId ? edgeHitById.get(edgeId) : null;
+      if (!hit) return;
+      hit.classList.toggle('is-adj', thread.classList.contains('is-adj'));
+      hit.classList.toggle('is-dim', thread.classList.contains('is-dim'));
+      hit.classList.toggle('is-filtered-out', thread.classList.contains('is-filtered-out'));
+      hit.classList.toggle('is-edge-selected', selectedEdgeId === edgeId);
+    };
+
+    const registerEdgeHit = (hit: SVGPathElement) => {
+      if (hit.dataset.edgeHitRegistered === 'true') return;
+      hit.dataset.edgeHitRegistered = 'true';
+      hit.addEventListener('pointerenter', (event) => {
+        const edgeId = clean(hit.dataset.edgeId);
+        if (!edgeId || !hit.classList.contains('is-adj')) return;
+        showEdgeTooltip(edgeId, event);
+      });
+      hit.addEventListener('pointermove', (event) => {
+        if (edgeTooltip?.getAttribute('aria-hidden') === 'false') positionEdgeTooltip(event);
+      });
+      hit.addEventListener('pointerleave', hideEdgeTooltip);
+    };
+
+    const clearFocusState = () => {
+      activeFocusNodeId = '';
       root.classList.remove('is-focused');
-      root.querySelectorAll('.gp-home-map-thread').forEach((t) => t.classList.remove('is-adj', 'is-dim'));
-      root.querySelectorAll('.gp-home-map-node-link').forEach((l) => l.classList.remove('is-adj', 'is-dim'));
+      root.querySelectorAll('.gp-home-map-thread').forEach((t) => t.classList.remove('is-adj', 'is-dim', 'is-revealing', 'is-selected-adj'));
+      root.querySelectorAll('.gp-home-map-thread-hit').forEach((t) => t.classList.remove('is-adj', 'is-dim'));
+      root.querySelectorAll('.gp-home-map-node-link').forEach((l) => l.classList.remove('is-adj', 'is-dim', 'is-edge-target'));
+      clearSelectionStrands();
+      hideEdgeTooltip();
+      clearEdgeHighlight();
       if (focusEl) focusEl.setAttribute('aria-hidden', 'true');
     };
 
-    const relationshipSummary = (nodeId: string) => {
-      let chapterConnections = 0;
-      let stewardConnections = 0;
-      let memberConnections = 0;
-      root.querySelectorAll<SVGPathElement>('.gp-home-map-thread').forEach((thread) => {
-        const from = thread.getAttribute('data-from');
-        const to = thread.getAttribute('data-to');
-        if (from !== nodeId && to !== nodeId) return;
-        const adjacentId = from === nodeId ? to : from;
-        if (!adjacentId) return;
-        const adjacent = root.querySelector(`[data-node-id="${CSS.escape(adjacentId)}"]`);
-        if (!adjacent) return;
-        const adjacentType = filterTypeFor(adjacent.getAttribute('data-node-type'));
-        if (adjacentType === 'chapter') chapterConnections += 1;
-        if (adjacentType === 'steward') stewardConnections += 1;
-        if (adjacentType === 'member') memberConnections += 1;
+    const clearFocus = () => {
+      if (selectedFocusTarget && !selectedFocusTarget.classList.contains('is-filtered-out')) {
+        setFocus(selectedFocusTarget);
+        return;
+      }
+      clearFocusState();
+    };
+
+    // On deselect the map softly re-reveals its resting web, and any connections
+    // that polled in while a node was selected (held back as is-pending-reveal)
+    // now comet in — so live arrivals are captured rather than flashed mid-view.
+    const revealDefaultState = () => {
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      root.querySelectorAll<SVGPathElement>('.gp-home-map-thread.is-pending-reveal').forEach((thread) => {
+        if (reduceMotion) {
+          thread.classList.remove('is-pending-reveal');
+          return;
+        }
+        markThreadEntering(thread);
       });
-      const pieces = [];
-      if (chapterConnections) pieces.push(`${chapterConnections} chapter${chapterConnections === 1 ? '' : 's'}`);
-      if (stewardConnections) pieces.push(`${stewardConnections} steward${stewardConnections === 1 ? '' : 's'}`);
-      if (memberConnections) pieces.push(`${memberConnections} member${memberConnections === 1 ? '' : 's'}`);
-      return pieces.length ? `Connected to ${pieces.join(' · ')}` : 'No public connections yet';
+      if (reduceMotion) return;
+      root.querySelectorAll<SVGPathElement>('.gp-home-map-thread:not(.is-filtered-out):not(.is-pending-reveal)').forEach((thread) => {
+        thread.classList.remove('is-resettling');
+        void thread.getBoundingClientRect();
+        thread.classList.add('is-resettling');
+        const onEnd = () => {
+          thread.classList.remove('is-resettling');
+          thread.removeEventListener('animationend', onEnd);
+        };
+        thread.addEventListener('animationend', onEnd);
+      });
+    };
+
+    // Public links only: an external profile/social URL (new tab) and, for
+    // stewards, the same-site chapter page. cleanHref already rejected unsafe
+    // schemes. Returns the count so callers can hide an empty row.
+    const renderNodeLinks = (
+      container: HTMLElement | null,
+      node: { profileUrl?: string; chapterSlug?: string; type?: string; name?: string }
+    ) => {
+      if (!container) return 0;
+      container.textContent = '';
+      const safeName = clean(node.name) || 'this node';
+      let count = 0;
+      const appendLink = (href: string, label: string, aria: string, external: boolean) => {
+        const a = document.createElement('a');
+        applyScope(a);
+        a.className = 'gp-home-map-selected-link';
+        a.href = href;
+        if (external) {
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+        }
+        a.textContent = label;
+        a.setAttribute('aria-label', aria);
+        container.append(a);
+        count += 1;
+      };
+
+      // A chapter's single link is its own public page.
+      if (node.type === 'chapter') {
+        const href = chapterHref(node.chapterSlug);
+        if (href) appendLink(href, 'Visit chapter →', `Open the chapter page for ${safeName}`, false);
+        return count;
+      }
+
+      // People carry exactly one external link: their profile.
+      const profile = cleanHref(node.profileUrl);
+      if (profile) appendLink(profile, 'Profile ↗', `Open ${safeName}'s profile in a new tab`, /^https?:\/\//i.test(profile));
+
+      // A steward's chapter affiliation is an in-map jump (not an external link) —
+      // it opens the chapter node on the map, from where its page can be visited.
+      if (node.type === 'steward' && node.chapterSlug) {
+        const chapterEl = root.querySelector(`.gp-home-map-node-link.is-chapter[data-node-id="${CSS.escape('chapter:' + node.chapterSlug)}"]`);
+        const chapterName = clean(chapterEl?.getAttribute('data-node-name')) || 'their chapter';
+        const button = document.createElement('button');
+        applyScope(button);
+        button.type = 'button';
+        button.className = 'gp-home-map-selected-link is-chapter-jump';
+        button.textContent = `${chapterName} →`;
+        button.setAttribute('aria-label', `Show ${chapterName} on the map`);
+        button.addEventListener('click', () => selectChapterBySlug(node.chapterSlug || '', button.matches(':focus-visible')));
+        container.append(button);
+        count += 1;
+      }
+
+      return count;
     };
 
     const setFocus = (target: Element) => {
@@ -687,20 +1141,29 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (!id || !type) return;
 
       root.classList.add('is-focused');
+      const revealFocus = activeFocusNodeId !== id;
+      activeFocusNodeId = id;
+      if (revealFocus) {
+        hideEdgeTooltip();
+        clearEdgeHighlight();
+      }
 
       const adjacentIds = new Set<string>([id]);
       root.querySelectorAll<SVGPathElement>('.gp-home-map-thread').forEach((t) => {
         const from = t.getAttribute('data-from');
         const to = t.getAttribute('data-to');
         if (from === id || to === id) {
+          const wasAdjacent = t.classList.contains('is-adj');
           t.classList.add('is-adj');
           t.classList.remove('is-dim');
+          if (revealFocus || !wasAdjacent) markThreadRevealing(t);
           if (from && from !== id) adjacentIds.add(from);
           if (to && to !== id) adjacentIds.add(to);
         } else {
-          t.classList.remove('is-adj');
+          t.classList.remove('is-adj', 'is-revealing');
           t.classList.add('is-dim');
         }
+        syncEdgeHitState(t);
       });
 
       root.querySelectorAll('.gp-home-map-node-link').forEach((l) => {
@@ -736,39 +1199,133 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
             focusThemes.append(chip);
           });
         }
-        if (focusConnections) {
-          focusConnections.textContent = relationshipSummary(id);
-        }
         const dot = target.querySelector('.gp-home-map-node-dot') as SVGCircleElement | null;
         const cx = Number(dot?.getAttribute('cx'));
         const cy = Number(dot?.getAttribute('cy'));
         if (Number.isFinite(cx) && Number.isFinite(cy)) {
-          const xPct = (cx / VIEW_W) * 100;
-          const yPct = (cy / VIEW_H) * 100;
+          const xPct = ((cx - currentViewBox.x) / currentViewBox.width) * 100;
+          const yPct = ((cy - currentViewBox.y) / currentViewBox.height) * 100;
           focusEl.style.left = `${xPct}%`;
           focusEl.style.top = `${yPct}%`;
           focusEl.style.transform = `translate(${xPct < 60 ? '22px' : 'calc(-100% - 22px)'}, ${yPct < 50 ? '22px' : 'calc(-100% - 22px)'})`;
         }
         focusEl.dataset.nodeType = focusType;
-        focusEl.setAttribute('aria-hidden', 'false');
+        // The selected node already shows the persistent popover; don't stack the
+        // transient hover card on top of it. Hovering OTHER nodes still shows it.
+        focusEl.setAttribute('aria-hidden', target === selectedFocusTarget ? 'true' : 'false');
       }
+    };
+
+    // ---- Selected-node colour web + per-theme strands ----------------------
+    // The selected node is the only place a line carries theme colour. Hovering
+    // a different node never colourises — it only gets the neutral `.is-adj`
+    // highlight, because colour rides `.is-selected-adj`, which is pinned to the
+    // selected node's edges here and not touched by setFocus.
+    const SELECTION_STRAND_GAP = 0.72;
+    const MAX_SELECTION_STRANDS = 4;
+    let lastSelectionStrandSignature = '';
+
+    const centerForId = (id: string) => {
+      const node = id
+        ? root.querySelector(`.gp-home-map-node-link[data-node-id="${CSS.escape(id)}"]`)
+        : null;
+      return node ? nodeCenter(node) : null;
+    };
+
+    // Shared themes are derived from the two endpoints' public theme lists — both
+    // already in the DOM, so this needs no /map/state payload change.
+    const sharedThemesForEdge = (fromId: string, toId: string): string[] => {
+      const fromNode = fromId ? root.querySelector(`.gp-home-map-node-link[data-node-id="${CSS.escape(fromId)}"]`) : null;
+      const toNode = toId ? root.querySelector(`.gp-home-map-node-link[data-node-id="${CSS.escape(toId)}"]`) : null;
+      if (!fromNode || !toNode) return [];
+      const toThemes = new Set(nodeThemes(toNode));
+      return nodeThemes(fromNode).filter((theme) => toThemes.has(theme));
+    };
+
+    const clearSelectionStrands = () => {
+      if (selectionStrandsGroup) selectionStrandsGroup.textContent = '';
+      lastSelectionStrandSignature = '';
+    };
+
+    // One strand per shared theme, only when an edge shares more than one theme.
+    // Each strand springs from both node centres and bows out (per strand) through
+    // the belly, so multi-theme links read as woven mycelial filaments rather than
+    // rigid parallel rails — the endpoints stay pinned to the nodes, only the
+    // middle fans. The centre strand runs thickest for a cored, grown feel.
+    const buildSelectionStrandSpecs = (nodeId: string) => {
+      const specs: Array<{ d: string; theme: string; index: number; width: number }> = [];
+      if (!nodeId) return specs;
+      root.querySelectorAll<SVGPathElement>('.gp-home-map-thread.is-selected-adj:not(.is-filtered-out)').forEach((thread) => {
+        const from = thread.getAttribute('data-from') || '';
+        const to = thread.getAttribute('data-to') || '';
+        const edgeTheme = thread.getAttribute('data-theme') || '';
+        const shared = sharedThemesForEdge(from, to);
+        const themesList = [...new Set((shared.length ? shared : [edgeTheme]).filter(Boolean))].slice(0, MAX_SELECTION_STRANDS);
+        if (themesList.length <= 1) return;
+        const a = centerForId(from);
+        const b = centerForId(to);
+        if (!a || !b) return;
+        const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+        const nx = -(b.y - a.y) / len;
+        const ny = (b.x - a.x) / len;
+        const mid = (themesList.length - 1) / 2;
+        themesList.forEach((theme, index) => {
+          const offset = (index - mid) * SELECTION_STRAND_GAP;
+          // Asymmetric control points (1.15 vs 0.85) give each filament a gentle,
+          // non-circular bow so the bundle weaves instead of mirroring.
+          const c1x = a.x + (b.x - a.x) * 0.33 + nx * offset * 1.15;
+          const c1y = a.y + (b.y - a.y) * 0.33 + ny * offset * 1.15;
+          const c2x = a.x + (b.x - a.x) * 0.67 + nx * offset * 0.85;
+          const c2y = a.y + (b.y - a.y) * 0.67 + ny * offset * 0.85;
+          const d = `M${a.x.toFixed(2)} ${a.y.toFixed(2)} C${c1x.toFixed(2)} ${c1y.toFixed(2)} ${c2x.toFixed(2)} ${c2y.toFixed(2)} ${b.x.toFixed(2)} ${b.y.toFixed(2)}`;
+          const width = Math.max(0.18, 0.34 - Math.abs(index - mid) * 0.05);
+          specs.push({ d, theme, index, width });
+        });
+      });
+      return specs;
+    };
+
+    const renderSelectionStrands = (nodeId: string) => {
+      if (!selectionStrandsGroup) return;
+      const specs = buildSelectionStrandSpecs(nodeId);
+      const signature = `${nodeId}|${specs.map((s) => `${s.theme}:${s.d}`).join('~')}`;
+      // Idempotent across polls/filter passes — only rebuild (and re-run the
+      // one-shot grow) when the strand set actually changes, so there is no loop.
+      if (signature === lastSelectionStrandSignature) return;
+      lastSelectionStrandSignature = signature;
+      selectionStrandsGroup.textContent = '';
+      specs.forEach((spec) => {
+        const strand = document.createElementNS(SVG_NS, 'path');
+        applyScope(strand);
+        strand.setAttribute('class', 'gp-home-map-strand is-entering-strand');
+        strand.setAttribute('d', spec.d);
+        strand.setAttribute('pathLength', '1');
+        strand.setAttribute('stroke', themeColor(spec.theme));
+        strand.style.setProperty('--thread-color', themeColor(spec.theme));
+        strand.style.strokeWidth = spec.width.toFixed(2);
+        strand.style.animationDelay = `${(spec.index * 0.06).toFixed(2)}s`;
+        selectionStrandsGroup.append(strand);
+      });
+    };
+
+    // Pin theme colour to the selected node's edges (and only those). Cheap and
+    // idempotent, so it is safe to re-run after filter/poll redraws.
+    const markSelectedThreads = (nodeId: string) => {
+      root.querySelectorAll<SVGPathElement>('.gp-home-map-thread').forEach((thread) => {
+        const from = thread.getAttribute('data-from');
+        const to = thread.getAttribute('data-to');
+        thread.classList.toggle('is-selected-adj', Boolean(nodeId) && (from === nodeId || to === nodeId));
+      });
+      renderSelectionStrands(nodeId);
     };
 
     // SVG hit targets can be visually small. Track the nearest visible node
     // from the map surface as well so chapter focus cards appear where users
     // expect them, even when the pointer lands just outside the painted dot.
     let pointerFocusTarget: Element | null = null;
-    const svgEl = root.querySelector('.gp-home-map-svg') as SVGSVGElement | null;
     const nodeAtPointer = (event: PointerEvent): Element | null => {
-      if (!svgEl) return null;
-      const rect = svgEl.getBoundingClientRect();
-      const scale = Math.min(rect.width / VIEW_W, rect.height / VIEW_H);
-      if (!Number.isFinite(scale) || scale <= 0) return null;
-      const offsetX = (rect.width - VIEW_W * scale) / 2;
-      const offsetY = (rect.height - VIEW_H * scale) / 2;
-      const x = (event.clientX - rect.left - offsetX) / scale;
-      const y = (event.clientY - rect.top - offsetY) / scale;
-      if (x < 0 || x > VIEW_W || y < 0 || y > VIEW_H) return null;
+      const point = svgPointForEvent(event);
+      if (!point) return null;
 
       let nearest: { node: Element; distance: number } | null = null;
       root.querySelectorAll('.gp-home-map-node-link:not(.is-filtered-out)').forEach((node) => {
@@ -777,15 +1334,166 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         const cy = Number(dot?.getAttribute('cy'));
         const r = Number(dot?.getAttribute('r')) || 1.4;
         if (!Number.isFinite(cx) || !Number.isFinite(cy)) return;
-        const distance = Math.hypot(x - cx, y - cy);
-        const hitRadius = Math.max(3.8, r + 3.2);
+        const distance = Math.hypot(point.x - cx, point.y - cy);
+        const hitRadius = Math.max(NODE_HIT_RADIUS, r + 3.2);
         if (distance > hitRadius) return;
         if (!nearest || distance < nearest.distance) nearest = { node, distance };
       });
       return nearest?.node ?? null;
     };
 
+    const gesturePointers = new Map<number, PointerEvent>();
+    let panStart: null | { clientX: number; clientY: number; viewBox: MapViewBox } = null;
+    let pinchStart: null | {
+      distance: number;
+      midX: number;
+      midY: number;
+      centerX: number;
+      centerY: number;
+      viewBox: MapViewBox;
+    } = null;
+    let suppressNextNodeClick = false;
+
+    const isGestureBlocked = (target: EventTarget | null) => (
+      target instanceof Element &&
+      Boolean(target.closest('.gp-home-map-controls, .gp-home-map-legend, .gp-home-map-focus, .gp-home-map-selected, .gp-home-map-edge-tooltip'))
+    );
+
+    const pointerDistance = (a: PointerEvent, b: PointerEvent) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+
+    const midpoint = (a: PointerEvent, b: PointerEvent) => ({
+      x: (a.clientX + b.clientX) / 2,
+      y: (a.clientY + b.clientY) / 2,
+    });
+
+    const startPinch = () => {
+      const pointers = Array.from(gesturePointers.values());
+      if (pointers.length < 2) return;
+      const [a, b] = pointers;
+      const mid = midpoint(a, b);
+      const midEvent = { clientX: mid.x, clientY: mid.y } as PointerEvent;
+      const center = svgPointForBox(midEvent, currentViewBox) ?? {
+        x: currentViewBox.x + currentViewBox.width / 2,
+        y: currentViewBox.y + currentViewBox.height / 2,
+      };
+      pinchStart = {
+        distance: Math.max(1, pointerDistance(a, b)),
+        midX: mid.x,
+        midY: mid.y,
+        centerX: center.x,
+        centerY: center.y,
+        viewBox: { ...currentViewBox },
+      };
+      panStart = null;
+    };
+
+    const resetGesture = (pointerId?: number) => {
+      if (typeof pointerId === 'number') gesturePointers.delete(pointerId);
+      if (gesturePointers.size === 0) {
+        panStart = null;
+        pinchStart = null;
+        return;
+      }
+      if (gesturePointers.size === 1) {
+        const pointer = Array.from(gesturePointers.values())[0];
+        panStart = { clientX: pointer.clientX, clientY: pointer.clientY, viewBox: { ...currentViewBox } };
+        pinchStart = null;
+      }
+    };
+
+    root.addEventListener('pointerdown', (event) => {
+      if (isGestureBlocked(event.target)) return;
+      const mouse = event.pointerType === 'mouse';
+      // Touch: pan + pinch on touch maps. Mouse/trackpad: bounded drag-pan only
+      // when zoomed in (the full map has nothing to pan) and with the primary
+      // button — so hover/click on desktop is untouched until the user zooms.
+      if (mouse) {
+        if (!root.classList.contains('is-zoomed') || event.button !== 0) return;
+      } else if (!isTouchMap()) {
+        return;
+      }
+      if (!svgPointForEvent(event)) return;
+      gesturePointers.set(event.pointerId, event);
+      try {
+        root.setPointerCapture?.(event.pointerId);
+      } catch {
+        // Synthetic browser-smoke events and interrupted touch streams can miss
+        // capture; the gesture state still works from bubbled pointer events.
+      }
+      if (gesturePointers.size === 1) {
+        // Fresh interaction — a stale suppress flag from a prior drag must not
+        // swallow this tap/click.
+        suppressNextNodeClick = false;
+        panStart = { clientX: event.clientX, clientY: event.clientY, viewBox: { ...currentViewBox } };
+        if (mouse) root.classList.add('is-grabbing');
+      } else {
+        startPinch();
+      }
+    });
+
     root.addEventListener('pointermove', (event) => {
+      if (!gesturePointers.has(event.pointerId)) return;
+      gesturePointers.set(event.pointerId, event);
+      // Mouse drag-pan runs on desktop too; pinch stays touch-only (it needs two
+      // pointers, which a mouse can't produce).
+      if (!isTouchMap() && event.pointerType !== 'mouse') return;
+
+      if (gesturePointers.size >= 2 && pinchStart) {
+        const pointers = Array.from(gesturePointers.values());
+        const [a, b] = pointers;
+        const distance = Math.max(1, pointerDistance(a, b));
+        const mid = midpoint(a, b);
+        const scale = clientScaleForBox(pinchStart.viewBox);
+        const ratio = distance / pinchStart.distance;
+        const nextWidth = pinchStart.viewBox.width / ratio;
+        const dx = (mid.x - pinchStart.midX) / scale;
+        const dy = (mid.y - pinchStart.midY) / scale;
+        setMapViewBoxCentered(pinchStart.centerX - dx, pinchStart.centerY - dy, nextWidth);
+        suppressNextNodeClick = true;
+        event.preventDefault();
+        return;
+      }
+
+      if (gesturePointers.size === 1 && panStart) {
+        const dxPixels = event.clientX - panStart.clientX;
+        const dyPixels = event.clientY - panStart.clientY;
+        if (Math.hypot(dxPixels, dyPixels) < 5) return;
+        const scale = clientScaleForBox(panStart.viewBox);
+        setMapViewBox({
+          ...panStart.viewBox,
+          x: panStart.viewBox.x - dxPixels / scale,
+          y: panStart.viewBox.y - dyPixels / scale,
+        });
+        suppressNextNodeClick = true;
+        event.preventDefault();
+      }
+    });
+
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((eventName) => {
+      root.addEventListener(eventName, (event) => {
+        resetGesture((event as PointerEvent).pointerId);
+        if (gesturePointers.size === 0) root.classList.remove('is-grabbing');
+      });
+    });
+
+    // Single source of truth for drag-vs-click: a drag-pan that ends on a node
+    // must neither navigate the chapter <a> nor open a panel. Runs in capture
+    // phase (before the node/link click handlers and the link default); a normal
+    // click leaves the flag false so this is a no-op.
+    svgEl?.addEventListener('click', (event) => {
+      if (!suppressNextNodeClick) return;
+      suppressNextNodeClick = false;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, true);
+    // Block native link/image drag while panning the zoomed map.
+    root.addEventListener('dragstart', (event) => {
+      if (root.classList.contains('is-grabbing')) event.preventDefault();
+    });
+
+    root.addEventListener('pointermove', (event) => {
+      if (isTouchMap() && event.pointerType !== 'mouse') return;
+      if (gesturePointers.size > 0) return;
       const target = nodeAtPointer(event);
       if (!target) {
         if (pointerFocusTarget) {
@@ -807,8 +1515,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const selectedBioregion = scope.querySelector('[data-selected-bioregion]') as HTMLElement | null;
     const selectedThemesEl = scope.querySelector('[data-selected-themes]') as HTMLElement | null;
     const selectedNote = scope.querySelector('[data-selected-note]') as HTMLElement | null;
-    const selectedConnections = scope.querySelector('[data-selected-connections]') as HTMLElement | null;
+    const selectedLinks = scope.querySelector('[data-selected-links]') as HTMLElement | null;
+    const selectedEdgeList = scope.querySelector('[data-selected-edge-list]') as HTMLElement | null;
+    const selectedEdgeItems = scope.querySelector('[data-selected-edge-items]') as HTMLElement | null;
     const selectedClose = scope.querySelector('[data-selected-close]') as HTMLButtonElement | null;
+    const selectedLive = scope.querySelector('[data-selected-live]') as HTMLElement | null;
     const updateWrap = scope.querySelector('[data-home-map-update]') as HTMLElement | null;
     const updateTrigger = scope.querySelector('[data-update-trigger]') as HTMLButtonElement | null;
     const updateForm = scope.querySelector('[data-update-form]') as HTMLFormElement | null;
@@ -818,6 +1529,44 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const updateEmail = updateForm?.elements.namedItem('email') as HTMLInputElement | null;
 
     let activeSourceId = '';
+
+    const positionSelectedCard = (target: Element | null) => {
+      if (!selectedEl || selectedEl.hidden || !target || isTouchMap()) return;
+      const dot = target.querySelector('.gp-home-map-node-dot') as SVGCircleElement | null;
+      const cx = Number(dot?.getAttribute('cx'));
+      const cy = Number(dot?.getAttribute('cy'));
+      if (!Number.isFinite(cx) || !Number.isFinite(cy)) return;
+      const xPct = ((cx - currentViewBox.x) / currentViewBox.width) * 100;
+      const yPct = ((cy - currentViewBox.y) / currentViewBox.height) * 100;
+      selectedEl.style.setProperty('--gp-selected-x', `${xPct}%`);
+      selectedEl.style.setProperty('--gp-selected-y', `${yPct}%`);
+      selectedEl.style.setProperty(
+        '--gp-selected-transform',
+        `translate(${xPct < 60 ? '22px' : 'calc(-100% - 22px)'}, ${yPct < 48 ? '22px' : 'calc(-100% - 22px)'})`
+      );
+    };
+
+    selectedBottomPaddingForView = () => {
+      if (!selectedEl || selectedEl.hidden || !isTouchMap()) return 0;
+      const rootHeight = root.getBoundingClientRect().height;
+      const selectedHeight = selectedEl.getBoundingClientRect().height;
+      if (!Number.isFinite(rootHeight) || rootHeight <= 0 || !Number.isFinite(selectedHeight)) return 0;
+      return ((selectedHeight + 18) / rootHeight) * currentViewBox.height;
+    };
+
+    syncSelectedOverlay = () => {
+      if (!selectedEl || selectedEl.hidden) {
+        root.classList.remove('has-selected-node');
+        root.style.removeProperty('--gp-map-selected-clearance');
+        return;
+      }
+      root.classList.add('has-selected-node');
+      const selectedHeight = selectedEl.getBoundingClientRect().height;
+      if (Number.isFinite(selectedHeight) && selectedHeight > 0) {
+        root.style.setProperty('--gp-map-selected-clearance', `${Math.ceil(selectedHeight + 18)}px`);
+      }
+      positionSelectedCard(selectedFocusTarget);
+    };
 
     const resetUpdateState = () => {
       activeSourceId = '';
@@ -830,17 +1579,145 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (updateTrigger) updateTrigger.hidden = false;
     };
 
-    const closeSelected = () => {
-      if (selectedEl) selectedEl.hidden = true;
-      resetUpdateState();
-      root.querySelectorAll('.gp-home-map-node-link.is-selected').forEach((l) => l.classList.remove('is-selected'));
+    // One-shot "peek" so an overflowing theme carousel hints it scrolls, then
+    // settles. User-triggered (row activation) and reduced-motion aware — never
+    // an idle loop.
+    const peekCarousel = (strip: HTMLElement | null) => {
+      if (!strip) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const overflow = strip.scrollWidth - strip.clientWidth;
+      if (overflow <= 4) return;
+      // Assigning scrollLeft animates via the strip's CSS `scroll-behavior: smooth`
+      // (browsers force it to instant under reduced motion). One-shot peek; no loop.
+      strip.scrollLeft = overflow;
+      window.setTimeout(() => { strip.scrollLeft = 0; }, 900);
     };
 
-    const openSelected = (member: DynamicMapNode, link: Element) => {
+    const renderSelectedEdgeList = (nodeId: string) => {
+      if (!selectedEdgeList || !selectedEdgeItems) return;
+      selectedEdgeItems.textContent = '';
+      const edges = connectedEdgesFor(nodeId);
+      selectedEdgeList.hidden = edges.length === 0;
+      edges.forEach((edge) => {
+        const connected = oppositeEndpoint(edge, nodeId);
+        const connectedEl = root.querySelector(`.gp-home-map-node-link[data-node-id="${CSS.escape(connected.id)}"]`);
+        const shared = sharedThemesForEdge(edge.from.id, edge.to.id);
+        const themeSlugs = [...new Set((shared.length ? shared : [edge.theme]).filter(Boolean))];
+
+        const item = document.createElement('div');
+        applyScope(item);
+        item.className = 'gp-home-map-selected-edge-item';
+        item.style.setProperty('--edge-color', edge.themeColor);
+
+        // Name area — selecting it highlights the connection + connected node.
+        const row = document.createElement('button');
+        applyScope(row);
+        row.type = 'button';
+        row.className = 'gp-home-map-selected-edge-row';
+        row.dataset.selectedEdgeRow = edge.edgeId;
+        row.setAttribute('aria-pressed', selectedEdgeId === edge.edgeId ? 'true' : 'false');
+
+        const mark = document.createElement('span');
+        applyScope(mark);
+        mark.className = 'gp-home-map-selected-edge-mark';
+        mark.setAttribute('aria-hidden', 'true');
+
+        const copy = document.createElement('span');
+        applyScope(copy);
+        copy.className = 'gp-home-map-selected-edge-copy';
+
+        const name = document.createElement('span');
+        applyScope(name);
+        name.className = 'gp-home-map-selected-edge-name';
+        name.textContent = connected.name || connected.id;
+
+        const meta = document.createElement('span');
+        applyScope(meta);
+        meta.className = 'gp-home-map-selected-edge-meta';
+        meta.textContent = endpointRoleLabel(connected.type);
+
+        copy.append(name, meta);
+        row.append(mark, copy);
+
+        // Shared themes — single non-wrapping row; overflow scrolls (carousel)
+        // so a long list never makes rows uneven.
+        const themesStrip = document.createElement('div');
+        applyScope(themesStrip);
+        themesStrip.className = 'gp-home-map-selected-edge-themes';
+        themeSlugs.slice(0, 6).forEach((slug) => {
+          const chip = document.createElement('span');
+          applyScope(chip);
+          chip.className = 'gp-home-map-selected-edge-theme';
+          chip.textContent = themeLabel(slug);
+          chip.style.setProperty('--chip-color', themeColor(slug));
+          themesStrip.append(chip);
+        });
+
+        row.addEventListener('click', () => {
+          applyEdgeHighlight(edge.edgeId);
+          root.querySelectorAll('.gp-home-map-node-link.is-edge-target').forEach((n) => n.classList.remove('is-edge-target'));
+          if (connectedEl) {
+            connectedEl.classList.add('is-edge-target');
+            frameConnectedNode(connectedEl);
+          }
+          peekCarousel(themesStrip);
+        });
+        item.append(row);
+
+        // Open-link control — the connected person's public profile (new tab) or
+        // their same-site chapter page. Separate from row selection.
+        // One link per connection: the connected person's profile (new tab) only.
+        const connProfile = cleanHref(connectedEl?.getAttribute('data-node-profile-url'));
+        if (connProfile) {
+          const open = document.createElement('a');
+          applyScope(open);
+          open.className = 'gp-home-map-selected-edge-open';
+          open.href = connProfile;
+          open.target = '_blank';
+          open.rel = 'noopener noreferrer';
+          open.textContent = '↗';
+          open.setAttribute('aria-label', `Open ${connected.name || 'connection'}'s profile in a new tab`);
+          open.addEventListener('click', (event) => event.stopPropagation());
+          item.append(open);
+        }
+
+        item.append(themesStrip);
+        selectedEdgeItems.append(item);
+      });
+      applyEdgeHighlight(selectedEdgeId);
+    };
+
+    const closeSelected = () => {
+      const restoreFocus = Boolean(selectedEl?.contains(document.activeElement));
+      const focusTarget = selectedFocusTarget;
+      if (selectedEl) selectedEl.hidden = true;
+      resetUpdateState();
+      selectedFocusTarget = null;
+      root.querySelectorAll('.gp-home-map-node-link.is-selected').forEach((l) => l.classList.remove('is-selected'));
+      if (selectedEdgeList) selectedEdgeList.hidden = true;
+      if (selectedLive) selectedLive.textContent = '';
+      syncSelectedOverlay();
+      clearFocusState();
+      revealDefaultState();
+      if (
+        restoreFocus &&
+        focusTarget &&
+        !focusTarget.classList.contains('is-filtered-out') &&
+        typeof (focusTarget as HTMLElement).focus === 'function'
+      ) {
+        (focusTarget as HTMLElement).focus({ preventScroll: true });
+      }
+    };
+
+    const openSelected = (member: DynamicMapNode, link: Element, viaKeyboard = false) => {
       if (!selectedEl) return;
       resetUpdateState();
       root.querySelectorAll('.gp-home-map-node-link.is-selected').forEach((l) => l.classList.remove('is-selected'));
+      // Clear any prior connection-row target highlight when swapping nodes.
+      root.querySelectorAll('.gp-home-map-node-link.is-edge-target').forEach((l) => l.classList.remove('is-edge-target'));
       link.classList.add('is-selected');
+      selectedFocusTarget = link;
+      selectedEdgeId = '';
 
       if (selectedKicker) {
         const typeLabel = member.type.charAt(0).toUpperCase() + member.type.slice(1);
@@ -867,14 +1744,72 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         selectedNote.textContent = member.publicNote;
         selectedNote.hidden = !member.publicNote;
       }
-      if (selectedConnections) selectedConnections.textContent = relationshipSummary(member.key);
+      if (selectedLinks) {
+        selectedLinks.hidden = renderNodeLinks(selectedLinks, member) === 0;
+      }
+      renderSelectedEdgeList(member.key);
 
       // Owner edit-link is offered for approved submitted nodes only.
       if (updateWrap) updateWrap.hidden = !member.approved;
       activeSourceId = member.approved ? member.sourceId : '';
 
       selectedEl.hidden = false;
-      selectedEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      if (selectedLive) selectedLive.textContent = `${member.name} selected on the map.`;
+      syncSelectedOverlay();
+      if (member.type === 'chapter') {
+        // Chapters sit outside the person-to-person web — selecting one shows its
+        // card but leaves the threads at rest (no neighbourhood zoom, no dimming,
+        // no colour web). clearFocusState() also tears down any prior node's web.
+        clearFocusState();
+      } else {
+        // Frame before setFocus so pinned cards position against the framed view.
+        frameNodeNeighbourhood(link);
+        setFocus(link);
+        // Theme colour + per-theme strands ride the selected node's edges only.
+        markSelectedThreads(link.getAttribute('data-node-id') || member.key);
+      }
+      syncSelectedOverlay();
+      // Keyboard-initiated selection moves focus into the popover so its Close,
+      // links, and Edit controls are reachable without tabbing through every
+      // remaining map node first. Pointer selection leaves focus on the node, so
+      // there is no surprising focus jump on click (:focus-visible stays off for
+      // pointers anyway). Escape or Close returns focus to the node — closeSelected
+      // restores it whenever focus is inside the card. Blurring the node here is
+      // safe: clearFocus re-applies setFocus(selectedFocusTarget), which preserves
+      // the colour web (is-selected-adj is never touched by setFocus).
+      if (viaKeyboard) selectedClose?.focus({ preventScroll: true });
+    };
+
+    // Chapters keep their <a href> for no-JS navigation; with JS they open this
+    // inspect card (which holds the same 'visit chapter' link) so a stray tap
+    // explores instead of navigating the page away.
+    const openChapterNode = (link: Element, viaKeyboard = false) => {
+      const el = link as HTMLElement;
+      const slug = clean(el.dataset.nodeId).replace(/^chapter:/, '');
+      const chapter: DynamicMapNode = {
+        key: clean(el.dataset.nodeId),
+        sourceId: '',
+        type: 'chapter',
+        name: clean(el.dataset.nodeName) || 'Chapter',
+        place: clean(el.dataset.nodePlace),
+        chapterSlug: slug,
+        bioregion: '',
+        publicNote: '',
+        profileUrl: '',
+        themes: nodeThemes(link),
+        lat: 0,
+        long: 0,
+        approved: false,
+        pending: false,
+      };
+      openSelected(chapter, link, viaKeyboard);
+    };
+
+    // Cross-link from a steward card: open that steward's chapter node on the map.
+    const selectChapterBySlug = (slug: string, viaKeyboard = false) => {
+      if (!slug) return;
+      const chapterEl = root.querySelector(`.gp-home-map-node-link.is-chapter[data-node-id="${CSS.escape('chapter:' + slug)}"]`);
+      if (chapterEl) openChapterNode(chapterEl, viaKeyboard);
     };
 
     // ---- Embedded map filters ---------------------------------------------
@@ -912,11 +1847,16 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     applyMapFilters = () => {
       const visibleNodeIds = new Set<string>();
+      const visibleCounts: Record<string, number> = { chapter: 0, steward: 0, member: 0 };
       root.querySelectorAll('.gp-home-map-node-link').forEach((node) => {
         const visible = nodeMatchesFilters(node);
         setNodeVisibility(node, visible);
         const id = node.getAttribute('data-node-id');
         if (visible && id) visibleNodeIds.add(id);
+        if (visible) {
+          const type = filterTypeFor(node.getAttribute('data-node-type'));
+          visibleCounts[type] = (visibleCounts[type] ?? 0) + 1;
+        }
       });
 
       root.querySelectorAll<SVGPathElement>('.gp-home-map-thread').forEach((thread) => {
@@ -925,6 +1865,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         const theme = thread.getAttribute('data-theme') || '';
         const visible = visibleNodeIds.has(from) && visibleNodeIds.has(to) && themeIsActive(theme);
         thread.classList.toggle('is-filtered-out', !visible);
+        syncEdgeHitState(thread);
       });
 
       const selectedNode = root.querySelector('.gp-home-map-node-link.is-selected');
@@ -932,13 +1873,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const focusedNode = root.querySelector('.gp-home-map-node-link.is-adj.is-filtered-out');
       if (focusedNode) clearFocus();
 
-      // Honest legend: steward/member legend rows appear only once at least
-      // one node of that type actually exists on the map, so the chapter-only
-      // sparse state never implies visible stewards or members.
+      // Counts stay honest to the current filtered view. A filtered-out or
+      // absent type remains visible with a 0 instead of disappearing.
       legendItems.forEach((item) => {
         const type = clean(item.dataset.legendType);
-        if (!type || type === 'chapter') return;
-        item.hidden = !root.querySelector(`.gp-home-map-node-link.is-${type}`);
+        if (!type) return;
+        item.hidden = false;
+        const count = legendCountByType.get(type);
+        if (count) count.textContent = String(visibleCounts[type] ?? 0);
       });
 
       // Filter affordance: a toggle shows a dot while its filter set is
@@ -949,6 +1891,17 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           : activeTypes.size < typeFilterButtons.length;
         button.classList.toggle('is-filtering', narrowed);
       });
+
+      applyNodeDensityScale();
+      const activeFocusTarget = selectedFocusTarget ?? pointerFocusTarget;
+      if (activeFocusTarget && !activeFocusTarget.classList.contains('is-filtered-out')) {
+        setFocus(activeFocusTarget);
+      }
+      const selectedId = selectedNode?.getAttribute('data-node-id') || '';
+      if (selectedId) {
+        markSelectedThreads(selectedId);
+        renderSelectedEdgeList(selectedId);
+      }
     };
 
     filterToggleButtons.forEach((button) => {
@@ -994,6 +1947,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       updateForm.hidden = false;
       if (updateError) updateError.textContent = '';
       updateEmail?.focus();
+      window.requestAnimationFrame(syncSelectedOverlay);
     });
 
     updateCancel?.addEventListener('click', () => {
@@ -1001,6 +1955,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (updateError) updateError.textContent = '';
       if (updateEmail) updateEmail.value = '';
       if (updateTrigger) updateTrigger.hidden = false;
+      window.requestAnimationFrame(syncSelectedOverlay);
     });
 
     updateForm?.addEventListener('submit', (event) => {
@@ -1019,12 +1974,20 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (updateTrigger) updateTrigger.hidden = true;
       if (updateError) updateError.textContent = '';
       if (updateSuccess) updateSuccess.hidden = false;
+      window.requestAnimationFrame(syncSelectedOverlay);
 
       requestEditLink(sourceId, email);
     });
 
     selectedClose?.addEventListener('click', closeSelected);
-    // Escape closes the selected-node panel from anywhere (keyboard + a11y).
+    root.addEventListener('click', (event) => {
+      if (!selectedEl || selectedEl.hidden) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest('.gp-home-map-node-link, .gp-home-map-selected, .gp-home-map-controls, .gp-home-map-legend, .gp-home-map-edge-tooltip')) return;
+      closeSelected();
+    });
+    // Escape closes the selected-node card/bar from anywhere (keyboard + a11y).
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && selectedEl && !selectedEl.hidden) {
         closeSelected();
@@ -1034,6 +1997,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     // ---- Public person node injection --------------------------------------
     const injectedKeys = new Set<string>();
     const memberByKey = new Map<string, DynamicMapNode>();
+    let lastDynamicThreadSignature = '';
 
     const makeCircle = (cls: string, cx: number, cy: number, r: number) => {
       const circle = document.createElementNS(SVG_NS, 'circle');
@@ -1041,8 +2005,42 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       circle.setAttribute('cx', cx.toFixed(2));
       circle.setAttribute('cy', cy.toFixed(2));
       circle.setAttribute('r', String(r));
+      circle.setAttribute('data-base-r', String(r));
       applyScope(circle);
       return circle;
+    };
+
+    const memberFromRenderedNode = (link: Element, memberKey: string): DynamicMapNode | null => {
+      const rawType = filterTypeFor(link.getAttribute('data-node-type'));
+      if (rawType === 'chapter') return null;
+      const center = nodeCenter(link);
+      const pending = link.classList.contains('is-pending') || memberKey.startsWith('local:');
+      const approved = memberKey.startsWith('submission:') && !pending;
+      const sourceId = clean(memberKey).replace(/^submission:/, '').replace(/^local:/, '');
+      return {
+        key: memberKey,
+        sourceId: approved ? sourceId : '',
+        type: rawType === 'steward' ? 'steward' : 'member',
+        name: clean((link as HTMLElement).dataset.nodeName) || clean(link.querySelector('title')?.textContent).split('·')[0].trim(),
+        place: clean((link as HTMLElement).dataset.nodePlace),
+        chapterSlug: clean((link as HTMLElement).dataset.nodeChapterSlug),
+        bioregion: publicBioregion((link as HTMLElement).dataset.nodeBioregion),
+        publicNote: clean((link as HTMLElement).dataset.nodePublicNote),
+        profileUrl: cleanHref((link as HTMLElement).dataset.nodeProfileUrl),
+        themes: nodeThemes(link),
+        lat: center ? 90 - (center.y / VIEW_H) * 180 : 0,
+        long: center ? (center.x / VIEW_W) * 360 - 180 : 0,
+        approved,
+        pending,
+      };
+    };
+
+    const openMemberNode = (link: Element, memberKey: string, viaKeyboard = false) => {
+      const member = memberByKey.get(memberKey) ?? memberFromRenderedNode(link, memberKey);
+      if (member) {
+        memberByKey.set(member.key, member);
+        openSelected(member, link, viaKeyboard);
+      }
     };
 
     const registerNode = (link: Element) => {
@@ -1052,11 +2050,41 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       link.addEventListener('blur', clearFocus);
       const memberKey = (link as HTMLElement).dataset.memberKey;
       if (!memberKey) {
-        // Chapter nodes are <a> and navigate on click. Any other static nodes
-        // just highlight themselves and their adjacent threads.
+        if (link.classList.contains('is-chapter')) {
+          // Intercept chapter activation (mouse + keyboard) to open the inspect
+          // card instead of navigating. Enter on an <a> arrives as a synthetic
+          // click, so the click handler covers it; Space needs its own guard.
+          link.addEventListener('click', (event) => {
+            if (suppressNextNodeClick) {
+              suppressNextNodeClick = false;
+              event.preventDefault();
+              return;
+            }
+            event.preventDefault();
+            openChapterNode(link, (link as HTMLElement).matches(':focus-visible'));
+          });
+          link.addEventListener('keydown', (event) => {
+            if ((event as KeyboardEvent).key === ' ') {
+              event.preventDefault();
+              openChapterNode(link, true);
+            }
+          });
+          return;
+        }
+        // Other static nodes (no href) just highlight themselves + their threads.
         if (!link.hasAttribute('href')) {
-          const activate = () => setFocus(link);
-          link.addEventListener('click', activate);
+          const activate = () => {
+            frameNodeNeighbourhood(link);
+            setFocus(link);
+          };
+          link.addEventListener('click', (event) => {
+            if (suppressNextNodeClick) {
+              suppressNextNodeClick = false;
+              event.preventDefault();
+              return;
+            }
+            activate();
+          });
           link.addEventListener('keydown', (event) => {
             const key = (event as KeyboardEvent).key;
             if (key === 'Enter' || key === ' ') {
@@ -1067,19 +2095,35 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         }
         return;
       }
-      const open = () => {
-        const member = memberByKey.get(memberKey);
-        if (member) openSelected(member, link);
-      };
-      link.addEventListener('click', open);
-      link.addEventListener('keydown', (event) => {
-        const key = (event as KeyboardEvent).key;
-        if (key === 'Enter' || key === ' ') {
-          event.preventDefault();
-          open();
-        }
-      });
     };
+
+    root.addEventListener('click', (event) => {
+      const target = event.target instanceof Element
+        ? event.target.closest('.gp-home-map-node-link')
+        : null;
+      if (!target || !root.contains(target)) return;
+      const memberKey = (target as HTMLElement).dataset.memberKey;
+      if (!memberKey) return;
+      if (suppressNextNodeClick) {
+        suppressNextNodeClick = false;
+        event.preventDefault();
+        return;
+      }
+      openMemberNode(target, memberKey);
+    });
+
+    root.addEventListener('keydown', (event) => {
+      const key = event.key;
+      if (key !== 'Enter' && key !== ' ') return;
+      const target = event.target instanceof Element
+        ? event.target.closest('.gp-home-map-node-link')
+        : null;
+      if (!target || !root.contains(target)) return;
+      const memberKey = (target as HTMLElement).dataset.memberKey;
+      if (!memberKey) return;
+      event.preventDefault();
+      openMemberNode(target, memberKey, true);
+    });
 
     const injectMember = (member: DynamicMapNode) => {
       if (!membersGroup || injectedKeys.has(member.key)) return;
@@ -1105,6 +2149,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       );
       group.setAttribute('data-node-place', member.place);
       if (member.chapterSlug) group.setAttribute('data-node-chapter-slug', member.chapterSlug);
+      if (member.profileUrl) group.setAttribute('data-node-profile-url', member.profileUrl);
       group.setAttribute('data-node-bioregion', publicBioregion(member.bioregion));
       group.setAttribute('data-node-public-note', member.publicNote);
       group.setAttribute('data-node-themes', member.themes.join(' '));
@@ -1116,12 +2161,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const titleType = member.type.charAt(0).toUpperCase() + member.type.slice(1);
       title.textContent = `${member.name} · ${titleType}${member.place ? ` · ${member.place}` : ''}`;
       group.append(title);
-      const size = member.type === 'steward' ? 2.05 : 1.6;
-      group.append(makeCircle('gp-home-map-node-halo', x, y, member.type === 'steward' ? 3.4 : 4));
-      group.append(makeCircle('gp-home-map-node-ring', x, y, member.type === 'steward' ? 2 : 2.3));
+      const size = member.type === 'steward' ? 1.28 : 1.08;
+      group.append(makeCircle('gp-home-map-node-hit', x, y, NODE_HIT_RADIUS));
+      group.append(makeCircle('gp-home-map-node-halo', x, y, member.type === 'steward' ? 2.45 : 2.6));
+      group.append(makeCircle('gp-home-map-node-ring', x, y, member.type === 'steward' ? 1.52 : 1.48));
       group.append(makeCircle('gp-home-map-node-dot', x, y, size));
-      group.append(makeCircle('gp-home-map-node-ripple is-ripple-a', x, y, 0));
-      group.append(makeCircle('gp-home-map-node-ripple is-ripple-b', x, y, 0));
 
       membersGroup.append(group);
       registerNode(group);
@@ -1130,7 +2174,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     // Reconciliation: once a locally-stored pending node resurfaces as an
     // approved public node, remove the optimistic copy so the map never shows a
-    // duplicate. Closes the selected panel if it was open on the removed node.
+    // duplicate. Closes the selected card/bar if it was open on the removed node.
     const removeInjectedMember = (key: string) => {
       if (!injectedKeys.has(key)) return;
       injectedKeys.delete(key);
@@ -1169,6 +2213,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         chapterSlug: clean(raw.chapterSlug || raw.chapter_slug),
         bioregion: publicBioregion(raw.bioregion),
         publicNote: clean(raw.publicNote || raw.public_note),
+        profileUrl: cleanHref(raw.profileUrl || raw.profile_url || raw.href),
         themes,
         lat,
         long,
@@ -1182,15 +2227,34 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       rawEdges: Array<Record<string, any>>
     ) => {
       if (!dynamicThreadsGroup) return;
-      dynamicThreadsGroup.textContent = '';
-      const nodeById = new Map<string, { x: number; y: number; type: 'chapter' | 'steward' | 'member' }>();
+      const existingThreads = new Map<string, SVGPathElement>();
+      dynamicThreadsGroup.querySelectorAll<SVGPathElement>('.gp-home-map-thread').forEach((path) => {
+        const id = clean(path.dataset.edgeId);
+        if (id) existingThreads.set(id, path);
+      });
+      const existingHits = new Map<string, SVGPathElement>();
+      dynamicThreadHitsGroup?.querySelectorAll<SVGPathElement>('.gp-home-map-thread-hit').forEach((path) => {
+        const id = clean(path.dataset.edgeId);
+        if (id) existingHits.set(id, path);
+      });
+      const nodeById = new Map<string, {
+        x: number;
+        y: number;
+        type: 'chapter' | 'steward' | 'member';
+        name: string;
+      }>();
       root.querySelectorAll('.gp-home-map-node-link').forEach((node) => {
         const id = clean(node.getAttribute('data-node-id'));
         const dot = node.querySelector('.gp-home-map-node-dot') as SVGCircleElement | null;
         const x = toFiniteNumber(dot?.getAttribute('cx'));
         const y = toFiniteNumber(dot?.getAttribute('cy'));
         if (!id || x === null || y === null) return;
-        nodeById.set(id, { x, y, type: filterTypeFor(node.getAttribute('data-node-type')) });
+        nodeById.set(id, {
+          x,
+          y,
+          type: filterTypeFor(node.getAttribute('data-node-type')),
+          name: clean((node as HTMLElement).dataset.nodeName) || clean(node.querySelector('title')?.textContent).split('·')[0].trim() || id,
+        });
       });
       rawNodes.forEach((node) => {
         const id = clean(node?.id);
@@ -1198,34 +2262,134 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         const long = toFiniteNumber(node?.long);
         const type = filterTypeFor(node?.type);
         if (!id || lat === null || long === null) return;
-        nodeById.set(id, { x: lonToX(long), y: latToY(lat), type });
+        const existing = nodeById.get(id);
+        nodeById.set(id, {
+          x: existing?.x ?? lonToX(long),
+          y: existing?.y ?? latToY(lat),
+          type: existing?.type ?? type,
+          name: existing?.name || clean(node?.name) || id,
+        });
       });
 
-      rawEdges.forEach((edge, idx) => {
+      const nextThreadSpecs = rawEdges.map((edge, idx) => {
         const from = clean(edge?.from);
         const to = clean(edge?.to);
         const a = nodeById.get(from);
         const b = nodeById.get(to);
-        if (!from || !to || !a || !b) return;
+        if (!from || !to || !a || !b) return null;
 
         const theme = clean(edge?.theme);
         const color = themeColor(theme);
-        const path = document.createElementNS(SVG_NS, 'path');
-        applyScope(path);
-        path.setAttribute('class', 'gp-home-map-thread');
-        path.setAttribute('data-from', from);
-        path.setAttribute('data-to', to);
-        path.setAttribute('data-theme', theme);
-        path.setAttribute('d', buildMycelialPath(a, b, seedForEdge(`${from}:${to}:${theme}`)));
-        path.setAttribute('pathLength', '1');
-        path.setAttribute('stroke', color);
-        const growDelay = (idx % 12) * 0.12;
-        const pulseDelay = (idx % 9) * 0.45;
-        path.setAttribute(
-          'style',
-          `--thread-color: ${color}; --thread-grow-delay: ${growDelay}s; --thread-pulse-delay: ${pulseDelay}s; animation-delay: ${growDelay}s, ${pulseDelay + 1.6}s;`
-        );
-        dynamicThreadsGroup.append(path);
+        const edgeId = clean(edge?.id) || `${from}:${to}:${theme}`;
+        const d = buildMycelialPath(a, b, seedForEdge(edgeId));
+        const growDelay = `${(idx % 12) * 0.12}s`;
+        const kind = clean(edge?.kind) || 'related';
+        const source = clean(edge?.source);
+        const bioregion = publicBioregion(edge?.bioregion);
+        const weight = toFiniteNumber(edge?.weight) ?? 1;
+        const meta: EdgeMeta = {
+          edgeId,
+          from: { id: from, name: a.name, type: a.type },
+          to: { id: to, name: b.name, type: b.type },
+          kind,
+          theme,
+          themeLabel: themeLabel(theme),
+          themeColor: color,
+          source,
+          weight,
+          bioregion,
+        };
+        return { edgeId, from, to, theme, color, d, growDelay, kind, source, bioregion, weight, meta };
+      }).filter(Boolean) as Array<{
+        edgeId: string;
+        from: string;
+        to: string;
+        theme: string;
+        color: string;
+        d: string;
+        growDelay: string;
+        kind: string;
+        source: string;
+        bioregion: string;
+        weight: number;
+        meta: EdgeMeta;
+      }>;
+
+      const signature = nextThreadSpecs.map((spec) => (
+        `${spec.edgeId}|${spec.from}|${spec.to}|${spec.theme}|${spec.color}|${spec.d}|${spec.kind}|${spec.source}|${spec.bioregion}|${spec.weight}`
+      )).join('~');
+      if (signature === lastDynamicThreadSignature) return;
+      lastDynamicThreadSignature = signature;
+
+      const nextThreadIds = new Set<string>();
+      const setThreadAttribute = (path: SVGPathElement, name: string, value: string) => {
+        if (path.getAttribute(name) !== value) path.setAttribute(name, value);
+      };
+
+      nextThreadSpecs.forEach((spec) => {
+        nextThreadIds.add(spec.edgeId);
+        edgeMetaById.set(spec.edgeId, spec.meta);
+        const existingPath = existingThreads.get(spec.edgeId);
+        const path = existingPath ?? document.createElementNS(SVG_NS, 'path');
+        if (!existingPath) {
+          applyScope(path);
+          // While a node is selected, a freshly-arrived connection is held back
+          // (rendered invisible) and revealed on deselect, so live polling never
+          // flashes new lines across the focused view. Decision 8.
+          const deferReveal = Boolean(selectedFocusTarget);
+          path.setAttribute('class', deferReveal ? 'gp-home-map-thread is-pending-reveal' : 'gp-home-map-thread is-entering');
+          path.setAttribute(
+            'style',
+            `--thread-color: ${spec.color}; --thread-grow-delay: ${spec.growDelay}; animation-delay: ${spec.growDelay};`
+          );
+          registerThread(path);
+          dynamicThreadsGroup.append(path);
+        }
+        setThreadAttribute(path, 'data-edge-id', spec.edgeId);
+        setThreadAttribute(path, 'data-from', spec.from);
+        setThreadAttribute(path, 'data-to', spec.to);
+        setThreadAttribute(path, 'data-theme', spec.theme);
+        setThreadAttribute(path, 'data-kind', spec.kind);
+        setThreadAttribute(path, 'data-source', spec.source);
+        setThreadAttribute(path, 'data-weight', String(spec.weight));
+        setThreadAttribute(path, 'd', spec.d);
+        setThreadAttribute(path, 'pathLength', '1');
+        setThreadAttribute(path, 'stroke', spec.color);
+        path.style.setProperty('--thread-color', spec.color);
+        path.style.setProperty('--thread-grow-delay', spec.growDelay);
+
+        if (dynamicThreadHitsGroup) {
+          const existingHit = existingHits.get(spec.edgeId);
+          const hit = existingHit ?? document.createElementNS(SVG_NS, 'path');
+          if (!existingHit) {
+            applyScope(hit);
+            hit.setAttribute('class', 'gp-home-map-thread-hit');
+            registerEdgeHit(hit);
+            dynamicThreadHitsGroup.append(hit);
+          }
+          setThreadAttribute(hit, 'data-edge-id', spec.edgeId);
+          setThreadAttribute(hit, 'data-from', spec.from);
+          setThreadAttribute(hit, 'data-to', spec.to);
+          setThreadAttribute(hit, 'data-theme', spec.theme);
+          setThreadAttribute(hit, 'data-kind', spec.kind);
+          setThreadAttribute(hit, 'd', spec.d);
+          setThreadAttribute(hit, 'pathLength', '1');
+          hit.style.setProperty('--thread-color', spec.color);
+          edgeHitById.set(spec.edgeId, hit);
+          syncEdgeHitState(path);
+        }
+      });
+      existingThreads.forEach((path, id) => {
+        if (!nextThreadIds.has(id)) {
+          edgeMetaById.delete(id);
+          path.remove();
+        }
+      });
+      existingHits.forEach((path, id) => {
+        if (!nextThreadIds.has(id)) {
+          edgeHitById.delete(id);
+          path.remove();
+        }
       });
       applyMapFilters();
     };
@@ -1281,9 +2445,16 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         const approved = nodes.filter(
           (node: Record<string, any>) => node?.source === 'approved-submission'
         );
+        const approvedKeys = new Set<string>();
         approved.forEach((node: Record<string, any>) => {
           const member = toMember(node, 'approved-submission');
-          if (member) injectMember(member);
+          if (member) {
+            approvedKeys.add(member.key);
+            injectMember(member);
+          }
+        });
+        Array.from(memberByKey.values()).forEach((member) => {
+          if (member.approved && !approvedKeys.has(member.key)) removeInjectedMember(member.key);
         });
 
         // Reconcile: drop optimistic local nodes that are now approved server-side
@@ -1329,9 +2500,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const locationMap = scope.querySelector('[data-location-map]') as HTMLElement | null;
     const locationSvg = locationMap?.querySelector('svg') as SVGSVGElement | null;
     const locationPin = scope.querySelector('[data-location-pin]') as SVGCircleElement | null;
-    const locationModeToggle = scope.querySelector('[data-location-mode-toggle]') as HTMLButtonElement | null;
-    const locationText = scope.querySelector('[data-location-text]') as HTMLElement | null;
     const locationQuery = scope.querySelector('input[name="placeQuery"]') as HTMLInputElement | null;
+    const locationDatalist = scope.querySelector('[data-location-datalist]') as HTMLDataListElement | null;
     const placeInput = scope.querySelector('[data-location-place]') as HTMLInputElement | null;
     const latInput = scope.querySelector('[data-location-lat]') as HTMLInputElement | null;
     const longInput = scope.querySelector('[data-location-long]') as HTMLInputElement | null;
@@ -1340,6 +2510,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const reviewPlace = scope.querySelector('[data-review-place]') as HTMLElement | null;
     const reviewThemes = scope.querySelector('[data-review-themes]') as HTMLElement | null;
     const reviewNote = scope.querySelector('[data-review-note]') as HTMLElement | null;
+    const taglineCount = scope.querySelector('[data-tagline-count]') as HTMLElement | null;
     const editStepButtons = Array.from(scope.querySelectorAll('[data-edit-step]')) as HTMLButtonElement[];
 
     const MAX_THEME_COUNT = 4;
@@ -1347,7 +2518,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const selectedThemes = new Set<string>();
     let currentStep = 0;
     let lastAddTrigger: HTMLElement | null = null;
-    let locationMode: 'map' | 'text' = 'map';
 
     const xToLon = (x: number) => (x / VIEW_W) * 360 - 180;
     const yToLat = (y: number) => 90 - (y / VIEW_H) * 180;
@@ -1362,16 +2532,62 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           long: xToLon(x),
         };
       }).filter((place) => Number.isFinite(place.lat) && Number.isFinite(place.long)),
+      // A compact bundled spread of major world cities — enough to autocomplete and
+      // auto-label most pins. Anywhere not listed still works: the pin gives the
+      // coordinates and a free-typed name becomes the label.
       { label: 'Lagos', lat: 6.5244, long: 3.3792 },
-      { label: 'Berlin', lat: 52.52, long: 13.405 },
-      { label: 'Bogota', lat: 4.711, long: -74.0721 },
-      { label: 'Bali', lat: -8.3405, long: 115.092 },
-      { label: 'Toronto', lat: 43.6532, long: -79.3832 },
-      { label: 'New York City', lat: 40.7128, long: -74.006 },
+      { label: 'Accra', lat: 5.6037, long: -0.187 },
       { label: 'Nairobi', lat: -1.2864, long: 36.8172 },
+      { label: 'Cairo', lat: 30.0444, long: 31.2357 },
       { label: 'Cape Town', lat: -33.9249, long: 18.4241 },
-      { label: 'Sao Paulo', lat: -23.5505, long: -46.6333 },
+      { label: 'Johannesburg', lat: -26.2041, long: 28.0473 },
+      { label: 'Casablanca', lat: 33.5731, long: -7.5898 },
+      { label: 'Addis Ababa', lat: 9.03, long: 38.74 },
+      { label: 'Dar es Salaam', lat: -6.7924, long: 39.2083 },
+      { label: 'Kinshasa', lat: -4.4419, long: 15.2663 },
+      { label: 'London', lat: 51.5072, long: -0.1276 },
+      { label: 'Berlin', lat: 52.52, long: 13.405 },
+      { label: 'Paris', lat: 48.8566, long: 2.3522 },
+      { label: 'Madrid', lat: 40.4168, long: -3.7038 },
+      { label: 'Lisbon', lat: 38.7223, long: -9.1393 },
+      { label: 'Amsterdam', lat: 52.3676, long: 4.9041 },
+      { label: 'Rome', lat: 41.9028, long: 12.4964 },
+      { label: 'Istanbul', lat: 41.0082, long: 28.9784 },
+      { label: 'Warsaw', lat: 52.2297, long: 21.0122 },
+      { label: 'Stockholm', lat: 59.3293, long: 18.0686 },
+      { label: 'Kyiv', lat: 50.4501, long: 30.5234 },
+      { label: 'Delhi', lat: 28.6139, long: 77.209 },
+      { label: 'Mumbai', lat: 19.076, long: 72.8777 },
+      { label: 'Bangalore', lat: 12.9716, long: 77.5946 },
+      { label: 'Bangkok', lat: 13.7563, long: 100.5018 },
+      { label: 'Singapore', lat: 1.3521, long: 103.8198 },
+      { label: 'Jakarta', lat: -6.2088, long: 106.8456 },
+      { label: 'Bali', lat: -8.3405, long: 115.092 },
+      { label: 'Manila', lat: 14.5995, long: 120.9842 },
+      { label: 'Seoul', lat: 37.5665, long: 126.978 },
       { label: 'Tokyo', lat: 35.6762, long: 139.6503 },
+      { label: 'Shanghai', lat: 31.2304, long: 121.4737 },
+      { label: 'Beijing', lat: 39.9042, long: 116.4074 },
+      { label: 'Ho Chi Minh City', lat: 10.8231, long: 106.6297 },
+      { label: 'Dhaka', lat: 23.8103, long: 90.4125 },
+      { label: 'Karachi', lat: 24.8607, long: 67.0011 },
+      { label: 'Dubai', lat: 25.2048, long: 55.2708 },
+      { label: 'New York City', lat: 40.7128, long: -74.006 },
+      { label: 'Toronto', lat: 43.6532, long: -79.3832 },
+      { label: 'Vancouver', lat: 49.2827, long: -123.1207 },
+      { label: 'Los Angeles', lat: 34.0522, long: -118.2437 },
+      { label: 'Chicago', lat: 41.8781, long: -87.6298 },
+      { label: 'Mexico City', lat: 19.4326, long: -99.1332 },
+      { label: 'Bogota', lat: 4.711, long: -74.0721 },
+      { label: 'Medellin', lat: 6.2442, long: -75.5812 },
+      { label: 'Lima', lat: -12.0464, long: -77.0428 },
+      { label: 'Santiago', lat: -33.4489, long: -70.6693 },
+      { label: 'Buenos Aires', lat: -34.6037, long: -58.3816 },
+      { label: 'Sao Paulo', lat: -23.5505, long: -46.6333 },
+      { label: 'Rio de Janeiro', lat: -22.9068, long: -43.1729 },
+      { label: 'Sydney', lat: -33.8688, long: 151.2093 },
+      { label: 'Melbourne', lat: -37.8136, long: 144.9631 },
+      { label: 'Auckland', lat: -36.8485, long: 174.7633 },
     ];
 
     const nearestPlace = (lat: number, long: number) => (
@@ -1424,6 +2640,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (reviewName) reviewName.textContent = name;
       if (reviewPlace) reviewPlace.textContent = `Member · ${place || '—'}`;
       if (reviewNote) reviewNote.textContent = publicNote || 'None yet';
+      if (taglineCount) taglineCount.textContent = `${String(data.get('publicNote') ?? '').length} / 72`;
       if (reviewThemes) {
         reviewThemes.textContent = '';
         selectedThemeIds().forEach((slug) => {
@@ -1491,15 +2708,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       addForm?.reset();
       selectedThemes.clear();
       currentStep = 0;
-      locationMode = 'map';
       if (placeInput) placeInput.value = '';
       if (latInput) latInput.value = '';
       if (longInput) longInput.value = '';
       if (locationPin) locationPin.hidden = true;
-      if (locationStatus) locationStatus.textContent = 'Click anywhere on the map to drop your pin.';
-      if (locationText) locationText.hidden = true;
-      locationMap?.removeAttribute('hidden');
-      if (locationModeToggle) locationModeToggle.textContent = 'or type a city ↗';
+      if (locationStatus) locationStatus.textContent = 'Drop a pin on the map, then name your city — or pick one from the list.';
       setAddStatus('');
       syncWalkthroughState();
     };
@@ -1583,37 +2796,83 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     });
 
     addForm?.addEventListener('input', syncWalkthroughState);
-    locationModeToggle?.addEventListener('click', () => {
-      locationMode = locationMode === 'map' ? 'text' : 'map';
-      const textMode = locationMode === 'text';
-      if (locationText) locationText.hidden = !textMode;
-      if (locationMap) locationMap.hidden = textMode;
-      if (locationModeToggle) locationModeToggle.textContent = textMode ? '← back to map' : 'or type a city ↗';
-      if (textMode) locationQuery?.focus();
-    });
-    locationSvg?.addEventListener('click', (event) => {
+    // Pin = coordinates. Drag or tap anywhere on the mini-map to place it; the
+    // nearest bundled city auto-labels it, and a custom typed name takes
+    // precedence so any place reads correctly.
+    const cityIsKnown = (value: string) => {
+      const lower = value.toLowerCase();
+      return placeIndex.some((place) => place.label.toLowerCase() === lower);
+    };
+    const placeFromPointer = (event: PointerEvent) => {
+      if (!locationSvg) return;
       const rect = locationSvg.getBoundingClientRect();
-      const x = ((event.clientX - rect.left) / rect.width) * VIEW_W;
-      const y = ((event.clientY - rect.top) / rect.height) * VIEW_H;
+      const x = Math.min(VIEW_W, Math.max(0, ((event.clientX - rect.left) / rect.width) * VIEW_W));
+      const y = Math.min(VIEW_H, Math.max(0, ((event.clientY - rect.top) / rect.height) * VIEW_H));
       const lat = yToLat(y);
       const long = xToLon(x);
-      const place = nearestPlace(lat, long);
-      setLocation(lat, long, place?.label || 'your place');
+      const typed = clean(locationQuery?.value);
+      const label = typed.length >= 2 && !cityIsKnown(typed)
+        ? typed
+        : (nearestPlace(lat, long)?.label || 'your place');
+      setLocation(lat, long, label);
+    };
+    let locationDragging = false;
+    locationSvg?.addEventListener('pointerdown', (event) => {
+      locationDragging = true;
+      try { locationSvg?.setPointerCapture(event.pointerId); } catch {}
+      placeFromPointer(event);
     });
+    locationSvg?.addEventListener('pointermove', (event) => {
+      if (locationDragging) placeFromPointer(event);
+    });
+    const endLocationDrag = (event: PointerEvent) => {
+      if (!locationDragging) return;
+      locationDragging = false;
+      try { locationSvg?.releasePointerCapture(event.pointerId); } catch {}
+    };
+    locationSvg?.addEventListener('pointerup', endLocationDrag);
+    locationSvg?.addEventListener('pointercancel', endLocationDrag);
+
+    // Type to search the bundled list (a native datalist suggests matches). A
+    // matched city jumps the pin; any other text becomes the label as long as a
+    // pin supplies the coordinates — so a diverse set of places all work.
     locationQuery?.addEventListener('input', () => {
-      const query = clean(locationQuery.value).toLowerCase();
-      if (query.length < 2) {
-        if (locationStatus) locationStatus.textContent = 'Type at least two letters to match a known city.';
+      const raw = clean(locationQuery.value);
+      if (raw.length < 2) {
+        if (locationStatus) locationStatus.textContent = 'Drop a pin on the map, or type your city.';
         return;
       }
-      const match = placeIndex.find((place) => place.label.toLowerCase().startsWith(query))
+      const query = raw.toLowerCase();
+      const match = placeIndex.find((place) => place.label.toLowerCase() === query)
+        || placeIndex.find((place) => place.label.toLowerCase().startsWith(query))
         || placeIndex.find((place) => place.label.toLowerCase().includes(query));
-      if (!match) {
-        if (locationStatus) locationStatus.textContent = 'No match yet — try a major city or chapter.';
+      if (match) {
+        setLocation(match.lat, match.long, match.label);
         return;
       }
-      setLocation(match.lat, match.long, match.label);
+      const lat = toFiniteNumber(latInput?.value);
+      const long = toFiniteNumber(longInput?.value);
+      if (lat !== null && long !== null) {
+        setLocation(lat, long, raw);
+      } else {
+        if (placeInput) placeInput.value = raw;
+        if (locationStatus) locationStatus.textContent = `Drop a pin on the map to place “${raw}”.`;
+        syncWalkthroughState();
+      }
     });
+
+    // Populate the city autocomplete from the bundled list (deduped).
+    if (locationDatalist) {
+      const seenCities = new Set<string>();
+      placeIndex.forEach((place) => {
+        const label = clean(place.label);
+        if (!label || seenCities.has(label.toLowerCase())) return;
+        seenCities.add(label.toLowerCase());
+        const option = document.createElement('option');
+        option.value = label;
+        locationDatalist.append(option);
+      });
+    }
 
     addForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -1696,6 +2955,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     // ---- Init ---------------------------------------------------------------
     root.querySelectorAll('.gp-home-map-node-link').forEach(registerNode);
+    root.querySelectorAll<SVGPathElement>('.gp-home-map-thread').forEach(registerThread);
     root.addEventListener('mouseleave', clearFocus);
     window.addEventListener(PENDING_NODE_UPDATED_EVENT, renderLocalPending);
 
@@ -1707,11 +2967,25 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
 <style>
   .gp-home-map {
-    --gp-map-chapter: var(--gp-green-700);
-    --gp-map-chapter-ring: var(--gp-green-100);
+    --gp-map-chapter: var(--gp-primary);
+    --gp-map-chapter-ring: var(--gp-green-950);
     --gp-map-member: var(--gp-green-100);
-    --gp-map-member-ring: var(--gp-lime-300);
+    --gp-map-member-ring: var(--gp-secondary);
     --gp-map-steward: var(--gp-secondary);
+    /* Relationship lines are neutral chrome at rest — a quiet mint thread on the
+       forest canvas. Theme hue (data) only appears on an actively selected node's
+       web. The bright tone is the one-shot arrival/hover pass before settling. */
+    --gp-map-thread: var(--gp-green-200);
+    --gp-map-thread-bright: var(--gp-off-white);
+    /* Shared on-map surface chrome (defined once, reused by the hover card,
+       selected popover, and inline controls). Raw tints are intentional
+       data-viz/overlay exceptions — see scripts/data/ui-source-baseline.tsv. */
+    --gp-map-pop-bg:
+      linear-gradient(135deg, rgba(250, 247, 238, 0.08), rgba(250, 247, 238, 0.02)),
+      rgba(9, 34, 25, 0.96);
+    --gp-map-pop-shadow: 0 18px 48px -18px rgba(0, 0, 0, 0.72);
+    --gp-map-control-bg: rgba(7, 24, 15, 0.5);
+    --gp-map-edge-fade: linear-gradient(to right, transparent 0, #000 6px, #000 calc(100% - 12px), transparent 100%);
     container-type: inline-size;
     margin: 0;
     width: 100%;
@@ -1779,25 +3053,74 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
   .gp-home-map-thread {
     fill: none;
-    stroke-width: 0.22;
+    /* Faint muted theme tint at rest — alive but calm. The per-edge --thread-color
+       shows through, mixed toward the neutral base and held at low opacity so a
+       resting line is quiet network context. Full saturation stays reserved for a
+       selected node's web (.is-selected-adj). */
+    stroke: color-mix(in srgb, var(--thread-color, var(--gp-map-thread)) 58%, var(--gp-map-thread));
+    stroke-width: 0.2;
     stroke-linecap: round;
-    opacity: 0.55;
+    opacity: 0.26;
     mix-blend-mode: screen;
-    filter: drop-shadow(0 0 0.5px var(--thread-color));
+    filter: none;
     transition: stroke-width 240ms cubic-bezier(0.4, 0, 0.2, 1),
-      opacity 240ms cubic-bezier(0.4, 0, 0.2, 1);
+      opacity 240ms cubic-bezier(0.4, 0, 0.2, 1),
+      stroke 320ms cubic-bezier(0.4, 0, 0.2, 1);
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+    animation: none;
+  }
+
+  /* Arrival pass — a brief neutral "comet" at near-full opacity that draws in,
+     then settles to the quiet resting line above (the class is removed once the
+     one-shot animation ends). One-shot only; no idle loop. */
+  .gp-home-map-thread.is-entering {
+    stroke: var(--gp-map-thread-bright);
     stroke-dasharray: 1;
     stroke-dashoffset: 1;
-    animation:
-      gpMapThreadGrow 1.6s cubic-bezier(0.22, 1, 0.36, 1) forwards,
-      gpMapThread 5.6s ease-in-out infinite;
+    animation: gpMapThreadGrow 1.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  /* Held back while a node is selected; cometed in on deselect (decision 8). */
+  .gp-home-map-thread.is-pending-reveal {
+    opacity: 0;
+    animation: none;
+  }
+
+  /* Soft web re-reveal on deselect — a brief settle, gentler than the comet. */
+  .gp-home-map-thread.is-resettling {
+    animation: gpMapThreadResettle 620ms ease both;
   }
 
   .gp-home-map-thread.is-dim {
-    opacity: 0.08;
+    opacity: 0.05;
+    filter: none;
   }
 
   .gp-home-map-thread.is-filtered-out {
+    display: none;
+  }
+
+  .gp-home-map-thread.is-edge-selected {
+    opacity: 1;
+    stroke-width: 0.48;
+    filter: drop-shadow(0 0 2px var(--thread-color));
+  }
+
+  .gp-home-map-thread-hit {
+    fill: none;
+    stroke: transparent;
+    stroke-width: 3.8;
+    stroke-linecap: round;
+    pointer-events: none;
+  }
+
+  .gp-home-map-thread-hit.is-adj {
+    pointer-events: stroke;
+    cursor: help;
+  }
+
+  .gp-home-map-thread-hit.is-filtered-out {
     display: none;
   }
 
@@ -1809,7 +3132,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   }
 
   .gp-home-map-node-link.is-dim {
-    opacity: 0.22;
+    opacity: 0.16;
   }
 
   .gp-home-map-node-link.is-adj {
@@ -1820,29 +3143,42 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     display: none;
   }
 
-  /* Chapter node treatment — dark green anchor, light green ring */
+  .gp-home-map-node-hit {
+    fill: transparent;
+    stroke: transparent;
+    pointer-events: all;
+  }
+
+  .gp-home-map-node-dot,
+  .gp-home-map-node-ring,
+  .gp-home-map-node-halo {
+    transition: r 200ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Chapter node treatment — lime anchor with a dark green edge */
   .gp-home-map-node-link.is-chapter .gp-home-map-node-dot {
     fill: var(--gp-map-chapter);
     stroke: var(--gp-green-950);
-    stroke-width: 0.6;
-    transition: r 200ms cubic-bezier(0.22, 1, 0.36, 1);
+    stroke-width: 0.5;
   }
   .gp-home-map-node-link.is-chapter .gp-home-map-node-ring {
     fill: none;
     stroke: var(--gp-map-chapter-ring);
-    stroke-width: 0.4;
-    opacity: 0.65;
+    stroke-width: 0.36;
+    opacity: 0.9;
   }
   .gp-home-map-node-link.is-chapter .gp-home-map-node-halo {
     fill: var(--gp-map-chapter);
-    opacity: 0.2;
-    transition: opacity 240ms cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.16;
   }
   .gp-home-map-node-link.is-chapter:hover .gp-home-map-node-halo,
-  .gp-home-map-node-link.is-chapter:focus-visible .gp-home-map-node-halo {
+  .gp-home-map-node-link.is-chapter:focus-visible .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-chapter.is-selected .gp-home-map-node-halo {
     opacity: 0.42;
   }
-  .gp-home-map-node-link.is-chapter:focus-visible .gp-home-map-node-dot {
+  .gp-home-map-node-link.is-chapter:focus-visible .gp-home-map-node-dot,
+  .gp-home-map-node-link.is-chapter.is-selected .gp-home-map-node-dot {
     stroke: var(--gp-map-chapter-ring);
     stroke-width: 0.9;
   }
@@ -1872,7 +3208,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     fill: var(--gp-map-member);
     stroke: var(--gp-green-950);
     stroke-width: 0.5;
-    transition: r 200ms cubic-bezier(0.22, 1, 0.36, 1);
   }
   .gp-home-map-node-link.is-member .gp-home-map-node-ring,
   .gp-home-map-node-link.is-project .gp-home-map-node-ring,
@@ -1923,57 +3258,63 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     opacity: 0.9;
   }
 
-  /* Focus ripples — only visible while the node is actively focused. We
-     animate a CSS variable through stops so each ripple breathes
-     outward and fades, then resets. r is CSS-animatable in modern
-     browsers; we attribute it via custom properties. */
-  .gp-home-map-node-ripple {
-    fill: none;
-    stroke-width: 0.18;
-    opacity: 0;
-    pointer-events: none;
-    transform-box: fill-box;
-  }
-  .gp-home-map-node-link.is-chapter .gp-home-map-node-ripple {
-    stroke: var(--gp-map-chapter-ring);
-  }
-  .gp-home-map-node-link.is-steward .gp-home-map-node-ripple {
-    stroke: var(--gp-map-steward);
-    stroke-width: 0.14;
-  }
-  .gp-home-map-node-link.is-member .gp-home-map-node-ripple,
-  .gp-home-map-node-link.is-project .gp-home-map-node-ripple,
-  .gp-home-map-node-link.is-place .gp-home-map-node-ripple {
-    stroke: var(--gp-map-member);
-    stroke-width: 0.16;
-  }
-  .gp-home-map-node-link:hover .gp-home-map-node-ripple,
-  .gp-home-map-node-link:focus-visible .gp-home-map-node-ripple {
-    animation: gpMapNodeRipple 2.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
-  }
-  .gp-home-map-node-link:hover .gp-home-map-node-ripple.is-ripple-b,
-  .gp-home-map-node-link:focus-visible .gp-home-map-node-ripple.is-ripple-b {
-    animation-delay: 0.9s;
-  }
-
-  /* Nutrient blips on adjacent threads when a node is focused. The dash
-     pattern is 0.04 / 0.96 so a single short stroke segment chases along
-     each adjacent path, riding the active thread color. Subtle, only on
-     focus, and respects reduced motion. */
+  /* Hover/focus highlight — a node's connected lines brighten to a clearer
+     neutral so you can see who it links to, WITHOUT colourising. Theme colour is
+     reserved for an actively selected node (.is-selected-adj below). One-shot
+     reveal only; no idle loop. */
   .gp-home-map-thread.is-adj {
-    opacity: 0.95;
+    opacity: 0.82;
     stroke-width: 0.34;
-    stroke: var(--gp-map-member);
-    /* Override the dasharray set by the grow-in animation so the blip
-       gets a tight pattern to chase along the path. */
-    stroke-dasharray: 0.04 0.96;
+    /* Brighten the same tint on hover/focus rather than desaturating to white, so
+       the resting tint and the active state share a hue. Still short of the full
+       saturated colour the selected web carries. */
+    stroke: color-mix(in srgb, var(--thread-color, var(--gp-map-thread)) 72%, var(--gp-off-white));
+    stroke-dasharray: none;
     stroke-dashoffset: 0;
-    animation:
-      gpMapThread 5.6s ease-in-out infinite,
-      gpMapNutrientBlip 2.6s linear infinite;
+    filter: none;
+    animation: none;
   }
 
-  /* Count-free identity legend inside the map */
+  .gp-home-map-thread.is-adj.is-revealing {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+    animation: gpMapAdjacentThread 900ms cubic-bezier(0.22, 1, 0.36, 1) 1;
+  }
+
+  /* Selected node's web — the only place theme colour (data) paints a line. Set
+     by markSelectedThreads() on the selected node's edges and cleared on
+     deselect, so hovering another node never colourises (its lines only get the
+     neutral .is-adj highlight). Declared after .is-adj/.is-dim so it wins on
+     equal specificity; the parallel theme strands add the per-shared-theme
+     density. */
+  .gp-home-map-thread.is-selected-adj {
+    opacity: 1;
+    stroke: var(--thread-color, var(--gp-map-member));
+    stroke-width: 0.46;
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+    filter: drop-shadow(0 0 1.5px var(--thread-color));
+  }
+
+  /* Per-shared-theme parallel strands for the selected node (renderSelectionStrands).
+     Decorative, non-interactive, in their own overlay group. One-shot grow. */
+  .gp-home-map-strand {
+    fill: none;
+    stroke: var(--thread-color, var(--gp-map-member));
+    stroke-width: 0.3;
+    stroke-linecap: round;
+    opacity: 0.92;
+    mix-blend-mode: screen;
+    filter: drop-shadow(0 0 1px var(--thread-color));
+    pointer-events: none;
+  }
+  .gp-home-map-strand.is-entering-strand {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: gpMapStrandGrow 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* Visible identity counts inside the map */
   .gp-home-map-legend {
     position: absolute;
     top: 12px;
@@ -1995,7 +3336,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   .gp-home-map-legend-item {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     white-space: nowrap;
   }
 
@@ -2035,6 +3376,22 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     font-weight: 700;
   }
 
+  .gp-home-map-legend-count {
+    min-width: 2ch;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 7px;
+    border: 1px solid color-mix(in srgb, var(--gp-primary) 36%, transparent);
+    border-radius: var(--gp-radius-pill);
+    background: color-mix(in srgb, var(--gp-fg) 8%, transparent);
+    color: var(--gp-fg);
+    font-family: var(--gp-font-mono);
+    font-size: var(--gp-caption);
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
   /* Focus card */
   .gp-home-map-focus {
     position: absolute;
@@ -2048,13 +3405,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     padding: 13px 15px 14px;
     border: 1px solid color-mix(in srgb, var(--gp-map-member) 32%, transparent);
     border-radius: var(--gp-radius-md);
-    background:
-      linear-gradient(135deg, rgba(250, 247, 238, 0.08), rgba(250, 247, 238, 0.02)),
-      rgba(9, 34, 25, 0.96);
+    background: var(--gp-map-pop-bg);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     color: var(--gp-fg);
-    box-shadow: 0 18px 48px -18px rgba(0, 0, 0, 0.72);
+    box-shadow: var(--gp-map-pop-shadow);
     z-index: 6;
     pointer-events: none;
     overflow-wrap: anywhere;
@@ -2074,7 +3429,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   }
 
   .gp-home-map-focus[data-node-type='chapter'] .gp-home-map-focus-role {
-    color: var(--gp-map-chapter-ring);
+    color: var(--gp-map-chapter);
   }
 
   .gp-home-map-focus[data-node-type='steward'] .gp-home-map-focus-role {
@@ -2134,6 +3489,52 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     letter-spacing: 0.08em;
     line-height: 1.2;
     text-transform: uppercase;
+  }
+
+  .gp-home-map-edge-tooltip {
+    --edge-color: var(--gp-map-member);
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-start: 0;
+    z-index: 7;
+    display: none;
+    min-width: 210px;
+    max-width: min(280px, calc(100% - 20px));
+    padding: 11px 13px 12px;
+    border: 1px solid color-mix(in srgb, var(--edge-color) 56%, transparent);
+    border-radius: var(--gp-radius-md);
+    background: color-mix(in srgb, var(--gp-green-950) 96%, var(--edge-color));
+    color: var(--gp-fg);
+    box-shadow: 0 18px 42px -18px color-mix(in srgb, var(--gp-green-950) 78%, transparent);
+    pointer-events: none;
+  }
+
+  .gp-home-map-edge-tooltip[aria-hidden='false'] {
+    display: grid;
+    gap: 5px;
+  }
+
+  .gp-home-map-edge-tooltip-kicker,
+  .gp-home-map-edge-tooltip-meta {
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .gp-home-map-edge-tooltip-kicker {
+    color: var(--edge-color);
+  }
+
+  .gp-home-map-edge-tooltip-title {
+    color: var(--gp-secondary);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-label-sm);
+    font-weight: 800;
+    line-height: 1.25;
   }
 
   /* Embedded HiFi-style map controls */
@@ -2284,6 +3685,65 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     background: currentColor;
   }
 
+  .gp-home-map-zoom-controls {
+    /* Visible on every viewport — desktop needs zoom + the drag-pan it unlocks,
+       not just touch. */
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-pill);
+    background: color-mix(in srgb, var(--gp-green-950) 74%, transparent);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+
+  .gp-home-map-zoom-controls svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+  }
+
+  /* Drag-to-pan affordance once the map is zoomed in. */
+  .gp-home-map-canvas.is-zoomed .gp-home-map-svg {
+    cursor: grab;
+  }
+  .gp-home-map-canvas.is-grabbing .gp-home-map-svg,
+  .gp-home-map-canvas.is-grabbing .gp-home-map-node-link {
+    cursor: grabbing;
+  }
+
+  .gp-home-map-zoom-controls button {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: var(--gp-radius-pill);
+    padding: 8px 12px;
+    background: transparent;
+    color: var(--gp-fg);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-label-sm);
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .gp-home-map-zoom-controls button:hover,
+  .gp-home-map-zoom-controls button:focus-visible,
+  .gp-home-map-canvas.is-zoomed .gp-home-map-zoom-controls [data-home-map-zoom='reset'] {
+    background: var(--gp-map-member);
+    color: var(--gp-green-900);
+  }
+
   .gp-home-map-control-row {
     display: flex;
     align-items: center;
@@ -2292,58 +3752,46 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     max-width: 100%;
   }
 
-  /* On-map participation CTA — same public-safe dialog as the hero CTA. */
-  .gp-home-map-add-self {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-height: 48px;
-    padding: 8px 16px;
-    border: 1px solid color-mix(in srgb, var(--gp-map-member) 45%, transparent);
-    border-radius: var(--gp-radius-pill);
-    background: color-mix(in srgb, var(--gp-green-950) 72%, transparent);
-    color: var(--gp-map-member);
-    font-family: var(--gp-font-body);
-    font-size: var(--gp-label-md);
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    line-height: 1;
-    white-space: nowrap;
-    cursor: pointer;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    transition: background 160ms ease, color 160ms ease;
-  }
-
-  .gp-home-map-add-self:hover,
-  .gp-home-map-add-self:focus-visible {
-    background: var(--gp-map-member);
-    color: var(--gp-green-900);
-    outline: none;
-  }
-
-  /* Selected-node panel — in-flow (not an overlay) so it never clips on
-     mobile. Appears when a submitted steward/member node is activated. */
+  /* Selected-node card — on-map only. Desktop pins near the selected node;
+     compact mobile rules turn this same region into the lower map bar. */
+  /* Desktop: a compact, light popover pinned by the selected node — the hover
+     card's visual language, made persistent + interactive (clickable links,
+     edit). Not a large map-blocking card. The connection web reads on the map;
+     the mobile sheet (below) carries the connection list. */
   .gp-home-map-selected {
-    position: relative;
-    width: 100%;
+    position: absolute;
+    inset-inline-start: var(--gp-selected-x, 50%);
+    inset-block-start: var(--gp-selected-y, 50%);
+    z-index: 8;
+    width: max-content;
+    min-width: 176px;
+    max-width: min(244px, calc(100% - 24px));
+    max-height: calc(100% - 24px);
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     gap: 6px;
-    padding: 14px 16px;
-    border: 1px solid color-mix(in srgb, var(--gp-map-member) 42%, transparent);
+    padding: 11px 13px 12px;
+    border: 1px solid color-mix(in srgb, var(--gp-map-member) 32%, transparent);
     border-radius: var(--gp-radius-md);
-    background: rgba(15, 50, 38, 0.92);
+    background: var(--gp-map-pop-bg);
+    color: var(--gp-fg);
+    box-shadow: var(--gp-map-pop-shadow);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    overflow: auto;
+    overflow-wrap: anywhere;
+    pointer-events: auto;
+    transform: var(--gp-selected-transform, translate(18px, 18px));
   }
   .gp-home-map-selected[hidden] { display: none; }
 
   .gp-home-map-selected-close {
     position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 32px;
-    height: 32px;
+    inset-block-start: 8px;
+    inset-inline-end: 8px;
+    width: 34px;
+    height: 34px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -2359,17 +3807,17 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
   .gp-home-map-selected-kicker {
     margin: 0;
-    padding-right: 38px;
+    padding-inline-end: 38px;
     font-family: var(--gp-font-mono);
     color: var(--gp-map-member);
-    font-size: 10px;
+    font-size: var(--gp-caption);
     letter-spacing: 0.14em;
     text-transform: uppercase;
     font-weight: 700;
   }
   .gp-home-map-selected-name {
     margin: 0;
-    padding-right: 38px;
+    padding-inline-end: 38px;
     font-family: var(--gp-font-display);
     color: var(--gp-secondary);
     font-size: 18px;
@@ -2386,8 +3834,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   .gp-home-map-selected-place:empty { display: none; }
 
   .gp-home-map-selected-bioregion,
-  .gp-home-map-selected-note,
-  .gp-home-map-selected-connections {
+  .gp-home-map-selected-note {
     margin: 0;
     color: var(--gp-fg-muted);
     font-size: 13px;
@@ -2409,15 +3856,36 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     display: none;
   }
 
-  .gp-home-map-selected-connections {
-    padding-top: 6px;
-    border-top: 1px solid rgba(250, 247, 238, 0.1);
-    color: var(--gp-fg-dim);
-    font-family: var(--gp-font-mono);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+  .gp-home-map-selected-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .gp-home-map-selected-links[hidden] { display: none; }
+  .gp-home-map-selected-link {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 4px 11px;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-pill);
+    background: var(--gp-map-control-bg);
+    color: var(--gp-fg);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-caption);
+    font-weight: 650;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+  }
+  .gp-home-map-selected-link:hover,
+  .gp-home-map-selected-link:focus-visible {
+    color: var(--gp-primary);
+    border-color: color-mix(in srgb, var(--gp-primary) 55%, transparent);
+    background: var(--gp-green-800);
   }
 
   .gp-home-map-selected-themes {
@@ -2439,6 +3907,168 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     font-size: 12px;
     line-height: 1;
     overflow-wrap: anywhere;
+  }
+
+  .gp-home-map-selected-edge-list {
+    display: none;
+    margin-top: 6px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(250, 247, 238, 0.1);
+  }
+
+  .gp-home-map-selected-edge-list[hidden] {
+    display: none;
+  }
+
+  .gp-home-map-selected-edge-title {
+    margin: 0 0 8px;
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-mono);
+    font-size: var(--gp-caption);
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .gp-home-map-selected-edge-items {
+    display: grid;
+    gap: 7px;
+  }
+
+  .gp-home-map-selected-edge-row {
+    --edge-color: var(--gp-map-member);
+    min-height: 44px;
+    display: grid;
+    grid-template-columns: 12px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid color-mix(in srgb, var(--edge-color) 38%, transparent);
+    border-radius: var(--gp-radius-sm);
+    background: color-mix(in srgb, var(--edge-color) 10%, var(--gp-green-950));
+    color: var(--gp-fg);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .gp-home-map-selected-edge-row:hover,
+  .gp-home-map-selected-edge-row:focus-visible,
+  .gp-home-map-selected-edge-row.is-active {
+    border-color: color-mix(in srgb, var(--edge-color) 72%, transparent);
+    background: color-mix(in srgb, var(--edge-color) 18%, var(--gp-green-950));
+  }
+
+  .gp-home-map-selected-edge-mark {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--edge-color);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--edge-color) 62%, transparent);
+  }
+
+  .gp-home-map-selected-edge-copy {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .gp-home-map-selected-edge-name {
+    color: var(--gp-fg);
+    font-size: var(--gp-label-sm);
+    font-weight: 800;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .gp-home-map-selected-edge-meta {
+    color: var(--gp-fg-dim);
+    font-family: var(--gp-font-mono);
+    font-size: var(--gp-caption);
+    font-weight: 750;
+    letter-spacing: 0.06em;
+    line-height: 1.2;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+  }
+
+  /* Connection item: name button (selects) + open-link control + a single
+     non-wrapping shared-theme carousel, so a long theme list never makes rows
+     uneven. (The list itself is mobile-only — see the container query below.) */
+  .gp-home-map-selected-edge-item {
+    --edge-color: var(--gp-map-member);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name open"
+      "themes themes";
+    align-items: center;
+    gap: 5px 8px;
+  }
+  .gp-home-map-selected-edge-item .gp-home-map-selected-edge-row { grid-area: name; }
+  .gp-home-map-selected-edge-open { grid-area: open; }
+  .gp-home-map-selected-edge-themes { grid-area: themes; }
+
+  .gp-home-map-selected-edge-open {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex: none;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-pill);
+    background: var(--gp-map-control-bg);
+    color: var(--gp-fg-muted);
+    font-size: var(--gp-body-sm);
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 160ms ease, border-color 160ms ease;
+  }
+  .gp-home-map-selected-edge-open:hover,
+  .gp-home-map-selected-edge-open:focus-visible {
+    color: var(--gp-primary);
+    border-color: color-mix(in srgb, var(--gp-primary) 55%, transparent);
+  }
+
+  .gp-home-map-selected-edge-themes {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 5px;
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    mask-image: var(--gp-map-edge-fade);
+    -webkit-mask-image: var(--gp-map-edge-fade);
+  }
+  .gp-home-map-selected-edge-themes::-webkit-scrollbar { display: none; }
+  .gp-home-map-selected-edge-themes:empty { display: none; }
+  .gp-home-map-selected-edge-theme {
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    scroll-snap-align: start;
+    min-height: 22px;
+    padding: 2px 8px;
+    border: 1px solid color-mix(in srgb, var(--chip-color, var(--edge-color)) 50%, transparent);
+    border-radius: var(--gp-radius-pill);
+    background: color-mix(in srgb, var(--chip-color, var(--edge-color)) 16%, transparent);
+    color: var(--gp-fg);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  /* The connected node a tapped connection row points to. */
+  .gp-home-map-node-link.is-edge-target .gp-home-map-node-halo {
+    opacity: 0.62;
   }
 
   /* Owner edit-link request — neutral on every outcome. */
@@ -2481,7 +4111,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     font-size: 12px;
     font-weight: 700;
   }
-  .gp-home-map-update-field input {
+  .gp-home-map-update-form input {
     width: 100%;
     box-sizing: border-box;
     min-height: 44px;
@@ -2519,12 +4149,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   .gp-home-map-update-submit {
     border: 0;
     background: var(--gp-map-member);
-    color: #07241a;
+    color: var(--gp-green-950);
   }
   .gp-home-map-update-error {
     margin: 0;
-    color: #f0dca0;
-    font-size: 13px;
+    color: var(--gp-secondary);
+    font-size: var(--gp-label-sm);
   }
   .gp-home-map-update-error:empty { display: none; }
   .gp-home-map-update-success {
@@ -2644,7 +4274,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     margin: 0;
     color: var(--gp-map-member);
     font-family: var(--gp-font-mono);
-    font-size: 10px;
+    font-size: var(--gp-caption);
     font-weight: 700;
     letter-spacing: 0.14em;
     line-height: 1;
@@ -2695,7 +4325,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     background: color-mix(in srgb, var(--theme-color, var(--gp-map-member)) 10%, rgba(2, 12, 7, 0.42));
     color: var(--gp-fg);
     font: inherit;
-    font-size: 13px;
+    font-size: var(--gp-label-sm);
     font-weight: 750;
     line-height: 1.15;
     text-align: left;
@@ -2866,6 +4496,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     width: 100%;
     height: 100%;
     display: block;
+    touch-action: none;
   }
 
   .gp-home-map-addnode-mini-map svg circle {
@@ -3064,6 +4695,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     .gp-home-map-addnode-close {
       top: 16px;
       right: 16px;
+      width: 44px;
+      height: 44px;
     }
 
     .gp-home-map-addnode-form {
@@ -3101,32 +4734,49 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     }
   }
 
-  @keyframes gpMapThread {
-    0%, 100% { opacity: 0.4; }
-    50%      { opacity: 0.75; }
-  }
-
+  /* Arrival/comet: draw in at near-full opacity with a slightly heavier head,
+     then settle to the resting line's opacity/width so removing .is-entering is
+     seamless. The bright→neutral stroke fade is handled by the base transition. */
   @keyframes gpMapThreadGrow {
-    from { stroke-dashoffset: 1; }
-    to   { stroke-dashoffset: 0; }
+    0%   { stroke-dashoffset: 1; opacity: 0.92; stroke-width: 0.46; }
+    65%  { opacity: 0.85; }
+    100% { stroke-dashoffset: 0; opacity: 0.26; stroke-width: 0.2; }
   }
 
-  @keyframes gpMapNodeRipple {
-    0%   { r: 1; opacity: 0.55; }
-    80%  { r: 6; opacity: 0; }
-    100% { r: 6; opacity: 0; }
+  @keyframes gpMapStrandGrow {
+    from { stroke-dashoffset: 1; opacity: 0.35; }
+    to   { stroke-dashoffset: 0; opacity: 0.92; }
   }
 
-  @keyframes gpMapNutrientBlip {
-    from { stroke-dashoffset: 1; }
-    to   { stroke-dashoffset: 0; }
+  @keyframes gpMapThreadResettle {
+    from { opacity: 0.42; }
+    to   { opacity: 0.26; }
+  }
+
+  @keyframes gpMapAdjacentThread {
+    0% {
+      opacity: 0.42;
+      stroke-width: 0.24;
+      stroke-dashoffset: 1;
+    }
+    60% {
+      opacity: 1;
+      stroke-width: 0.42;
+    }
+    100% {
+      opacity: 0.95;
+      stroke-width: 0.34;
+      stroke-dashoffset: 0;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
     /* Drop motion but keep threads visible — without this the dasharray
        leaves them invisible at offset:1 when the global rule clamps the
        grow-in animation to ~0ms before any keyframe interpolation runs. */
-    .gp-home-map-thread {
+    .gp-home-map-thread,
+    .gp-home-map-thread.is-entering,
+    .gp-home-map-thread.is-adj.is-revealing {
       animation: none !important;
       stroke-dasharray: none;
       stroke-dashoffset: 0;
@@ -3135,9 +4785,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       stroke-dasharray: none;
       stroke-dashoffset: 0;
     }
-    .gp-home-map-node-ripple {
+    .gp-home-map-strand.is-entering-strand {
       animation: none !important;
-      opacity: 0 !important;
+      stroke-dasharray: none;
+      stroke-dashoffset: 0;
+    }
+    .gp-home-map-thread.is-resettling {
+      animation: none !important;
     }
   }
 
@@ -3147,17 +4801,52 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       border-radius: var(--gp-radius-lg);
     }
 
+    .gp-home-map-svg {
+      touch-action: none;
+    }
+
+    .gp-home-map-thread {
+      opacity: 0.24;
+      stroke-width: 0.18;
+      filter: drop-shadow(0 0 0.25px var(--thread-color));
+    }
+
+    .gp-home-map-thread.is-entering {
+      animation: none;
+      stroke-dasharray: none;
+      stroke-dashoffset: 0;
+    }
+
+    .gp-home-map-thread.is-adj {
+      opacity: 0.98;
+      stroke-width: 0.4;
+    }
+
+    .gp-home-map-thread.is-dim {
+      opacity: 0.04;
+    }
+
+    .gp-home-map-thread-hit {
+      stroke-width: 5.6;
+    }
+
     .gp-home-map-legend {
-      top: 8px;
-      right: 8px;
+      inset-inline-start: 8px;
+      inset-block-start: 8px;
+      inset-inline-end: 8px;
       padding: 8px 10px;
       gap: 10px;
       flex-wrap: wrap;
       justify-content: flex-end;
     }
 
+    .gp-home-map-legend-count {
+      padding-inline: 6px;
+      font-size: var(--gp-caption);
+    }
+
     .gp-home-map-legend-label {
-      font-size: 10px;
+      font-size: var(--gp-caption);
       letter-spacing: 0.08em;
     }
 
@@ -3165,16 +4854,25 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       padding: 8px 10px;
       min-width: 180px;
       max-width: min(240px, calc(100% - 16px));
+      display: none !important;
+    }
+
+    .gp-home-map-edge-tooltip {
+      display: none !important;
     }
 
     .gp-home-map-focus-name {
-      font-size: 14px;
+      font-size: var(--gp-body-sm);
     }
 
     .gp-home-map-controls {
-      left: 8px;
-      bottom: 8px;
+      inset-inline-start: 8px;
+      inset-block-end: 8px;
       max-width: calc(100% - 16px);
+    }
+
+    .gp-home-map-canvas.has-selected-node .gp-home-map-controls {
+      inset-block-end: var(--gp-map-selected-clearance, 168px);
     }
 
     .gp-home-map-filter-panel {
@@ -3194,13 +4892,142 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     .gp-home-map-filter-tabs button {
       min-height: 44px;
       padding-inline: 12px;
-      font-size: 12px;
+      font-size: var(--gp-label-sm);
+    }
+
+    /* Mobile: a compact bottom sheet over the lower map edge. Header = open
+       link (left) + name (right) + close; themes wrap up to two lines; the
+       connection list scrolls horizontally as equal-height items. The map stays
+       visible above it, and the controls lift by --gp-map-selected-clearance. */
+    .gp-home-map-selected {
+      inset-inline-start: 8px;
+      inset-inline-end: 8px;
+      inset-block-start: auto;
+      inset-block-end: 8px;
+      width: auto;
+      min-width: 0;
+      max-width: none;
+      /* Track the 4/3 mobile canvas height (height ≈ 0.75·width) and stay well
+         under it so the bar always fits inside the canvas and leaves the map
+         visible above; content scrolls within. */
+      max-height: min(45cqw, 248px);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto 44px;
+      grid-template-areas:
+        "name links close"
+        "themes themes themes"
+        "list list list"
+        "edit edit edit";
+      align-items: center;
+      gap: 6px 8px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 9px 10px 10px 12px;
+      transform: none;
+      border-radius: var(--gp-radius-lg);
+      border-color: color-mix(in srgb, var(--gp-map-member) 30%, transparent);
+      background: color-mix(in srgb, var(--gp-green-950) 97%, transparent);
+      box-shadow: 0 -14px 40px -28px color-mix(in srgb, var(--gp-green-950) 88%, transparent);
+    }
+
+    .gp-home-map-selected-close {
+      position: static;
+      grid-area: close;
+      width: 44px;
+      height: 44px;
+      justify-self: end;
+      align-self: center;
+    }
+
+    .gp-home-map-selected-name {
+      grid-area: name;
+      align-self: center;
+      padding-inline-end: 0;
+      font-size: var(--gp-body-md);
+      line-height: 1.15;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .gp-home-map-selected-links {
+      grid-area: links;
+      align-self: center;
+      flex-wrap: nowrap;
+    }
+    .gp-home-map-selected-links[hidden] { display: none; }
+    .gp-home-map-selected-link {
+      min-height: 36px;
+    }
+
+    .gp-home-map-selected-themes {
+      grid-area: themes;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      max-height: 52px;
+      overflow: hidden;
+      margin: 0;
+    }
+
+    .gp-home-map-selected-kicker,
+    .gp-home-map-selected-place,
+    .gp-home-map-selected-bioregion,
+    .gp-home-map-selected-note {
+      display: none;
+    }
+
+    .gp-home-map-selected-edge-list {
+      grid-area: list;
+    }
+    .gp-home-map-selected-edge-list:not([hidden]) {
+      display: block;
+      min-width: 0;
+      margin-top: 0;
+      padding-top: 4px;
+    }
+
+    .gp-home-map-selected-edge-title {
+      display: none;
+    }
+
+    .gp-home-map-selected-edge-items {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      overscroll-behavior-inline: contain;
+      padding-block-end: 2px;
+    }
+
+    .gp-home-map-selected-edge-item {
+      min-width: min(244px, 82cqw);
+      flex: 0 0 auto;
+    }
+
+    .gp-home-map-selected-edge-row {
+      min-height: 44px;
+      border-radius: var(--gp-radius-md);
+      padding-inline: 10px 12px;
+    }
+
+    .gp-home-map-update {
+      grid-area: edit;
+      margin-top: 2px;
+    }
+
+    .gp-home-map-update-trigger {
+      min-height: 44px;
+    }
+
+    .gp-home-map-update-form {
+      gap: 8px;
     }
   }
 
   @container (max-width: 480px) {
     .gp-home-map-legend {
-      max-width: 52%;
+      max-width: calc(100% - 16px);
+      justify-content: space-between;
     }
 
     .gp-home-map-legend-item {
@@ -3215,7 +5042,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     .gp-home-map-filter-tabs button {
       min-height: 44px;
       padding-inline: 10px;
-      font-size: 11px;
+      font-size: var(--gp-caption);
     }
   }
 </style>

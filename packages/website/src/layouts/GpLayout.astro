@@ -11,6 +11,7 @@ interface Props {
   activeNav?: string | null;
   noindex?: boolean;
   hideShell?: boolean;
+  backgroundMode?: 'graphic' | 'plain';
   ogType?: 'website' | 'article' | 'profile';
 }
 
@@ -22,13 +23,14 @@ const {
   activeNav = null,
   noindex = false,
   hideShell = false,
+  backgroundMode = 'graphic',
   ogType = 'website',
 } = Astro.props;
 const canonicalUrl = canonicalPath ? `https://greenpill.network${canonicalPath}` : 'https://greenpill.network';
 
 const bodyClasses = [
   'gp-root',
-  'has-graphic-background',
+  backgroundMode === 'plain' ? 'has-plain-background' : 'has-graphic-background',
 ];
 ---
 
@@ -61,7 +63,7 @@ const bodyClasses = [
     <link rel="shortcut icon" href="/favicon.ico" />
   </head>
   <body class:list={bodyClasses}>
-    <div class="gp-background-parallax" data-gp-parallax-bg aria-hidden="true"></div>
+    {backgroundMode === 'graphic' && <div class="gp-background-parallax" data-gp-parallax-bg aria-hidden="true"></div>}
     {!hideShell && <a class="gp-skip-link" href="#main-content">Skip to content</a>}
     {!hideShell && <SiteHeader activeNav={activeNav} />}
     <div id="main-content" class="gp-main-target" tabindex="-1">
