@@ -2453,9 +2453,26 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         fanOutCluster(members, center, viaKeyboard);
         return;
       }
-      // Spread-out group: zoom to frame it; the viewBox change recomputes and
-      // dissolves the cluster as the pins separate.
+      // Spread-out group: zoom to frame it so the pins separate. setMapViewBox is
+      // instant and queues a debounced recompute; run that recompute now (and
+      // cancel the pending timer) so cluster state settles against the final zoom
+      // and we can resolve focus deterministically in this same task.
       framePoints(members.map((m) => m.center), { padding: 16 });
+      window.clearTimeout(clusterRecomputeTimer);
+      recomputeClustersNow();
+      if (members.every((m) => m.el.classList.contains('is-clustered'))) {
+        // Framing didn't separate them — a single-link chain tighter than its
+        // centroid spread, or the view was already at min zoom. Fan out so the
+        // activation is never a silent no-op and keyboard focus has a home.
+        fanOutCluster(members, center, viaKeyboard);
+        return;
+      }
+      if (viaKeyboard) {
+        // The bubble that held focus was just removed by the recompute; move focus
+        // to the first now-separated pin so it never falls to <body>.
+        const firstFree = members.find((m) => !m.el.classList.contains('is-clustered'));
+        (firstFree?.el as SVGGElement | null)?.focus?.();
+      }
     };
 
     const renderClusterBubble = (members: ClusterMember[]) => {
@@ -2758,7 +2775,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     // onboarding is on — on a gentle visible-page poll so already-open browsers
     // watch the relationship web grow as more people join.
     const POLL_INTERVAL_MS = 2000;
+    // Abort a stalled /map/state fetch so a slow agent can't wedge the poll.
+    const MAP_STATE_TIMEOUT_MS = 8000;
     let pollTimer: number | null = null;
+    // Skip overlapping loads so requests never stack against the agent under
+    // latency, and a late response can't clobber a newer one.
+    let mapStateInFlight = false;
 
     const stopPolling = () => {
       if (pollTimer !== null) {
@@ -2775,8 +2797,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     };
 
     const loadMapState = async () => {
+      if (mapStateInFlight) return;
+      mapStateInFlight = true;
+      const controller = new AbortController();
+      const abortTimer = window.setTimeout(() => controller.abort(), MAP_STATE_TIMEOUT_MS);
       try {
-        const response = await fetch(`${agentBaseUrl}/map/state`, { cache: 'no-store' });
+        const response = await fetch(`${agentBaseUrl}/map/state`, { cache: 'no-store', signal: controller.signal });
         if (!response.ok) return;
         const state = await response.json();
         intakeMode = state?.intakeMode === 'live' ? 'live' : 'moderated';
@@ -2814,7 +2840,10 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         if (intakeMode === 'live') startPolling();
         else stopPolling();
       } catch {
-        // Agent unavailable: keep the SSR baseline map. No-op.
+        // Agent unavailable, timed out, or aborted: keep the SSR baseline. No-op.
+      } finally {
+        window.clearTimeout(abortTimer);
+        mapStateInFlight = false;
       }
     };
 

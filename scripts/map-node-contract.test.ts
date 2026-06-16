@@ -726,8 +726,16 @@ test('home map grows live: reconciles, polls visibly, and redraws after submit',
   assert.match(component, /document\.visibilityState === 'visible'/);
   assert.match(component, /setInterval/);
 
-  // /map/state stays the canonical public source, fetched no-store.
-  assert.match(component, /\$\{agentBaseUrl\}\/map\/state`, \{ cache: 'no-store' \}/);
+  // /map/state stays the canonical public source, fetched no-store with an abort
+  // signal so a stalled fetch can be timed out.
+  assert.match(component, /\$\{agentBaseUrl\}\/map\/state`, \{ cache: 'no-store', signal: controller\.signal \}/);
+
+  // The poll is hardened: an in-flight guard stops overlapping loads from stacking
+  // against the agent, and a timeout aborts a stalled fetch (cleared on settle).
+  assert.match(component, /if \(mapStateInFlight\) return;\s*mapStateInFlight = true;/);
+  assert.match(component, /new AbortController\(\)/);
+  assert.match(component, /setTimeout\(\(\) => controller\.abort\(\), MAP_STATE_TIMEOUT_MS\)/);
+  assert.match(component, /window\.clearTimeout\(abortTimer\);\s*mapStateInFlight = false;/);
 
   // Visible legend counts should reflect the current filtered map view instead
   // of disappearing when a type is empty or filtered out.
@@ -1118,6 +1126,13 @@ test('home map clusters co-located people: zoom/fan on desktop, list sheet on mo
 
   // Keyboard: Enter/Space activate the bubble and satellites.
   assert.match(component, /event\.key === 'Enter' \|\| event\.key === ' '/);
+
+  // Expanding a spread-out cluster settles the recompute synchronously, fans out
+  // when framing can't separate the group (so activation is never a silent no-op),
+  // and re-homes keyboard focus to a now-separated pin so it never falls to <body>.
+  assert.match(component, /window\.clearTimeout\(clusterRecomputeTimer\);\s*recomputeClustersNow\(\);/);
+  assert.match(component, /members\.every\(\(m\) => m\.el\.classList\.contains\('is-clustered'\)\)/);
+  assert.match(component, /const firstFree = members\.find\(\(m\) => !m\.el\.classList\.contains\('is-clustered'\)\)/);
 
   // Astro-scope every JS-created styled element, or the scoped CSS misses it.
   assert.match(component, /applyScope\(text\)/);
