@@ -11,7 +11,14 @@
 
 <p>Use this invite link to accept the invitation and set your password:</p>
 
-{% render "button", text: "Accept invite and set password", href: url %}
+<p>
+  <a
+    href="{{ url }}"
+    style="background-color: {{ projectColor }}; border-radius: 4px; color: #ffffff; display: inline-block; font-weight: 600; padding: 12px 18px; text-decoration: none;"
+  >
+    Accept invite and set password
+  </a>
+</p>
 
 <p>After you log in, open <strong>Content</strong> and start with:</p>
 
