@@ -46,7 +46,9 @@ bun run ui:verify /your-route
 
 `ui:check` is static/source-only and catches CSS standard drift without building or opening a browser. `ui:verify` renders at 375/1024/1440 and runs four channels — layout (overflow / wrapped pills / 44px targets), accessibility tree, axe-core, and CLS + semantic lint — writing screenshots + `report.json` to `.ui-verify/`. **Read the 375px PNG first.** Fix every HARD violation. Never declare UI work done on code review alone — responsiveness and a11y bugs are invisible in source.
 
-For local human/agent walkthroughs, WebMCP validation, and DevTools MCP proof, prefer Brave with an isolated/non-default profile. Keep `ui:check` / `ui:verify` Chrome/Chromium-compatible for contributors and CI unless a task explicitly requires Brave-only WebMCP validation.
+Local agentic browser QA must use the authenticated Brave QA profile.
+- Codex: use the Codex browser-extension path and claim the already-open Brave tab. Claude Code: use the Claude Code Chrome/Chromium extension path (`claude --chrome` or `/chrome`) and select the authenticated Brave profile/tab when it is installed, connected, and able to control the already-open Brave window. Do not fall back merely because the extension is branded Chrome. If the Brave extension path is unavailable or not connected, use Claude computer-use/visible desktop control of the already-open Brave window; if neither can reach authenticated Brave, report QA as blocked. Use this for Directus-backed, future workspace/session, staging, and profile-dependent verification.
+- Do not use isolated Browser, Playwright, or DevTools MCP profiles for local QA. Existing `ui:verify` / browser-proof commands are CI/clean-room checks only and must not be reported as authenticated verification. If authenticated Brave access is blocked, stop and report QA as blocked.
 
 Runtime WebMCP is approved only for the public read-only pilot in `src/scripts/webmcp.ts`. Keep tools scoped to visible public page/map state and do not expose private Directus data, pending intake, steward notes, edit links, emails, credentials, writes, or background-only actions.
 
