@@ -929,6 +929,207 @@ export async function createMapNodeEditLinkRequest(
   return MAP_NODE_EDIT_LINK_NEUTRAL_RESPONSE;
 }
 
+// Standalone recovery caps how many links one request can fan out, so a single
+// email request can never be turned into an unbounded email amplifier.
+export const MAP_NODE_EDIT_LINK_REQUEST_MAX_MATCHES = 3;
+
+// Email-keyed rate limit for the standalone (no node id) recovery path. The
+// cooldown keys on email + IP (the per-node path keys the cooldown on node id);
+// the daily IP and email buckets are shared with the per-node path, so this is
+// at least as strict.
+async function getEditLinkRequestLimitStatus(
+  tx: SqlLike,
+  { normalizedEmail, rateLimitKey }: { normalizedEmail: string; rateLimitKey: string }
+): Promise<string> {
+  const cooldownRows = await tx`
+    select id
+    from intake.map_node_edit_tokens
+    where normalized_email = ${normalizedEmail}
+      and rate_limit_key = ${rateLimitKey}
+      and created_at >= now() - interval '15 minutes'
+    limit 1
+  `;
+  if (cooldownRows.length > 0) return 'cooldown';
+
+  const [ipBucket] = await tx`
+    select count(*)::int as count
+    from intake.map_node_edit_tokens
+    where rate_limit_key = ${rateLimitKey}
+      and created_at >= now() - interval '24 hours'
+  `;
+  if ((ipBucket?.count ?? 0) >= MAP_NODE_EDIT_LINK_DAILY_IP_LIMIT) return 'rate_limited';
+
+  const [emailBucket] = await tx`
+    select count(*)::int as count
+    from intake.map_node_edit_tokens
+    where normalized_email = ${normalizedEmail}
+      and created_at >= now() - interval '24 hours'
+  `;
+  if ((emailBucket?.count ?? 0) >= MAP_NODE_EDIT_LINK_DAILY_EMAIL_LIMIT) return 'rate_limited';
+
+  return '';
+}
+
+// Approved/public submissions only, looked up by owner email alone. Never
+// touches pending or private rows.
+async function findEditableSubmissionsByEmail(
+  tx: SqlLike,
+  { normalizedEmail, limit }: { normalizedEmail: string; limit: number }
+): Promise<UnknownRecord[]> {
+  const rows = await tx`
+    select
+      s.id::text,
+      s.display_name as "displayName",
+      s.place_name as "placeName",
+      s.city,
+      s.region,
+      s.country,
+      s.latitude::float8 as lat,
+      s.longitude::float8 as long,
+      s.themes,
+      s.public_note as "publicNote",
+      s.updated_at as "updatedAt"
+    from intake.map_node_submissions s
+    join intake.map_node_private_contacts c on c.submission_id = s.id
+    where s.status = 'approved'
+      and lower(c.email::text) = ${normalizedEmail}
+    order by s.updated_at desc
+    limit ${limit}
+  `;
+  return Array.isArray(rows) ? rows : [];
+}
+
+// Standalone email-keyed recovery. Looks up approved/public nodes by owner email
+// and emails a fresh manage link for each (capped). The response is ALWAYS the
+// same neutral message — it never reveals whether the email matched, how many
+// nodes, or any node detail. A no-match request still records an attempt row so
+// the write path does not fork. Tokens stay hash-only; matches feed the same
+// 30-minute edit tokens as the per-node path.
+export async function createMapNodeEditLinkRequestByEmail(
+  sql: SqlLike,
+  email: string,
+  requestMeta: RequestMeta = {},
+  {
+    env = process.env,
+    fetchImpl = globalThis.fetch,
+  }: {
+    env?: Record<string, string | undefined>;
+    fetchImpl?: FetchLike;
+  } = {}
+): Promise<typeof MAP_NODE_EDIT_LINK_NEUTRAL_RESPONSE> {
+  const normalizedEmail = normalizeOwnerEmail(email);
+  if (!isValidOwnerEmail(normalizedEmail)) {
+    throw new PublicInputError('invalid_email', 'A valid email is required.');
+  }
+
+  const meta = {
+    ipAddress: cleanString(requestMeta.ipAddress),
+    userAgent: cleanString(requestMeta.userAgent),
+    rateLimitKey: cleanString(requestMeta.rateLimitKey) || 'anonymous',
+  };
+  const config = editLinkConfig(env);
+  const providerConfigured = Boolean(
+    config.apiKey && config.from && buildEditUrl(config.baseUrl, 'preview-token')
+  );
+  const sendContexts: EditLinkEmailContext[] = [];
+
+  await sql.begin(async (tx) => {
+    const limited = await getEditLinkRequestLimitStatus(tx, {
+      normalizedEmail,
+      rateLimitKey: meta.rateLimitKey,
+    });
+    const submissions = limited
+      ? []
+      : await findEditableSubmissionsByEmail(tx, {
+        normalizedEmail,
+        limit: MAP_NODE_EDIT_LINK_REQUEST_MAX_MATCHES,
+      });
+    // Record an attempt even when nothing matched, so a no-match request writes
+    // the same kind of row a match does and does not become observable by its
+    // absence.
+    const attempts = submissions.length > 0 ? submissions : [null];
+    for (const submission of attempts) {
+      const rawToken = !limited && submission && providerConfigured ? createRawEditToken() : '';
+      const tokenHash = rawToken ? hashMapNodeEditToken(rawToken) : null;
+      const providerStatus = providerStatusForAttempt({
+        limited,
+        matched: Boolean(submission),
+        providerConfigured,
+      });
+      const [attempt] = await tx`
+        insert into intake.map_node_edit_tokens (
+          requested_node_id,
+          submission_id,
+          normalized_email,
+          token_hash,
+          expires_at,
+          provider_status,
+          request_ip,
+          request_user_agent,
+          rate_limit_key,
+          request_metadata
+        )
+        values (
+          ${submission?.id ?? ''},
+          ${submission?.id ?? null},
+          ${normalizedEmail},
+          ${tokenHash},
+          now() + interval '30 minutes',
+          ${providerStatus},
+          ${meta.ipAddress || null},
+          ${meta.userAgent || null},
+          ${meta.rateLimitKey || null},
+          ${toSqlJson(tx, { source: 'public-edit-link-email-request' })}
+        )
+        returning id::text
+      `;
+
+      if (rawToken && attempt?.id && submission) {
+        const publicNode = toEditablePublicMapNode({
+          id: submission.id,
+          displayName: submission.displayName,
+          placeName: submission.placeName,
+          city: submission.city,
+          region: submission.region,
+          country: submission.country,
+          lat: submission.lat,
+          long: submission.long,
+          themes: submission.themes,
+          publicNote: submission.publicNote,
+        });
+        if (publicNode && !containsPrivateMapNodeField(publicNode)) {
+          sendContexts.push({
+            attemptId: attempt.id,
+            token: rawToken,
+            email: normalizedEmail,
+            node: publicNode,
+          });
+        }
+      }
+    }
+  });
+
+  for (const contextToSend of sendContexts) {
+    const result = await sendEditLinkEmail({
+      email: contextToSend.email,
+      node: contextToSend.node,
+      token: contextToSend.token,
+      env,
+      fetchImpl,
+    });
+    await sql`
+      update intake.map_node_edit_tokens
+      set
+        provider_status = ${result.status},
+        provider_error = ${result.error || null},
+        provider_message_id = ${result.providerMessageId || null}
+      where id = ${contextToSend.attemptId}::uuid
+    `;
+  }
+
+  return MAP_NODE_EDIT_LINK_NEUTRAL_RESPONSE;
+}
+
 export async function getMapNodeEditSession(sql: SqlLike, token: string): Promise<EditablePublicMapNode> {
   const tokenValue = cleanString(token);
   if (!tokenValue) throw publicInputInvalidEditLink();
@@ -1161,6 +1362,12 @@ export function createMapNodeRepository({
     },
     requestEditLink(nodeId, email, requestMeta) {
       return withSql(createSql, (sql) => createMapNodeEditLinkRequest(sql, nodeId, email, requestMeta, {
+        env,
+        fetchImpl,
+      }));
+    },
+    requestEditLinkByEmail(email, requestMeta) {
+      return withSql(createSql, (sql) => createMapNodeEditLinkRequestByEmail(sql, email, requestMeta, {
         env,
         fetchImpl,
       }));

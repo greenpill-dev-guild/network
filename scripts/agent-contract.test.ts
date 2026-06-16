@@ -47,8 +47,10 @@ import {
   AgentDataError,
   PublicInputError,
   MAP_NODE_EDIT_LINK_NEUTRAL_RESPONSE,
+  MAP_NODE_EDIT_LINK_REQUEST_MAX_MATCHES,
   MAP_NODE_INVALID_EDIT_LINK_ERROR,
   createMapNodeEditLinkRequest,
+  createMapNodeEditLinkRequestByEmail,
   createMapNodeSubmission,
   createMapNodeUpdateRequest,
   getMapNodeEditSession,
@@ -714,10 +716,13 @@ test('agent package exposes a Hono app with data-backed public routes', async ()
   assert.equal(mapStatePayload.counts.chapterNodes, 1);
   assert.equal(mapStatePayload.counts.approvedSubmittedNodes, 1);
   assert.equal(mapStatePayload.nodes.some((node) => node.source === 'generated-density'), false);
-  assert.equal(mapStatePayload.edges.length > 0, true);
+  // Relationships are person-to-person only: chapters are geographic anchors with
+  // no relationship threads, and a lone steward has no peer, so this fixture
+  // yields no edges and no chapter-anchored edge ever appears.
+  assert.equal(mapStatePayload.edges.length, 0);
   assert.equal(mapStatePayload.edges.some((edge) => (
     String(edge.from).startsWith('chapter:') || String(edge.to).startsWith('chapter:')
-  )), true);
+  )), false);
   assert.equal(containsPrivateMapStateField(mapStatePayload), false);
 
   const counts = await app.request('/public-counts');
@@ -1525,6 +1530,156 @@ test('edit-link cooldown stores and checks the canonical node id', async () => {
   assert.equal(insert.values.includes(submissionId), true);
   assert.equal(insert.values.includes(`submission:${submissionId}`), false);
   assert.equal(insert.values.some((value) => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value)), false);
+});
+
+test('email-keyed recovery emails an approved match with a hash-only token and node id never in the request', async () => {
+  let resendCalls = 0;
+  const { sql, statements, submissionId } = createFakeEditLinkSql();
+
+  const response = await createMapNodeEditLinkRequestByEmail(sql, 'Person@Example.org', {
+    ipAddress: '203.0.113.10',
+    userAgent: 'node-test',
+    rateLimitKey: '203.0.113.10',
+  }, {
+    env: {
+      RESEND_API_KEY: 'resend-secret',
+      MAP_NODE_EMAIL_FROM: 'Greenpill Network <map@mail.greenpill.network>',
+      MAP_NODE_EDIT_BASE_URL: 'https://greenpill.network/map/edit',
+    },
+    fetchImpl: async (url, options) => {
+      resendCalls += 1;
+      assert.equal(url, 'https://api.resend.com/emails');
+      assert.match(JSON.parse(options.body).text, /token=/);
+      return Response.json({ id: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee' });
+    },
+  });
+
+  assert.deepEqual(response, MAP_NODE_EDIT_LINK_NEUTRAL_RESPONSE);
+  assert.equal(resendCalls, 1);
+
+  // The lookup is approved/public-only, keyed by owner email, and capped.
+  const lookup = statements.find((statement) => statement.text.includes('from intake.map_node_submissions'));
+  assert.ok(lookup);
+  assert.match(lookup.text, /status = 'approved'/);
+  assert.match(lookup.text, /lower\(c\.email/);
+  assert.equal(lookup.values.includes(MAP_NODE_EDIT_LINK_REQUEST_MAX_MATCHES), true);
+
+  // Token persisted as a hash only; the normalized email is stored, never the raw input or raw token.
+  const insert = statements.find((statement) => statement.text.includes('insert into intake.map_node_edit_tokens'));
+  assert.ok(insert);
+  assert.equal(insert.values.includes('person@example.org'), true);
+  assert.equal(insert.values.includes('Person@Example.org'), false);
+  assert.equal(insert.values.some((value) => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value)), true);
+  assert.equal(insert.values.some((value) => typeof value === 'string' && value.includes('token=')), false);
+});
+
+test('email-keyed recovery is indistinguishable on no match: same neutral response, no email, attempt still recorded', async () => {
+  let resendCalls = 0;
+  const { sql, statements } = createFakeEditLinkSql({ match: false });
+
+  const response = await createMapNodeEditLinkRequestByEmail(sql, 'stranger@example.org', {
+    ipAddress: '203.0.113.10',
+    userAgent: 'node-test',
+    rateLimitKey: '203.0.113.10',
+  }, {
+    env: {
+      RESEND_API_KEY: 'resend-secret',
+      MAP_NODE_EMAIL_FROM: 'Greenpill Network <map@mail.greenpill.network>',
+      MAP_NODE_EDIT_BASE_URL: 'https://greenpill.network/map/edit',
+    },
+    fetchImpl: async () => {
+      resendCalls += 1;
+      return Response.json({});
+    },
+  });
+
+  // Identical response + no email, but the write path still runs (an attempt row
+  // is recorded with no token hash) so a no-match is not observable by absence.
+  assert.deepEqual(response, MAP_NODE_EDIT_LINK_NEUTRAL_RESPONSE);
+  assert.equal(resendCalls, 0);
+  const insert = statements.find((statement) => statement.text.includes('insert into intake.map_node_edit_tokens'));
+  assert.ok(insert);
+  assert.equal(insert.values.some((value) => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value)), false);
+});
+
+test('email-keyed recovery honors cooldown and daily IP/email caps without sending email', async () => {
+  for (const fake of [
+    createFakeEditLinkSql({ cooldown: true }),
+    createFakeEditLinkSql({ ipCount: 30 }),
+    createFakeEditLinkSql({ emailCount: 10 }),
+  ]) {
+    let resendCalls = 0;
+    const response = await createMapNodeEditLinkRequestByEmail(fake.sql, 'person@example.org', {
+      ipAddress: '203.0.113.10',
+      userAgent: 'node-test',
+      rateLimitKey: '203.0.113.10',
+    }, {
+      env: {
+        RESEND_API_KEY: 'resend-secret',
+        MAP_NODE_EMAIL_FROM: 'Greenpill Network <map@mail.greenpill.network>',
+        MAP_NODE_EDIT_BASE_URL: 'https://greenpill.network/map/edit',
+      },
+      fetchImpl: async () => {
+        resendCalls += 1;
+        return Response.json({});
+      },
+    });
+
+    assert.deepEqual(response, MAP_NODE_EDIT_LINK_NEUTRAL_RESPONSE);
+    assert.equal(resendCalls, 0);
+    const insert = fake.statements.find((statement) => statement.text.includes('insert into intake.map_node_edit_tokens'));
+    assert.ok(insert);
+    assert.equal(insert.values.some((value) => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value)), false);
+  }
+});
+
+test('email-keyed recovery route returns the same neutral 202 and rejects invalid email without leaking input', async () => {
+  const calls = [];
+  const reportedFailures = [];
+  const app = createAgentApp({
+    reportEditLinkError(event) {
+      reportedFailures.push(event);
+    },
+    mapNodeRepository: {
+      async createSubmission() {
+        throw new Error('not used');
+      },
+      async listPublic() {
+        return [];
+      },
+      async requestEditLinkByEmail(email, requestMeta) {
+        calls.push({ email, requestMeta });
+        if (email === 'boom@example.org') {
+          throw new Error('resend failed');
+        }
+        return MAP_NODE_EDIT_LINK_NEUTRAL_RESPONSE;
+      },
+    },
+  });
+
+  for (const email of ['Person@Example.org', 'boom@example.org']) {
+    const response = await app.request('/map-nodes/edit-link-request', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.10' },
+      body: JSON.stringify({ email }),
+    });
+    assert.equal(response.status, 202);
+    assert.deepEqual(await response.json(), MAP_NODE_EDIT_LINK_NEUTRAL_RESPONSE);
+  }
+
+  const invalidEmail = await app.request('/map-nodes/edit-link-request', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'not-an-email' }),
+  });
+  assert.equal(invalidEmail.status, 400);
+  assert.equal((await invalidEmail.json()).error.code, 'invalid_email');
+
+  assert.equal(calls[0].email, 'person@example.org');
+  assert.equal(calls[0].requestMeta.rateLimitKey, '203.0.113.10');
+  // A swallowed downstream failure never leaks the email or provider error.
+  assert.equal(JSON.stringify(reportedFailures).includes('Person@Example.org'), false);
+  assert.equal(JSON.stringify(reportedFailures).includes('resend failed'), false);
 });
 
 test('default map-state repository reports partial public source availability', async () => {
