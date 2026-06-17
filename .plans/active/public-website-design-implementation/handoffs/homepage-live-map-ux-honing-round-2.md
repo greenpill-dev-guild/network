@@ -9,7 +9,7 @@ and not a broad homepage rewrite.
 Repo:
 
 ```sh
-cd /Users/afo/Code/greenpill/network
+cd "$(git rev-parse --show-toplevel)"
 ```
 
 Read these first, in this order:
@@ -489,4 +489,3 @@ This round is complete only when:
   API-route change, dependency install, deploy, or commit was introduced.
 - All listed validation passes, or any blocker is documented with exact command
   output and the safest next step.
-

@@ -591,7 +591,7 @@ export function buildScopedPolicyPermissions(collections, kind: AssignmentKind, 
         },
       ],
     };
-    const updateRequestChildCreatePermissionScope = {
+    const updateRequestChildCreateScope = {
       _and: [
         {
           chapter_slug: {
@@ -600,21 +600,9 @@ export function buildScopedPolicyPermissions(collections, kind: AssignmentKind, 
         },
         {
           update_request_id: {
-            _nnull: true,
-          },
-        },
-      ],
-    };
-    const updateRequestChildCreateValidation = {
-      _and: [
-        {
-          chapter_slug: {
-            _eq: slug,
-          },
-        },
-        {
-          update_request_id: {
-            _nnull: true,
+            request_status: {
+              _in: CHAPTER_UPDATE_REQUEST_UPDATE_STATUSES,
+            },
           },
         },
       ],
@@ -710,8 +698,8 @@ export function buildScopedPolicyPermissions(collections, kind: AssignmentKind, 
             policy: policyId,
             collection,
             action: 'create',
-            permissions: updateRequestChildCreatePermissionScope,
-            validation: updateRequestChildCreateValidation,
+            permissions: updateRequestChildCreateScope,
+            validation: updateRequestChildCreateScope,
             presets: { chapter_slug: slug },
             fields: createFields,
           },

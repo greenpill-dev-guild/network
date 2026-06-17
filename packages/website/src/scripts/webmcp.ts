@@ -100,9 +100,10 @@ const summarizeMap = (input: Record<string, unknown> = {}) => {
   const selected = scope.querySelector<HTMLElement>('[data-home-map-selected]:not([hidden])');
   const nodeElements = Array.from(root.querySelectorAll('.gp-home-map-node-link:not(.is-filtered-out)'));
   const visibleTypes = Array.from(scope.querySelectorAll<HTMLElement>('[data-legend-type]'))
+    .filter(isVisible)
     .map((item) => ({
       type: item.dataset.legendType || '',
-      count: Number(item.querySelector('[data-home-map-type-count]')?.textContent || 0),
+      count: Number.parseInt(item.querySelector('[data-home-map-type-count]')?.textContent || '0', 10) || 0,
     }));
   const themeFilters = Array.from(scope.querySelectorAll<HTMLButtonElement>('[data-theme-filter]'))
     .map((button) => ({

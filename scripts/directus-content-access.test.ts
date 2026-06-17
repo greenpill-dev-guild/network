@@ -244,7 +244,9 @@ test('scoped chapter and guild policies use static parent filters', () => {
       },
       {
         update_request_id: {
-          _nnull: true,
+          request_status: {
+            _in: ['draft', 'pending_review', 'needs_changes'],
+          },
         },
       },
     ],
@@ -258,7 +260,9 @@ test('scoped chapter and guild policies use static parent filters', () => {
       },
       {
         update_request_id: {
-          _nnull: true,
+          request_status: {
+            _in: ['draft', 'pending_review', 'needs_changes'],
+          },
         },
       },
     ],

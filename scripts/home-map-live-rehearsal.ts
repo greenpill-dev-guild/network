@@ -40,7 +40,7 @@ interface RehearsalSubmission {
 
 function usage(): string {
   return [
-    'Usage: bun run home-map:rehearsal [--fast] [--interval-ms N] [--count N] [--cleanup]',
+    'Usage: bun run home-map:rehearsal [--fast] [--interval-ms N] [--count N] [--agent-url URL] [--database-url URL] [--cleanup]',
     '',
     'Run after the local stack is ready. Defaults target local services only:',
     `  website: ${DEFAULT_WEBSITE_URL}`,
@@ -51,8 +51,16 @@ function usage(): string {
     'Default pacing submits every 12 seconds for a realistic live-call pulse.',
     '--interval-ms sets a custom delay between submissions.',
     '--count limits how many deterministic rehearsal nodes are submitted.',
+    '--agent-url overrides the local agent base URL.',
+    '--database-url overrides the local DATABASE_URL.',
     '--cleanup removes rehearsal nodes and turns local live onboarding off.',
   ].join('\n');
+}
+
+function readFlagValue(argv: string[], index: number, flag: string): string {
+  const value = argv[index + 1];
+  if (!value || value.startsWith('--')) throw new Error(`${flag} requires a value.\n\n${usage()}`);
+  return value;
 }
 
 function parsePositiveInt(value: string, label: string): number {
@@ -86,7 +94,8 @@ function parseArgs(argv: string[]): Options {
       continue;
     }
     if (arg === '--interval-ms') {
-      options.intervalMs = parsePositiveInt(argv[++index] || '', '--interval-ms');
+      options.intervalMs = parsePositiveInt(readFlagValue(argv, index, '--interval-ms'), '--interval-ms');
+      index += 1;
       continue;
     }
     if (arg.startsWith('--interval-ms=')) {
@@ -94,7 +103,8 @@ function parseArgs(argv: string[]): Options {
       continue;
     }
     if (arg === '--count') {
-      options.count = parsePositiveInt(argv[++index] || '', '--count');
+      options.count = parsePositiveInt(readFlagValue(argv, index, '--count'), '--count');
+      index += 1;
       continue;
     }
     if (arg.startsWith('--count=')) {
@@ -102,7 +112,8 @@ function parseArgs(argv: string[]): Options {
       continue;
     }
     if (arg === '--agent-url') {
-      options.agentBaseUrl = argv[++index] || '';
+      options.agentBaseUrl = readFlagValue(argv, index, '--agent-url');
+      index += 1;
       continue;
     }
     if (arg.startsWith('--agent-url=')) {
@@ -110,7 +121,8 @@ function parseArgs(argv: string[]): Options {
       continue;
     }
     if (arg === '--database-url') {
-      options.databaseUrl = argv[++index] || '';
+      options.databaseUrl = readFlagValue(argv, index, '--database-url');
+      index += 1;
       continue;
     }
     if (arg.startsWith('--database-url=')) {

@@ -6,15 +6,18 @@ import {
   derivePublicBioregionFromCoordinates,
   lookupPublicBioregionFromCoordinates,
   EDITABLE_MAP_NODE_UPDATE_FIELDS,
-  loadLocalPendingNodes,
-  localPendingNodeSignature,
   normalizePublicMapThemeSlugs,
   PRIVATE_MAP_NODE_FIELDS,
-  reconcileLocalPendingNodes,
-  saveLocalPendingNode,
   toEditablePublicMapNode,
   toPublicMapNode,
 } from '@greenpill-network/shared/map-nodes';
+import {
+  loadLocalPendingNodes as loadStoredLocalPendingNodes,
+  localPendingNodeSignature as storedLocalPendingNodeSignature,
+  reconcileLocalPendingNodes as reconcileStoredLocalPendingNodes,
+  removeLocalPendingNode as removeStoredLocalPendingNode,
+  saveLocalPendingNode as saveStoredLocalPendingNode,
+} from '@greenpill-network/shared/map-node-storage';
 import {
   assertPublicMapStatePayload,
   containsPrivateMapStateField,
@@ -31,6 +34,21 @@ class MemoryStorage {
   }
 
   setItem(key, value) {
+    this.#values.set(key, String(value));
+  }
+}
+
+class FlakyStorage {
+  #values = new Map();
+
+  blocked = false;
+
+  getItem(key) {
+    return this.#values.get(key) ?? null;
+  }
+
+  setItem(key, value) {
+    if (this.blocked) throw new Error('storage unavailable');
     this.#values.set(key, String(value));
   }
 }
@@ -149,7 +167,7 @@ test('owner edit-session projection exposes only editable public node fields', (
 
 test('local optimistic node storage stays public-safe', () => {
   const storage = new MemoryStorage();
-  const node = saveLocalPendingNode(storage, {
+  const node = saveStoredLocalPendingNode(storage, {
     name: 'Local Pending',
     place: 'Lisbon',
     lat: 38.7223,
@@ -169,7 +187,7 @@ test('local optimistic node storage stays public-safe', () => {
 
 test('local pending nodes reconcile against approved nodes by name and coordinates', () => {
   const storage = new MemoryStorage();
-  saveLocalPendingNode(storage, {
+  saveStoredLocalPendingNode(storage, {
     id: 'local-approved-soon',
     name: 'Lagos Member',
     place: 'Lagos',
@@ -177,7 +195,7 @@ test('local pending nodes reconcile against approved nodes by name and coordinat
     long: 3.3792,
     themes: ['public', 'events', 'trees', 'water'],
   });
-  saveLocalPendingNode(storage, {
+  saveStoredLocalPendingNode(storage, {
     id: 'local-still-pending',
     name: 'Nairobi Member',
     place: 'Nairobi',
@@ -188,7 +206,7 @@ test('local pending nodes reconcile against approved nodes by name and coordinat
 
   // Approved node carries /map/state shape (name + lat/long) and a slightly
   // nudged coordinate that still falls inside the two-decimal fingerprint.
-  const result = reconcileLocalPendingNodes(storage, [
+  const result = reconcileStoredLocalPendingNodes(storage, [
     { name: 'Lagos Member', lat: 6.5249, long: 3.3795, status: 'approved' },
   ]);
 
@@ -197,14 +215,14 @@ test('local pending nodes reconcile against approved nodes by name and coordinat
   assert.equal(result.remaining.length, 1);
   assert.equal(result.remaining[0].id, 'local-still-pending');
 
-  const stored = loadLocalPendingNodes(storage);
+  const stored = loadStoredLocalPendingNodes(storage);
   assert.equal(stored.length, 1);
   assert.equal(stored[0].id, 'local-still-pending');
 });
 
 test('reconcile leaves pending nodes untouched when nothing matches', () => {
   const storage = new MemoryStorage();
-  saveLocalPendingNode(storage, {
+  saveStoredLocalPendingNode(storage, {
     id: 'local-unmatched',
     name: 'Lisbon Member',
     place: 'Lisbon',
@@ -214,18 +232,41 @@ test('reconcile leaves pending nodes untouched when nothing matches', () => {
   });
 
   // A distant node with the same name must not be reconciled away.
-  const result = reconcileLocalPendingNodes(storage, [
+  const result = reconcileStoredLocalPendingNodes(storage, [
     { name: 'Lisbon Member', lat: 40.0, long: -9.1393 },
   ]);
 
   assert.equal(result.removed.length, 0);
-  assert.equal(loadLocalPendingNodes(storage).length, 1);
+  assert.equal(loadStoredLocalPendingNodes(storage).length, 1);
   // A node without enough public signal yields no signature and never matches.
-  assert.equal(localPendingNodeSignature({ name: '', lat: 1, long: 2 }), '');
+  assert.equal(storedLocalPendingNodeSignature({ name: '', lat: 1, long: 2 }), '');
   assert.equal(
-    localPendingNodeSignature({ name: 'A', lat: 1.239, long: -2.001 }),
+    storedLocalPendingNodeSignature({ name: 'A', lat: 1.239, long: -2.001 }),
     'a|1.24|-2.00'
   );
+});
+
+test('local pending storage write failures do not throw or drop pending nodes', () => {
+  const storage = new FlakyStorage();
+  saveStoredLocalPendingNode(storage, {
+    id: 'local-storage-failure',
+    name: 'Storage Failure Member',
+    place: 'Lisbon',
+    lat: 38.7223,
+    long: -9.1393,
+    themes: ['public'],
+  });
+
+  storage.blocked = true;
+  assert.doesNotThrow(() => removeStoredLocalPendingNode(storage, 'local-storage-failure'));
+  assert.equal(loadStoredLocalPendingNodes(storage).length, 1);
+
+  const result = reconcileStoredLocalPendingNodes(storage, [
+    { name: 'Storage Failure Member', lat: 38.7223, long: -9.1393 },
+  ]);
+  assert.deepEqual(result.removed, []);
+  assert.equal(result.remaining.length, 1);
+  assert.equal(loadStoredLocalPendingNodes(storage).length, 1);
 });
 
 test('privacy guard catches snake_case private map-node fields', () => {
@@ -737,7 +778,8 @@ test('home map intake requires a valid email and stores local pending only after
   assert.match(homepage, /<Button type="button" data-home-map-open/);
   assert.doesNotMatch(component, /<button[^>]*data-home-map-open/);
   assert.match(homepage, /min-block-size: calc\(100dvh - var\(--gp-header-height\)\)/);
-  assert.match(homepage, /font-size:\s*clamp\(40px, calc\(30\.1px \+ 2\.65vw\), 64px\)/);
+  assert.match(homepage, /<Text variant="display" class="gp-home-hero-title">/);
+  assert.doesNotMatch(homepage, /font-size:\s*clamp\(40px, calc\(30\.1px \+ 2\.65vw\), 64px\)/);
   assert.match(homepage, /width:\s*min\(100%, 130dvh\)/);
   assert.doesNotMatch(homepage, /width:\s*min\(100%, clamp\(1100px, 82cqw, 1680px\)\)/);
   assert.match(homepage, /class="gp-home-lib-guild-pair"/);

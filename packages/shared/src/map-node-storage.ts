@@ -141,7 +141,11 @@ export function removeLocalPendingNode(
   if (!nodeId) return loadLocalPendingNodes(storage);
 
   const next = loadLocalPendingNodes(storage).filter((item) => item.id !== nodeId);
-  storage.setItem(PENDING_NODE_STORAGE_KEY, JSON.stringify(next));
+  try {
+    storage.setItem(PENDING_NODE_STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    return loadLocalPendingNodes(storage);
+  }
   return next;
 }
 
@@ -185,7 +189,11 @@ export function reconcileLocalPendingNodes(
   }
 
   if (removed.length > 0) {
-    storage.setItem(PENDING_NODE_STORAGE_KEY, JSON.stringify(remaining));
+    try {
+      storage.setItem(PENDING_NODE_STORAGE_KEY, JSON.stringify(remaining));
+    } catch {
+      return { removed: [], remaining: pending };
+    }
   }
   return { removed, remaining };
 }
