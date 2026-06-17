@@ -86,6 +86,10 @@ const stalePatterns = [
   /DevTools MCP path for live browser debugging/i,
   /isolated\/public proof lane/i,
   /browser proof still runs in Brave/i,
+  /only when the authenticated QA browser is Chrome\/Edge/i,
+  /Brave-only QA/i,
+  /Chrome\/Edge QA profiles/i,
+  /for Brave-only QA/i,
 ];
 
 for (const filePath of walk(repoRoot)) {
@@ -116,6 +120,14 @@ if (existsSync(packageJsonPath)) {
     !scripts['agentic:browser-proof'].startsWith('bun scripts/require-authenticated-browser-qa.mjs && ')
   ) {
     fail('package.json: local agentic:browser-proof must be guarded by require-authenticated-browser-qa.mjs');
+  }
+
+  if (
+    scripts['agentic:verify'] &&
+    scripts['agentic:verify'].includes('ui:verify') &&
+    !scripts['agentic:verify'].startsWith('bun scripts/require-authenticated-browser-qa.mjs')
+  ) {
+    fail('package.json: local agentic:verify browser lane must be guarded by require-authenticated-browser-qa.mjs');
   }
 }
 

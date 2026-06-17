@@ -65,3 +65,9 @@ Tailwind is being retired from this package (its utilities are unused; `@apply` 
 ## Canonical references
 
 web.dev [Learn CSS](https://web.dev/learn/css) · [Learn Accessibility](https://web.dev/learn/accessibility) · [Responsive design](https://web.dev/articles/responsive-web-design-basics) · [Building agent-friendly UX](https://web.dev/articles/ai-agent-site-ux) · Chrome [CSS & UI](https://developer.chrome.com/docs/css-ui).
+
+## Agentic Browser QA
+
+Local agentic browser QA must use the authenticated Brave QA profile.
+- Codex: use the Codex browser-extension path and claim the already-open Brave tab. Claude Code: use the Claude Code Chrome/Chromium extension path (`claude --chrome` or `/chrome`) and select the authenticated Brave profile/tab when it is installed, connected, and able to control the already-open Brave window. Do not fall back merely because the extension is branded Chrome. If the Brave extension path is unavailable or not connected, use Claude computer-use/visible desktop control of the already-open Brave window; if neither can reach authenticated Brave, report QA as blocked. Use this for Directus-backed, future workspace/session, staging, and profile-dependent verification.
+- Do not use isolated Browser, Playwright, or DevTools MCP profiles for local QA. Existing `ui:verify` / browser-proof commands are CI/clean-room checks only and must not be reported as authenticated verification. If authenticated Brave access is blocked, stop and report QA as blocked.
