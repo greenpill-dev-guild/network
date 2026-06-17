@@ -68,7 +68,7 @@
 ## Home Map Polish Pass
 
 - Steward-sync feedback is now an explicit implementation slice for the Home map: the world graphic needs to read clearly beneath the route lines, chapter nodes should be dark/anchored green with a ring, steward nodes should be warm gold, and theme colors should explain relationships without overriding node identity.
-- The homepage map treats theme connections as mycelial relationship lines generated from shared themes between real approved member/steward submissions, plus trusted steward-to-chapter edges when a steward email maps to a chapter. Theme colors drive edges and chips; chapter, steward, and member identities remain visible, but homepage proof stats are limited to chapter count and podcast count.
+- The homepage map treats theme connections as mycelial relationship lines generated from shared themes between real approved member/steward submissions. Chapters stay as anchor pins, not relationship endpoints. Theme colors drive edges and chips; chapter, steward, and member identities remain visible, but homepage proof stats are limited to chapter count and podcast count.
 - The homepage must not surface steward count, member count, continent count, member-tier copy, self-node walkthroughs, or `/map/state` polling as proof/stat behavior.
 - Home map polish should retain non-color identity cues, accessible focus behavior, an accessible legend, public-safe selected-node details, and mobile/dense-region behavior that reduces mycelial edge noise.
 

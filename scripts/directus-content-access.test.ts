@@ -50,7 +50,12 @@ test('operational permission plan keeps base steward role read-only for operatio
   const plan = buildDirectusOperationalPermissionPlan(
     ['themes', 'people', 'chapters', 'chapter_initiatives', 'guilds', 'projects'],
     [],
-    ['chapter_editor_assignments', 'guild_editor_assignments']
+    ['chapter_editor_assignments', 'guild_editor_assignments'],
+    [
+      'chapter_update_requests',
+      'chapter_update_request_links',
+      'chapter_update_request_proof_signals',
+    ]
   );
 
   const stewardPermissions = plan.permissions.filter((permission) => permission.policy === 'Greenpill Steward Editor');
@@ -74,12 +79,71 @@ test('operational permission plan keeps base steward role read-only for operatio
     'chapter_editor_assignments',
     'guild_editor_assignments',
   ]);
+
+  const publisherRequestReview = plan.permissions.find(
+    (permission) => permission.collection === 'chapter_update_requests' &&
+      permission.action === 'update' &&
+      permission.policy === 'Greenpill Trusted Publisher'
+  );
+  const publisherRequestCreate = plan.permissions.find(
+    (permission) => permission.collection === 'chapter_update_requests' &&
+      permission.action === 'create' &&
+      permission.policy === 'Greenpill Trusted Publisher'
+  );
+  assert.deepEqual(publisherRequestCreate?.validation, {
+    request_status: {
+      _in: ['draft', 'pending_review'],
+    },
+  });
+  assert.deepEqual(publisherRequestReview?.validation, {
+    request_status: {
+      _in: ['draft', 'pending_review', 'needs_changes', 'accepted', 'declined', 'archived'],
+    },
+  });
+
+  const publisherLinkCreate = plan.permissions.find(
+    (permission) => permission.collection === 'chapter_update_request_links' &&
+      permission.action === 'create' &&
+      permission.policy === 'Greenpill Trusted Publisher'
+  );
+  const publisherProofSignalDelete = plan.permissions.find(
+    (permission) => permission.collection === 'chapter_update_request_proof_signals' &&
+      permission.action === 'delete' &&
+      permission.policy === 'Greenpill Trusted Publisher'
+  );
+  assert.deepEqual(publisherLinkCreate?.fields, [
+    'update_request_id',
+    'chapter_slug',
+    'sort_order',
+    'label',
+    'url',
+    'subtext',
+    'handle',
+    'action',
+    'icon',
+    'kind',
+  ]);
+  assert.deepEqual(publisherProofSignalDelete?.fields, [
+    'id',
+    'update_request_id',
+    'chapter_slug',
+    'sort_order',
+    'label',
+    'value',
+    'source',
+    'href',
+    'created_at',
+    'updated_at',
+  ]);
 });
 
 test('scoped chapter and guild policies use static parent filters', () => {
   const collections = {
     chapters: 'chapters',
     chapterInitiatives: 'chapter_initiatives',
+    chapterUpdateRequests: 'chapter_update_requests',
+    chapterUpdateRequestLinks: 'chapter_update_request_links',
+    chapterUpdateRequestProofSignals: 'chapter_update_request_proof_signals',
     guilds: 'guilds',
     projects: 'projects',
   };
@@ -113,7 +177,7 @@ test('scoped chapter and guild policies use static parent filters', () => {
   const initiativeCreate = chapterPermissions.find(
     (permission) => permission.collection === 'chapter_initiatives' && permission.action === 'create'
   );
-  assert.deepEqual(initiativeCreate?.permissions._and[1], {
+  assert.deepEqual((initiativeCreate?.permissions as any)._and[1], {
     chapter_slug: {
       _eq: 'brasil',
     },
@@ -139,10 +203,114 @@ test('scoped chapter and guild policies use static parent filters', () => {
     },
   });
 
+  const updateRequestCreate = chapterPermissions.find(
+    (permission) => permission.collection === 'chapter_update_requests' && permission.action === 'create'
+  );
+  assert.deepEqual((updateRequestCreate?.permissions as any)._and[1], {
+    chapter_slug: {
+      _eq: 'brasil',
+    },
+  });
+  assert.equal(updateRequestCreate?.fields.includes('chapter_slug'), false);
+  assert.deepEqual(updateRequestCreate?.presets, {
+    request_status: 'draft',
+    chapter_slug: 'brasil',
+  });
+  assert.deepEqual(updateRequestCreate?.validation, {
+    request_status: {
+      _in: ['draft', 'pending_review'],
+    },
+  });
+
+  const updateRequestUpdate = chapterPermissions.find(
+    (permission) => permission.collection === 'chapter_update_requests' && permission.action === 'update'
+  );
+  assert.equal(updateRequestUpdate?.fields.includes('chapter_slug'), false);
+  assert.deepEqual(updateRequestUpdate?.validation, {
+    request_status: {
+      _in: ['draft', 'pending_review', 'needs_changes'],
+    },
+  });
+
+  const updateRequestLinkCreate = chapterPermissions.find(
+    (permission) => permission.collection === 'chapter_update_request_links' && permission.action === 'create'
+  );
+  assert.deepEqual(updateRequestLinkCreate?.permissions, {
+    _and: [
+      {
+        chapter_slug: {
+          _eq: 'brasil',
+        },
+      },
+      {
+        update_request_id: {
+          request_status: {
+            _in: ['draft', 'pending_review', 'needs_changes'],
+          },
+        },
+      },
+    ],
+  });
+  assert.deepEqual(updateRequestLinkCreate?.validation, {
+    _and: [
+      {
+        chapter_slug: {
+          _eq: 'brasil',
+        },
+      },
+      {
+        update_request_id: {
+          request_status: {
+            _in: ['draft', 'pending_review', 'needs_changes'],
+          },
+        },
+      },
+    ],
+  });
+  assert.deepEqual(updateRequestLinkCreate?.presets, {
+    chapter_slug: 'brasil',
+  });
+  assert.deepEqual(updateRequestLinkCreate?.fields, [
+    'update_request_id',
+    'sort_order',
+    'label',
+    'url',
+    'subtext',
+    'handle',
+    'action',
+    'icon',
+    'kind',
+  ]);
+
+  const updateRequestProofSignalUpdate = chapterPermissions.find(
+    (permission) => (
+      permission.collection === 'chapter_update_request_proof_signals' &&
+      permission.action === 'update'
+    )
+  );
+  assert.deepEqual(updateRequestProofSignalUpdate?.permissions, {
+    _and: [
+      {
+        chapter_slug: {
+          _eq: 'brasil',
+        },
+      },
+      {
+        update_request_id: {
+          request_status: {
+            _in: ['draft', 'pending_review', 'needs_changes'],
+          },
+        },
+      },
+    ],
+  });
+  assert.equal(updateRequestProofSignalUpdate?.fields.includes('chapter_slug'), false);
+  assert.equal(updateRequestProofSignalUpdate?.fields.includes('update_request_id'), false);
+
   const projectCreate = guildPermissions.find(
     (permission) => permission.collection === 'projects' && permission.action === 'create'
   );
-  assert.deepEqual(projectCreate?.permissions._and[1], {
+  assert.deepEqual((projectCreate?.permissions as any)._and[1], {
     guild_slug: {
       _eq: 'dev-guild',
     },

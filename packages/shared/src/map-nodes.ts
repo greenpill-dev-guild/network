@@ -1,6 +1,17 @@
+import { PUBLIC_ECOREGIONS, type PublicEcoregionRegion } from './public-ecoregions.js';
+
 type UnknownRecord = Record<string, any>;
 
+export { PUBLIC_ECOREGIONS, type PublicEcoregionRegion } from './public-ecoregions.js';
+
 export type MapNodeStatus = 'pending' | 'approved' | 'rejected' | 'archived';
+export type PublicBioregionSource = 'resolve-ecoregions-2017' | 'one-earth' | string;
+
+export interface PublicBioregionMetadata {
+  id: string;
+  name: string;
+  source: PublicBioregionSource;
+}
 
 export interface PublicMapNode {
   id: string;
@@ -10,6 +21,8 @@ export interface PublicMapNode {
   region: string;
   country: string;
   bioregion: string;
+  bioregionId?: string;
+  bioregionSource?: PublicBioregionSource;
   lat: number;
   long: number;
   role: string;
@@ -114,6 +127,8 @@ export const PUBLIC_MAP_NODE_FIELDS = Object.freeze([
   'region',
   'country',
   'bioregion',
+  'bioregionId',
+  'bioregionSource',
   'lat',
   'long',
   'role',
@@ -139,6 +154,16 @@ export const EDITABLE_MAP_NODE_UPDATE_FIELDS: readonly (keyof Omit<EditablePubli
 
 export const PENDING_NODE_STORAGE_KEY = 'greenpill.pendingMapNodes.v1';
 export const PENDING_NODE_UPDATED_EVENT = 'greenpill:pending-map-node';
+
+export const PUBLIC_MAP_THEME_ALIASES: Readonly<Record<string, string>> = Object.freeze({
+  'coordination-tools': 'opensrc',
+  currency: 'mutual',
+  'knowledge-commons': 'education',
+  'local-regeneration': 'trees',
+  opensource: 'opensrc',
+  'open-source': 'opensrc',
+  'public-goods': 'public',
+});
 
 const cleanString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 const normalizeFieldKey = (key: unknown): string => cleanString(key).toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -174,6 +199,144 @@ const normalizeNumber = (value: unknown): number | null => {
 
 const normalizePublicBioregion = (value: unknown): string => cleanString(value);
 
+const PUBLIC_ECOREGION_BY_ID = new Map(PUBLIC_ECOREGIONS.regions.map((region) => [region.id, region]));
+const ECOREGION_LOOKUP_TOLERANCE_DEGREES = 0.45;
+
+export function findPublicEcoregionById(id: unknown): PublicEcoregionRegion | null {
+  const regionId = cleanString(id);
+  return regionId ? PUBLIC_ECOREGION_BY_ID.get(regionId) ?? null : null;
+}
+
+const pointInRing = (lon: number, lat: number, ring: PublicEcoregionRegion['polygons'][number][number]): boolean => {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    const intersects = yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi + 1e-9) + xi;
+    if (intersects) inside = !inside;
+  }
+  return inside;
+};
+
+const pointInEcoregionPolygon = (
+  lon: number,
+  lat: number,
+  polygon: PublicEcoregionRegion['polygons'][number]
+): boolean => {
+  const [outer, ...holes] = polygon;
+  if (!outer || !pointInRing(lon, lat, outer)) return false;
+  return !holes.some((hole) => pointInRing(lon, lat, hole));
+};
+
+const bboxContains = (bbox: PublicEcoregionRegion['bbox'], lon: number, lat: number): boolean => (
+  lon >= bbox[0] && lon <= bbox[2] && lat >= bbox[1] && lat <= bbox[3]
+);
+
+const expandedBboxContains = (
+  bbox: PublicEcoregionRegion['bbox'],
+  lon: number,
+  lat: number,
+  tolerance: number
+): boolean => (
+  lon >= bbox[0] - tolerance &&
+  lon <= bbox[2] + tolerance &&
+  lat >= bbox[1] - tolerance &&
+  lat <= bbox[3] + tolerance
+);
+
+const distanceToSegmentSq = (
+  point: [number, number],
+  start: [number, number],
+  end: [number, number]
+): number => {
+  const dx = end[0] - start[0];
+  const dy = end[1] - start[1];
+  if (dx === 0 && dy === 0) {
+    return (point[0] - start[0]) ** 2 + (point[1] - start[1]) ** 2;
+  }
+  const t = Math.max(0, Math.min(1, ((point[0] - start[0]) * dx + (point[1] - start[1]) * dy) / (dx * dx + dy * dy)));
+  const projected: [number, number] = [start[0] + t * dx, start[1] + t * dy];
+  return (point[0] - projected[0]) ** 2 + (point[1] - projected[1]) ** 2;
+};
+
+const distanceToRingSq = (lon: number, lat: number, ring: PublicEcoregionRegion['polygons'][number][number]): number => {
+  let nearest = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < ring.length - 1; i += 1) {
+    nearest = Math.min(nearest, distanceToSegmentSq([lon, lat], ring[i], ring[i + 1]));
+  }
+  return nearest;
+};
+
+const distanceToRegionSq = (lon: number, lat: number, region: PublicEcoregionRegion): number => {
+  let nearest = Number.POSITIVE_INFINITY;
+  for (const polygon of region.polygons) {
+    const outer = polygon[0];
+    if (outer) nearest = Math.min(nearest, distanceToRingSq(lon, lat, outer));
+  }
+  return nearest;
+};
+
+export function lookupPublicBioregionFromCoordinates(
+  lat: unknown,
+  long: unknown
+): PublicBioregionMetadata | null {
+  const latitude = normalizeNumber(lat);
+  const longitude = normalizeNumber(long);
+  if (latitude === null || longitude === null) return null;
+  let nearestRegion: { region: PublicEcoregionRegion; distanceSq: number } | null = null;
+
+  for (const region of PUBLIC_ECOREGIONS.regions) {
+    if (!expandedBboxContains(region.bbox, longitude, latitude, ECOREGION_LOOKUP_TOLERANCE_DEGREES)) continue;
+    if (region.polygons.some((polygon) => pointInEcoregionPolygon(longitude, latitude, polygon))) {
+      return {
+        id: region.id,
+        name: region.name,
+        source: region.source,
+      };
+    }
+    const distanceSq = distanceToRegionSq(longitude, latitude, region);
+    if (!nearestRegion || distanceSq < nearestRegion.distanceSq) {
+      nearestRegion = { region, distanceSq };
+    }
+  }
+
+  if (
+    nearestRegion &&
+    nearestRegion.distanceSq <= ECOREGION_LOOKUP_TOLERANCE_DEGREES * ECOREGION_LOOKUP_TOLERANCE_DEGREES
+  ) {
+    return {
+      id: nearestRegion.region.id,
+      name: nearestRegion.region.name,
+      source: nearestRegion.region.source,
+    };
+  }
+
+  return null;
+}
+
+export function derivePublicBioregionMetadataFromCoordinates(
+  lat: unknown,
+  long: unknown,
+  knownBioregion?: unknown,
+  knownBioregionId?: unknown,
+  knownBioregionSource?: unknown
+): PublicBioregionMetadata | null {
+  const knownName = cleanString(knownBioregion);
+  const knownId = cleanString(knownBioregionId);
+  const knownSource = cleanString(knownBioregionSource) || 'resolve-ecoregions-2017';
+
+  if (knownId) {
+    const region = findPublicEcoregionById(knownId);
+    return {
+      id: knownId,
+      name: knownName || region?.name || knownId,
+      source: knownSource,
+    };
+  }
+
+  return lookupPublicBioregionFromCoordinates(lat, long);
+}
+
 export function derivePublicBioregionFromCoordinates(
   lat: unknown,
   long: unknown,
@@ -182,10 +345,7 @@ export function derivePublicBioregionFromCoordinates(
   const bioregion = cleanString(knownBioregion);
   if (bioregion) return bioregion;
 
-  // No redistributable bioregion polygon dataset is checked into this repo yet.
-  // Keep coordinates public-safe and leave bioregion blank until an approved
-  // polygon source can make a real match.
-  return '';
+  return derivePublicBioregionMetadataFromCoordinates(lat, long)?.name ?? '';
 }
 
 const cleanHref = (value: unknown): string => {
@@ -196,11 +356,18 @@ const cleanHref = (value: unknown): string => {
   return '';
 };
 
-const normalizeThemes = (themes: unknown): string[] => (
+export const normalizePublicMapThemeSlug = (theme: unknown): string => {
+  const slug = cleanString(theme);
+  return PUBLIC_MAP_THEME_ALIASES[slug] ?? slug;
+};
+
+export const normalizePublicMapThemeSlugs = (themes: unknown): string[] => (
   Array.isArray(themes)
-    ? themes.map(cleanString).filter(Boolean)
+    ? [...new Set(themes.map(normalizePublicMapThemeSlug).filter(Boolean))]
     : []
 );
+
+const normalizeThemes = normalizePublicMapThemeSlugs;
 
 export function containsPrivateMapNodeField(value: unknown, seen: Set<object> = new Set()): boolean {
   if (!value || typeof value !== 'object') return false;
@@ -223,6 +390,14 @@ export function toPublicMapNode(submission: UnknownRecord): PublicMapNode | null
   const lat = normalizeNumber(submission.lat);
   const long = normalizeNumber(submission.long);
   if (lat === null || long === null) return null;
+  const bioregion = derivePublicBioregionMetadataFromCoordinates(
+    lat,
+    long,
+    submission.bioregion,
+    submission.bioregionId ?? submission.bioregion_id,
+    submission.bioregionSource ?? submission.bioregion_source
+  );
+  const knownBioregion = normalizePublicBioregion(submission.bioregion);
 
   return {
     id: cleanString(submission.id),
@@ -231,9 +406,8 @@ export function toPublicMapNode(submission: UnknownRecord): PublicMapNode | null
     city: cleanString(submission.city),
     region: cleanString(submission.region),
     country: cleanString(submission.country),
-    bioregion: normalizePublicBioregion(
-      derivePublicBioregionFromCoordinates(lat, long, submission.bioregion)
-    ),
+    bioregion: normalizePublicBioregion(knownBioregion || bioregion?.name),
+    ...(bioregion?.id ? { bioregionId: bioregion.id, bioregionSource: bioregion.source } : {}),
     lat,
     long,
     role: cleanString(submission.role || submission.intent),
@@ -279,6 +453,14 @@ export function createOptimisticPendingNode(
   const createdAt = now instanceof Date ? now.toISOString() : new Date(now).toISOString();
   const lat = normalizeNumber(input?.lat);
   const long = normalizeNumber(input?.long);
+  const bioregion = derivePublicBioregionMetadataFromCoordinates(
+    lat,
+    long,
+    input?.bioregion,
+    input?.bioregionId ?? input?.bioregion_id,
+    input?.bioregionSource ?? input?.bioregion_source
+  );
+  const knownBioregion = normalizePublicBioregion(input?.bioregion);
 
   return {
     id: cleanString(input?.id) || cleanString(input?.localId) || `local-${Date.parse(createdAt)}`,
@@ -287,9 +469,8 @@ export function createOptimisticPendingNode(
     city: cleanString(input?.city),
     region: cleanString(input?.region),
     country: cleanString(input?.country),
-    bioregion: normalizePublicBioregion(
-      derivePublicBioregionFromCoordinates(lat, long, input?.bioregion)
-    ),
+    bioregion: normalizePublicBioregion(knownBioregion || bioregion?.name),
+    ...(bioregion?.id ? { bioregionId: bioregion.id, bioregionSource: bioregion.source } : {}),
     lat,
     long,
     role: cleanString(input?.role || input?.intent),

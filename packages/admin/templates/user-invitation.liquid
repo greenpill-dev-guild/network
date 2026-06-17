@@ -1,0 +1,37 @@
+{% layout "base" %}
+{% block content %}
+
+<h1>You have been invited to Greenpill Network Steward Admin</h1>
+
+<p>
+  You have been invited to {{ projectName }}. This private Directus workspace is
+  where Greenpill stewards review chapter information, suggest updates to public
+  chapter profiles, and submit chapter initiatives for publisher review.
+</p>
+
+<p>Use this invite link to accept the invitation and set your password:</p>
+
+<p>
+  <a
+    href="{{ url }}"
+    style="background-color: {{ projectColor }}; border-radius: 4px; color: #ffffff; display: inline-block; font-weight: 600; padding: 12px 18px; text-decoration: none;"
+  >
+    Accept invite and set password
+  </a>
+</p>
+
+<p>After you log in, open <strong>Content</strong> and start with:</p>
+
+<ul>
+  <li><strong>Chapters</strong> to view the current public chapter profile.</li>
+  <li><strong>Chapter Update Requests</strong> to suggest changes while the public page stays live.</li>
+  <li><strong>Chapter Initiatives</strong> to add local programs, events, campaigns, and impact work.</li>
+</ul>
+
+<p>
+  This invite is only for your assigned Greenpill steward content access. Please
+  do not forward it. If the link expires or your chapter is missing after login,
+  reply to the operator who invited you.
+</p>
+
+{% endblock %}

@@ -3,7 +3,10 @@ import {
 } from './chapter-impact.js';
 import {
   containsPrivateMapNodeField,
+  derivePublicBioregionMetadataFromCoordinates,
+  normalizePublicMapThemeSlugs,
   toPublicMapNode,
+  type PublicBioregionSource,
 } from './map-nodes.js';
 
 type UnknownRecord = Record<string, any>;
@@ -33,6 +36,8 @@ export interface PublicMapStateNode {
   region: string;
   country: string;
   bioregion?: string;
+  bioregionId?: string;
+  bioregionSource?: PublicBioregionSource;
   lat: number;
   long: number;
   href?: string;
@@ -54,6 +59,8 @@ export interface PublicMapStateEdge {
   kind: string;
   theme: string;
   bioregion?: string;
+  bioregionId?: string;
+  bioregionSource?: PublicBioregionSource;
   weight: number;
   source: 'generated-theme-match' | 'source-backed' | string;
 }
@@ -140,22 +147,22 @@ export const PUBLIC_COUNT_STATUSES: readonly PublicCountStatus[] = Object.freeze
 ]);
 
 export const PUBLIC_MAP_THEMES: readonly PublicMapTheme[] = Object.freeze([
-  { id: 'trees', label: 'Trees & Biodiversity', color: '#7BC74D', icon: 'tree' },
-  { id: 'food', label: 'Food & Farms', color: '#A8D24A', icon: 'grain' },
-  { id: 'water', label: 'Water & Waste', color: '#3FB6A8', icon: 'wave' },
-  { id: 'energy', label: 'Clean Energy', color: '#F5CB45', icon: 'sun' },
-  { id: 'gov', label: 'Local Governance', color: '#E8B14B', icon: 'gavel' },
-  { id: 'events', label: 'Local Events', color: '#E89455', icon: 'flag' },
-  { id: 'funding', label: 'Grants & Funding', color: '#E07856', icon: 'coin' },
-  { id: 'currency', label: 'Community Currency', color: '#D86A4A', icon: 'currency' },
-  { id: 'mutual', label: 'Mutual Aid', color: '#D87B97', icon: 'heart' },
-  { id: 'stories', label: 'Storytelling', color: '#E0A6B8', icon: 'book' },
-  { id: 'education', label: 'Education', color: '#F0DCA0', icon: 'mortar' },
-  { id: 'opensrc', label: 'Open Source', color: '#5CC2D9', icon: 'fork' },
-  { id: 'desci', label: 'DeSci', color: '#7DAEE0', icon: 'beaker' },
-  { id: 'ai', label: 'AI & Automation', color: '#9B8FD9', icon: 'circuit' },
-  { id: 'impact', label: 'Impact Tracking', color: '#86E0B5', icon: 'pulse' },
-  { id: 'public', label: 'Public Goods', color: '#C9A4E0', icon: 'commons' },
+  { id: 'water', label: 'Water', color: '#2BA7FF', icon: 'wave' },
+  { id: 'waste', label: 'Waste', color: '#8E6CFF', icon: 'recycle' },
+  { id: 'opensrc', label: 'Open Source', color: '#00D5E8', icon: 'fork' },
+  { id: 'impact', label: 'Impact Tracking', color: '#34D399', icon: 'pulse' },
+  { id: 'trees', label: 'Trees & Biodiversity', color: '#75D063', icon: 'tree' },
+  { id: 'food', label: 'Food & Farms', color: '#C6D84F', icon: 'grain' },
+  { id: 'energy', label: 'Clean Energy', color: '#FFD84D', icon: 'sun' },
+  { id: 'education', label: 'Education', color: '#1A9CFF', icon: 'mortar' },
+  { id: 'events', label: 'Local Events', color: '#FF9F1C', icon: 'flag' },
+  { id: 'funding', label: 'Grants & Funding', color: '#FF6B35', icon: 'coin' },
+  { id: 'mutual', label: 'Mutual Aid', color: '#F472B6', icon: 'heart' },
+  { id: 'stories', label: 'Storytelling', color: '#D946EF', icon: 'book' },
+  { id: 'ai', label: 'AI & Automation', color: '#B067FF', icon: 'circuit' },
+  { id: 'desci', label: 'DeSci', color: '#536DFE', icon: 'beaker' },
+  { id: 'gov', label: 'Local Governance', color: '#7C9CFF', icon: 'gavel' },
+  { id: 'public', label: 'Public Goods', color: '#B9A6C9', icon: 'commons' },
 ]);
 
 const COUNT_LABELS: Readonly<Record<PublicCountId, string>> = Object.freeze({
@@ -218,10 +225,7 @@ const cleanHref = (value: unknown): string => {
   return '';
 };
 
-const normalizeThemes = (themes: unknown): string[] => {
-  if (!Array.isArray(themes)) return [];
-  return [...new Set(themes.map(cleanString).filter(Boolean))];
-};
+const normalizeThemes = normalizePublicMapThemeSlugs;
 
 const makeIdPart = (value: unknown, fallback = 'node'): string => (
   cleanString(value)
@@ -291,6 +295,13 @@ export function toPublicMapStateChapterNode(location: UnknownRecord): PublicMapS
   if (!name) return null;
 
   const themes = normalizeThemes(location?.themes ?? location?.themeSlugs);
+  const bioregion = derivePublicBioregionMetadataFromCoordinates(
+    lat,
+    long,
+    location?.bioregion,
+    location?.bioregionId ?? location?.bioregion_id,
+    location?.bioregionSource ?? location?.bioregion_source
+  );
   return {
     id: `chapter:${sourceId}`,
     sourceId,
@@ -301,6 +312,7 @@ export function toPublicMapStateChapterNode(location: UnknownRecord): PublicMapS
     city: cleanString(location?.city),
     region: cleanString(location?.region),
     country: cleanString(location?.country),
+    ...(bioregion?.name ? { bioregion: bioregion.name, bioregionId: bioregion.id, bioregionSource: bioregion.source } : {}),
     lat,
     long,
     href: cleanHref(location?.href ?? location?.link ?? (slug ? `/chapters/${slug}` : '')),
@@ -328,6 +340,7 @@ export function toPublicMapStateSubmittedNode(input: UnknownRecord): PublicMapSt
     region: node.region,
     country: node.country,
     bioregion: node.bioregion,
+    ...(node.bioregionId ? { bioregionId: node.bioregionId, bioregionSource: node.bioregionSource } : {}),
     lat: node.lat,
     long: node.long,
     href: cleanHref(input?.href ?? input?.profileUrl ?? node.profileUrl),
@@ -366,6 +379,16 @@ const sharedThemes = (a: PublicMapStateNode, b: PublicMapStateNode): string[] =>
   a.themes.filter((theme) => b.themes.includes(theme))
 );
 
+// Edge colour is the only relationship signal on the public map, so prefer a
+// specific shared theme over the near-ubiquitous `public` (Public Goods) theme;
+// keep `public` only when it is the sole shared theme. Deterministic — the first
+// match preserves node A's theme order.
+const PUBLIC_THEME_SLUG = 'public';
+const firstSpecificTheme = (themes: string[]): string => (
+  themes.find((theme) => theme && theme !== PUBLIC_THEME_SLUG) ?? ''
+);
+const pickSharedTheme = (shared: string[]): string => firstSpecificTheme(shared) || shared[0] || '';
+
 const hasPublicBioregion = (value: unknown): value is string => {
   const bioregion = cleanString(value);
   return Boolean(bioregion) && bioregion.toLowerCase() !== 'bioregion pending';
@@ -376,16 +399,6 @@ export function generatePublicMapEdges(
   { limit = 160, perNodeLimit = 4 }: { limit?: number; perNodeLimit?: number } = {}
 ): PublicMapStateEdge[] {
   const people = nodes.filter((node) => node.type === 'member' || node.type === 'steward');
-  const chaptersBySlug = new Map(
-    nodes
-      .filter((node) => node.type === 'chapter')
-      .flatMap((node) => {
-        const keys = [node.slug, node.sourceId]
-          .map(cleanString)
-          .filter(Boolean);
-        return keys.map((key) => [key, node] as const);
-      })
-  );
   const edges: PublicMapStateEdge[] = [];
   const edgeKeys = new Set<string>();
   const nodeEdgeCounts = new Map<string, number>();
@@ -396,6 +409,8 @@ export function generatePublicMapEdges(
     kind,
     theme,
     bioregion = '',
+    bioregionId = '',
+    bioregionSource = '',
     weight = 1,
     source = 'generated-theme-match',
   }: {
@@ -404,6 +419,8 @@ export function generatePublicMapEdges(
     kind: string;
     theme: string;
     bioregion?: string;
+    bioregionId?: string;
+    bioregionSource?: PublicBioregionSource;
     weight?: number;
     source?: PublicMapStateEdge['source'];
   }) => {
@@ -422,32 +439,22 @@ export function generatePublicMapEdges(
       kind,
       theme,
       ...(bioregion ? { bioregion } : {}),
+      ...(bioregionId ? { bioregionId, bioregionSource } : {}),
       weight: Math.min(3, Math.max(1, weight)),
       source,
     });
   };
 
-  for (const steward of people.filter((node) => node.type === 'steward')) {
-    const chapterSlug = cleanString(steward.chapterSlug);
-    const chapter = chapterSlug ? chaptersBySlug.get(chapterSlug) : null;
-    if (!chapter) continue;
-    const shared = sharedThemes(steward, chapter);
-    addEdge({
-      from: steward,
-      to: chapter,
-      kind: 'steward-chapter',
-      theme: shared[0] || steward.primaryTheme || chapter.primaryTheme,
-      weight: 2,
-      source: 'source-backed',
-    });
-    if (edges.length >= limit) return edges;
-  }
-
+  // Relationships are person-to-person only (steward↔steward, steward↔member,
+  // member↔member). Chapters stay as geographic anchors with no relationship
+  // threads — there is intentionally no steward→chapter edge.
   const candidates: Array<{
     a: PublicMapStateNode;
     b: PublicMapStateNode;
     shared: string[];
     sharedBioregion: string;
+    sharedBioregionId: string;
+    sharedBioregionSource: PublicBioregionSource | '';
     distance: number;
     score: number;
   }> = [];
@@ -458,8 +465,18 @@ export function generatePublicMapEdges(
       if (!shared.length) continue;
       const aBioregion = cleanString(people[i].bioregion);
       const bBioregion = cleanString(people[j].bioregion);
-      const sharedBioregion = hasPublicBioregion(aBioregion) && aBioregion === bBioregion
-        ? aBioregion
+      const aBioregionId = cleanString(people[i].bioregionId);
+      const bBioregionId = cleanString(people[j].bioregionId);
+      const sharedBioregionId = aBioregionId && aBioregionId === bBioregionId ? aBioregionId : '';
+      const sharedBioregion = sharedBioregionId
+        ? aBioregion || bBioregion
+        : (
+            hasPublicBioregion(aBioregion) && aBioregion === bBioregion
+              ? aBioregion
+              : ''
+          );
+      const sharedBioregionSource = sharedBioregionId
+        ? people[i].bioregionSource || people[j].bioregionSource || 'resolve-ecoregions-2017'
         : '';
       const distance = distanceDegrees(people[i], people[j]);
       candidates.push({
@@ -467,6 +484,8 @@ export function generatePublicMapEdges(
         b: people[j],
         shared,
         sharedBioregion,
+        sharedBioregionId,
+        sharedBioregionSource,
         distance,
         score: shared.length * 4 + (sharedBioregion ? 2 : 0) - Math.min(distance, 90) / 60,
       });
@@ -484,8 +503,10 @@ export function generatePublicMapEdges(
       from: candidate.a,
       to: candidate.b,
       kind: 'shared-theme',
-      theme: candidate.shared[0],
+      theme: pickSharedTheme(candidate.shared),
       bioregion: candidate.sharedBioregion,
+      bioregionId: candidate.sharedBioregionId,
+      bioregionSource: candidate.sharedBioregionSource,
       weight: candidate.shared.length + (candidate.sharedBioregion ? 1 : 0),
     });
     if (edges.length >= limit) return edges;
@@ -505,6 +526,12 @@ function normalizeEdge(edge: Partial<PublicMapStateEdge> & UnknownRecord): Publi
     kind: cleanString(edge?.kind) || 'related',
     theme: cleanString(edge?.theme),
     ...(cleanString(edge?.bioregion) ? { bioregion: cleanString(edge?.bioregion) } : {}),
+    ...(cleanString(edge?.bioregionId ?? edge?.bioregion_id)
+      ? {
+          bioregionId: cleanString(edge?.bioregionId ?? edge?.bioregion_id),
+          bioregionSource: cleanString(edge?.bioregionSource ?? edge?.bioregion_source) || 'resolve-ecoregions-2017',
+        }
+      : {}),
     weight: Math.max(1, normalizeInteger(edge?.weight) || 1),
     source: cleanString(edge?.source) || 'source-backed',
   };
@@ -652,18 +679,48 @@ export function containsPrivateMapStateField(value: unknown, seen: Set<object> =
   });
 }
 
+function isPublicPersonMapNodeType(type: unknown): boolean {
+  const normalizedType = cleanString(type);
+  return normalizedType === 'member' || normalizedType === 'steward';
+}
+
 export function assertPublicMapStatePayload<T>(payload: T): T {
   if (containsPrivateMapStateField(payload)) {
     throw new Error('Public map-state payload contains private fields');
   }
 
   const nodes = Array.isArray((payload as UnknownRecord)?.nodes) ? (payload as UnknownRecord).nodes : [];
+  const nodesById = new Map<string, UnknownRecord>();
+  for (const node of nodes) {
+    const id = cleanString(node?.id);
+    if (id) nodesById.set(id, node);
+  }
+
   const hasPendingNode = nodes.some((node: UnknownRecord) => (
     cleanString(node?.status).toLowerCase() === 'pending' ||
     cleanString(node?.source).toLowerCase().includes('pending')
   ));
   if (hasPendingNode) {
     throw new Error('Public map-state payload contains pending nodes');
+  }
+
+  const edges = Array.isArray((payload as UnknownRecord)?.edges) ? (payload as UnknownRecord).edges : [];
+  for (const edge of edges) {
+    const fromId = cleanString(edge?.from);
+    const toId = cleanString(edge?.to);
+    if (!fromId || !toId || fromId === toId) {
+      throw new Error('Public map-state payload contains invalid edge endpoints');
+    }
+
+    const fromNode = nodesById.get(fromId);
+    const toNode = nodesById.get(toId);
+    if (!fromNode || !toNode) {
+      throw new Error('Public map-state payload contains edge with unknown endpoint');
+    }
+
+    if (!isPublicPersonMapNodeType(fromNode.type) || !isPublicPersonMapNodeType(toNode.type)) {
+      throw new Error('Public map-state payload contains non-person edge endpoint');
+    }
   }
 
   return payload;

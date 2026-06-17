@@ -39,6 +39,11 @@ export default defineConfig({
       fs: {
         allow: [rootDir],
       },
+      watch: {
+        // Native file events can be missed by agent/sandboxed edits; polling keeps HMR honest.
+        usePolling: true,
+        interval: 150,
+      },
     },
   },
 });

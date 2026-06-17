@@ -169,6 +169,16 @@ fly secrets set --app network-admin \
 The sender defaults to `Greenpill Network <no-reply@mail.greenpill.network>`.
 Change `EMAIL_FROM` in `packages/admin/fly.toml` if the verified sender differs.
 
+The production Directus image copies `packages/admin/templates` into
+`/directus/templates`. The `user-invitation.liquid` template adds Greenpill
+steward context to the default Directus invite link so invite emails are not
+blank or context-free.
+
+The Directus `/users/invite` API only receives the user, role, and optional
+invite URL. For event-specific context, send the copy in
+[`STEWARD_SYNC_INVITE.md`](./STEWARD_SYNC_INVITE.md) before or after running the
+invite script.
+
 ## Production Boundary
 
 Directus may create and manage its `directus_*` system tables in the connected
@@ -197,9 +207,45 @@ Only `publication_status='published'` rows enter the agent's
 review; trusted publishers/operators approve and publish. The static website
 then consumes the approved snapshot at build time.
 
+For published chapter profiles that must stay online during review, stewards
+should create `content.chapter_update_requests` rows instead of editing the
+published chapter row directly. Assigned stewards can draft and submit update
+requests for their chapter; trusted publishers review, apply accepted changes
+to the live chapter record, and publish the updated snapshot. This avoids
+moving a public chapter back to `draft` or `pending_review` just to collect
+edits.
+
 Directus Flows may send notifications or trigger rebuilds, but privacy
 projection logic stays in SQL, `@greenpill-network/shared/public-content`, and
 the agent route.
+
+### Steward Onboarding
+
+Use [`STEWARD_GUIDE.md`](./STEWARD_GUIDE.md) as the steward-facing walkthrough
+for account setup, chapter editing, chapter update requests, initiatives, and
+the steward sync agenda.
+
+Before a steward sync:
+
+1. Run database migrations, including the chapter update request table.
+2. Run `bun run directus:content:setup`.
+3. Run `bun run directus:studio:setup` to apply labels, field guidance, preview
+   links, and role bookmarks such as `Published chapter reference`, `My draft
+   initiatives`, `My chapter change requests`, and `Pending chapter reviews`.
+4. Invite stewards with `bun run directus:users:invite -- --input stewards.tsv`.
+5. Assign chapters or guilds with
+   `bun run directus:content-access -- assign --input assignments.tsv`.
+6. Pre-create one draft chapter update request per participating chapter with
+   `bun scripts/directus-steward-sync-prep.ts --input assignments.tsv`.
+7. Send [`STEWARD_SYNC_INVITE.md`](./STEWARD_SYNC_INVITE.md) alongside the
+   Directus system invite so stewards know what to prepare.
+8. Run `bun run directus:steward:smoke` against representative assigned and
+   unassigned scopes.
+
+For local rehearsal, prefer `bun run directus:local:bootstrap` after
+`bun run db:migrate`. If a root `.env.local` points at a non-local Directus,
+run the individual local setup scripts with `bun --no-env-file` as documented
+above.
 
 ### Live Onboarding Mode
 

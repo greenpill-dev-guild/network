@@ -20,6 +20,7 @@
  *   UI_VERIFY_ORIGIN            verify against this origin instead of building + serving dist
  *   UI_VERIFY_REQUIRED=1        fail (instead of skip) when no Chrome binary is found
  *   UI_VERIFY_WIDTHS=375,768    override the default 375,1024,1440 widths
+ *   UI_VERIFY_HEIGHT=768        override the default rendered viewport height
  *   UI_VERIFY_SOURCE_ONLY=1     run only source CSS standard checks and exit
  *
  * Reuses the CDP-over-static-server pattern proven in scripts/map-edit-browser-smoke.ts;
@@ -46,6 +47,8 @@ const widths = (process.env.UI_VERIFY_WIDTHS || '375,1024,1440')
   .split(',')
   .map((w) => Number.parseInt(w.trim(), 10))
   .filter((w) => Number.isFinite(w) && w > 0);
+const requestedHeight = Number.parseInt(process.env.UI_VERIFY_HEIGHT || '900', 10);
+const renderedHeight = Number.isFinite(requestedHeight) && requestedHeight > 0 ? requestedHeight : 900;
 
 type Severity = 'hard' | 'warn';
 interface Violation { channel: string; code: string; sev: Severity; msg: string; route?: string; width?: number; }
@@ -810,7 +813,7 @@ async function verifyRouteAtWidth(client: CdpClient, origin: string, route: stri
     await client.send('Page.enable', {}, sessionId);
     await client.send('Runtime.enable', {}, sessionId);
     await client.send('Emulation.setDeviceMetricsOverride', {
-      width, height: 900, deviceScaleFactor: 1, mobile: width <= 420,
+      width, height: renderedHeight, deviceScaleFactor: 1, mobile: width <= 420,
     }, sessionId);
     await client.send('Page.addScriptToEvaluateOnNewDocument', { source: CLS_OBSERVER }, sessionId);
 
@@ -905,7 +908,7 @@ async function run(): Promise<void> {
 
     client = await CdpClient.connect(chrome.webSocketUrl);
     webMcp = await discoverWebMcp(client, baseOrigin, routes);
-    console.log(`[ui-verify] ${routes.length} route(s) × widths [${widths.join(', ')}] via ${chromeBinary.split('/').pop()}\n`);
+    console.log(`[ui-verify] ${routes.length} route(s) × ${renderedHeight}px height × widths [${widths.join(', ')}] via ${chromeBinary.split('/').pop()}\n`);
     console.log(`[ui-verify] llms.txt: ${llmsTxt.status}${llmsTxt.bytes ? ` (${llmsTxt.bytes} bytes)` : ''}`);
     console.log(`[ui-verify] WebMCP: ${webMcp.status} — ${webMcp.message}\n`);
     for (const route of routes) {
@@ -927,7 +930,7 @@ async function run(): Promise<void> {
 
   const hardCount = all.filter((v) => v.sev === 'hard').length;
   const warnCount = all.filter((v) => v.sev === 'warn').length;
-  await writeFile(join(outDir, 'report.json'), JSON.stringify({ generatedAt: new Date().toISOString(), widths, routes, llmsTxt, webMcp, hardCount, warnCount, violations: all }, null, 2));
+  await writeFile(join(outDir, 'report.json'), JSON.stringify({ generatedAt: new Date().toISOString(), widths, height: renderedHeight, routes, llmsTxt, webMcp, hardCount, warnCount, violations: all }, null, 2));
   console.log(`\n[ui-verify] ${hardCount} hard, ${warnCount} warn across ${routes.length} route(s). Screenshots + report.json in packages/website/.ui-verify/`);
   if (hardCount > 0) process.exitCode = 1;
 }

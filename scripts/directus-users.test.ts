@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parseArgs, parseInviteUsers, splitDisplayName } from './directus-users.ts';
+
+const rootDir = join(dirname(fileURLToPath(import.meta.url)), '..');
+const inviteTemplatePath = join(rootDir, 'packages/admin/templates/user-invitation.liquid');
 
 test('parseInviteUsers reads steward TSV rows without treating location commas as separators', () => {
   const users = parseInviteUsers([
@@ -55,4 +61,12 @@ test('parseArgs keeps normal steward and admin roles explicit', () => {
   assert.equal(options.role, 'Greenpill Steward Editor');
   assert.equal(options.adminRole, 'Greenpill Operator');
   assert.equal(options.admins.has('matt@greenpill.builders'), true);
+});
+
+test('Directus invite template renders the setup link without shared partials', () => {
+  const template = readFileSync(inviteTemplatePath, 'utf8');
+
+  assert.doesNotMatch(template, /\{%\s*render\s+["']button["']/);
+  assert.match(template, /href="{{ url }}"/);
+  assert.match(template, /Accept invite and set password/);
 });

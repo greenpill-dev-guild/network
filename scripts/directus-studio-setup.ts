@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import {
   DIRECTUS_OPERATIONAL_COLLECTIONS,
   DIRECTUS_STEWARD_ACCESS_COLLECTIONS,
+  DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS,
   createDirectusClient,
 } from './directus-operational-content-setup.ts';
 
@@ -28,6 +29,7 @@ const OPERATIONAL_COLLECTION_META = Object.freeze({
     icon: 'location_city',
     note: 'Chapter profiles. Stewards can edit assigned draft or review-ready records.',
     display_template: '{{ name }}',
+    preview_url: 'https://greenpill.network/chapters/{{ slug }}',
   },
   chapter_initiatives: {
     hidden: false,
@@ -69,10 +71,47 @@ const ACCESS_COLLECTION_META = Object.freeze({
   },
 });
 
+const STEWARD_WORKFLOW_COLLECTION_META = Object.freeze({
+  chapter_update_requests: {
+    hidden: false,
+    singleton: false,
+    icon: 'edit_document',
+    note: 'Steward-requested edits to live chapter profiles. Use this when a published chapter should stay online during review.',
+    display_template: '{{ title }}',
+    preview_url: 'https://greenpill.network/chapters/{{ chapter_slug }}',
+    archive_field: 'request_status',
+    archive_value: 'archived',
+    unarchive_value: 'draft',
+  },
+  chapter_update_request_links: {
+    hidden: true,
+    singleton: false,
+    icon: 'link',
+    note: 'Structured public links attached to chapter update requests.',
+    display_template: '{{ label }}',
+  },
+  chapter_update_request_proof_signals: {
+    hidden: true,
+    singleton: false,
+    icon: 'fact_check',
+    note: 'Structured public proof signals attached to chapter update requests.',
+    display_template: '{{ label }}',
+  },
+});
+
 const PUBLICATION_STATUS_CHOICES = Object.freeze([
   { text: 'Draft', value: 'draft' },
   { text: 'Pending Review', value: 'pending_review' },
   { text: 'Published', value: 'published' },
+  { text: 'Archived', value: 'archived' },
+]);
+
+const REQUEST_STATUS_CHOICES = Object.freeze([
+  { text: 'Draft', value: 'draft' },
+  { text: 'Pending Review', value: 'pending_review' },
+  { text: 'Needs Changes', value: 'needs_changes' },
+  { text: 'Accepted', value: 'accepted' },
+  { text: 'Declined', value: 'declined' },
   { text: 'Archived', value: 'archived' },
 ]);
 
@@ -125,7 +164,20 @@ const fieldMeta = ({
 });
 
 const input = (sort, note = null, width = 'half', options = null) => fieldMeta({ sort, note, width, options });
+const requiredInput = (sort, note = null, width = 'half', options = null) => fieldMeta({
+  sort,
+  note,
+  width,
+  options,
+  required: true,
+});
 const textarea = (sort, note = null) => fieldMeta({ sort, note, interface: 'input-multiline' });
+const requiredTextarea = (sort, note = null) => fieldMeta({
+  sort,
+  note,
+  interface: 'input-multiline',
+  required: true,
+});
 const tags = (sort, note = null, width = 'full') => fieldMeta({
   sort,
   note,
@@ -154,7 +206,7 @@ const url = (sort, note = null, width = 'half') => fieldMeta({
   interface: 'input',
   options: { iconRight: 'link' },
 });
-const relation = (sort, note, template = '{{ name }}') => fieldMeta({
+const relation = (sort, note, template = '{{ name }}', required = false) => fieldMeta({
   sort,
   note,
   width: 'half',
@@ -163,6 +215,7 @@ const relation = (sort, note, template = '{{ name }}') => fieldMeta({
   display: 'related-values',
   display_options: { template },
   special: ['m2o'],
+  required,
 });
 const workflow = (sort = 900) => ({
   publication_status: fieldMeta({
@@ -311,6 +364,90 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
     seo: json(16, 'Optional SEO controls.'),
     ...workflow(),
   },
+  chapter_update_requests: {
+    id: fieldMeta({ sort: 1, width: 'half', interface: 'input', readonly: true, hidden: true }),
+    chapter_slug: relation(2, 'Chapter this request changes. Assigned stewards can create requests only for their chapter.', '{{ name }}', true),
+    title: requiredInput(3, 'Short internal review title, for example "Refresh Nigeria chapter links".', 'half'),
+    request_status: fieldMeta({
+      sort: 4,
+      width: 'half',
+      note: 'Stewards use Draft while editing and Pending Review when ready. Publishers use Needs Changes, Accepted, Declined, or Archived.',
+      interface: 'select-dropdown',
+      options: { choices: REQUEST_STATUS_CHOICES },
+      display: 'labels',
+      required: true,
+    }),
+    summary: requiredTextarea(5, 'Plain-language summary of what should change and why.'),
+    proposed_summary: textarea(6, 'Optional replacement text for the public chapter summary. Leave blank if the current summary should stay.'),
+    proposed_primary_link: url(7, 'Optional replacement main public link for the chapter.', 'half'),
+    proposed_image: url(8, 'Optional replacement public image URL.', 'half'),
+    proposed_image_alt: textarea(9, 'Required if proposing a new image. Describe the image for screen readers.'),
+    proposed_image_credit: input(10, 'Optional public credit for the proposed image.', 'half'),
+    links: fieldMeta({
+      sort: 11,
+      note: 'Add public links one row at a time. Prefer this over raw JSON for website, social, program, and contact links.',
+      interface: 'list-o2m',
+      display: 'related-values',
+      display_options: { template: '{{ label }}' },
+      options: { template: '{{ label }}' },
+      readonly: false,
+      hidden: false,
+      width: 'full',
+      special: ['o2m'],
+    }),
+    proof_signals: fieldMeta({
+      sort: 12,
+      note: 'Add public proof signals one row at a time, such as program count, active members, cohorts, or public source-backed impact.',
+      interface: 'list-o2m',
+      display: 'related-values',
+      display_options: { template: '{{ label }}' },
+      options: { template: '{{ label }}' },
+      readonly: false,
+      hidden: false,
+      width: 'full',
+      special: ['o2m'],
+    }),
+    requested_changes: json(13, 'Advanced fallback JSON for unusual changes that do not fit the structured fields above. Keep private notes out.'),
+    reviewer_notes: textarea(14, 'Publisher review notes. Use this for requested changes or final review context.'),
+    reviewed_by: input(15, 'Reviewer or publisher identifier.', 'half'),
+    reviewed_at: fieldMeta({ sort: 16, width: 'half', interface: 'datetime' }),
+    created_at: fieldMeta({ sort: 17, width: 'half', interface: 'datetime', readonly: true, hidden: true }),
+    updated_at: fieldMeta({ sort: 18, width: 'half', interface: 'datetime', readonly: true, hidden: true }),
+  },
+  chapter_update_request_links: {
+    id: fieldMeta({ sort: 1, width: 'half', interface: 'input', readonly: true, hidden: true }),
+    update_request_id: relation(2, 'Parent chapter update request.', '{{ title }}', true),
+    chapter_slug: fieldMeta({ sort: 3, width: 'half', interface: 'input', readonly: true, hidden: true, required: true }),
+    sort_order: number(4, 'Lower numbers appear first.', 'half'),
+    label: requiredInput(5, 'Public label, for example "Chapter website" or "Water Cup updates".', 'half'),
+    url: fieldMeta({
+      sort: 6,
+      width: 'half',
+      note: 'Public URL. Use a complete https:// link.',
+      interface: 'input',
+      options: { iconRight: 'link' },
+      required: true,
+    }),
+    kind: input(7, 'Optional link type, for example website, social, event, program, or contact.', 'half'),
+    subtext: input(8, 'Optional supporting text shown near the link.', 'half'),
+    handle: input(9, 'Optional public social handle.', 'half'),
+    action: input(10, 'Optional action label, for example "Join" or "Learn more".', 'half'),
+    icon: input(11, 'Optional icon token if the website supports one.', 'half'),
+    created_at: fieldMeta({ sort: 12, width: 'half', interface: 'datetime', readonly: true, hidden: true }),
+    updated_at: fieldMeta({ sort: 13, width: 'half', interface: 'datetime', readonly: true, hidden: true }),
+  },
+  chapter_update_request_proof_signals: {
+    id: fieldMeta({ sort: 1, width: 'half', interface: 'input', readonly: true, hidden: true }),
+    update_request_id: relation(2, 'Parent chapter update request.', '{{ title }}', true),
+    chapter_slug: fieldMeta({ sort: 3, width: 'half', interface: 'input', readonly: true, hidden: true, required: true }),
+    sort_order: number(4, 'Lower numbers appear first.', 'half'),
+    label: requiredInput(5, 'Public label, for example "Education program" or "Active contributors".', 'half'),
+    value: requiredInput(6, 'Public value, for example "10 weeks" or "25 contributors".', 'half'),
+    source: input(7, 'Optional public source name.', 'half'),
+    href: url(8, 'Optional public source URL.', 'half'),
+    created_at: fieldMeta({ sort: 9, width: 'half', interface: 'datetime', readonly: true, hidden: true }),
+    updated_at: fieldMeta({ sort: 10, width: 'half', interface: 'datetime', readonly: true, hidden: true }),
+  },
   chapter_editor_assignments: {
     id: fieldMeta({ sort: 1, width: 'half', interface: 'input', readonly: true, hidden: true }),
     chapter_slug: relation(2, 'Chapter this user can edit.'),
@@ -365,17 +502,21 @@ function encodePathSegment(segment) {
 
 export function buildDirectusStudioMetadataPlan(
   operationalCollectionNames = DIRECTUS_OPERATIONAL_COLLECTIONS,
-  accessCollectionNames = DIRECTUS_STEWARD_ACCESS_COLLECTIONS
+  accessCollectionNames = DIRECTUS_STEWARD_ACCESS_COLLECTIONS,
+  workflowCollectionNames = DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS
 ) {
   const collections = [
     ...operationalCollectionNames,
     ...accessCollectionNames,
+    ...workflowCollectionNames,
   ];
 
   return {
     collections: collections.map((collection) => {
       const base = cleanCollectionName(collection);
-      const meta = OPERATIONAL_COLLECTION_META[base] ?? ACCESS_COLLECTION_META[base];
+      const meta = OPERATIONAL_COLLECTION_META[base] ??
+        ACCESS_COLLECTION_META[base] ??
+        STEWARD_WORKFLOW_COLLECTION_META[base];
       if (!meta) throw new Error(`Missing Directus Studio collection metadata for ${base}.`);
       return {
         collection,
@@ -408,6 +549,74 @@ export function buildDirectusStudioMetadataPlan(
       }));
     }),
   };
+}
+
+const STUDIO_BOOKMARKS = Object.freeze([
+  {
+    role: 'Greenpill Steward Editor',
+    collection: 'chapters',
+    bookmark: 'Published chapter reference',
+    icon: 'visibility',
+    color: '#2f7d32',
+    filter: { publication_status: { _eq: 'published' } },
+    fields: ['name', 'city', 'country', 'publication_status', 'updated_at'],
+  },
+  {
+    role: 'Greenpill Steward Editor',
+    collection: 'chapter_initiatives',
+    bookmark: 'My draft initiatives',
+    icon: 'local_activity',
+    color: '#6a6a00',
+    filter: { publication_status: { _in: ['draft', 'pending_review'] } },
+    fields: ['title', 'chapter_slug', 'publication_status', 'updated_at'],
+  },
+  {
+    role: 'Greenpill Steward Editor',
+    collection: 'chapter_update_requests',
+    bookmark: 'My chapter change requests',
+    icon: 'edit_document',
+    color: '#7d4f00',
+    filter: { request_status: { _in: ['draft', 'pending_review', 'needs_changes'] } },
+    fields: ['title', 'chapter_slug', 'request_status', 'updated_at'],
+  },
+  {
+    role: 'Greenpill Trusted Publisher',
+    collection: 'chapter_update_requests',
+    bookmark: 'Pending chapter reviews',
+    icon: 'rate_review',
+    color: '#005c8a',
+    filter: { request_status: { _eq: 'pending_review' } },
+    fields: ['title', 'chapter_slug', 'request_status', 'updated_at'],
+  },
+]);
+
+export function buildDirectusStudioBookmarkPlan(collectionNames = [
+  ...DIRECTUS_OPERATIONAL_COLLECTIONS,
+  ...DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS,
+]) {
+  const collectionByBase = new Map(collectionNames.map((collection) => [cleanCollectionName(collection), collection]));
+
+  return STUDIO_BOOKMARKS
+    .filter((bookmark) => collectionByBase.has(bookmark.collection))
+    .map((bookmark) => ({
+      role: bookmark.role,
+      collection: collectionByBase.get(bookmark.collection),
+      bookmark: bookmark.bookmark,
+      icon: bookmark.icon,
+      color: bookmark.color,
+      filter: bookmark.filter,
+      layout: 'tabular',
+      layout_query: {
+        tabular: {
+          fields: bookmark.fields,
+        },
+      },
+      layout_options: {
+        tabular: {
+          widths: {},
+        },
+      },
+    }));
 }
 
 async function getAvailableCollectionNames(client) {
@@ -463,6 +672,79 @@ async function patchFieldMeta(client, fieldPlan, relationKeys) {
   });
 }
 
+async function getRoleIdsByName(client, roleNames) {
+  const response = await client.request('/roles?limit=-1&fields=id,name');
+  const roleIds = new Map();
+  const wanted = new Set(roleNames);
+  for (const role of response?.data ?? []) {
+    if (wanted.has(role.name)) {
+      roleIds.set(role.name, role.id);
+    }
+  }
+  return roleIds;
+}
+
+async function upsertBookmarkPreset(client, bookmarkPlan, roleIds) {
+  const roleId = roleIds.get(bookmarkPlan.role);
+  if (!roleId) {
+    console.warn(`Skipped Directus bookmark "${bookmarkPlan.bookmark}" because role was not found: ${bookmarkPlan.role}`);
+    return null;
+  }
+
+  const params = new URLSearchParams();
+  params.set('filter[role][_eq]', roleId);
+  params.set('filter[collection][_eq]', bookmarkPlan.collection);
+  params.set('filter[bookmark][_eq]', bookmarkPlan.bookmark);
+  params.set('limit', '1');
+
+  const payload = {
+    bookmark: bookmarkPlan.bookmark,
+    role: roleId,
+    user: null,
+    collection: bookmarkPlan.collection,
+    search: null,
+    layout: bookmarkPlan.layout,
+    layout_query: bookmarkPlan.layout_query,
+    layout_options: bookmarkPlan.layout_options,
+    refresh_interval: null,
+    filter: bookmarkPlan.filter,
+    icon: bookmarkPlan.icon,
+    color: bookmarkPlan.color,
+  };
+
+  const existing = await client.request(`/presets?${params.toString()}`);
+  const item = existing?.data?.[0];
+  if (item?.id) {
+    const updated = await client.request(`/presets/${encodePathSegment(item.id)}`, {
+      method: 'PATCH',
+      body: payload,
+    });
+    return updated?.data ?? item;
+  }
+
+  const created = await client.request('/presets', {
+    method: 'POST',
+    body: payload,
+  });
+  return created?.data;
+}
+
+async function applyDirectusStudioBookmarks(client, collectionNames) {
+  const bookmarks = buildDirectusStudioBookmarkPlan(collectionNames);
+  const roleIds = await getRoleIdsByName(client, [...new Set(bookmarks.map((bookmark) => bookmark.role))]);
+  let applied = 0;
+
+  for (const bookmark of bookmarks) {
+    const result = await upsertBookmarkPreset(client, bookmark, roleIds);
+    if (result) {
+      applied += 1;
+      console.log(`Bookmark: ${bookmark.role} / ${bookmark.collection} / ${bookmark.bookmark}`);
+    }
+  }
+
+  return applied;
+}
+
 export async function applyDirectusStudioMetadata(options: {
   client?: Awaited<ReturnType<typeof createDirectusClient>>;
   [key: string]: any;
@@ -471,7 +753,8 @@ export async function applyDirectusStudioMetadata(options: {
   const available = await getAvailableCollectionNames(client);
   const operationalCollections = resolveSchemaCollectionNames(available, 'content', DIRECTUS_OPERATIONAL_COLLECTIONS);
   const accessCollections = resolveSchemaCollectionNames(available, 'content', DIRECTUS_STEWARD_ACCESS_COLLECTIONS);
-  const plan = buildDirectusStudioMetadataPlan(operationalCollections, accessCollections);
+  const workflowCollections = resolveSchemaCollectionNames(available, 'content', DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS);
+  const plan = buildDirectusStudioMetadataPlan(operationalCollections, accessCollections, workflowCollections);
   const relationKeys = await getRelationKeys(client);
 
   for (const collection of plan.collections) {
@@ -484,10 +767,16 @@ export async function applyDirectusStudioMetadata(options: {
     console.log(`Field metadata: ${field.collection}.${field.field}`);
   }
 
+  const bookmarks = await applyDirectusStudioBookmarks(client, [
+    ...operationalCollections,
+    ...workflowCollections,
+  ]);
+
   return {
     url: client.url,
     collections: plan.collections.length,
     fields: plan.fields.length,
+    bookmarks,
   };
 }
 
@@ -496,6 +785,7 @@ async function main() {
   console.log(`Configured Directus Studio metadata at ${result.url}`);
   console.log(`Collections: ${result.collections}`);
   console.log(`Fields: ${result.fields}`);
+  console.log(`Bookmarks: ${result.bookmarks}`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {

@@ -24,6 +24,14 @@
       "types": "./dist/map-nodes.d.ts",
       "default": "./dist/map-nodes.js"
     },
+    "./map-node-storage": {
+      "types": "./dist/map-node-storage.d.ts",
+      "default": "./dist/map-node-storage.js"
+    },
+    "./public-ecoregions": {
+      "types": "./dist/public-ecoregions.d.ts",
+      "default": "./dist/public-ecoregions.js"
+    },
     "./public-content": {
       "types": "./dist/public-content.d.ts",
       "default": "./dist/public-content.js"

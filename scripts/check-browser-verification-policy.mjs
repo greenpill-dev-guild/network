@@ -107,7 +107,7 @@ if (existsSync(packageJsonPath)) {
   const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
   const scripts = packageJson.scripts ?? {};
 
-  if (scripts['check:browser-verification-policy'] !== 'bun scripts/check-browser-verification-policy.mjs') {
+  if (scripts['check:browser-verification-policy'] !== 'bun --no-env-file scripts/check-browser-verification-policy.mjs') {
     fail('package.json: missing check:browser-verification-policy script');
   }
 
@@ -117,7 +117,7 @@ if (existsSync(packageJsonPath)) {
 
   if (
     scripts['agentic:browser-proof'] &&
-    !scripts['agentic:browser-proof'].startsWith('bun scripts/require-authenticated-browser-qa.mjs')
+    !scripts['agentic:browser-proof'].startsWith('bun scripts/require-authenticated-browser-qa.mjs && ')
   ) {
     fail('package.json: local agentic:browser-proof must be guarded by require-authenticated-browser-qa.mjs');
   }

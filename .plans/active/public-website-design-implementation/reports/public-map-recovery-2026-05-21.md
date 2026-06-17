@@ -21,7 +21,7 @@ This report supersedes any local claim that the Home map, live add-node flow, or
 - Everyone uses one add-node flow. Private email controls ownership and steward allowlisting, not public display.
 - Steward allowlist entries may map `email=chapter-slug`; matching emails become public stewards and receive that trusted `chapterSlug`, while email remains private.
 - Public `bioregion` is shown only when a real approved value exists. No polygon lookup is claimed until a checked-in redistributable dataset exists; until then, coordinates are preserved and bioregion stays blank.
-- Relationship edges are trusted steward-to-chapter edges plus shared-theme member/steward edges. Shared non-pending bioregion can strengthen or annotate an edge; there is no steward-steward special case.
+- Relationship edges are people-to-people shared-theme member/steward edges only. Chapters remain anchor pins, not relationship endpoints. Shared non-pending bioregion can annotate an edge once approved data exists; there is no steward-steward special case.
 
 ## Divergence From HiFi
 

@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { checkDatabaseConnection } from './db.js';
 import {
   CHAPTER_IMPACT_ROUTE,
+  MAP_NODE_EDIT_LINK_REQUEST_ROUTE,
   MAP_NODE_EDIT_LINK_ROUTE,
   MAP_NODE_EDIT_SESSION_ROUTE,
   MAP_NODE_SUBMISSIONS_ROUTE,
@@ -270,6 +271,39 @@ export function createAgentApp({
     } catch (error) {
       // Keep account/node/provider state private. Persisted attempts are the
       // primary operator surface; this sanitized event covers persistence loss.
+      reportSanitizedEditLinkError(reportEditLinkError, error);
+    }
+
+    return context.json(MAP_NODE_EDIT_LINK_NEUTRAL_RESPONSE, 202);
+  });
+
+  // Standalone, email-keyed recovery — no node id. Mirrors the per-node handler:
+  // validate the email, swallow all downstream state, and always return the same
+  // neutral response so the route never reveals whether the email matched.
+  app.post(MAP_NODE_EDIT_LINK_REQUEST_ROUTE, async (context) => {
+    let input: UnknownRecord = {};
+    try {
+      input = await context.req.json() as UnknownRecord;
+    } catch {
+      input = {};
+    }
+
+    const email = normalizeOwnerEmail(input?.email);
+    if (!isValidOwnerEmail(email)) {
+      return context.json({
+        error: {
+          code: 'invalid_email',
+          message: 'A valid email is required.',
+        },
+      }, 400);
+    }
+
+    try {
+      await mapNodeRepository.requestEditLinkByEmail?.(
+        email,
+        getRequestMeta(context)
+      );
+    } catch (error) {
       reportSanitizedEditLinkError(reportEditLinkError, error);
     }
 
