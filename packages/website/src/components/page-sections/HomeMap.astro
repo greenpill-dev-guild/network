@@ -441,7 +441,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
             <input name="name" autocomplete="name" required placeholder="What should the network call you?" />
           </label>
           <label>
-            <span>Private email</span>
+            <span>Email</span>
             <input name="contact" autocomplete="email" type="email" required placeholder="you@example.org" />
           </label>
         </div>
@@ -465,7 +465,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
             <span>Or place yourself on the map</span>
             <div class="gp-home-map-addnode-mini-map" data-location-map>
               <div class="gp-home-map-addnode-mini-topo" aria-hidden="true"></div>
-              <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} preserveAspectRatio="xMidYMid meet" aria-label="Tap or drag to place your pin on the world map">
+              <svg viewBox={`0 0 ${VIEW_W} ${MAP_VIEW_H}`} preserveAspectRatio="xMidYMid meet" aria-label="Tap or drag to place your pin on the world map">
                 <g aria-hidden="true">
                   {landDots.map((d) => (
                     <circle cx={d.cx} cy={d.cy} r="0.42" />
@@ -480,8 +480,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           <input type="hidden" name="place" data-location-place />
           <input type="hidden" name="lat" data-location-lat />
           <input type="hidden" name="long" data-location-long />
-
-          <p class="gp-home-map-addnode-location-status" data-location-status>Type a city or drop a pin on the map.</p>
         </div>
       </section>
 
@@ -509,7 +507,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
             <button type="button" data-edit-step="identity">Edit tagline</button>
           </div>
           <div>
-            <span>Private email</span>
+            <span>Email</span>
             <p data-review-email>Saved privately for future edit links.</p>
             <button type="button" data-edit-step="identity">Edit email</button>
           </div>
@@ -3336,7 +3334,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const placeInput = scope.querySelector('[data-location-place]') as HTMLInputElement | null;
     const latInput = scope.querySelector('[data-location-lat]') as HTMLInputElement | null;
     const longInput = scope.querySelector('[data-location-long]') as HTMLInputElement | null;
-    const locationStatus = scope.querySelector('[data-location-status]') as HTMLElement | null;
     const reviewName = scope.querySelector('[data-review-name]') as HTMLElement | null;
     const reviewPlace = scope.querySelector('[data-review-place]') as HTMLElement | null;
     const reviewThemes = scope.querySelector('[data-review-themes]') as HTMLElement | null;
@@ -3464,7 +3461,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       placeInput.value = label;
       latInput.value = lat.toFixed(6);
       longInput.value = long.toFixed(6);
-      if (locationStatus) locationStatus.textContent = `Pinning near ${label}`;
       if (locationPin) {
         locationPin.setAttribute('cx', lonToX(long).toFixed(2));
         locationPin.setAttribute('cy', latToY(lat).toFixed(2));
@@ -3566,7 +3562,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (latInput) latInput.value = '';
       if (longInput) longInput.value = '';
       if (locationPin) locationPin.hidden = true;
-      if (locationStatus) locationStatus.textContent = 'Drop a pin on the map, then name your city — or pick one from the list.';
       setAddStatus('');
       syncWalkthroughState();
     };
@@ -3733,7 +3728,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (!locationSvg) return;
       const rect = locationSvg.getBoundingClientRect();
       const x = Math.min(VIEW_W, Math.max(0, ((event.clientX - rect.left) / rect.width) * VIEW_W));
-      const y = Math.min(VIEW_H, Math.max(0, ((event.clientY - rect.top) / rect.height) * VIEW_H));
+      const y = Math.min(VISIBLE_VIEW_H, Math.max(0, ((event.clientY - rect.top) / rect.height) * VISIBLE_VIEW_H));
       const lat = yToLat(y);
       const long = xToLon(x);
       const typed = clean(locationQuery?.value);
@@ -3765,7 +3760,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     locationQuery?.addEventListener('input', () => {
       const raw = clean(locationQuery.value);
       if (raw.length < 2) {
-        if (locationStatus) locationStatus.textContent = 'Drop a pin on the map, or type your city.';
         return;
       }
       const query = raw.toLowerCase();
@@ -3782,7 +3776,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         setLocation(lat, long, raw);
       } else {
         if (placeInput) placeInput.value = raw;
-        if (locationStatus) locationStatus.textContent = `Drop a pin on the map to place “${raw}”.`;
         syncWalkthroughState();
       }
     });
@@ -5774,7 +5767,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
   .gp-home-map-addnode-copy,
   .gp-home-map-addnode-mode,
-  .gp-home-map-addnode-location-status,
   .gp-home-map-addnode-status {
     margin: 0;
     color: var(--gp-fg-muted);
@@ -5976,7 +5968,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
   .gp-home-map-addnode-mini-map {
     position: relative;
-    aspect-ratio: 2 / 1;
+    aspect-ratio: 200 / 88;
     min-height: 156px;
     border: 1px solid color-mix(in srgb, var(--gp-map-member) 24%, transparent);
     border-radius: var(--gp-radius-md);
