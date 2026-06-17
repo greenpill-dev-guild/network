@@ -196,10 +196,11 @@ bun run test:home-map:live-e2e
 `bun run dev` seeds the local Postgres database, boots Directus, starts the
 agent on `3303`, and gives the local agent a safe default steward allowlist for
 `local-steward@example.org=nigeria`. In a second terminal,
-`test:home-map:live-e2e` turns local Live Onboarding Mode on, submits one member
-and one allowlisted steward through `POST /map-nodes`, verifies that `/map/state`
-reports live mode, public member/steward nodes, a steward-to-chapter edge, and no
-private email/raw-note leakage, then restores the previous live-mode setting.
+`test:home-map:live-e2e` turns local Live Onboarding Mode on, submits member
+and allowlisted steward nodes through `POST /map-nodes`, verifies that
+`/map/state` reports live mode, public member/steward nodes, people-to-people
+shared-theme edges, chapter anchors with no relationship edges, and no private
+email/raw-note leakage, then restores the previous live-mode setting.
 
 For a manual call rehearsal where the homepage should stay live, run:
 

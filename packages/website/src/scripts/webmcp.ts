@@ -99,10 +99,10 @@ const summarizeMap = (input: Record<string, unknown> = {}) => {
   const scope = root.closest('.gp-home-map') || document;
   const selected = scope.querySelector<HTMLElement>('[data-home-map-selected]:not([hidden])');
   const nodeElements = Array.from(root.querySelectorAll('.gp-home-map-node-link:not(.is-filtered-out)'));
-  const typeFilters = Array.from(scope.querySelectorAll<HTMLButtonElement>('[data-type-filter]'))
-    .map((button) => ({
-      type: button.dataset.typeFilter || '',
-      active: button.getAttribute('aria-pressed') !== 'false',
+  const visibleTypes = Array.from(scope.querySelectorAll<HTMLElement>('[data-legend-type]'))
+    .map((item) => ({
+      type: item.dataset.legendType || '',
+      count: Number(item.querySelector('[data-home-map-type-count]')?.textContent || 0),
     }));
   const themeFilters = Array.from(scope.querySelectorAll<HTMLButtonElement>('[data-theme-filter]'))
     .map((button) => ({
@@ -114,7 +114,7 @@ const summarizeMap = (input: Record<string, unknown> = {}) => {
   return {
     available: true,
     visibleNodeCount: nodeElements.length,
-    activeTypes: typeFilters.filter((item) => item.active).map((item) => item.type),
+    visibleTypes,
     activeThemes: themeFilters.filter((item) => item.active).map((item) => item.label || item.theme),
     selectedNode: selected
       ? {

@@ -103,7 +103,7 @@ if (existsSync(packageJsonPath)) {
   const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
   const scripts = packageJson.scripts ?? {};
 
-  if (scripts['check:browser-verification-policy'] !== 'bun scripts/check-browser-verification-policy.mjs') {
+  if (scripts['check:browser-verification-policy'] !== 'bun --no-env-file scripts/check-browser-verification-policy.mjs') {
     fail('package.json: missing check:browser-verification-policy script');
   }
 

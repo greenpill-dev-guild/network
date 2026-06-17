@@ -561,12 +561,47 @@ async function runSmoke(): Promise<void> {
     await client.send('Page.enable', {}, sessionId);
     await client.send('Network.enable', {}, sessionId);
     await client.send('Fetch.enable', {
-      patterns: [{ urlPattern: '*://127.0.0.1:3303/*', requestStage: 'Request' }],
+      patterns: [
+        { urlPattern: '*://127.0.0.1:3303/*', requestStage: 'Request' },
+        { urlPattern: '*://localhost:3303/*', requestStage: 'Request' },
+      ],
     }, sessionId);
 
     await client.send('Page.navigate', { url: `${staticServer.origin}/` }, sessionId);
     await waitForExpression(client, sessionId, "document.querySelector('[data-home-map]')");
     await waitForExpression(client, sessionId, "document.querySelector('[data-home-map-open]')");
+    await client.send('Emulation.setDeviceMetricsOverride', {
+      width: 1280,
+      height: 768,
+      deviceScaleFactor: 1,
+      mobile: false,
+    }, sessionId);
+    const heroViewportProof = await evaluate(client, sessionId, `
+      (async () => {
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const actions = document.querySelector('.gp-home-hero-actions');
+        const map = document.querySelector('.gp-home-hero-map');
+        const hero = document.querySelector('.gp-home-hero');
+        const actionRect = actions?.getBoundingClientRect();
+        const mapRect = map?.getBoundingClientRect();
+        const heroRect = hero?.getBoundingClientRect();
+        return {
+          missing: !actions || !map || !hero,
+          viewportHeight: window.innerHeight,
+          actionBottom: actionRect ? Math.round(actionRect.bottom) : null,
+          actionTop: actionRect ? Math.round(actionRect.top) : null,
+          mapHeight: mapRect ? Math.round(mapRect.height) : null,
+          heroBottom: heroRect ? Math.round(heroRect.bottom) : null,
+          ctaInsideViewport: Boolean(actionRect && actionRect.bottom <= window.innerHeight + 1 && actionRect.top >= 0),
+        };
+      })()
+    `);
+    assert.equal(heroViewportProof.missing, false, 'home hero viewport proof should find map and CTA actions');
+    assert.equal(
+      heroViewportProof.ctaInsideViewport,
+      true,
+      `home hero CTAs should stay inside a 1280x768 first viewport: ${JSON.stringify(heroViewportProof)}`
+    );
     // Desktop viewport so the desktop section exercises the desktop popover and
     // its container-query layout (wide map container), not the mobile sheet. The
     // mobile section overrides to 375 later.
@@ -600,6 +635,259 @@ async function runSmoke(): Promise<void> {
         return toggled && button.getAttribute('aria-pressed') === 'false';
       })()
     `);
+
+    const addDialogLabelProof = await evaluate(client, sessionId, `
+      (async () => {
+        const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        const trigger = document.querySelector('[data-home-map-open]');
+        const dialog = document.querySelector('[data-home-map-addnode-dialog]');
+        const titleFor = () => {
+          const labelledBy = dialog?.getAttribute('aria-labelledby') || '';
+          return (labelledBy ? document.getElementById(labelledBy)?.textContent : '')?.trim() || '';
+        };
+        window.scrollTo(0, 220);
+        await wait(40);
+        const scrollBeforeOpen = window.scrollY;
+        trigger?.click();
+        await wait(80);
+        const stepOneName = titleFor();
+        const scrollLockProof = {
+          lockedClass: document.documentElement.classList.contains('gp-home-map-addnode-scroll-locked'),
+          bodyPosition: document.body.style.position,
+          bodyTop: document.body.style.top,
+          bodyOverflowY: document.body.style.overflowY,
+          scrollBeforeOpen,
+        };
+        dialog?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        await wait(40);
+        const openAfterBackdropClick = Boolean(dialog?.open);
+        const cancelEvent = new Event('cancel', { bubbles: false, cancelable: true });
+        dialog?.dispatchEvent(cancelEvent);
+        await wait(40);
+        const openAfterCancel = Boolean(dialog?.open);
+        dialog?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }));
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }));
+        await wait(40);
+        const openAfterEscape = Boolean(dialog?.open);
+        const footer = document.querySelector('.gp-home-map-addnode-footer');
+        const manage = document.querySelector('.gp-home-map-addnode-manage');
+        const actions = document.querySelector('.gp-home-map-addnode-actions');
+        const next = document.querySelector('[data-walkthrough-next]');
+        const themeGrid = document.querySelector('.gp-home-map-addnode-theme-options');
+        const themeStep = document.querySelector('[data-walkthrough-step="themes"]');
+        const themeTitle = themeStep?.querySelector('h2');
+        const themeCount = document.querySelector('[data-home-map-theme-count]');
+        const dialogRect = dialog?.getBoundingClientRect();
+        const footerRect = footer?.getBoundingClientRect();
+        const manageRect = manage?.getBoundingClientRect();
+        const actionsRect = actions?.getBoundingClientRect();
+        const nextRect = next?.getBoundingClientRect();
+        const stepRect = themeStep?.getBoundingClientRect();
+        const themeTitleRect = themeTitle?.getBoundingClientRect();
+        const themeCountRect = themeCount?.getBoundingClientRect();
+        const themeRects = [...document.querySelectorAll('[data-theme-choice]')].map((node) => node.getBoundingClientRect());
+        const footerStyle = footer ? getComputedStyle(footer) : null;
+        const themeGridStyle = themeGrid ? getComputedStyle(themeGrid) : null;
+        const lastThemeBottom = Math.max(
+          ...themeRects.map((rect) => rect.bottom),
+          themeCountRect?.bottom || Number.NEGATIVE_INFINITY
+        );
+        const layoutProof = {
+          footerAtDialogBottom: Boolean(dialogRect && footerRect && Math.abs(dialogRect.bottom - footerRect.bottom) <= 2),
+          actionGroupRightAligned: Boolean(footerRect && actionsRect && Math.abs(actionsRect.right - footerRect.right) <= 2),
+          manageLeftAligned: Boolean(footerRect && manageRect && Math.abs(manageRect.left - footerRect.left) <= 2),
+          manageAndActionsSameRow: Boolean(
+            manageRect &&
+            actionsRect &&
+            Math.abs(((manageRect.top + manageRect.bottom) / 2) - ((actionsRect.top + actionsRect.bottom) / 2)) <= 8
+          ),
+          nextInsideActions: Boolean(actionsRect && nextRect && nextRect.left >= actionsRect.left - 1 && nextRect.right <= actionsRect.right + 1),
+          footerBackground: footerStyle?.backgroundColor || '',
+          footerBorderTopWidth: footerStyle?.borderTopWidth || '',
+          themeGridColumns: themeGridStyle?.gridTemplateColumns.split(' ').filter(Boolean).length || 0,
+          themeButtonCount: themeRects.length,
+          themeTitleTopAnchored: Boolean(dialogRect && themeTitleRect && themeTitleRect.top - dialogRect.top <= 56),
+          themeFooterGap: Boolean(footerRect && Number.isFinite(lastThemeBottom) && footerRect.top - lastThemeBottom >= 8),
+          themesVisibleAboveFooter: Boolean(
+            stepRect &&
+            footerRect &&
+            themeRects.length === 16 &&
+            themeRects.every((rect) => rect.top >= stepRect.top - 1 && rect.bottom <= footerRect.top + 1)
+          ),
+        };
+        document.querySelector('[data-theme-choice="public"]')?.click();
+        document.querySelector('[data-walkthrough-next]')?.click();
+        await wait(80);
+        const stepTwoName = titleFor();
+        const hiddenStepOne = Boolean(document.querySelector('[data-walkthrough-step="themes"]')?.hidden);
+        const identityStep = document.querySelector('[data-walkthrough-step="identity"]');
+        const identityTitle = identityStep?.querySelector('h2');
+        const identityCopy = identityStep?.querySelector('.gp-home-map-addnode-copy');
+        const cityField = identityStep?.querySelector('[data-location-text]');
+        const miniMap = identityStep?.querySelector('[data-location-map]');
+        const back = document.querySelector('[data-walkthrough-back]');
+        const backRect = back?.getBoundingClientRect();
+        const identityTitleRect = identityTitle?.getBoundingClientRect();
+        const identityCopyRect = identityCopy?.getBoundingClientRect();
+        const cityFieldRect = cityField?.getBoundingClientRect();
+        const miniMapRect = miniMap?.getBoundingClientRect();
+        const identityHeaderProof = {
+          titleCentered: Boolean(dialogRect && identityTitleRect && Math.abs(((identityTitleRect.left + identityTitleRect.right) / 2) - ((dialogRect.left + dialogRect.right) / 2)) <= 2),
+          copyCentered: Boolean(dialogRect && identityCopyRect && Math.abs(((identityCopyRect.left + identityCopyRect.right) / 2) - ((dialogRect.left + dialogRect.right) / 2)) <= 2),
+          copyTextAlign: identityCopy ? getComputedStyle(identityCopy).textAlign : '',
+          cityFieldAboveMap: Boolean(cityFieldRect && miniMapRect && cityFieldRect.bottom <= miniMapRect.top + 1),
+          backVisibleTopLeft: Boolean(dialogRect && backRect && !back?.hidden && backRect.left <= dialogRect.left + 32 && backRect.top <= dialogRect.top + 32),
+        };
+        const form = document.querySelector('[data-home-map-addnode-form]');
+        form.elements.name.value = 'Review Browser Member';
+        form.elements.contact.value = 'review-browser@example.org';
+        form.elements.publicNote.value = 'One-line required tagline.';
+        form.elements.place.value = 'Oakland';
+        form.elements.lat.value = '37.804400';
+        form.elements.long.value = '-122.271200';
+        form.dispatchEvent(new Event('input', { bubbles: true }));
+        document.querySelector('[data-walkthrough-next]')?.click();
+        await wait(80);
+        const reviewStep = document.querySelector('[data-walkthrough-step="review"]');
+        const reviewTitle = reviewStep?.querySelector('h2');
+        const reviewCopy = reviewStep?.querySelector('.gp-home-map-addnode-copy');
+        const reviewTitleRect = reviewTitle?.getBoundingClientRect();
+        const reviewCopyRect = reviewCopy?.getBoundingClientRect();
+        const reviewProof = {
+          titleCentered: Boolean(dialogRect && reviewTitleRect && Math.abs(((reviewTitleRect.left + reviewTitleRect.right) / 2) - ((dialogRect.left + dialogRect.right) / 2)) <= 2),
+          copyCentered: Boolean(dialogRect && reviewCopyRect && Math.abs(((reviewCopyRect.left + reviewCopyRect.right) / 2) - ((dialogRect.left + dialogRect.right) / 2)) <= 2),
+          copyTextAlign: reviewCopy ? getComputedStyle(reviewCopy).textAlign : '',
+          emailText: document.querySelector('[data-review-email]')?.textContent?.trim() || '',
+          taglineText: document.querySelector('[data-review-note]')?.textContent?.trim() || '',
+        };
+        document.querySelector('[data-addnode-close]')?.click();
+        await wait(40);
+        const unlockProof = {
+          unlockedClass: !document.documentElement.classList.contains('gp-home-map-addnode-scroll-locked'),
+          bodyPosition: document.body.style.position,
+          bodyTop: document.body.style.top,
+          bodyOverflowY: document.body.style.overflowY,
+          scrollRestored: Math.abs(window.scrollY - scrollBeforeOpen) <= 8,
+        };
+        return {
+          stepOneName,
+          stepTwoName,
+          hiddenStepOne,
+          dialogOpen: Boolean(dialog?.open),
+          layoutProof,
+          identityHeaderProof,
+          reviewProof,
+          scrollLockProof,
+          openAfterBackdropClick,
+          openAfterCancel,
+          cancelDefaultPrevented: cancelEvent.defaultPrevented,
+          openAfterEscape,
+          unlockProof,
+        };
+      })()
+    `);
+    assert.match(addDialogLabelProof.stepOneName, /What are you here to grow/);
+    assert.match(addDialogLabelProof.stepTwoName, /Drop your pin/);
+    assert.equal(addDialogLabelProof.hiddenStepOne, true, 'add-node step 2 should not keep the hidden step 1 title as the dialog name');
+    assert.equal(addDialogLabelProof.dialogOpen, false, 'add-node label proof should leave the dialog closed');
+    assert.equal(
+      addDialogLabelProof.identityHeaderProof.titleCentered,
+      true,
+      `add-node identity title should be centered: ${JSON.stringify(addDialogLabelProof.identityHeaderProof)}`
+    );
+    assert.equal(
+      addDialogLabelProof.identityHeaderProof.copyCentered,
+      true,
+      `add-node identity subtitle should be centered: ${JSON.stringify(addDialogLabelProof.identityHeaderProof)}`
+    );
+    assert.equal(addDialogLabelProof.identityHeaderProof.copyTextAlign, 'center');
+    assert.equal(
+      addDialogLabelProof.identityHeaderProof.cityFieldAboveMap,
+      true,
+      `add-node identity place selector should render above the mini map: ${JSON.stringify(addDialogLabelProof.identityHeaderProof)}`
+    );
+    assert.equal(addDialogLabelProof.identityHeaderProof.backVisibleTopLeft, true, 'add-node Back should be a top-left icon button after the first step');
+    assert.equal(
+      addDialogLabelProof.reviewProof.titleCentered,
+      true,
+      `add-node review title should be centered: ${JSON.stringify(addDialogLabelProof.reviewProof)}`
+    );
+    assert.equal(
+      addDialogLabelProof.reviewProof.copyCentered,
+      true,
+      `add-node review subtitle should be centered: ${JSON.stringify(addDialogLabelProof.reviewProof)}`
+    );
+    assert.equal(addDialogLabelProof.reviewProof.copyTextAlign, 'center');
+    assert.equal(addDialogLabelProof.reviewProof.emailText, 'review-browser@example.org', 'review step should show the entered private email for correction');
+    assert.equal(addDialogLabelProof.reviewProof.taglineText, 'One-line required tagline.', 'review step should show the required tagline');
+    assert.equal(
+      addDialogLabelProof.scrollLockProof.lockedClass,
+      true,
+      `add-node dialog should lock document scroll while open: ${JSON.stringify(addDialogLabelProof.scrollLockProof)}`
+    );
+    assert.equal(addDialogLabelProof.scrollLockProof.bodyPosition, 'fixed', 'add-node dialog should pin the page body while open');
+    assert.equal(addDialogLabelProof.scrollLockProof.bodyOverflowY, 'hidden', 'add-node dialog should hide body overflow while open');
+    assert.match(
+      addDialogLabelProof.scrollLockProof.bodyTop,
+      /^-\d+px$/,
+      `add-node dialog should preserve the scroll offset while locking: ${JSON.stringify(addDialogLabelProof.scrollLockProof)}`
+    );
+    assert.equal(addDialogLabelProof.openAfterBackdropClick, true, 'add-node backdrop click should not close the dialog');
+    assert.equal(addDialogLabelProof.cancelDefaultPrevented, true, 'add-node native cancel should be prevented');
+    assert.equal(addDialogLabelProof.openAfterCancel, true, 'add-node native cancel should not close the dialog');
+    assert.equal(addDialogLabelProof.openAfterEscape, true, 'add-node Escape keydown should not close the dialog');
+    assert.equal(
+      addDialogLabelProof.layoutProof.footerAtDialogBottom,
+      true,
+      `add-node footer should sit at the bottom of the dialog: ${JSON.stringify(addDialogLabelProof.layoutProof)}`
+    );
+    assert.equal(
+      addDialogLabelProof.layoutProof.actionGroupRightAligned,
+      true,
+      `add-node primary actions should sit on the far right of the footer: ${JSON.stringify(addDialogLabelProof.layoutProof)}`
+    );
+    assert.equal(
+      addDialogLabelProof.layoutProof.manageLeftAligned,
+      true,
+      `add-node manage link should sit on the left of the footer: ${JSON.stringify(addDialogLabelProof.layoutProof)}`
+    );
+    assert.equal(
+      addDialogLabelProof.layoutProof.manageAndActionsSameRow,
+      true,
+      `add-node manage link and primary actions should share a footer row: ${JSON.stringify(addDialogLabelProof.layoutProof)}`
+    );
+    assert.equal(
+      addDialogLabelProof.layoutProof.nextInsideActions,
+      true,
+      `add-node Continue should remain inside the right-aligned action group: ${JSON.stringify(addDialogLabelProof.layoutProof)}`
+    );
+    assert.match(addDialogLabelProof.layoutProof.footerBackground, /rgba\(0,\s*0,\s*0,\s*0\)|transparent/);
+    assert.equal(addDialogLabelProof.layoutProof.footerBorderTopWidth, '0px', 'add-node footer should not render as a separate bordered bar');
+    assert.equal(addDialogLabelProof.layoutProof.themeGridColumns, 2, 'desktop add-node theme picker should use a centered two-column grid');
+    assert.equal(addDialogLabelProof.layoutProof.themeButtonCount, 16, 'desktop add-node theme picker should render the full canonical theme list');
+    assert.equal(
+      addDialogLabelProof.layoutProof.themeTitleTopAnchored,
+      true,
+      `add-node theme title should stay top-anchored, not vertically centered: ${JSON.stringify(addDialogLabelProof.layoutProof)}`
+    );
+    assert.equal(
+      addDialogLabelProof.layoutProof.themeFooterGap,
+      true,
+      `add-node theme picker should keep breathing room above the footer: ${JSON.stringify(addDialogLabelProof.layoutProof)}`
+    );
+    assert.equal(
+      addDialogLabelProof.layoutProof.themesVisibleAboveFooter,
+      true,
+      `desktop add-node theme picker should be visible without its own scroller: ${JSON.stringify(addDialogLabelProof.layoutProof)}`
+    );
+    assert.equal(
+      addDialogLabelProof.unlockProof.unlockedClass,
+      true,
+      `add-node close button should release the document scroll lock: ${JSON.stringify(addDialogLabelProof.unlockProof)}`
+    );
+    assert.equal(addDialogLabelProof.unlockProof.bodyPosition, '', 'add-node close button should restore body positioning');
+    assert.equal(addDialogLabelProof.unlockProof.bodyOverflowY, '', 'add-node close button should restore body overflow');
+    assert.equal(addDialogLabelProof.unlockProof.scrollRestored, true, 'add-node close button should restore the previous page scroll position');
 
     const pendingPlacement = await evaluate(client, sessionId, submitNodeExpression({
       themes: ['public'],
@@ -723,11 +1011,12 @@ async function runSmoke(): Promise<void> {
         const rect = svg.getBoundingClientRect();
         const cx = Number(dot.getAttribute('cx'));
         const cy = Number(dot.getAttribute('cy'));
-        const scale = Math.min(rect.width / 200, rect.height / 100);
-        const offsetX = (rect.width - 200 * scale) / 2;
-        const offsetY = (rect.height - 100 * scale) / 2;
-        const clientX = rect.left + offsetX + cx * scale;
-        const clientY = rect.top + offsetY + cy * scale;
+        const viewBox = svg.viewBox.baseVal;
+        const scale = Math.min(rect.width / viewBox.width, rect.height / viewBox.height);
+        const offsetX = (rect.width - viewBox.width * scale) / 2;
+        const offsetY = (rect.height - viewBox.height * scale) / 2;
+        const clientX = rect.left + offsetX + (cx - viewBox.x) * scale;
+        const clientY = rect.top + offsetY + (cy - viewBox.y) * scale;
         root.dispatchEvent(new PointerEvent('pointermove', {
           bubbles: true,
           clientX,
@@ -788,6 +1077,20 @@ async function runSmoke(): Promise<void> {
           selectedCardRole: selectedRegion?.getAttribute('role') || '',
           selectedCardPosition: selectedStyle?.position || '',
           selectedCardInCanvas: Boolean(selectedRegion && root.contains(selectedRegion)),
+          selectedCardRect: selectedRect
+            ? {
+                left: Math.round(selectedRect.left),
+                right: Math.round(selectedRect.right),
+                top: Math.round(selectedRect.top),
+                bottom: Math.round(selectedRect.bottom),
+              }
+            : null,
+          canvasRect: {
+            left: Math.round(canvasRect.left),
+            right: Math.round(canvasRect.right),
+            top: Math.round(canvasRect.top),
+            bottom: Math.round(canvasRect.bottom),
+          },
           selectedCardInsideStage: Boolean(
             selectedRect &&
             selectedRect.left >= canvasRect.left - 1 &&
@@ -824,10 +1127,18 @@ async function runSmoke(): Promise<void> {
     assert.equal(focusThreadProof.selectedCardRole, 'region', 'selected node surface should be an interactive named region');
     assert.equal(focusThreadProof.selectedCardPosition, 'absolute', 'desktop selected node surface should be pinned inside the map');
     assert.equal(focusThreadProof.selectedCardInCanvas, true, 'selected node surface should live inside the map canvas');
-    assert.equal(focusThreadProof.selectedCardInsideStage, true, 'desktop selected node card should stay within the visible map stage');
+    assert.equal(
+      focusThreadProof.selectedCardInsideStage,
+      true,
+      `desktop selected node card should stay within the visible map stage ${JSON.stringify({
+        selectedCardRect: focusThreadProof.selectedCardRect,
+        canvasRect: focusThreadProof.canvasRect,
+      })}`
+    );
     assert.equal(focusThreadProof.scrollUnchanged, true, 'desktop node selection must not scroll the page');
     assert.match(focusThreadProof.selectedCardText, /Live Browser Member/);
-    assert.match(focusThreadProof.selectedCardText, /Member node/);
+    assert.match(focusThreadProof.selectedCardText, /\bMember\b/);
+    assert.doesNotMatch(focusThreadProof.selectedCardText, /Member node/);
     assert.equal(focusThreadProof.selected.filter((thread) => thread.adjacent).length, 1, 'selected member should keep its adjacent edge locked');
     assert.deepEqual(focusThreadProof.loopingAnimations, [], 'map should not contain looping node or thread animations');
 
@@ -900,9 +1211,9 @@ async function runSmoke(): Promise<void> {
       })()
     `);
     assert.match(selectedCard.text, /Trusted Browser Steward/);
-    // Desktop popover is light — name, role, links, themes. No connection list
-    // and no connection summary; relationships read on the map + by hovering.
-    assert.equal(selectedCard.edgeListVisible, false, 'desktop selected popover must not show the connection list');
+    // Desktop popover now carries compact selected-edge rows for direct graph
+    // exploration; the old empty connection summary copy stays out.
+    assert.equal(selectedCard.edgeListVisible, true, 'desktop selected popover should show selected connection rows');
     assert.doesNotMatch(selectedCard.text, /No public connections yet/);
     // One external link only: the profile (new tab). A steward's chapter is an
     // in-map jump BUTTON (opens the chapter node), not a second external link.
@@ -1048,6 +1359,11 @@ async function runSmoke(): Promise<void> {
         const barOpenAfterTap = Boolean(bar && !bar.hidden);
         const edgeListHiddenAfterTap = edgeList?.hidden;
         const barTextBeforeSwap = bar?.innerText || '';
+        const visibleThemeRowsAfterTap = [...document.querySelectorAll('.gp-home-map-selected-themes, .gp-home-map-selected-edge-themes')]
+          .filter((node) => {
+            const rect = node.getBoundingClientRect();
+            return getComputedStyle(node).display !== 'none' && rect.width > 0 && rect.height > 0;
+          }).length;
         const activationDebug = {
           memberClass: member.getAttribute('class') || '',
           memberKey: member.dataset.memberKey || '',
@@ -1063,6 +1379,7 @@ async function runSmoke(): Promise<void> {
         await wait(120);
         const afterRowViewBox = svg.getAttribute('viewBox') || '';
         const activeRowsAfterRow = document.querySelectorAll('[data-selected-edge-row].is-active').length;
+        const barRectAfterRow = bar?.getBoundingClientRect();
 
         const stewardNode = document.querySelector('[data-node-id="submission:approved-steward-1"]');
         if (stewardNode) await activateNode(stewardNode);
@@ -1070,7 +1387,11 @@ async function runSmoke(): Promise<void> {
         const barTextAfterSwap = bar?.innerText || '';
         const rowCountAfterSwap = document.querySelectorAll('[data-selected-edge-row]').length;
         const barOpenAfterSwap = Boolean(bar && !bar.hidden);
-        const beforePanViewBox = svg.getAttribute('viewBox') || '';
+        const beforeExplicitZoomViewBox = svg.getAttribute('viewBox') || '';
+        document.querySelector('[data-home-map-zoom="in"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await wait(120);
+        const afterExplicitZoomViewBox = svg.getAttribute('viewBox') || '';
+        const beforePanViewBox = afterExplicitZoomViewBox;
 
         const rect = root.getBoundingClientRect();
         const panStartX = rect.left + rect.width * 0.5;
@@ -1145,23 +1466,106 @@ async function runSmoke(): Promise<void> {
         await wait(120);
         const afterPinchViewBox = svg.getAttribute('viewBox') || '';
 
-        document.querySelector('[data-home-map-zoom="reset"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-        await wait(80);
-        const afterResetViewBox = svg.getAttribute('viewBox') || '';
+        const beforeCloseViewBox = svg.getAttribute('viewBox') || '';
         document.querySelector('[data-selected-close]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-        await wait(80);
+        await wait(120);
+        const afterCloseViewBox = svg.getAttribute('viewBox') || '';
         const barClosedAfterClose = Boolean(bar?.hidden);
+
+        const dotRectForNearTap = member.querySelector('.gp-home-map-node-dot')?.getBoundingClientRect();
+        if (dotRectForNearTap) {
+          const nearClientX = dotRectForNearTap.left + dotRectForNearTap.width / 2 + 18;
+          const nearClientY = dotRectForNearTap.top + dotRectForNearTap.height / 2;
+          svg.dispatchEvent(new PointerEvent('pointerdown', {
+            bubbles: true,
+            pointerId: 41,
+            pointerType: 'mouse',
+            clientX: nearClientX,
+            clientY: nearClientY,
+          }));
+          svg.dispatchEvent(new PointerEvent('pointerup', {
+            bubbles: true,
+            pointerId: 41,
+            pointerType: 'mouse',
+            clientX: nearClientX,
+            clientY: nearClientY,
+          }));
+          svg.dispatchEvent(new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            clientX: nearClientX,
+            clientY: nearClientY,
+          }));
+        }
+        await wait(120);
+        const mouseNearTapBarOpen = Boolean(bar && !bar.hidden);
+
+        if (dotRectForNearTap) {
+          const nearClientX = dotRectForNearTap.left + dotRectForNearTap.width / 2 + 18;
+          const nearClientY = dotRectForNearTap.top + dotRectForNearTap.height / 2;
+          svg.dispatchEvent(new PointerEvent('pointerdown', {
+            bubbles: true,
+            pointerId: 42,
+            pointerType: 'touch',
+            clientX: nearClientX,
+            clientY: nearClientY,
+          }));
+          svg.dispatchEvent(new PointerEvent('pointerup', {
+            bubbles: true,
+            pointerId: 42,
+            pointerType: 'touch',
+            clientX: nearClientX,
+            clientY: nearClientY,
+          }));
+          svg.dispatchEvent(new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            clientX: nearClientX,
+            clientY: nearClientY,
+          }));
+        }
+        await wait(120);
+        const nearestTapBarOpen = Boolean(bar && !bar.hidden);
+        const nearestTapBarText = bar?.innerText || '';
+        document.querySelector('[data-selected-close]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await wait(120);
+
+        const listToggle = document.querySelector('[data-home-map-list-toggle]');
+        listToggle?.focus({ preventScroll: true });
+        listToggle?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await wait(160);
+        const listDrawer = document.querySelector('[data-home-map-list]');
+        const listClose = document.querySelector('[data-home-map-list-close]');
+        const listRect = listDrawer?.getBoundingClientRect();
+        const listRows = [...(listDrawer?.querySelectorAll('.gp-home-map-list-row') || [])];
+        const visibleListRows = listRect
+          ? listRows.filter((row) => {
+              const rowRect = row.getBoundingClientRect();
+              return rowRect.height > 0 && rowRect.bottom > listRect.top && rowRect.top < listRect.bottom;
+            }).length
+          : 0;
+        const listStyle = listDrawer ? getComputedStyle(listDrawer) : null;
+        const listOpen = Boolean(listDrawer && !listDrawer.hidden && listDrawer.open);
+        const listAriaModal = listDrawer?.getAttribute('aria-modal') || '';
+        const listPosition = listStyle?.position || '';
+        listClose?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await wait(120);
+        const listClosed = Boolean(listDrawer?.hidden && !listDrawer?.open);
+        const listFocusReturned = document.activeElement === listToggle;
 
         return {
           missing: false,
           fullViewBox,
           afterTapViewBox,
           afterRowViewBox,
+          beforeExplicitZoomViewBox,
+          afterExplicitZoomViewBox,
           beforePanViewBox,
           afterPanViewBox,
           beforePinchViewBox,
           afterPinchViewBox,
-          afterResetViewBox,
+          beforeCloseViewBox,
+          afterCloseViewBox,
           idleAnimation,
           idleOpacity,
           barOpen: barOpenAfterTap,
@@ -1175,6 +1579,8 @@ async function runSmoke(): Promise<void> {
             memberBottom: memberRectAfterTap?.bottom ?? null,
             memberWidth: memberRectAfterTap?.width ?? null,
             memberHeight: memberRectAfterTap?.height ?? null,
+            barHeight: barRect?.height ?? null,
+            barHeightAfterRow: barRectAfterRow?.height ?? null,
           },
           barOpenAfterSwap,
           barPosition: barStyle?.position || '',
@@ -1202,6 +1608,16 @@ async function runSmoke(): Promise<void> {
           barTextAfterSwap,
           rowCountAfterSwap,
           barClosedAfterClose,
+          visibleThemeRowsAfterTap,
+          mouseNearTapBarOpen,
+          nearestTapBarOpen,
+          nearestTapBarText,
+          listOpen,
+          listAriaModal,
+          listPosition,
+          visibleListRows,
+          listClosed,
+          listFocusReturned,
         };
       })()
     `);
@@ -1229,15 +1645,36 @@ async function runSmoke(): Promise<void> {
     );
     assert.equal(mobileProof.rowCount > 0, true, 'mobile selected bar should render at least one connection chip');
     assert.equal(mobileProof.activeRowsAfterRow, 1, 'tapping a connection chip should highlight exactly that one edge row');
-    assert.notEqual(mobileProof.afterRowViewBox, mobileProof.afterTapViewBox, 'tapping a connection row should frame the connected node');
+    assert.equal(mobileProof.afterTapViewBox, mobileProof.fullViewBox, 'tapping a node should not change the map viewBox');
+    assert.equal(mobileProof.afterRowViewBox, mobileProof.afterTapViewBox, 'tapping a connection row should highlight without changing the map viewBox');
+    assert.equal(
+      typeof mobileProof.selectedGeometry.barHeight === 'number' &&
+        typeof mobileProof.selectedGeometry.barHeightAfterRow === 'number' &&
+        mobileProof.selectedGeometry.barHeight <= 184 &&
+        mobileProof.selectedGeometry.barHeightAfterRow <= 184,
+      true,
+      `mobile selected bar should stay compact before and after chip tap: ${JSON.stringify(mobileProof.selectedGeometry)}`
+    );
+    assert.equal(mobileProof.visibleThemeRowsAfterTap, 0, 'mobile selected bar should not expose separate theme-chip rows');
     assert.match(mobileProof.barTextBeforeSwap, /Live Browser Member/);
     assert.match(mobileProof.barTextAfterSwap, /Trusted Browser Steward/);
     assert.equal(mobileProof.barOpenAfterSwap, true, 'tapping another node should swap the selected bar without closing it');
     assert.equal(mobileProof.rowCountAfterSwap > 0, true, 'swapped mobile bar should keep connection chips available');
+    assert.notEqual(mobileProof.afterExplicitZoomViewBox, mobileProof.beforeExplicitZoomViewBox, 'mobile zoom control should change the bounded viewBox');
     assert.notEqual(mobileProof.afterPanViewBox, mobileProof.beforePanViewBox, 'mobile pan should change the bounded viewBox');
     assert.notEqual(mobileProof.afterPinchViewBox, mobileProof.beforePinchViewBox, 'mobile pinch should change the bounded viewBox');
-    assert.match(mobileProof.afterResetViewBox, /^0(?:\.00)? 0(?:\.00)? 200(?:\.00)? 100(?:\.00)?$/, 'overview reset should restore the full map viewBox');
+    assert.notEqual(mobileProof.beforeCloseViewBox, mobileProof.fullViewBox, 'mobile close proof should start from a zoomed map');
+    assert.match(mobileProof.afterCloseViewBox, /^0(?:\.00)? 0(?:\.00)? 200(?:\.00)? 88(?:\.00)?$/, 'closing the mobile selected bar should restore the full map viewBox');
     assert.equal(mobileProof.barClosedAfterClose, true, 'mobile selected bar close button should dismiss the bar');
+    assert.equal(mobileProof.mouseNearTapBarOpen, false, 'nearest-node fallback should not activate from a mouse-origin near tap');
+    assert.equal(mobileProof.nearestTapBarOpen, true, `near-node mobile canvas tap should open a selected bar: ${mobileProof.nearestTapBarText}`);
+    assert.match(mobileProof.nearestTapBarText, /Live Browser Member/);
+    assert.equal(mobileProof.listOpen, true, 'mobile List should open as a dialog sheet');
+    assert.equal(mobileProof.listAriaModal, 'true', 'mobile List dialog should declare modal behavior while open');
+    assert.equal(mobileProof.listPosition, 'fixed', 'mobile List dialog should be a top-layer bottom sheet, not a clipped map drawer');
+    assert.equal(mobileProof.visibleListRows >= 4, true, `mobile List should show multiple rows at once (saw ${mobileProof.visibleListRows})`);
+    assert.equal(mobileProof.listClosed, true, 'mobile List close button should close the dialog');
+    assert.equal(mobileProof.listFocusReturned, true, 'mobile List close should return focus to the List button');
 
     const publicLeakCheck = await evaluate(client, sessionId, `
       (() => {

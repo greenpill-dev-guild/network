@@ -1414,6 +1414,14 @@ function createFakeEditLinkSql({
   emailCount = 0,
   claimSucceeds = true,
   queuedRows = [],
+}: {
+  match?: boolean;
+  matchCount?: number;
+  cooldown?: boolean;
+  ipCount?: number;
+  emailCount?: number;
+  claimSucceeds?: boolean;
+  queuedRows?: any[];
 } = {}) {
   const statements = [];
   const submissionId = '11111111-1111-4111-8111-111111111111';

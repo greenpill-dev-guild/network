@@ -10,7 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, "..");
 
-const localDatabaseUrl = "postgres://greenpill:greenpill@127.0.0.1:3304/greenpill_network";
+const localDatabaseUrl = "postgres://greenpill:greenpill@localhost:3304/greenpill_network";
 const directusDatabaseUrl = "postgres://greenpill:greenpill@host.docker.internal:3304/greenpill_network";
 const localMapNodeStewardEmailAllowlist =
   "local-steward@example.org=nigeria,steward@example.org=nigeria";
@@ -31,7 +31,7 @@ const directusEnv = {
 
 const agentEnv = {
   ...dbEnv,
-  AGENT_HOST: "127.0.0.1",
+  AGENT_HOST: "localhost",
   AGENT_PORT: "3303",
   MAP_NODE_STEWARD_EMAIL_ALLOWLIST:
     process.env.MAP_NODE_STEWARD_EMAIL_ALLOWLIST || localMapNodeStewardEmailAllowlist,
@@ -41,21 +41,21 @@ const agentEnv = {
 const longRunningTargets = [
   {
     label: "website",
-    command: ["bun", "run", "dev:website"],
+    command: ["bun", "--no-env-file", "scripts/dev-website.ts"],
     env: {},
     url: "http://localhost:3301/",
     readyUrl: "http://localhost:3301/",
   },
   {
     label: "directus",
-    command: ["bun", "run", "dev:admin"],
+    command: ["bun", "--no-env-file", "scripts/docker-compose.ts", "-f", "packages/admin/docker-compose.yml", "up", "admin-directus"],
     env: directusEnv,
     url: "http://localhost:3302/",
     readyUrl: "http://localhost:3302/server/ping",
   },
   {
     label: "agent",
-    command: ["bun", "run", "dev:agent"],
+    command: ["bun", "--no-env-file", "scripts/run-agent-dev.ts"],
     env: agentEnv,
     url: "http://localhost:3303/health",
     readyUrl: "http://localhost:3303/health",
@@ -204,7 +204,7 @@ process.on("SIGTERM", () => {
 try {
   console.log("[dev] Greenpill Network local environment starting.");
   await runCommand("postgres up", ["bun", "run", "db:local:up"]);
-  await waitForTcp("127.0.0.1", 3304, 60_000);
+  await waitForTcp("localhost", 3304, 60_000);
   await runCommand("build packages", ["bun", "run", "build:packages"], dbEnv);
   await runCommand("database migrations", ["bun", "--no-env-file", "scripts/agent-db.migrate.ts"], dbEnv);
   await runCommand(
@@ -231,7 +231,7 @@ try {
 
   console.log("[dev] Greenpill Network local environment ready:");
   for (const target of longRunningTargets) console.log(`[dev] ${target.label}: ${target.url}`);
-  console.log("[dev] Postgres: postgres://greenpill:greenpill@127.0.0.1:3304/greenpill_network");
+  console.log("[dev] Postgres: postgres://greenpill:greenpill@localhost:3304/greenpill_network");
   console.log("[dev] Press Ctrl+C to stop.");
 
   await new Promise(() => {});

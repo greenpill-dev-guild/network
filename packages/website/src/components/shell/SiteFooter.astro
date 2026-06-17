@@ -55,6 +55,7 @@ const columns = [
   <div class="gp-footer-bottom">
     <span>greenpill.network</span>
     <span>2026 Greenpill Network</span>
+    <span>Ecoregion boundaries: RESOLVE Ecoregions 2017, CC-BY 4.0.</span>
   </div>
 </footer>
 
@@ -115,7 +116,8 @@ const columns = [
   }
 
   .gp-footer-bottom {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     justify-content: space-between;
     gap: var(--gp-space-lg);
     max-width: var(--gp-container-2xl);
@@ -128,6 +130,14 @@ const columns = [
     letter-spacing: 0.06em;
     line-height: 1.3;
     text-transform: uppercase;
+  }
+
+  .gp-footer-bottom span:nth-child(2) {
+    text-align: center;
+  }
+
+  .gp-footer-bottom span:nth-child(3) {
+    text-align: right;
   }
 
   @media (max-width: 900px) {
@@ -146,8 +156,13 @@ const columns = [
     }
 
     .gp-footer-bottom {
-      flex-direction: column;
+      grid-template-columns: 1fr;
       gap: var(--gp-space-sm);
+    }
+
+    .gp-footer-bottom span:nth-child(2),
+    .gp-footer-bottom span:nth-child(3) {
+      text-align: left;
     }
   }
 </style>

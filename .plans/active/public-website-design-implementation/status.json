@@ -310,7 +310,7 @@
       "actor": "codex",
       "lane": "platform",
       "status": "implemented_local",
-      "note": "Applied the unified Home map recovery locally: the active hub remains the single plan source, generated anonymous density nodes are removed, public map state is chapters plus approved real member/steward submissions, steward allowlist entries can map email to trusted chapterSlug, public nodes reserve optional bioregion for future approved values without claiming polygon lookup, edges are trusted steward-to-chapter plus shared-theme relationships with per-node caps, and HomeMap selected-node details remain public-safe. Focused shared and agent contract tests pass; browser proof remains an explicit follow-up."
+      "note": "Applied the unified Home map recovery locally: the active hub remains the single plan source, generated anonymous density nodes are removed, public map state is chapters plus approved real member/steward submissions, steward allowlist entries can map email to trusted chapterSlug, public nodes reserve optional bioregion for future approved values without claiming polygon lookup, edges are people-to-people shared-theme relationships with per-node caps and chapters remain anchor pins, and HomeMap selected-node details remain public-safe. Focused shared and agent contract tests pass; browser proof remains an explicit follow-up."
     },
     {
       "timestamp": "2026-05-21T20:10:53Z",
@@ -338,7 +338,7 @@
       "actor": "codex",
       "lane": "platform",
       "status": "implemented_local",
-      "note": "Added the local live map e2e rehearsal path: bun run test:home-map:live-e2e toggles local live mode, submits a member and allowlisted steward through the real agent/database, checks /map/state for live mode, public nodes, steward-to-chapter edge, and private-field guards, then restores the prior mode unless --keep-live is used. Added --disable-live and the local runbook reports/local-live-map-e2e-runbook-2026-06-11.md. Remaining launch work is visual HiFi proof, steward/admin onboarding, profile opt-ins, and session facilitation."
+      "note": "Added the local live map e2e rehearsal path: bun run test:home-map:live-e2e toggles local live mode, submits member and allowlisted steward nodes through the real agent/database, checks /map/state for live mode, public nodes, people-to-people shared-theme edges, chapter anchors with no relationship edges, and private-field guards, then restores the prior mode unless --keep-live is used. Added --disable-live and the local runbook reports/local-live-map-e2e-runbook-2026-06-11.md. Remaining launch work is visual HiFi proof, steward/admin onboarding, profile opt-ins, and session facilitation."
     }
   ]
 }

@@ -3,7 +3,10 @@ import {
 } from './chapter-impact.js';
 import {
   containsPrivateMapNodeField,
+  derivePublicBioregionMetadataFromCoordinates,
+  normalizePublicMapThemeSlugs,
   toPublicMapNode,
+  type PublicBioregionSource,
 } from './map-nodes.js';
 
 type UnknownRecord = Record<string, any>;
@@ -33,6 +36,8 @@ export interface PublicMapStateNode {
   region: string;
   country: string;
   bioregion?: string;
+  bioregionId?: string;
+  bioregionSource?: PublicBioregionSource;
   lat: number;
   long: number;
   href?: string;
@@ -54,6 +59,8 @@ export interface PublicMapStateEdge {
   kind: string;
   theme: string;
   bioregion?: string;
+  bioregionId?: string;
+  bioregionSource?: PublicBioregionSource;
   weight: number;
   source: 'generated-theme-match' | 'source-backed' | string;
 }
@@ -140,16 +147,16 @@ export const PUBLIC_COUNT_STATUSES: readonly PublicCountStatus[] = Object.freeze
 ]);
 
 export const PUBLIC_MAP_THEMES: readonly PublicMapTheme[] = Object.freeze([
-  { id: 'water', label: 'Water & Waste', color: '#2BA7FF', icon: 'wave' },
+  { id: 'water', label: 'Water', color: '#2BA7FF', icon: 'wave' },
+  { id: 'waste', label: 'Waste', color: '#8E6CFF', icon: 'recycle' },
   { id: 'opensrc', label: 'Open Source', color: '#00D5E8', icon: 'fork' },
   { id: 'impact', label: 'Impact Tracking', color: '#34D399', icon: 'pulse' },
   { id: 'trees', label: 'Trees & Biodiversity', color: '#75D063', icon: 'tree' },
   { id: 'food', label: 'Food & Farms', color: '#C6D84F', icon: 'grain' },
   { id: 'energy', label: 'Clean Energy', color: '#FFD84D', icon: 'sun' },
-  { id: 'education', label: 'Education', color: '#12C7B4', icon: 'mortar' },
+  { id: 'education', label: 'Education', color: '#1A9CFF', icon: 'mortar' },
   { id: 'events', label: 'Local Events', color: '#FF9F1C', icon: 'flag' },
   { id: 'funding', label: 'Grants & Funding', color: '#FF6B35', icon: 'coin' },
-  { id: 'currency', label: 'Community Currency', color: '#EF476F', icon: 'currency' },
   { id: 'mutual', label: 'Mutual Aid', color: '#F472B6', icon: 'heart' },
   { id: 'stories', label: 'Storytelling', color: '#D946EF', icon: 'book' },
   { id: 'ai', label: 'AI & Automation', color: '#B067FF', icon: 'circuit' },
@@ -218,10 +225,7 @@ const cleanHref = (value: unknown): string => {
   return '';
 };
 
-const normalizeThemes = (themes: unknown): string[] => {
-  if (!Array.isArray(themes)) return [];
-  return [...new Set(themes.map(cleanString).filter(Boolean))];
-};
+const normalizeThemes = normalizePublicMapThemeSlugs;
 
 const makeIdPart = (value: unknown, fallback = 'node'): string => (
   cleanString(value)
@@ -291,6 +295,13 @@ export function toPublicMapStateChapterNode(location: UnknownRecord): PublicMapS
   if (!name) return null;
 
   const themes = normalizeThemes(location?.themes ?? location?.themeSlugs);
+  const bioregion = derivePublicBioregionMetadataFromCoordinates(
+    lat,
+    long,
+    location?.bioregion,
+    location?.bioregionId ?? location?.bioregion_id,
+    location?.bioregionSource ?? location?.bioregion_source
+  );
   return {
     id: `chapter:${sourceId}`,
     sourceId,
@@ -301,6 +312,7 @@ export function toPublicMapStateChapterNode(location: UnknownRecord): PublicMapS
     city: cleanString(location?.city),
     region: cleanString(location?.region),
     country: cleanString(location?.country),
+    ...(bioregion?.name ? { bioregion: bioregion.name, bioregionId: bioregion.id, bioregionSource: bioregion.source } : {}),
     lat,
     long,
     href: cleanHref(location?.href ?? location?.link ?? (slug ? `/chapters/${slug}` : '')),
@@ -328,6 +340,7 @@ export function toPublicMapStateSubmittedNode(input: UnknownRecord): PublicMapSt
     region: node.region,
     country: node.country,
     bioregion: node.bioregion,
+    ...(node.bioregionId ? { bioregionId: node.bioregionId, bioregionSource: node.bioregionSource } : {}),
     lat: node.lat,
     long: node.long,
     href: cleanHref(input?.href ?? input?.profileUrl ?? node.profileUrl),
@@ -396,6 +409,8 @@ export function generatePublicMapEdges(
     kind,
     theme,
     bioregion = '',
+    bioregionId = '',
+    bioregionSource = '',
     weight = 1,
     source = 'generated-theme-match',
   }: {
@@ -404,6 +419,8 @@ export function generatePublicMapEdges(
     kind: string;
     theme: string;
     bioregion?: string;
+    bioregionId?: string;
+    bioregionSource?: PublicBioregionSource;
     weight?: number;
     source?: PublicMapStateEdge['source'];
   }) => {
@@ -422,6 +439,7 @@ export function generatePublicMapEdges(
       kind,
       theme,
       ...(bioregion ? { bioregion } : {}),
+      ...(bioregionId ? { bioregionId, bioregionSource } : {}),
       weight: Math.min(3, Math.max(1, weight)),
       source,
     });
@@ -435,6 +453,8 @@ export function generatePublicMapEdges(
     b: PublicMapStateNode;
     shared: string[];
     sharedBioregion: string;
+    sharedBioregionId: string;
+    sharedBioregionSource: PublicBioregionSource | '';
     distance: number;
     score: number;
   }> = [];
@@ -445,8 +465,18 @@ export function generatePublicMapEdges(
       if (!shared.length) continue;
       const aBioregion = cleanString(people[i].bioregion);
       const bBioregion = cleanString(people[j].bioregion);
-      const sharedBioregion = hasPublicBioregion(aBioregion) && aBioregion === bBioregion
-        ? aBioregion
+      const aBioregionId = cleanString(people[i].bioregionId);
+      const bBioregionId = cleanString(people[j].bioregionId);
+      const sharedBioregionId = aBioregionId && aBioregionId === bBioregionId ? aBioregionId : '';
+      const sharedBioregion = sharedBioregionId
+        ? aBioregion || bBioregion
+        : (
+            hasPublicBioregion(aBioregion) && aBioregion === bBioregion
+              ? aBioregion
+              : ''
+          );
+      const sharedBioregionSource = sharedBioregionId
+        ? people[i].bioregionSource || people[j].bioregionSource || 'resolve-ecoregions-2017'
         : '';
       const distance = distanceDegrees(people[i], people[j]);
       candidates.push({
@@ -454,6 +484,8 @@ export function generatePublicMapEdges(
         b: people[j],
         shared,
         sharedBioregion,
+        sharedBioregionId,
+        sharedBioregionSource,
         distance,
         score: shared.length * 4 + (sharedBioregion ? 2 : 0) - Math.min(distance, 90) / 60,
       });
@@ -473,6 +505,8 @@ export function generatePublicMapEdges(
       kind: 'shared-theme',
       theme: pickSharedTheme(candidate.shared),
       bioregion: candidate.sharedBioregion,
+      bioregionId: candidate.sharedBioregionId,
+      bioregionSource: candidate.sharedBioregionSource,
       weight: candidate.shared.length + (candidate.sharedBioregion ? 1 : 0),
     });
     if (edges.length >= limit) return edges;
@@ -492,6 +526,12 @@ function normalizeEdge(edge: Partial<PublicMapStateEdge> & UnknownRecord): Publi
     kind: cleanString(edge?.kind) || 'related',
     theme: cleanString(edge?.theme),
     ...(cleanString(edge?.bioregion) ? { bioregion: cleanString(edge?.bioregion) } : {}),
+    ...(cleanString(edge?.bioregionId ?? edge?.bioregion_id)
+      ? {
+          bioregionId: cleanString(edge?.bioregionId ?? edge?.bioregion_id),
+          bioregionSource: cleanString(edge?.bioregionSource ?? edge?.bioregion_source) || 'resolve-ecoregions-2017',
+        }
+      : {}),
     weight: Math.max(1, normalizeInteger(edge?.weight) || 1),
     source: cleanString(edge?.source) || 'source-backed',
   };

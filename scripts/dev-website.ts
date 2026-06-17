@@ -108,7 +108,7 @@ function startOperationalContentWatcher() {
 await waitForSuccess('building workspace packages', ['bun', 'run', 'build:packages']);
 
 const watcher = startOperationalContentWatcher();
-const astro = runCommand('starting Astro dev server', ['bun', '--bun', 'astro', 'dev', '--host', '127.0.0.1', '--port', websitePort], websiteDir);
+const astro = runCommand('starting Astro dev server', ['bun', '--bun', 'astro', 'dev', '--host', 'localhost', '--port', websitePort], websiteDir);
 
 const close = () => {
   watcher?.close();

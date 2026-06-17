@@ -6,8 +6,8 @@ import { MAP_NODE_SUBMISSIONS_ROUTE } from '@greenpill-network/agent/impact';
 import { PUBLIC_MAP_STATE_ROUTE } from '@greenpill-network/agent/map-state';
 import { assertPublicMapStatePayload } from '@greenpill-network/shared/map-state';
 
-const DEFAULT_AGENT_BASE_URL = 'http://127.0.0.1:3303';
-const DEFAULT_DATABASE_URL = 'postgres://greenpill:greenpill@127.0.0.1:3304/greenpill_network';
+const DEFAULT_AGENT_BASE_URL = 'http://localhost:3303';
+const DEFAULT_DATABASE_URL = 'postgres://greenpill:greenpill@localhost:3304/greenpill_network';
 const LOCAL_STEWARD_EMAIL = 'local-steward@example.org';
 const LOCAL_MEMBER_EMAIL = 'local-member@example.org';
 const LOCAL_STEWARD_EMAIL_ALT = 'steward@example.org';

@@ -4,6 +4,7 @@ import {
   containsPrivateMapNodeField,
   createOptimisticPendingNode,
   derivePublicBioregionFromCoordinates,
+  normalizePublicMapThemeSlugs,
   toEditablePublicMapNode,
   toPublicMapNode,
 } from '@greenpill-network/shared/map-nodes';
@@ -122,11 +123,7 @@ const normalizeNumber = (value: unknown): number | null => {
   return Number.isFinite(number) ? number : null;
 };
 
-const normalizeThemes = (themes: unknown): string[] => (
-  Array.isArray(themes)
-    ? [...new Set(themes.map(cleanString).filter(Boolean))]
-    : []
-);
+const normalizeThemes = normalizePublicMapThemeSlugs;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
