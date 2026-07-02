@@ -252,20 +252,9 @@ test('scoped chapter and guild policies use static parent filters', () => {
     ],
   });
   assert.deepEqual(updateRequestLinkCreate?.validation, {
-    _and: [
-      {
-        chapter_slug: {
-          _eq: 'brasil',
-        },
-      },
-      {
-        update_request_id: {
-          request_status: {
-            _in: ['draft', 'pending_review', 'needs_changes'],
-          },
-        },
-      },
-    ],
+    update_request_id: {
+      _nnull: true,
+    },
   });
   assert.deepEqual(updateRequestLinkCreate?.presets, {
     chapter_slug: 'brasil',
@@ -304,6 +293,7 @@ test('scoped chapter and guild policies use static parent filters', () => {
       },
     ],
   });
+  assert.equal(updateRequestProofSignalUpdate?.validation, null);
   assert.equal(updateRequestProofSignalUpdate?.fields.includes('chapter_slug'), false);
   assert.equal(updateRequestProofSignalUpdate?.fields.includes('update_request_id'), false);
 

@@ -607,6 +607,16 @@ export function buildScopedPolicyPermissions(collections, kind: AssignmentKind, 
         },
       ],
     };
+    // Directus cannot evaluate relational filters as create validation (the FK
+    // arrives as a plain UUID), so validation only requires the parent id.
+    // Same-chapter integrity is enforced by the chapter_slug preset plus the
+    // composite (update_request_id, chapter_slug) foreign key from migration
+    // 016; a cross-chapter attach fails there with a 400 invalid-foreign-key.
+    const updateRequestChildCreateValidation = {
+      update_request_id: {
+        _nnull: true,
+      },
+    };
     return [
       {
         policy: policyId,
@@ -699,7 +709,7 @@ export function buildScopedPolicyPermissions(collections, kind: AssignmentKind, 
             collection,
             action: 'create',
             permissions: updateRequestChildCreateScope,
-            validation: updateRequestChildCreateScope,
+            validation: updateRequestChildCreateValidation,
             presets: { chapter_slug: slug },
             fields: createFields,
           },
@@ -708,7 +718,7 @@ export function buildScopedPolicyPermissions(collections, kind: AssignmentKind, 
             collection,
             action: 'update',
             permissions: updateRequestChildScope,
-            validation: updateRequestChildScope,
+            validation: null,
             presets: null,
             fields: updateFields,
           },
