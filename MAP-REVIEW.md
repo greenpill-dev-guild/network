@@ -3,6 +3,16 @@
 **Date:** 2026-05-20 · **Target:** https://greenpill.network/ (homepage map) + `agent.greenpill.network`
 **Scope:** read-only review. No code edited. No node submitted (see P0).
 
+## Status Update - 2026-06-17
+
+Production Live Onboarding Mode has been turned off. The operator update set
+`intake.map_node_intake_settings.live_onboarding_enabled=false` via the
+`network-agent` runtime, and `https://agent.greenpill.network/map/state`
+now reports `intakeMode: "moderated"` with `/ready` still healthy.
+
+The original May 20 review below is retained as historical audit evidence for
+why the runtime flag needed to be disabled before review/demo use.
+
 ## Headline
 
 **Production is in LIVE onboarding mode** (`/map/state` → `intakeMode: "live"`). A submitted

@@ -36,6 +36,12 @@ Run installs and validation from the repo root.
 - `bun run directus:steward:smoke` - create a temporary steward user and verify scoped Directus editing behavior.
 - `bun run test:agent`, `bun run test:chapter-impact`, `bun run test:content`, `bun run test:map-nodes`, `bun run plans:validate` - focused contract checks.
 
+## Linear And Plan Hubs
+
+Linear (workspace `greenpill-dev-guild`; teams Product `PRD` / Research `RESR`) is the durable backlog. GitHub Issues are not used for backlog work. `.plans` remains the execution truth for feature hubs, and Linear mirrors should carry `source:plans`.
+
+**Plan Hub Linear Mirror Policy**: scoped `.plans/ideas` and `.plans/backlog` hubs get one parent Linear issue for visibility. Do not create lane child issues, delegate agents, or treat scoped lane sketches as implementation specs until the human explicitly starts implementation or the hub moves to active execution. When implementation starts, create child issues only for the `.plans` lanes that are actionable at that time. If a scoped plan drifts before implementation, update the hub and parent issue first; do not rewrite a stale child tree.
+
 ## Architecture Notes
 
 The public website remains static. Keystatic is enabled only during local website dev for editorial and site-composition content; there is no deployed Keystatic server or public website database connection.
