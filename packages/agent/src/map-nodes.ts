@@ -396,9 +396,11 @@ export async function createMapNodeSubmission(
   };
 
   const result = await sql.begin(async (tx) => {
-    await assertMapNodeSubmissionRateLimit(tx, meta.rateLimitKey);
     const intakeMode = await getMapNodeIntakeMode(tx);
     const liveOnboarding = intakeMode === 'live';
+    if (!liveOnboarding) {
+      await assertMapNodeSubmissionRateLimit(tx, meta.rateLimitKey);
+    }
     const submissionStatus = liveOnboarding ? 'approved' : 'pending';
     const approvedAt = liveOnboarding ? new Date() : null;
     const [submission] = await tx`

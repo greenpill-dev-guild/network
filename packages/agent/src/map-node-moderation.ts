@@ -182,6 +182,7 @@ async function sendModerationEmail({
       headers: {
         authorization: `Bearer ${config.apiKey}`,
         'content-type': 'application/json',
+        'Idempotency-Key': `map-node-moderation-${row.id}`,
       },
       body: JSON.stringify({
         from: config.from,

@@ -1113,6 +1113,27 @@ test('map-node submissions stay pending unless live onboarding is enabled', asyn
   );
 });
 
+test('live map-node onboarding does not apply the moderated intake rate limit', async () => {
+  const { sql, statements } = createFakeSubmissionSql({
+    liveOnboardingEnabled: true,
+    submissionCount: 5,
+  });
+  const node = await createMapNodeSubmission(sql, {
+    name: 'Live session member',
+    place: 'Oakland',
+    lat: 37.8044,
+    long: -122.2712,
+    themes: ['public'],
+    email: 'member@example.com',
+  }, { rateLimitKey: '203.0.113.8' });
+
+  assert.equal(node.status, 'approved');
+  assert.equal(
+    statements.some((statement) => statement.text.includes('select count(*)::int as count from intake.map_node_submissions')),
+    false
+  );
+});
+
 test('map-node honeypot and daily IP limit reject before storing a submission', async () => {
   const honeypot = createFakeSubmissionSql({ liveOnboardingEnabled: false });
   await assert.rejects(

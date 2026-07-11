@@ -1255,6 +1255,14 @@ test('map-node edit flow has an operator cleanup command', async () => {
     'bun run build:packages && bun --no-env-file --env-file-if-exists=.env.local scripts/map-node-moderation-delivery.ts'
   );
   assert.equal(
+    packageJson.scripts['test:agent'],
+    'bun run build:packages && bun test scripts/agent-contract.test.ts && bun test scripts/map-node-moderation.test.ts'
+  );
+  assert.equal(
+    packageJson.scripts['directus:map-moderation:smoke'],
+    'bun --no-env-file scripts/directus-map-moderation-smoke.ts'
+  );
+  assert.equal(
     packageJson.scripts['test:map-edit:browser'],
     'bun run build:website && bun --no-env-file scripts/map-edit-browser-smoke.ts'
   );

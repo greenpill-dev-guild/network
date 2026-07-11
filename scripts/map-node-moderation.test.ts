@@ -59,6 +59,7 @@ test('moderation alerts contain only safe submission fields and the exact Direct
   const payload = JSON.parse(String(calls[0]?.body));
   assert.deepEqual(payload.to, ['afo@example.org', 'matt@example.org']);
   assert.equal(payload.subject, 'Greenpill map node awaiting approval');
+  assert.equal(calls[0]?.headers?.['Idempotency-Key'], 'map-node-moderation-c8e1fc85-5ca5-43f9-bd13-5069eb6c544f');
   assert.match(payload.text, new RegExp(`/admin/content/intake\\.map_node_submissions/${submissionId}`));
   assert.match(payload.text, /Map Member/);
   assert.doesNotMatch(payload.text, /private@example\.org|Never email this|203\.0\.113\.42/);

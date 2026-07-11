@@ -52,7 +52,7 @@ export function startMapNodeEditLinkDeliverySweep({
         await deliverQueuedModerationNotifications({ limit: 20 });
       }
     } catch (error) {
-      console.warn('map_node_email_delivery_sweep_failed', {
+      console.warn('map_node_delivery_sweep_failed', {
         errorName: error instanceof Error ? error.name : 'UnknownError',
       });
     } finally {

@@ -101,6 +101,7 @@ const STEWARD_WORKFLOW_COLLECTION_META = Object.freeze({
 
 const MAP_NODE_MODERATION_COLLECTIONS = Object.freeze([
   'map_node_submissions',
+  'map_node_moderation_notifications',
 ]);
 
 const MAP_NODE_MODERATION_COLLECTION_META = Object.freeze({
@@ -110,6 +111,13 @@ const MAP_NODE_MODERATION_COLLECTION_META = Object.freeze({
     icon: 'approval',
     note: 'Private map-node intake. Review the submission, then set its moderation status.',
     display_template: '{{ display_name }} · {{ place_name }}',
+  },
+  map_node_moderation_notifications: {
+    hidden: false,
+    singleton: false,
+    icon: 'mark_email_unread',
+    note: 'Private delivery audit for map moderation alerts. Failed alerts are retained here for operator follow-up.',
+    display_template: '{{ kind }} · {{ status }}',
   },
 });
 
@@ -134,6 +142,15 @@ const MAP_NODE_STATUS_CHOICES = Object.freeze([
   { text: 'Approved', value: 'approved' },
   { text: 'Rejected', value: 'rejected' },
   { text: 'Archived', value: 'archived' },
+]);
+
+const MAP_NODE_MODERATION_NOTIFICATION_STATUS_CHOICES = Object.freeze([
+  { text: 'Queued', value: 'queued' },
+  { text: 'Delivery claimed', value: 'delivery_claimed' },
+  { text: 'Retry scheduled', value: 'retry_scheduled' },
+  { text: 'Sent', value: 'sent' },
+  { text: 'Failed', value: 'failed' },
+  { text: 'Skipped', value: 'skipped' },
 ]);
 
 const ENTITY_STATUS_CHOICES = Object.freeze([
@@ -528,6 +545,29 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
     created_at: fieldMeta({ sort: 15, width: 'half', interface: 'datetime', readonly: true }),
     updated_at: fieldMeta({ sort: 16, width: 'half', interface: 'datetime', readonly: true }),
   },
+  map_node_moderation_notifications: {
+    id: fieldMeta({ sort: 1, width: 'half', interface: 'input', readonly: true, hidden: true }),
+    kind: fieldMeta({ sort: 2, width: 'half', interface: 'select-dropdown', readonly: true }),
+    submission_id: fieldMeta({ sort: 3, width: 'half', interface: 'input', readonly: true }),
+    digest_date: fieldMeta({ sort: 4, width: 'half', interface: 'datetime', readonly: true }),
+    status: fieldMeta({
+      sort: 5,
+      width: 'half',
+      note: 'Delivery status is maintained by the agent. A failed alert remains visible here for operator follow-up.',
+      interface: 'select-dropdown',
+      options: { choices: MAP_NODE_MODERATION_NOTIFICATION_STATUS_CHOICES },
+      display: 'labels',
+      readonly: true,
+    }),
+    attempts: fieldMeta({ sort: 6, width: 'half', interface: 'input', readonly: true }),
+    next_attempt_at: fieldMeta({ sort: 7, width: 'half', interface: 'datetime', readonly: true }),
+    delivery_claimed_at: fieldMeta({ sort: 8, width: 'half', interface: 'datetime', readonly: true }),
+    provider_message_id: fieldMeta({ sort: 9, width: 'full', interface: 'input', readonly: true }),
+    provider_error: fieldMeta({ sort: 10, width: 'full', interface: 'input', readonly: true }),
+    sent_at: fieldMeta({ sort: 11, width: 'half', interface: 'datetime', readonly: true }),
+    created_at: fieldMeta({ sort: 12, width: 'half', interface: 'datetime', readonly: true }),
+    updated_at: fieldMeta({ sort: 13, width: 'half', interface: 'datetime', readonly: true }),
+  },
 });
 
 function cleanCollectionName(collection) {
@@ -662,6 +702,24 @@ const STUDIO_BOOKMARKS = Object.freeze([
     color: '#005c8a',
     filter: { status: { _eq: 'pending' } },
     fields: ['display_name', 'place_name', 'themes', 'status', 'created_at'],
+  },
+  {
+    role: 'Greenpill Steward Moderator',
+    collection: 'map_node_moderation_notifications',
+    bookmark: 'Failed map moderation alerts',
+    icon: 'mark_email_unread',
+    color: '#b42318',
+    filter: { status: { _eq: 'failed' } },
+    fields: ['submission_id', 'kind', 'attempts', 'provider_error', 'updated_at'],
+  },
+  {
+    role: 'Greenpill Trusted Publisher',
+    collection: 'map_node_moderation_notifications',
+    bookmark: 'Failed map moderation alerts',
+    icon: 'mark_email_unread',
+    color: '#b42318',
+    filter: { status: { _eq: 'failed' } },
+    fields: ['submission_id', 'kind', 'attempts', 'provider_error', 'updated_at'],
   },
 ]);
 

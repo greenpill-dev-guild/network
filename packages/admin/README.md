@@ -267,6 +267,18 @@ records the actor and status transition, while the database sets `approved_at`
 on first approval. The `Pending map node approvals` bookmark is the fallback
 queue when an email link has expired or been missed.
 
+The agent retries temporary alert failures and Resend deduplicates a retry of
+the same alert. If retries are exhausted, the `Failed map moderation alerts`
+bookmark exposes only the delivery status and provider error for moderators and
+trusted publishers; it never exposes recipient addresses, owner email, raw
+notes, IP addresses, or spam metadata.
+
+For a local end-to-end permission check, run
+`bun run directus:map-moderation:smoke` while the local stack is running. It
+creates and cleans up a temporary Steward Moderator, confirms that user can
+approve a pending node, verifies `approved_at`, and checks Directus activity
+records the moderator as the actor.
+
 An approved node renders as a steward only when its private owner email matches
 an **active** Directus user with one chapter-editor assignment. The agent reads
 that relationship privately on every map projection and exposes only the public

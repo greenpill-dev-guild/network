@@ -15,6 +15,7 @@ export const DIRECTUS_INTAKE_COLLECTIONS = Object.freeze([
   'map_node_submissions',
   'map_node_private_contacts',
   'map_node_reviews',
+  'map_node_moderation_notifications',
   'map_node_intake_settings',
   'map_node_edit_tokens',
   'map_node_update_requests',
@@ -253,6 +254,22 @@ const MAP_NODE_REVIEW_WRITE_FIELDS = Object.freeze([
   'reviewer_id',
   'review_status',
   'review_notes',
+]);
+
+const MAP_NODE_MODERATION_NOTIFICATION_READ_FIELDS = Object.freeze([
+  'id',
+  'kind',
+  'submission_id',
+  'digest_date',
+  'status',
+  'attempts',
+  'next_attempt_at',
+  'delivery_claimed_at',
+  'provider_message_id',
+  'provider_error',
+  'sent_at',
+  'created_at',
+  'updated_at',
 ]);
 
 const MAP_NODE_PRIVATE_CONTACT_READ_FIELDS = Object.freeze([
@@ -633,6 +650,7 @@ function buildIntakeModerationPermissions(collectionNames = []) {
   const submission = collections.get('map_node_submissions');
   const privateContacts = collections.get('map_node_private_contacts');
   const reviews = collections.get('map_node_reviews');
+  const moderationNotifications = collections.get('map_node_moderation_notifications');
   const settings = collections.get('map_node_intake_settings');
   const editTokens = collections.get('map_node_edit_tokens');
   const updateRequests = collections.get('map_node_update_requests');
@@ -727,6 +745,31 @@ function buildIntakeModerationPermissions(collectionNames = []) {
         validation: reviewStatusFilter(reviewStatuses),
         presets: null,
         fields: MAP_NODE_REVIEW_WRITE_FIELDS,
+      }
+    );
+  }
+
+  if (moderationNotifications) {
+    permissions.push(
+      {
+        role: 'Greenpill Steward Moderator',
+        policy: 'Greenpill Steward Moderator',
+        collection: moderationNotifications,
+        action: 'read',
+        permissions: null,
+        validation: null,
+        presets: null,
+        fields: MAP_NODE_MODERATION_NOTIFICATION_READ_FIELDS,
+      },
+      {
+        role: 'Greenpill Trusted Publisher',
+        policy: 'Greenpill Trusted Publisher',
+        collection: moderationNotifications,
+        action: 'read',
+        permissions: null,
+        validation: null,
+        presets: null,
+        fields: MAP_NODE_MODERATION_NOTIFICATION_READ_FIELDS,
       }
     );
   }
