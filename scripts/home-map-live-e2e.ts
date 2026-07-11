@@ -5,12 +5,15 @@ import { createDatabaseClient } from '@greenpill-network/agent/db';
 import { MAP_NODE_SUBMISSIONS_ROUTE } from '@greenpill-network/agent/impact';
 import { PUBLIC_MAP_STATE_ROUTE } from '@greenpill-network/agent/map-state';
 import { assertPublicMapStatePayload } from '@greenpill-network/shared/map-state';
+import { createDirectusClient } from './directus-operational-content-setup.ts';
 
 const DEFAULT_AGENT_BASE_URL = 'http://localhost:3303';
 const DEFAULT_DATABASE_URL = 'postgres://greenpill:greenpill@localhost:3304/greenpill_network';
+const DEFAULT_DIRECTUS_URL = 'http://localhost:3302';
 const LOCAL_STEWARD_EMAIL = 'local-steward@example.org';
 const LOCAL_MEMBER_EMAIL = 'local-member@example.org';
-const LOCAL_STEWARD_EMAIL_ALT = 'steward@example.org';
+const E2E_STEWARD_FIRST_NAME = 'Local Live';
+const E2E_STEWARD_LAST_NAME = 'Map E2E';
 const PRIVATE_RAW_NOTE = 'local-live-e2e private raw note';
 
 type UnknownRecord = Record<string, any>;
@@ -168,6 +171,97 @@ async function deleteE2eSubmissions(sql: any): Promise<void> {
   }
 }
 
+function directusFilter(field: string, value: string): string {
+  const params = new URLSearchParams();
+  params.set(`filter[${field}][_eq]`, value);
+  params.set('limit', '1');
+  return params.toString();
+}
+
+async function localE2eStewardRoleId(client: any): Promise<string> {
+  const response = await client.request(`/roles?${directusFilter('name', 'Greenpill Steward Editor')}`);
+  const roleId = response?.data?.[0]?.id;
+  if (!roleId) throw new Error('Local Directus is missing the Greenpill Steward Editor role. Run bun run directus:local:bootstrap.');
+  return roleId;
+}
+
+async function prepareLocalE2eSteward(): Promise<void> {
+  const client = await createDirectusClient({ url: DEFAULT_DIRECTUS_URL });
+  const userResponse = await client.request(`/users?${directusFilter('email', LOCAL_STEWARD_EMAIL)}`);
+  let user = userResponse?.data?.[0] ?? null;
+
+  if (user && (user.first_name !== E2E_STEWARD_FIRST_NAME || user.last_name !== E2E_STEWARD_LAST_NAME)) {
+    throw new Error(`Refusing to reuse non-e2e Directus user: ${LOCAL_STEWARD_EMAIL}`);
+  }
+  if (!user) {
+    user = (await client.request('/users', {
+      method: 'POST',
+      body: {
+        email: LOCAL_STEWARD_EMAIL,
+        first_name: E2E_STEWARD_FIRST_NAME,
+        last_name: E2E_STEWARD_LAST_NAME,
+        status: 'active',
+        role: await localE2eStewardRoleId(client),
+        password: 'local-live-map-e2e-password',
+      },
+    }))?.data;
+  }
+  if (!user?.id) throw new Error('Local Directus did not return the e2e steward user id.');
+
+  const assignmentResponse = await client.request(
+    `/items/chapter_editor_assignments?${directusFilter('directus_user_id', user.id)}`
+  );
+  const assignments = assignmentResponse?.data ?? [];
+  if (assignments.some((assignment) => assignment.chapter_slug !== 'nigeria')) {
+    throw new Error('Local e2e steward already has a non-Nigeria chapter assignment.');
+  }
+  if (!assignments.length) {
+    await client.request('/items/chapter_editor_assignments', {
+      method: 'POST',
+      body: {
+        chapter_slug: 'nigeria',
+        directus_user_id: user.id,
+        access_level: 'editor',
+      },
+    });
+  }
+}
+
+async function cleanupLocalE2eSteward(): Promise<void> {
+  const client = await createDirectusClient({ url: DEFAULT_DIRECTUS_URL });
+  const userResponse = await client.request(`/users?${directusFilter('email', LOCAL_STEWARD_EMAIL)}`);
+  const user = userResponse?.data?.[0] ?? null;
+  if (!user || user.first_name !== E2E_STEWARD_FIRST_NAME || user.last_name !== E2E_STEWARD_LAST_NAME) return;
+
+  await deleteLocalE2eStewardChapterAssignmentForUser(client, user.id);
+  await client.request(`/users/${encodeURIComponent(user.id)}`, {
+    method: 'DELETE',
+    expected: [204, 404],
+  });
+}
+
+async function deleteLocalE2eStewardChapterAssignmentForUser(client: any, userId: string): Promise<void> {
+  const assignmentResponse = await client.request(
+    `/items/chapter_editor_assignments?${directusFilter('directus_user_id', userId)}`
+  );
+  for (const assignment of assignmentResponse?.data ?? []) {
+    await client.request(`/items/chapter_editor_assignments/${encodeURIComponent(assignment.id)}`, {
+      method: 'DELETE',
+      expected: [204, 404],
+    });
+  }
+}
+
+async function removeLocalE2eStewardChapterAssignment(): Promise<void> {
+  const client = await createDirectusClient({ url: DEFAULT_DIRECTUS_URL });
+  const userResponse = await client.request(`/users?${directusFilter('email', LOCAL_STEWARD_EMAIL)}`);
+  const user = userResponse?.data?.[0] ?? null;
+  if (!user || user.first_name !== E2E_STEWARD_FIRST_NAME || user.last_name !== E2E_STEWARD_LAST_NAME) {
+    throw new Error('Local e2e steward user is unavailable for assignment-revocation proof.');
+  }
+  await deleteLocalE2eStewardChapterAssignmentForUser(client, user.id);
+}
+
 async function getLiveMode(sql: any): Promise<boolean> {
   const rows = await sql`
     select live_onboarding_enabled as "liveOnboardingEnabled"
@@ -252,7 +346,7 @@ const BASE_SUBMISSIONS = Object.freeze([
     country: 'Nigeria',
     lat: 6.5244,
     long: 3.3792,
-    role: 'steward',
+    role: 'member',
     themes: ['public', 'events'],
     publicNote: 'Local live e2e steward node.',
     email: LOCAL_STEWARD_EMAIL,
@@ -372,10 +466,10 @@ const EXPANDED_SUBMISSIONS = Object.freeze([
     country: 'Ghana',
     lat: 5.6037,
     long: -0.187,
-    role: 'steward',
+    role: 'member',
     themes: ['public', 'events', 'education'],
     publicNote: 'Local live e2e Accra steward node.',
-    email: LOCAL_STEWARD_EMAIL_ALT,
+    email: LOCAL_STEWARD_EMAIL,
   }),
   submission('steward-nairobi', 'steward', {
     displayName: 'Local Live E2E Steward Nairobi',
@@ -385,7 +479,7 @@ const EXPANDED_SUBMISSIONS = Object.freeze([
     country: 'Kenya',
     lat: -1.2864,
     long: 36.8172,
-    role: 'steward',
+    role: 'member',
     themes: ['public', 'events', 'education'],
     publicNote: 'Local live e2e Nairobi steward node.',
     email: LOCAL_STEWARD_EMAIL,
@@ -401,7 +495,7 @@ const EXPANDED_SUBMISSIONS = Object.freeze([
     role: 'steward',
     themes: ['public', 'water', 'impact'],
     publicNote: 'Local live e2e Cape Town steward node.',
-    email: LOCAL_STEWARD_EMAIL_ALT,
+    email: LOCAL_STEWARD_EMAIL,
   }),
 ]);
 
@@ -427,6 +521,7 @@ let previousLiveMode: boolean | null = null;
 try {
   if (options.disableLive) {
     await deleteE2eSubmissions(sql);
+    await cleanupLocalE2eSteward();
     await setLiveMode(sql, false);
     console.log(JSON.stringify({
       ok: true,
@@ -440,6 +535,7 @@ try {
 
     previousLiveMode = await getLiveMode(sql);
     await deleteE2eSubmissions(sql);
+    await prepareLocalE2eSteward();
     await setLiveMode(sql, true);
 
     const initialState = await fetchJson(mapStateUrl, 'GET /map/state');
@@ -464,7 +560,7 @@ try {
         item.expectedRole === 'steward'
           ? [
             `${item.payload.displayName} should render as steward.`,
-            'If this fails, restart `bun run dev` so the local MAP_NODE_STEWARD_EMAIL_ALLOWLIST default is loaded.',
+            'Confirm the local Directus steward assignment is active and points to Nigeria.',
           ].join(' ')
           : `${item.payload.displayName} should stay a member`
       );
@@ -529,6 +625,15 @@ try {
       submittedNodes.map(({ item, node }) => [item.label, node.id])
     );
 
+    if (!options.keepLive) {
+      await removeLocalE2eStewardChapterAssignment();
+      const revokedState = await fetchJson(mapStateUrl, 'GET /map/state after chapter assignment removal');
+      const revokedSteward = findNode(revokedState, 'Local Live E2E Steward');
+      assert.equal(revokedSteward.type, 'member', 'removed chapter assignment should re-project the node as member');
+      assert.equal(revokedSteward.chapterSlug || '', '', 'removed chapter assignment should clear the public chapter link');
+      assertNoPrivateLeak(revokedState);
+    }
+
     console.log(JSON.stringify({
       ok: true,
       agent: options.agentBaseUrl,
@@ -549,6 +654,7 @@ try {
 } finally {
   if (!options.keepLive && !options.disableLive) {
     await deleteE2eSubmissions(sql).catch(() => {});
+    await cleanupLocalE2eSteward().catch(() => {});
     if (previousLiveMode !== null) {
       await setLiveMode(sql, previousLiveMode).catch(() => {});
     }

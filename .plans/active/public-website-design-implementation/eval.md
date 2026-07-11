@@ -55,7 +55,7 @@
 - `bun run test:home-map:browser`
 - Migration ordering check against `packages/agent/migrations`.
 - Contract tests for required email on new public map-node submissions.
-- Contract tests for non-allowlisted member submissions, allowlisted steward submissions, trusted steward `chapterSlug`, optional `bioregion` with no fake fallback, generated-density removal, and real-node-only relationship edges.
+- Contract tests for unassigned member submissions, active Directus chapter-editor steward submissions, trusted steward `chapterSlug`, optional `bioregion` with no fake fallback, generated-density removal, and real-node-only relationship edges.
 - Contract tests for role/type edit boundary, one-pending-update or optimistic-lock behavior, retention cleanup, and broad edit-link rate limits.
 - Contract tests for identical edit-link public responses across matching, non-matching, missing-node, ownerless, and cooldown-limited cases.
 - Contract tests for missing email configuration and send failure paths preserving the neutral public edit-link response.

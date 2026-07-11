@@ -30,17 +30,17 @@
 
 - [x] Save the recovery audit/report in this hub and mark prior map-complete claims superseded for the map slice.
 - [x] Record the unified Home map recovery amendment in this existing hub instead of creating a competing map plan.
-- [x] Correct the shared public map contract so opt-in/allowlisted stewards can appear as public steward nodes.
+- [x] Correct the shared public map contract so active Directus chapter-editor stewards can appear as public steward nodes.
 - [x] Remove anonymous generated density nodes entirely; public map state is chapters plus approved real member/steward submissions only.
-- [x] Extend the steward allowlist from email-to-role to email-to-chapter mapping so trusted steward submissions receive a public-safe `chapterSlug` without exposing email.
+- [x] Resolve active Directus chapter-editor email-to-chapter assignments at map projection time so trusted steward nodes receive a public-safe `chapterSlug` without exposing email.
 - [x] Keep `bioregion` as an optional public field for future approved values; no polygon lookup is claimed until a redistributable dataset is checked in.
 - [x] Update Home map rendering so chapter, steward, and member nodes use HiFi token colors, count-free identity legend, public-safe details, and connected-node highlighting without fake participation cues.
 - [x] Change add-node theme selection from exactly four to one to four themes.
-- [x] Add browser proof for the Home add-node flow against mocked agent responses: moderated pending, live approved member, allowlisted steward, selected details, and private-field DOM/storage guards.
+- [x] Add browser proof for the Home add-node flow against mocked agent responses: moderated pending, live approved member, Directus-projected steward, selected details, and private-field DOM/storage guards.
 - [ ] Add HiFi comparison proof at 375, 1024, and 1440 for chapter/member/steward node treatments, real mycelial edges, selected-node details, filter legibility, and mobile readability.
-- [x] Add a live-mode operator preflight/runbook covering `/map/state.intakeMode`, live refresh, allowlisted steward behavior, disable-live path, and post-session review. See `reports/local-live-map-e2e-runbook-2026-06-11.md` and `bun run test:home-map:live-e2e`.
+- [x] Add a live-mode operator preflight/runbook covering `/map/state.intakeMode`, live refresh, Directus steward behavior, disable-live path, and post-session review. See `reports/local-live-map-e2e-runbook-2026-06-11.md` and `bun run test:home-map:live-e2e`.
 - [ ] Complete Steward Sync Week 1: Directus/admin onboarding, role assignment, chapter content update workflow, and public map profile opt-ins.
-- [ ] Complete Steward Sync Week 2: steward self-add rehearsal with allowlisted emails in controlled live mode.
+- [ ] Complete Steward Sync Week 2: steward self-add rehearsal with active Directus chapter assignments in controlled live mode.
 - [ ] Prepare June 10 live member self-add session; this is map participation, not a public-note feature.
 - [ ] After separate explicit approval only, reuse/rename the reverted Linear project and issues under `Network Presence`.
 

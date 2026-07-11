@@ -1472,56 +1472,80 @@ async function runSmoke(): Promise<void> {
         const afterCloseViewBox = svg.getAttribute('viewBox') || '';
         const barClosedAfterClose = Boolean(bar?.hidden);
 
-        const dotRectForNearTap = member.querySelector('.gp-home-map-node-dot')?.getBoundingClientRect();
-        if (dotRectForNearTap) {
-          const nearClientX = dotRectForNearTap.left + dotRectForNearTap.width / 2 + 18;
-          const nearClientY = dotRectForNearTap.top + dotRectForNearTap.height / 2;
+        const nearTapPointForMember = () => {
+          const dotRect = member.querySelector('.gp-home-map-node-dot')?.getBoundingClientRect();
+          const hitRect = member.querySelector('.gp-home-map-node-hit')?.getBoundingClientRect();
+          if (!dotRect) return null;
+          const center = {
+            x: dotRect.left + dotRect.width / 2,
+            y: dotRect.top + dotRect.height / 2,
+          };
+          const nearestOther = [...document.querySelectorAll('.gp-home-map-node-link:not(.is-filtered-out)')]
+            .filter((node) => node !== member)
+            .map((node) => {
+              const rect = node.querySelector('.gp-home-map-node-dot')?.getBoundingClientRect();
+              if (!rect) return null;
+              const x = rect.left + rect.width / 2;
+              const y = rect.top + rect.height / 2;
+              return { x, y, distance: Math.hypot(center.x - x, center.y - y) };
+            })
+            .filter(Boolean)
+            .sort((a, b) => a.distance - b.distance)[0];
+          const dx = nearestOther ? center.x - nearestOther.x : 1;
+          const dy = nearestOther ? center.y - nearestOther.y : 0;
+          const magnitude = Math.hypot(dx, dy) || 1;
+          const offset = Math.max(12, Math.max(hitRect?.width ?? 0, hitRect?.height ?? 0) / 2 + 4);
+          return {
+            clientX: center.x + (dx / magnitude) * offset,
+            clientY: center.y + (dy / magnitude) * offset,
+          };
+        };
+        const nearTapPoint = nearTapPointForMember();
+        if (nearTapPoint) {
           svg.dispatchEvent(new PointerEvent('pointerdown', {
             bubbles: true,
             pointerId: 41,
             pointerType: 'mouse',
-            clientX: nearClientX,
-            clientY: nearClientY,
+            clientX: nearTapPoint.clientX,
+            clientY: nearTapPoint.clientY,
           }));
           svg.dispatchEvent(new PointerEvent('pointerup', {
             bubbles: true,
             pointerId: 41,
             pointerType: 'mouse',
-            clientX: nearClientX,
-            clientY: nearClientY,
+            clientX: nearTapPoint.clientX,
+            clientY: nearTapPoint.clientY,
           }));
           svg.dispatchEvent(new MouseEvent('click', {
             bubbles: true,
             cancelable: true,
-            clientX: nearClientX,
-            clientY: nearClientY,
+            clientX: nearTapPoint.clientX,
+            clientY: nearTapPoint.clientY,
           }));
         }
         await wait(120);
         const mouseNearTapBarOpen = Boolean(bar && !bar.hidden);
 
-        if (dotRectForNearTap) {
-          const nearClientX = dotRectForNearTap.left + dotRectForNearTap.width / 2 + 18;
-          const nearClientY = dotRectForNearTap.top + dotRectForNearTap.height / 2;
+        if (nearTapPoint) {
           svg.dispatchEvent(new PointerEvent('pointerdown', {
             bubbles: true,
             pointerId: 42,
             pointerType: 'touch',
-            clientX: nearClientX,
-            clientY: nearClientY,
+            clientX: nearTapPoint.clientX,
+            clientY: nearTapPoint.clientY,
           }));
           svg.dispatchEvent(new PointerEvent('pointerup', {
             bubbles: true,
             pointerId: 42,
             pointerType: 'touch',
-            clientX: nearClientX,
-            clientY: nearClientY,
+            clientX: nearTapPoint.clientX,
+            clientY: nearTapPoint.clientY,
           }));
           svg.dispatchEvent(new MouseEvent('click', {
             bubbles: true,
             cancelable: true,
-            clientX: nearClientX,
-            clientY: nearClientY,
+            clientX: nearTapPoint.clientX,
+            clientY: nearTapPoint.clientY,
           }));
         }
         await wait(120);
