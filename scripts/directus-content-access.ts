@@ -326,6 +326,8 @@ export function parseAssignments(text: string): AssignmentInput[] {
   const dataLines = lines[0]?.toLowerCase().startsWith('email\t') ? lines.slice(1) : lines;
   const seen = new Set<string>();
 
+  const chapterByEmail = new Map<string, string>();
+
   return dataLines.map((line) => {
     const [email, kind, slug] = line.split('\t').map((part) => part.trim());
     const cleanKind = kind as AssignmentKind;
@@ -347,6 +349,14 @@ export function parseAssignments(text: string): AssignmentInput[] {
       throw new Error(`Duplicate assignment: ${key}`);
     }
     seen.add(key);
+
+    if (cleanKind === 'chapter') {
+      const existingChapter = chapterByEmail.get(cleanUserEmail);
+      if (existingChapter && existingChapter !== cleanSlug) {
+        throw new Error(`A steward can only be assigned to one chapter: ${cleanUserEmail}`);
+      }
+      chapterByEmail.set(cleanUserEmail, cleanSlug);
+    }
 
     return {
       email: cleanUserEmail,
@@ -457,16 +467,36 @@ async function ensureContentExists(client, collection: string, slug: string, kin
   }
 }
 
-async function ensureAssignment(client, collection: string, userId: string, kind: AssignmentKind, slug: string, dryRun: boolean) {
+async function getUserAssignments(client, collection: string, userId: string, kind: AssignmentKind) {
   const ownerField = kind === 'chapter' ? 'chapter_slug' : 'guild_slug';
   const params = new URLSearchParams();
-  params.set(`filter[${ownerField}][_eq]`, slug);
   params.set('filter[directus_user_id][_eq]', userId);
-  params.set('fields', 'id');
-  params.set('limit', '1');
+  params.set('fields', `id,${ownerField}`);
+  params.set('limit', '-1');
 
   const existing = await client.request(`/items/${encodeCollection(collection)}?${params.toString()}`);
-  if (existing?.data?.[0]?.id) return 'already assigned';
+  return { ownerField, rows: existing?.data ?? [] };
+}
+
+export async function assertAssignmentAvailable(
+  client,
+  collection: string,
+  userId: string,
+  kind: AssignmentKind,
+  slug: string
+) {
+  const { ownerField, rows } = await getUserAssignments(client, collection, userId, kind);
+  const matching = rows.find((row) => row?.[ownerField] === slug);
+  if (kind === 'chapter' && rows.some((row) => row?.[ownerField] !== slug)) {
+    throw new Error(`Directus user ${userId} already has a chapter assignment.`);
+  }
+  return Boolean(matching?.id);
+}
+
+async function ensureAssignment(client, collection: string, userId: string, kind: AssignmentKind, slug: string, dryRun: boolean) {
+  const ownerField = kind === 'chapter' ? 'chapter_slug' : 'guild_slug';
+  const alreadyAssigned = await assertAssignmentAvailable(client, collection, userId, kind, slug);
+  if (alreadyAssigned) return 'already assigned';
 
   if (!dryRun) {
     await client.request(`/items/${encodeCollection(collection)}`, {
@@ -816,17 +846,34 @@ async function assignContentAccess(assignments: AssignmentInput[], options: Assi
   const collections = await resolveCollections(client);
   const stewardRoleId = await getRoleId(client, options.role);
   const operatorRoleId = await getRoleId(client, options.operatorRole);
-  const results = [];
+  const prepared = [];
 
   for (const assignment of assignments) {
     const user = await getUserByEmail(client, assignment.email);
-    const roleStatus = await ensureUserRole(client, user, stewardRoleId, operatorRoleId, options);
     const contentCollection = assignment.kind === 'chapter' ? collections.chapters : collections.guilds;
     const assignmentCollection = assignment.kind === 'chapter'
       ? collections.chapterAssignments
       : collections.guildAssignments;
 
     await ensureContentExists(client, contentCollection, assignment.slug, assignment.kind);
+    await assertAssignmentAvailable(
+      client,
+      assignmentCollection,
+      user.id,
+      assignment.kind,
+      assignment.slug
+    );
+
+    prepared.push({
+      assignment,
+      user,
+      assignmentCollection,
+    });
+  }
+
+  const results = [];
+  for (const { assignment, user, assignmentCollection } of prepared) {
+    const roleStatus = await ensureUserRole(client, user, stewardRoleId, operatorRoleId, options);
     const assignmentStatus = await ensureAssignment(
       client,
       assignmentCollection,

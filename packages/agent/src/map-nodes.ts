@@ -108,7 +108,6 @@ export const MAP_NODE_EDIT_LINK_DAILY_IP_LIMIT = 30;
 export const MAP_NODE_EDIT_LINK_DAILY_EMAIL_LIMIT = 10;
 export const MAP_NODE_EDIT_LINK_STALE_DELIVERY_CLAIM_MINUTES = 10;
 export const RESEND_EMAILS_ENDPOINT = 'https://api.resend.com/emails';
-export const MAP_NODE_STEWARD_EMAIL_ALLOWLIST_ENV = 'MAP_NODE_STEWARD_EMAIL_ALLOWLIST';
 export const MAP_NODE_THEME_MIN_COUNT = 1;
 export const MAP_NODE_THEME_MAX_COUNT = 4;
 
@@ -137,67 +136,19 @@ export function isValidOwnerEmail(value: unknown): boolean {
   return email.length > 3 && email.length <= 320 && EMAIL_PATTERN.test(email);
 }
 
-export function parseMapNodeStewardEmailAllowlist(
-  env: Record<string, string | undefined> = process.env
-): Set<string> {
-  return new Set(parseMapNodeStewardEmailAssignments(env).keys());
-}
+// Steward status is resolved privately from active Directus chapter access when
+// a node is projected. Public submission input can never self-assign a role.
+const normalizeSubmittedRole = (): 'member' => 'member';
 
-const normalizeChapterSlug = (value: unknown): string => (
-  cleanString(value)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
-);
+type StewardMapNodeResolution = {
+  role: 'member' | 'steward';
+  chapterSlug: string;
+};
 
-export function parseMapNodeStewardEmailAssignments(
-  env: Record<string, string | undefined> = process.env
-): Map<string, string> {
-  const assignments = new Map<string, string>();
-  for (const entry of cleanString(env[MAP_NODE_STEWARD_EMAIL_ALLOWLIST_ENV]).split(/[\s,]+/)) {
-    const cleaned = cleanString(entry);
-    if (!cleaned) continue;
-    const separatorIndex = cleaned.search(/[=:]/);
-    const email = normalizeOwnerEmail(separatorIndex > 0 ? cleaned.slice(0, separatorIndex) : cleaned);
-    const chapterSlug = separatorIndex > 0 ? normalizeChapterSlug(cleaned.slice(separatorIndex + 1)) : '';
-    if (isValidOwnerEmail(email)) assignments.set(email, chapterSlug);
-  }
-  return assignments;
-}
-
-export function getMapNodeStewardChapterSlug(
-  email: string,
-  env: Record<string, string | undefined> = process.env
-): string {
-  return (
-    parseMapNodeStewardEmailAssignments(env).get(normalizeOwnerEmail(email)) ?? ''
-  );
-}
-
-export function isMapNodeStewardEmailAllowlisted(
-  email: string,
-  env: Record<string, string | undefined> = process.env
-): boolean {
-  return parseMapNodeStewardEmailAssignments(env).has(normalizeOwnerEmail(email));
-}
-
-function normalizeSubmittedRole(
-  role: unknown,
-  { stewardAllowlisted }: { stewardAllowlisted: boolean }
-): string {
-  if (stewardAllowlisted) return 'steward';
-
-  const requestedRole = cleanString(role);
-  const normalizedRole = requestedRole.toLowerCase();
-  if (
-    normalizedRole.includes('steward') ||
-    normalizedRole.includes('organizer') ||
-    normalizedRole.includes('coordinator')
-  ) {
-    return 'member';
-  }
-  return requestedRole || 'member';
-}
+const MEMBER_MAP_NODE_RESOLUTION: StewardMapNodeResolution = Object.freeze({
+  role: 'member',
+  chapterSlug: '',
+});
 
 function normalizeLookupNodeId(value: unknown): string {
   const cleaned = cleanString(value).replace(/^submission:/, '');
@@ -329,10 +280,7 @@ export async function getMapNodeIntakeMode(sql: SqlLike): Promise<PublicMapIntak
   return enabled ? 'live' : 'moderated';
 }
 
-function normalizeSubmissionInput(
-  input: PublicMapNodeSubmissionInput = {},
-  { env = process.env }: { env?: Record<string, string | undefined> } = {}
-) {
+function normalizeSubmissionInput(input: PublicMapNodeSubmissionInput = {}) {
   const displayName = cleanString(input.displayName ?? input.name);
   const placeName = cleanString(input.placeName ?? input.place);
   const lat = normalizeNumber(input.lat ?? input.latitude);
@@ -363,9 +311,6 @@ function normalizeSubmissionInput(
     );
   }
 
-  const stewardAllowlisted = isMapNodeStewardEmailAllowlisted(email, env);
-  const chapterSlug = getMapNodeStewardChapterSlug(email, env);
-
   return {
     displayName,
     placeName,
@@ -374,8 +319,8 @@ function normalizeSubmissionInput(
     country: cleanString(input.country),
     lat,
     long,
-    role: normalizeSubmittedRole(input.role ?? input.intent, { stewardAllowlisted }),
-    chapterSlug,
+    role: normalizeSubmittedRole(),
+    chapterSlug: '',
     themes,
     bioregion: derivePublicBioregionFromCoordinates(lat, long),
     publicNote: cleanString(input.publicNote ?? input.public_note),
@@ -400,10 +345,9 @@ export function getRequestMeta(context: {
 export async function createMapNodeSubmission(
   sql: SqlLike,
   input: PublicMapNodeSubmissionInput,
-  requestMeta: RequestMeta = {},
-  { env = process.env }: { env?: Record<string, string | undefined> } = {}
+  requestMeta: RequestMeta = {}
 ): Promise<SubmittedMapNode> {
-  const normalized = normalizeSubmissionInput(input, { env });
+  const normalized = normalizeSubmissionInput(input);
   const meta = {
     ipAddress: cleanString(requestMeta.ipAddress),
     userAgent: cleanString(requestMeta.userAgent),
@@ -507,8 +451,15 @@ export async function createMapNodeSubmission(
       `;
     }
 
+    const steward = liveOnboarding
+      ? await resolveActiveChapterSteward(tx, normalized.email)
+      : MEMBER_MAP_NODE_RESOLUTION;
     const publicNode = liveOnboarding
-      ? toPublicMapNode(submission)
+      ? toPublicMapNode({
+        ...submission,
+        role: steward.role,
+        chapterSlug: steward.chapterSlug,
+      })
       : toPublicPendingMapNode(submission);
     if (!publicNode) {
       throw new AgentDataError(
@@ -1510,8 +1461,45 @@ export async function cleanupMapNodeEditFlow(sql: SqlLike): Promise<{
   };
 }
 
-export async function listPublicMapNodes(sql: SqlLike): Promise<PublicMapNode[]> {
-  const rows = await sql`
+function isDirectusStewardSourceUnavailable(error: unknown): boolean {
+  const code = cleanString((error as { code?: unknown } | null)?.code);
+  if (code === '42P01') return true;
+  const message = error instanceof Error ? error.message : '';
+  return /relation .+ does not exist/i.test(message) && (
+    message.includes('directus_users') || message.includes('chapter_editor_assignments')
+  );
+}
+
+export async function resolveActiveChapterSteward(
+  sql: SqlLike,
+  ownerEmail: unknown
+): Promise<StewardMapNodeResolution> {
+  const email = normalizeOwnerEmail(ownerEmail);
+  if (!isValidOwnerEmail(email)) return MEMBER_MAP_NODE_RESOLUTION;
+
+  try {
+    const [assignment] = await sql`
+      select cea.chapter_slug as "chapterSlug"
+      from public.directus_users u
+      join content.chapter_editor_assignments cea on cea.directus_user_id = u.id
+      where lower(u.email::text) = ${email}
+        and u.status = 'active'
+      limit 1
+    `;
+    const chapterSlug = cleanString(assignment?.chapterSlug ?? assignment?.chapter_slug);
+    return chapterSlug
+      ? { role: 'steward', chapterSlug }
+      : MEMBER_MAP_NODE_RESOLUTION;
+  } catch (error) {
+    // Directus can be initialized after the local agent schema. The public map
+    // must remain available and should never infer stewardship without that data.
+    if (isDirectusStewardSourceUnavailable(error)) return MEMBER_MAP_NODE_RESOLUTION;
+    throw error;
+  }
+}
+
+async function listPublicMapNodeRowsWithoutDirectus(sql: SqlLike): Promise<UnknownRecord[]> {
+  return sql`
     select
       id::text,
       name,
@@ -1521,8 +1509,8 @@ export async function listPublicMapNodes(sql: SqlLike): Promise<PublicMapNode[]>
       country,
       lat::float8,
       long::float8,
-      role,
-      chapter_slug as "chapterSlug",
+      'member'::text as role,
+      ''::text as "chapterSlug",
       themes,
       bioregion,
       public_note as "publicNote",
@@ -1531,6 +1519,39 @@ export async function listPublicMapNodes(sql: SqlLike): Promise<PublicMapNode[]>
     from intake.public_map_nodes
     order by approved_at desc nulls last
   `;
+}
+
+export async function listPublicMapNodes(sql: SqlLike): Promise<PublicMapNode[]> {
+  let rows: UnknownRecord[];
+  try {
+    rows = await sql`
+      select
+        n.id::text,
+        n.name,
+        n.place,
+        n.city,
+        n.region,
+        n.country,
+        n.lat::float8,
+        n.long::float8,
+        case when cea.directus_user_id is null then 'member' else 'steward' end as role,
+        coalesce(cea.chapter_slug, '') as "chapterSlug",
+        n.themes,
+        n.bioregion,
+        n.public_note as "publicNote",
+        n.status::text,
+        n.approved_at as "approvedAt"
+      from intake.public_map_nodes n
+      left join intake.map_node_private_contacts c on c.submission_id = n.id
+      left join public.directus_users u on lower(u.email::text) = lower(c.email::text)
+        and u.status = 'active'
+      left join content.chapter_editor_assignments cea on cea.directus_user_id = u.id
+      order by n.approved_at desc nulls last
+    `;
+  } catch (error) {
+    if (!isDirectusStewardSourceUnavailable(error)) throw error;
+    rows = await listPublicMapNodeRowsWithoutDirectus(sql);
+  }
 
   return rows
     .map((row) => toPublicMapNode(row))
@@ -1558,7 +1579,7 @@ export function createMapNodeRepository({
 } = {}) {
   return {
     createSubmission(input, requestMeta) {
-      return withSql(createSql, (sql) => createMapNodeSubmission(sql, input, requestMeta, { env }));
+      return withSql(createSql, (sql) => createMapNodeSubmission(sql, input, requestMeta));
     },
     requestEditLink(nodeId, email, requestMeta) {
       return withSql(createSql, (sql) => createMapNodeEditLinkRequest(sql, nodeId, email, requestMeta, {

@@ -671,6 +671,18 @@ test('map-node recovery migration exposes only public chapter and bioregion fiel
   }
 });
 
+test('chapter editor assignments enforce one chapter per Directus user', async () => {
+  const sql = await readFile(
+    new URL('../packages/agent/migrations/018_chapter_editor_assignment_single_chapter.sql', import.meta.url),
+    'utf8'
+  );
+
+  assert.match(sql, /group by directus_user_id/);
+  assert.match(sql, /having count\(\*\) > 1/);
+  assert.match(sql, /chapter_editor_assignments_unique_directus_user/);
+  assert.match(sql, /unique \(directus_user_id\)/);
+});
+
 test('map-node intake settings use a replay-safe dedicated migration', async () => {
   const baselineSql = await readFile(new URL('../packages/agent/migrations/001_private_map_node_schema.sql', import.meta.url), 'utf8');
   const settingsSql = await readFile(new URL('../packages/agent/migrations/003_map_node_intake_settings.sql', import.meta.url), 'utf8');
@@ -780,7 +792,7 @@ test('home map intake requires a valid email and stores local pending only after
   assert.match(homepage, /min-block-size: calc\(100dvh - var\(--gp-header-height\)\)/);
   assert.match(homepage, /<Text variant="display" class="gp-home-hero-title">/);
   assert.doesNotMatch(homepage, /font-size:\s*clamp\(40px, calc\(30\.1px \+ 2\.65vw\), 64px\)/);
-  assert.match(homepage, /width:\s*min\(100%, 130dvh\)/);
+  assert.match(homepage, /width:\s*min\(100%, 128dvh\)/);
   assert.doesNotMatch(homepage, /width:\s*min\(100%, clamp\(1100px, 82cqw, 1680px\)\)/);
   assert.match(homepage, /class="gp-home-lib-guild-pair"/);
   assert.match(homepage, /\.gp-home-eco-grid\s*{[\s\S]*?display:\s*flex;[\s\S]*?justify-content:\s*center/);

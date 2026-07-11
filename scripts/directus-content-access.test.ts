@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildScopedPolicyPermissions, parseArgs, parseAssignments } from './directus-content-access.ts';
+import {
+  assertAssignmentAvailable,
+  buildScopedPolicyPermissions,
+  parseArgs,
+  parseAssignments,
+} from './directus-content-access.ts';
 import { buildDirectusOperationalPermissionPlan } from './directus-operational-content-setup.ts';
 
 test('parseAssignments reads chapter and guild assignment TSV rows', () => {
@@ -33,6 +38,24 @@ test('parseAssignments rejects invalid kinds and duplicate rows', () => {
   assert.throws(
     () => parseAssignments('afo@example.com\tchapter\tnigeria\nafo@example.com\tchapter\tnigeria'),
     /Duplicate assignment/
+  );
+
+  assert.throws(
+    () => parseAssignments('afo@example.com\tchapter\tnigeria\nafo@example.com\tchapter\tkenya'),
+    /can only be assigned to one chapter/
+  );
+});
+
+test('chapter assignment preflight rejects a different existing chapter', async () => {
+  const client = {
+    async request() {
+      return { data: [{ id: 'assignment-1', chapter_slug: 'nigeria' }] };
+    },
+  };
+
+  await assert.rejects(
+    () => assertAssignmentAvailable(client, 'chapter_editor_assignments', 'user-1', 'chapter', 'kenya'),
+    /already has a chapter assignment/
   );
 });
 

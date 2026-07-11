@@ -57,6 +57,8 @@ import {
   getRequestMeta,
   getMapNodeEditSession,
   hashMapNodeEditToken,
+  listPublicMapNodes,
+  resolveActiveChapterSteward,
 } from '@greenpill-network/agent/map-nodes';
 import {
   containsPrivateMapStateField,
@@ -1037,7 +1039,7 @@ test('edit-session and update-request routes expose generic token semantics', as
   assert.deepEqual(await invalidUpdate.json(), MAP_NODE_INVALID_EDIT_LINK_ERROR);
 });
 
-function createFakeSubmissionSql({ liveOnboardingEnabled }) {
+function createFakeSubmissionSql({ liveOnboardingEnabled, stewardChapterSlug = '' }) {
   const statements = [];
   const tx = async (strings, ...values) => {
     const text = strings.join('?').replace(/\s+/g, ' ').trim();
@@ -1045,6 +1047,10 @@ function createFakeSubmissionSql({ liveOnboardingEnabled }) {
 
     if (text.includes('from intake.map_node_intake_settings')) {
       return [{ liveOnboardingEnabled }];
+    }
+
+    if (text.includes('from public.directus_users')) {
+      return stewardChapterSlug ? [{ chapterSlug: stewardChapterSlug }] : [];
     }
 
     if (text.includes('insert into intake.map_node_submissions')) {
@@ -1114,7 +1120,7 @@ test('map-node submissions require one to four themes', async () => {
   }
 });
 
-test('map-node steward role can only be set by an allowlisted owner email', async () => {
+test('map-node steward role is derived from an active Directus chapter assignment', async () => {
   const regular = createFakeSubmissionSql({ liveOnboardingEnabled: false });
   await createMapNodeSubmission(regular.sql, {
     name: 'Public Claimed Steward',
@@ -1133,27 +1139,132 @@ test('map-node steward role can only be set by an allowlisted owner email', asyn
   assert.equal(regularInsert.values.includes('chapter steward'), false);
   assert.equal(regularInsert.values.includes('member'), true);
 
-  const steward = createFakeSubmissionSql({ liveOnboardingEnabled: false });
-  await createMapNodeSubmission(steward.sql, {
-    name: 'Allowlisted Steward',
+  const steward = createFakeSubmissionSql({
+    liveOnboardingEnabled: true,
+    stewardChapterSlug: 'nigeria',
+  });
+  const stewardNode = await createMapNodeSubmission(steward.sql, {
+    name: 'Directus Steward',
     place: 'Lagos',
     lat: 6.5244,
     long: 3.3792,
-    role: 'member',
+    role: 'chapter steward',
     themes: ['public'],
     email: 'Steward@Example.org',
-  }, {}, {
-    env: {
-      MAP_NODE_STEWARD_EMAIL_ALLOWLIST: 'steward@example.org=nigeria, other@example.org',
-    },
   });
 
   const stewardInsert = steward.statements.find((statement) => (
     statement.text.includes('insert into intake.map_node_submissions')
   ));
   assert.ok(stewardInsert);
-  assert.equal(stewardInsert.values.includes('steward'), true);
-  assert.equal(stewardInsert.values.includes('nigeria'), true);
+  assert.equal(stewardInsert.values.includes('steward'), false);
+  assert.equal(stewardInsert.values.includes('member'), true);
+  assert.equal(stewardNode.role, 'steward');
+  assert.equal(stewardNode.chapterSlug, 'nigeria');
+  assert.equal(containsPrivateMapNodeField(stewardNode), false);
+});
+
+test('active Directus chapter projection is case-insensitive and otherwise fails closed to member', async () => {
+  const statements = [];
+  const sql = async (strings, ...values) => {
+    const text = strings.join('?').replace(/\s+/g, ' ').trim();
+    statements.push({ text, values });
+    if (text.includes('from public.directus_users')) return [{ chapterSlug: 'nigeria' }];
+    return [];
+  };
+
+  assert.deepEqual(await resolveActiveChapterSteward(sql, 'Steward@Example.org'), {
+    role: 'steward',
+    chapterSlug: 'nigeria',
+  });
+  assert.equal(statements[0].values.includes('steward@example.org'), true);
+  assert.match(statements[0].text, /u\.status = 'active'/);
+
+  const noMatchSql = async () => [];
+  assert.deepEqual(await resolveActiveChapterSteward(noMatchSql, 'member@example.org'), {
+    role: 'member',
+    chapterSlug: '',
+  });
+});
+
+test('missing Directus steward tables fail closed without hiding approved map nodes', async () => {
+  const unavailable = Object.assign(
+    new Error('relation "public.directus_users" does not exist'),
+    { code: '42P01' }
+  );
+  const unavailableSql = async () => {
+    throw unavailable;
+  };
+
+  assert.deepEqual(await resolveActiveChapterSteward(unavailableSql, 'steward@example.org'), {
+    role: 'member',
+    chapterSlug: '',
+  });
+
+  const statements = [];
+  const sql = async (strings) => {
+    const text = strings.join('?').replace(/\s+/g, ' ').trim();
+    statements.push(text);
+    if (text.includes('left join public.directus_users')) throw unavailable;
+    if (text.includes('from intake.public_map_nodes')) {
+      return [{
+        id: 'node-member',
+        name: 'Fallback Member',
+        place: 'Lagos',
+        city: 'Lagos',
+        region: '',
+        country: 'Nigeria',
+        lat: 6.5244,
+        long: 3.3792,
+        role: 'member',
+        chapterSlug: '',
+        themes: ['public'],
+        bioregion: '',
+        publicNote: 'Still visible while Directus initializes.',
+        status: 'approved',
+        approvedAt: '2026-07-11T00:00:00.000Z',
+      }];
+    }
+    return [];
+  };
+
+  const nodes = await listPublicMapNodes(sql);
+  assert.equal(statements.some((text) => text.includes('left join public.directus_users')), true);
+  assert.equal(nodes.length, 1);
+  assert.equal(nodes[0].role, 'member');
+  assert.equal(nodes[0].chapterSlug, '');
+  assert.equal(containsPrivateMapNodeField(nodes), false);
+});
+
+test('public map nodes resolve steward role without exposing owner emails', async () => {
+  const sql = async (strings) => {
+    const text = strings.join('?').replace(/\s+/g, ' ').trim();
+    assert.match(text, /join intake\.map_node_private_contacts/);
+    assert.match(text, /join public\.directus_users/);
+    return [{
+      id: 'node-steward',
+      name: 'Directus Steward',
+      place: 'Lagos',
+      city: 'Lagos',
+      region: '',
+      country: 'Nigeria',
+      lat: 6.5244,
+      long: 3.3792,
+      role: 'steward',
+      chapterSlug: 'nigeria',
+      themes: ['public'],
+      bioregion: '',
+      publicNote: 'Keeping the chapter connected.',
+      status: 'approved',
+      approvedAt: '2026-07-11T00:00:00.000Z',
+    }];
+  };
+
+  const nodes = await listPublicMapNodes(sql);
+  assert.equal(nodes.length, 1);
+  assert.equal(nodes[0].role, 'steward');
+  assert.equal(nodes[0].chapterSlug, 'nigeria');
+  assert.equal(containsPrivateMapNodeField(nodes), false);
 });
 
 test('live onboarding auto-approves submissions and appends private audit row', async () => {

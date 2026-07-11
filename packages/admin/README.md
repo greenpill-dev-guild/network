@@ -260,14 +260,11 @@ the approved public projection available through `/map/state`. Turn it off
 manually after the session. Do not expose this toggle through public URLs,
 query parameters, browser storage, or generated website content.
 
-To let known stewards create steward nodes during a session without exposing
-Directus user data publicly, set the agent secret
-`MAP_NODE_STEWARD_EMAIL_ALLOWLIST` to a comma- or whitespace-separated list of
-`email=chapter-slug` entries. Plain email entries still promote the role for
-compatibility, but mapped entries also attach the trusted public `chapterSlug`
-to the steward node. The public form still submits a normal member role; the
-agent promotes matching owner emails to `steward` server-side. Non-allowlisted
-submissions are normalized away from steward/organizer/coordinator roles.
+An approved node renders as a steward only when its private owner email matches
+an **active** Directus user with one chapter-editor assignment. The agent reads
+that relationship privately on every map projection and exposes only the public
+role and trusted `chapterSlug`. The public form still submits a normal member
+role; browser input cannot self-assign steward, organizer, or coordinator.
 
 Before inviting stewards, run `bun run directus:content:setup` and confirm the
 generated roles:

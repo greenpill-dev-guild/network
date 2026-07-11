@@ -178,13 +178,12 @@ shared contracts instead of one-off route or website fetch logic.
 
 Public map-node submissions require an owner email. The agent stores that email only in `intake.map_node_private_contacts` so future owner updates can use one-use email magic links. Configure email sending on the agent with `RESEND_API_KEY`, `MAP_NODE_EMAIL_FROM`, `MAP_NODE_EMAIL_REPLY_TO`, and `MAP_NODE_EDIT_BASE_URL`; do not expose those values to the static website, Keystatic, generated JSON, or browser bundles. Map magic-link replies should route to the monitored map mailbox on the verified sending subdomain, currently `Greenpill Network <map@mail.greenpill.network>`. Missing or failing email provider configuration still returns the same neutral public edit-link response.
 
-For steward onboarding sessions, set `MAP_NODE_STEWARD_EMAIL_ALLOWLIST` on the
-agent to a comma- or whitespace-separated list of `email=chapter-slug` entries.
-Plain email entries still promote the role for compatibility, but mapped entries
-also attach the trusted public `chapterSlug` to the steward node. Non-allowlisted
-public submissions cannot self-claim steward, organizer, or coordinator roles.
-Pair this with Live Onboarding Mode when steward nodes should appear publicly
-during the session.
+For steward onboarding sessions, an approved node is projected as a steward only
+when its private owner email matches an **active** Directus user with one chapter
+editor assignment. The agent resolves this privately on every map read and
+exposes only the public steward role and trusted `chapterSlug`; public input
+cannot self-claim steward, organizer, or coordinator roles. Pair this with Live
+Onboarding Mode when new nodes should appear publicly during the session.
 
 Local live-map rehearsal:
 
@@ -193,11 +192,10 @@ bun run dev
 bun run test:home-map:live-e2e
 ```
 
-`bun run dev` seeds the local Postgres database, boots Directus, starts the
-agent on `3303`, and gives the local agent a safe default steward allowlist for
-`local-steward@example.org=nigeria`. In a second terminal,
-`test:home-map:live-e2e` turns local Live Onboarding Mode on, submits member
-and allowlisted steward nodes through `POST /map-nodes`, verifies that
+`bun run dev` seeds the local Postgres database, boots Directus, and starts the
+agent on `3303`. In a second terminal, `test:home-map:live-e2e` creates a
+marked local Directus steward assigned to Nigeria, turns local Live Onboarding
+Mode on, submits member and steward nodes through `POST /map-nodes`, verifies that
 `/map/state` reports live mode, public member/steward nodes, people-to-people
 shared-theme edges, chapter anchors with no relationship edges, and no private
 email/raw-note leakage, then restores the previous live-mode setting.
@@ -208,10 +206,10 @@ For a manual call rehearsal where the homepage should stay live, run:
 bun run test:home-map:live-e2e --keep-live
 ```
 
-Open `http://localhost:3301/` and use the Home map add-node flow. Use a
-non-allowlisted email for a public member node, or the local allowlisted
-`local-steward@example.org` address for a steward node linked to Nigeria. When
-the rehearsal is over, run:
+Open `http://localhost:3301/` and use the Home map add-node flow. The marked
+local Directus user `local-steward@example.org` renders as a steward linked to
+Nigeria; all other unassigned emails render as members. When the rehearsal is
+over, run:
 
 ```sh
 bun run test:home-map:live-e2e --disable-live
