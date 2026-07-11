@@ -260,6 +260,13 @@ the approved public projection available through `/map/state`. Turn it off
 manually after the session. Do not expose this toggle through public URLs,
 query parameters, browser storage, or generated website content.
 
+In moderated mode, the agent sends configured operators a Resend alert with a
+link to the exact `map_node_submissions` record in Directus. Sign in, review the
+safe fields, and set `status` to `approved`, `rejected`, or `archived`; Directus
+records the actor and status transition, while the database sets `approved_at`
+on first approval. The `Pending map node approvals` bookmark is the fallback
+queue when an email link has expired or been missed.
+
 An approved node renders as a steward only when its private owner email matches
 an **active** Directus user with one chapter-editor assignment. The agent reads
 that relationship privately on every map projection and exposes only the public

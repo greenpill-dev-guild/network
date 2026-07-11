@@ -157,6 +157,8 @@ test('agent server starts a durable edit-link delivery sweep without logging pri
   assert.match(source, /DATABASE_URL/);
   assert.match(source, /MAP_NODE_EDIT_LINK_DELIVERY_SWEEP_ENABLED/);
   assert.match(source, /deliverQueuedEditLinks/);
+  assert.match(source, /MAP_NODE_MODERATION_DELIVERY_SWEEP_ENABLED/);
+  assert.match(source, /deliverQueuedModerationNotifications/);
   assert.match(source, /errorName/);
   assert.doesNotMatch(source, /console\.warn\([^;]*(email|token|normalized_email|request_ip)/s);
 });
@@ -1039,7 +1041,7 @@ test('edit-session and update-request routes expose generic token semantics', as
   assert.deepEqual(await invalidUpdate.json(), MAP_NODE_INVALID_EDIT_LINK_ERROR);
 });
 
-function createFakeSubmissionSql({ liveOnboardingEnabled, stewardChapterSlug = '' }) {
+function createFakeSubmissionSql({ liveOnboardingEnabled, stewardChapterSlug = '', submissionCount = 0 }) {
   const statements = [];
   const tx = async (strings, ...values) => {
     const text = strings.join('?').replace(/\s+/g, ' ').trim();
@@ -1047,6 +1049,10 @@ function createFakeSubmissionSql({ liveOnboardingEnabled, stewardChapterSlug = '
 
     if (text.includes('from intake.map_node_intake_settings')) {
       return [{ liveOnboardingEnabled }];
+    }
+
+    if (text.includes('select count(*)::int as count from intake.map_node_submissions')) {
+      return [{ count: submissionCount }];
     }
 
     if (text.includes('from public.directus_users')) {
@@ -1070,6 +1076,10 @@ function createFakeSubmissionSql({ liveOnboardingEnabled, stewardChapterSlug = '
         createdAt: '2026-05-19T18:00:00.000Z',
         approvedAt: liveOnboardingEnabled ? '2026-05-19T18:00:00.000Z' : null,
       }];
+    }
+
+    if (text.includes('insert into intake.map_node_moderation_notifications')) {
+      return [{ id: 'moderation-notification-1' }];
     }
 
     return [];
@@ -1097,6 +1107,45 @@ test('map-node submissions stay pending unless live onboarding is enabled', asyn
     statements.some((statement) => statement.text.includes('insert into intake.map_node_reviews')),
     false
   );
+  assert.equal(
+    statements.some((statement) => statement.text.includes('insert into intake.map_node_moderation_notifications')),
+    true
+  );
+});
+
+test('map-node honeypot and daily IP limit reject before storing a submission', async () => {
+  const honeypot = createFakeSubmissionSql({ liveOnboardingEnabled: false });
+  await assert.rejects(
+    () => createMapNodeSubmission(honeypot.sql, {
+      name: 'Bot',
+      place: 'Oakland',
+      lat: 37.8044,
+      long: -122.2712,
+      themes: ['public'],
+      email: 'private@example.com',
+      website: 'https://spam.example',
+    }),
+    (error) => error instanceof PublicInputError && error.code === 'spam_detected'
+  );
+  assert.equal(honeypot.statements.some((statement) => (
+    statement.text.includes('insert into intake.map_node_submissions')
+  )), false);
+
+  const limited = createFakeSubmissionSql({ liveOnboardingEnabled: false, submissionCount: 5 });
+  await assert.rejects(
+    () => createMapNodeSubmission(limited.sql, {
+      name: 'Limited Member',
+      place: 'Oakland',
+      lat: 37.8044,
+      long: -122.2712,
+      themes: ['public'],
+      email: 'private@example.com',
+    }, { rateLimitKey: '203.0.113.8' }),
+    (error) => error instanceof PublicInputError && error.code === 'rate_limited' && error.status === 429
+  );
+  assert.equal(limited.statements.some((statement) => (
+    statement.text.includes('insert into intake.map_node_submissions')
+  )), false);
 });
 
 test('map-node submissions require one to four themes', async () => {

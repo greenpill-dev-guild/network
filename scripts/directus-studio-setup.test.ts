@@ -10,7 +10,8 @@ test('Directus Studio metadata plan hides assignment collections and labels cont
       'chapter_update_requests',
       'chapter_update_request_links',
       'chapter_update_request_proof_signals',
-    ]
+    ],
+    ['map_node_submissions']
   );
 
   const chapters = plan.collections.find((collection) => collection.collection === 'chapters');
@@ -19,6 +20,9 @@ test('Directus Studio metadata plan hides assignment collections and labels cont
   const updateRequestLinks = plan.collections.find((collection) => collection.collection === 'chapter_update_request_links');
   const updateRequestProofSignals = plan.collections.find((collection) => (
     collection.collection === 'chapter_update_request_proof_signals'
+  ));
+  const mapNodeSubmissions = plan.collections.find((collection) => (
+    collection.collection === 'map_node_submissions'
   ));
   const chapterSummary = plan.fields.find((field) => field.collection === 'chapters' && field.field === 'summary');
   const initiativeChapter = plan.fields.find((field) => (
@@ -59,6 +63,9 @@ test('Directus Studio metadata plan hides assignment collections and labels cont
   ));
   const projectGuild = plan.fields.find((field) => field.collection === 'projects' && field.field === 'guild_slug');
   const rawData = plan.fields.find((field) => field.collection === 'chapters' && field.field === 'data');
+  const mapNodeStatus = plan.fields.find((field) => (
+    field.collection === 'map_node_submissions' && field.field === 'status'
+  ));
 
   assert.equal(chapters?.meta.icon, 'location_city');
   assert.equal(chapters?.meta.display_template, '{{ name }}');
@@ -70,6 +77,7 @@ test('Directus Studio metadata plan hides assignment collections and labels cont
   assert.equal(updateRequests?.meta.preview_url, 'https://greenpill.network/chapters/{{ chapter_slug }}');
   assert.equal(updateRequestLinks?.meta.hidden, true);
   assert.equal(updateRequestProofSignals?.meta.hidden, true);
+  assert.equal(mapNodeSubmissions?.meta.icon, 'approval');
   assert.equal((chapterSummary?.meta as any).interface, 'input-multiline');
   assert.equal((initiativeChapter?.meta as any).interface, 'select-dropdown-m2o');
   assert.deepEqual((initiativeChapter?.meta as any).special, ['m2o']);
@@ -85,6 +93,8 @@ test('Directus Studio metadata plan hides assignment collections and labels cont
   assert.equal((projectGuild?.meta as any).interface, 'select-dropdown-m2o');
   assert.equal((rawData?.meta as any).hidden, true);
   assert.equal((rawData?.meta as any).readonly, true);
+  assert.equal((mapNodeStatus?.meta as any).interface, 'select-dropdown');
+  assert.equal((mapNodeStatus?.meta as any).required, true);
 });
 
 test('Directus Studio bookmark plan adds steward and publisher working views', () => {
@@ -92,10 +102,12 @@ test('Directus Studio bookmark plan adds steward and publisher working views', (
     'chapters',
     'chapter_initiatives',
     'chapter_update_requests',
+    'map_node_submissions',
   ]);
 
   const stewardRequests = bookmarks.find((bookmark) => bookmark.bookmark === 'My chapter change requests');
   const publisherReviews = bookmarks.find((bookmark) => bookmark.bookmark === 'Pending chapter reviews');
+  const mapApprovals = bookmarks.filter((bookmark) => bookmark.bookmark === 'Pending map node approvals');
 
   assert.equal(stewardRequests?.role, 'Greenpill Steward Editor');
   assert.equal(stewardRequests?.collection, 'chapter_update_requests');
@@ -108,6 +120,13 @@ test('Directus Studio bookmark plan adds steward and publisher working views', (
   assert.deepEqual(publisherReviews?.filter, {
     request_status: {
       _eq: 'pending_review',
+    },
+  });
+  assert.equal(mapApprovals.length, 2);
+  assert.equal(mapApprovals.every((bookmark) => bookmark.collection === 'map_node_submissions'), true);
+  assert.deepEqual(mapApprovals[0]?.filter, {
+    status: {
+      _eq: 'pending',
     },
   });
 });

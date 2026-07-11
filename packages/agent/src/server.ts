@@ -18,26 +18,41 @@ const editLinkDeliverySweepIntervalMs = parsePositiveInteger(
   process.env.MAP_NODE_EDIT_LINK_DELIVERY_SWEEP_INTERVAL_MS,
   5 * 60 * 1000
 );
+const moderationDeliverySweepIntervalMs = parsePositiveInteger(
+  process.env.MAP_NODE_MODERATION_DELIVERY_SWEEP_INTERVAL_MS,
+  editLinkDeliverySweepIntervalMs
+);
 
 export function startMapNodeEditLinkDeliverySweep({
   env = process.env,
   repository = createMapNodeRepository({ env }),
 }: {
   env?: Record<string, string | undefined>;
-  repository?: { deliverQueuedEditLinks?: (options?: { limit?: number }) => Promise<unknown> };
+  repository?: {
+    deliverQueuedEditLinks?: (options?: { limit?: number }) => Promise<unknown>;
+    deliverQueuedModerationNotifications?: (options?: { limit?: number }) => Promise<unknown>;
+  };
 } = {}): (() => void) | null {
-  if (!env.DATABASE_URL || env.MAP_NODE_EDIT_LINK_DELIVERY_SWEEP_ENABLED === 'false') return null;
-  if (typeof repository.deliverQueuedEditLinks !== 'function') return null;
-  const deliverQueuedEditLinks = repository.deliverQueuedEditLinks.bind(repository);
+  if (!env.DATABASE_URL) return null;
+  const deliverQueuedEditLinks = env.MAP_NODE_EDIT_LINK_DELIVERY_SWEEP_ENABLED === 'false'
+    ? null
+    : repository.deliverQueuedEditLinks?.bind(repository);
+  const deliverQueuedModerationNotifications = env.MAP_NODE_MODERATION_DELIVERY_SWEEP_ENABLED === 'false'
+    ? null
+    : repository.deliverQueuedModerationNotifications?.bind(repository);
+  if (!deliverQueuedEditLinks && !deliverQueuedModerationNotifications) return null;
 
   let running = false;
   const run = async () => {
     if (running) return;
     running = true;
     try {
-      await deliverQueuedEditLinks({ limit: 20 });
+      if (deliverQueuedEditLinks) await deliverQueuedEditLinks({ limit: 20 });
+      if (deliverQueuedModerationNotifications) {
+        await deliverQueuedModerationNotifications({ limit: 20 });
+      }
     } catch (error) {
-      console.warn('map_node_edit_link_delivery_sweep_failed', {
+      console.warn('map_node_email_delivery_sweep_failed', {
         errorName: error instanceof Error ? error.name : 'UnknownError',
       });
     } finally {
@@ -50,7 +65,7 @@ export function startMapNodeEditLinkDeliverySweep({
   }, 1000);
   const interval = setInterval(() => {
     void run();
-  }, editLinkDeliverySweepIntervalMs);
+  }, Math.min(editLinkDeliverySweepIntervalMs, moderationDeliverySweepIntervalMs));
   bootTimer.unref?.();
   interval.unref?.();
 
