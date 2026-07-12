@@ -2,6 +2,8 @@ export * from './impact.js';
 export * from './app.js';
 export * from './db.js';
 export * from './map-nodes.js';
+export * from './errors.js';
+export * from './map-locations.js';
 export * from './map-state.js';
 export * from './impact-cache.js';
 export * from './green-goods-impact.js';

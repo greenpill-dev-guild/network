@@ -47,8 +47,14 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
           const form = document.getElementById('map-edit-form');
           const submitButton = document.getElementById('map-edit-submit');
           const extraThemes = document.getElementById('map-edit-extra-themes');
+          const locationQuery = document.getElementById('map-edit-location-query');
+          const locationSearch = document.getElementById('map-edit-location-search');
+          const locationResults = document.getElementById('map-edit-location-results');
+          const locationResultsList = document.getElementById('map-edit-location-results-list');
+          const locationStatus = document.getElementById('map-edit-location-status');
+          const locationCurrent = document.getElementById('map-edit-location-current');
 
-          if (!loading || !invalid || !success || !failure || !form || !submitButton || !extraThemes) {
+          if (!loading || !invalid || !success || !failure || !form || !submitButton || !extraThemes || !locationQuery || !locationSearch || !locationResults || !locationResultsList || !locationStatus || !locationCurrent) {
             editToken = '';
             return;
           }
@@ -58,6 +64,8 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
           const agentBaseUrl = isLocalHost ? 'http://127.0.0.1:3303' : 'https://agent.greenpill.network';
           let nodeId = '';
           let initialPublicFields = null;
+          let locationConfirmationId = '';
+          let locationSearchVersion = 0;
 
           const hideAllStates = () => {
             loading.hidden = true;
@@ -141,22 +149,16 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
           const renderNode = (node) => {
             nodeId = clean(node?.id);
             setTextField('display_name', clean(node?.display_name));
-            setTextField('place_name', clean(node?.place_name));
-            setTextField('city', clean(node?.city));
-            setTextField('region', clean(node?.region));
-            setTextField('country', clean(node?.country));
-            setTextField('latitude', node?.latitude ?? '');
-            setTextField('longitude', node?.longitude ?? '');
+            locationConfirmationId = '';
+            locationCurrent.textContent = `Current location: ${clean(node?.place_name) || 'Unknown place'}`;
+            locationStatus.textContent = 'Find a new place only if you want to move this node.';
+            locationStatus.removeAttribute('data-tone');
+            locationResults.hidden = true;
+            locationResultsList.replaceChildren();
             setThemeFields(node?.themes);
             setTextField('public_note', clean(node?.public_note));
             initialPublicFields = {
               display_name: clean(node?.display_name),
-              place_name: clean(node?.place_name),
-              city: clean(node?.city),
-              region: clean(node?.region),
-              country: clean(node?.country),
-              latitude: toNumber(node?.latitude),
-              longitude: toNumber(node?.longitude),
               themes: normalizeThemes(node?.themes),
               public_note: clean(node?.public_note),
             };
@@ -165,29 +167,12 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
           const collectPublicFields = () => {
             const formData = new FormData(form);
             const displayName = clean(formData.get('display_name'));
-            const placeName = clean(formData.get('place_name'));
-            const latitude = toNumber(formData.get('latitude'));
-            const longitude = toNumber(formData.get('longitude'));
             const themes = normalizeThemes(formData.getAll('themes'));
 
-            if (!displayName || !placeName) {
-              throw new Error('Add a display name and place name before submitting.');
-            }
-            if (latitude === null || latitude < -90 || latitude > 90) {
-              throw new Error('Latitude must be a number between -90 and 90.');
-            }
-            if (longitude === null || longitude < -180 || longitude > 180) {
-              throw new Error('Longitude must be a number between -180 and 180.');
-            }
+            if (!displayName) throw new Error('Add a display name before submitting.');
 
             return {
               display_name: displayName,
-              place_name: placeName,
-              city: clean(formData.get('city')),
-              region: clean(formData.get('region')),
-              country: clean(formData.get('country')),
-              latitude,
-              longitude,
               themes,
               public_note: clean(formData.get('public_note')),
             };
@@ -223,7 +208,7 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
               }
 
               renderNode(payload.node);
-              if (!nodeId || !initialPublicFields || initialPublicFields.latitude === null || initialPublicFields.longitude === null) {
+              if (!nodeId || !initialPublicFields) {
                 showInvalid();
                 return;
               }
@@ -247,12 +232,19 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
             try {
               const publicFields = collectPublicFields();
               if (initialPublicFields && publicFieldsMatch(publicFields, initialPublicFields)) {
-                showFailure('Make at least one public-field change before submitting.');
+                if (!locationConfirmationId) {
+                  showFailure('Make at least one public-field or confirmed-location change before submitting.');
+                  return;
+                }
+              }
+              if (!initialPublicFields && !locationConfirmationId) {
+                showFailure('Make at least one public-field or confirmed-location change before submitting.');
                 return;
               }
               body = {
                 token: editToken,
                 ...publicFields,
+                ...(locationConfirmationId ? { locationConfirmationId } : {}),
               };
             } catch (error) {
               showFailure(error instanceof Error ? error.message : 'Check the public fields before submitting.');
@@ -285,6 +277,75 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
             } finally {
               setSubmitting(false);
             }
+          });
+
+          const setLocationStatus = (message, tone = '') => {
+            locationStatus.textContent = message;
+            if (tone) locationStatus.dataset.tone = tone;
+            else locationStatus.removeAttribute('data-tone');
+          };
+
+          const renderLocationResults = (results) => {
+            locationResultsList.replaceChildren();
+            results.forEach((result) => {
+              const item = document.createElement('li');
+              const button = document.createElement('button');
+              button.type = 'button';
+              button.textContent = result.label;
+              button.addEventListener('click', () => {
+                locationConfirmationId = result.confirmationId;
+                locationCurrent.textContent = `New confirmed location: ${result.label}`;
+                setLocationStatus(`Confirmed. ${result.attribution || '© OpenStreetMap contributors'}`, 'success');
+                locationResults.hidden = true;
+                locationResultsList.replaceChildren();
+              });
+              item.append(button);
+              locationResultsList.append(item);
+            });
+            locationResults.hidden = results.length === 0;
+          };
+
+          const findLocation = async () => {
+            const query = clean(locationQuery.value);
+            if (query.length < 3) {
+              setLocationStatus('Enter at least three characters to find a place.', 'error');
+              locationQuery.focus();
+              return;
+            }
+            const searchVersion = ++locationSearchVersion;
+            locationSearch.disabled = true;
+            setLocationStatus('Finding matching places…');
+            try {
+              const response = await fetch(`${agentBaseUrl}/map-locations/search`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query }),
+              });
+              const payload = await safeJson(response);
+              if (searchVersion !== locationSearchVersion) return;
+              if (!response.ok || !Array.isArray(payload?.results)) {
+                throw new Error(payload?.error?.message || 'We could not find that place.');
+              }
+              const results = payload.results.filter((result) => (
+                clean(result?.confirmationId) && clean(result?.label)
+              ));
+              if (results.length === 0) throw new Error('No city, region, or country matched that search.');
+              renderLocationResults(results);
+              setLocationStatus('Choose a matching place to confirm the new location.');
+            } catch (error) {
+              if (searchVersion !== locationSearchVersion) return;
+              renderLocationResults([]);
+              setLocationStatus(error instanceof Error ? error.message : 'We could not find that place.', 'error');
+            } finally {
+              if (searchVersion === locationSearchVersion) locationSearch.disabled = false;
+            }
+          };
+
+          locationSearch.addEventListener('click', () => void findLocation());
+          locationQuery.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            void findLocation();
           });
 
           loadEditSession();
@@ -346,7 +407,7 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
 
       .map-edit-panel {
         width: min(100%, 48rem);
-        border: 1px solid rgba(207, 247, 90, 0.18);
+        border: 1px solid color-mix(in srgb, var(--gp-primary) 18%, transparent);
         border-radius: 8px;
         padding: clamp(var(--gp-space-lg), 4vw, var(--gp-space-2xl));
         background: rgba(7, 24, 15, 0.76);
@@ -374,7 +435,7 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
       .map-edit-copy {
         max-width: 40rem;
         margin: var(--gp-space-md) 0 var(--gp-space-lg);
-        color: rgba(250, 247, 238, 0.8);
+        color: var(--gp-fg-muted);
         font-size: var(--gp-body-md);
         line-height: 1.6;
       }
@@ -415,9 +476,76 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
         gap: var(--gp-space-xs);
       }
 
+      .map-edit-location {
+        display: grid;
+        gap: var(--gp-space-sm);
+        margin: 0;
+        border: 1px solid rgba(207, 247, 90, 0.18);
+        border-radius: 8px;
+        padding: var(--gp-space-md);
+      }
+
+      .map-edit-location legend {
+        padding-inline: var(--gp-space-xs);
+        color: rgba(250, 247, 238, 0.84);
+        font-size: var(--gp-label-sm);
+        font-weight: 800;
+      }
+
+      .map-edit-location p {
+        margin: 0;
+        color: rgba(250, 247, 238, 0.8);
+        line-height: 1.45;
+      }
+
+      .map-edit-location-search-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: var(--gp-space-sm);
+      }
+
+      .map-edit-location-search-row button,
+      #map-edit-location-results button {
+        min-height: 2.85rem;
+        border: 1px solid color-mix(in srgb, var(--gp-primary) 30%, transparent);
+        border-radius: 8px;
+        padding: 0.75rem;
+        background: var(--gp-card);
+        color: var(--gp-fg);
+        font: inherit;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      .map-edit-location-search-row button:disabled {
+        cursor: wait;
+        opacity: 0.64;
+      }
+
+      #map-edit-location-results ul {
+        display: grid;
+        gap: var(--gp-space-xs);
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      #map-edit-location-results button {
+        width: 100%;
+        text-align: start;
+      }
+
+      .map-edit-location-hint,
+      .map-edit-location-status {
+        font-size: var(--gp-label-sm);
+      }
+
+      .map-edit-location-status[data-tone="success"] { color: var(--gp-primary); }
+      .map-edit-location-status[data-tone="error"] { color: var(--gp-error); }
+
       .map-edit-form label span,
       .map-edit-themes legend {
-        color: rgba(250, 247, 238, 0.84);
+        color: var(--gp-fg-muted);
         font-size: var(--gp-label-sm);
         font-weight: 800;
       }
@@ -527,6 +655,10 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
           grid-template-columns: 1fr;
         }
 
+        .map-edit-location-search-row {
+          grid-template-columns: 1fr;
+        }
+
         .map-edit-actions {
           display: grid;
         }
@@ -564,31 +696,22 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
               <span>Display name</span>
               <input name="display_name" autocomplete="name" required />
             </label>
-            <label>
-              <span>Place name</span>
-              <input name="place_name" autocomplete="address-level2" required />
-            </label>
-            <label>
-              <span>City</span>
-              <input name="city" autocomplete="address-level2" />
-            </label>
-            <label>
-              <span>Region</span>
-              <input name="region" autocomplete="address-level1" />
-            </label>
-            <label>
-              <span>Country</span>
-              <input name="country" autocomplete="country-name" />
-            </label>
-            <label>
-              <span>Latitude</span>
-              <input name="latitude" inputmode="decimal" required type="number" step="0.000001" min="-90" max="90" />
-            </label>
-            <label>
-              <span>Longitude</span>
-              <input name="longitude" inputmode="decimal" required type="number" step="0.000001" min="-180" max="180" />
-            </label>
           </div>
+
+          <fieldset class="map-edit-location">
+            <legend>Location</legend>
+            <p id="map-edit-location-current"></p>
+            <label for="map-edit-location-query">Find a new city, region, or country</label>
+            <div class="map-edit-location-search-row">
+              <input id="map-edit-location-query" type="search" autocomplete="off" minlength="3" maxlength="120" placeholder="e.g. Awka, Nigeria" />
+              <button id="map-edit-location-search" type="button">Find place</button>
+            </div>
+            <p class="map-edit-location-hint">Use a public community location, not a home address.</p>
+            <div id="map-edit-location-results" hidden>
+              <ul id="map-edit-location-results-list"></ul>
+            </div>
+            <p id="map-edit-location-status" class="map-edit-location-status" role="status" aria-live="polite"></p>
+          </fieldset>
 
           <fieldset class="map-edit-themes">
             <legend>Themes</legend>

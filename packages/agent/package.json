@@ -32,6 +32,10 @@
       "types": "./dist/map-nodes.d.ts",
       "default": "./dist/map-nodes.js"
     },
+    "./map-locations": {
+      "types": "./dist/map-locations.d.ts",
+      "default": "./dist/map-locations.js"
+    },
     "./map-state": {
       "types": "./dist/map-state.d.ts",
       "default": "./dist/map-state.js"

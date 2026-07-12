@@ -29,6 +29,7 @@
     "db:local:down": "bun --no-env-file scripts/docker-compose.ts -f packages/agent/docker-compose.yml down",
     "db:migrate": "bun run build:packages && bun --no-env-file --env-file-if-exists=.env.local scripts/agent-db.migrate.ts",
     "db:cleanup:map-node-edit-flow": "bun run build:packages && bun --no-env-file --env-file-if-exists=.env.local scripts/map-node-edit-flow-cleanup.ts",
+    "db:repair:map-node-locations": "bun run build:packages && bun --no-env-file --env-file-if-exists=.env.local scripts/map-node-location-repair.ts",
     "db:deliver:map-node-edit-links": "bun run build:packages && bun --no-env-file --env-file-if-exists=.env.local scripts/map-node-edit-link-delivery.ts",
     "db:deliver:map-node-moderation": "bun run build:packages && bun --no-env-file --env-file-if-exists=.env.local scripts/map-node-moderation-delivery.ts",
     "impact:sync": "bun run build:packages && bun --no-env-file --env-file-if-exists=.env.local scripts/agent-impact-sync.ts",

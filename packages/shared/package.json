@@ -24,6 +24,10 @@
       "types": "./dist/map-nodes.d.ts",
       "default": "./dist/map-nodes.js"
     },
+    "./map-locations": {
+      "types": "./dist/map-locations.d.ts",
+      "default": "./dist/map-locations.js"
+    },
     "./map-node-storage": {
       "types": "./dist/map-node-storage.d.ts",
       "default": "./dist/map-node-storage.js"

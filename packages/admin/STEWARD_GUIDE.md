@@ -44,8 +44,8 @@ or unapproved claims out of Directus fields that publish to the website.
    - `Chapter Initiatives`
    - `Chapter Update Requests`
 
-If the assigned chapter or guild is missing, ask the operator to check the
-content-access assignment TSV and rerun `directus:content-access`.
+If the assigned chapter or guild is missing, email Afolabi at
+`afo@greenpill.builders` so the content-access assignment can be checked.
 
 ## First 10-Minute Walkthrough
 
@@ -126,6 +126,11 @@ Chapter update requests move through this flow:
 
 Accepted update requests do not publish the website by themselves. They are the
 review handoff that tells a trusted publisher what to apply.
+
+When you move a request or initiative to `pending_review`, email
+`afo@greenpill.builders` with the subject `Greenpill chapter review: [Chapter
+name]`. Include the Directus item link and a one-sentence summary of what is
+ready for review. This makes sure Afolabi sees the review request promptly.
 
 ## Previewing Changes
 

@@ -698,6 +698,43 @@ test('map-node intake settings use a replay-safe dedicated migration', async () 
   assert.match(settingsSql, /on conflict \(id\) do nothing/);
 });
 
+test('location integrity migration keeps confirmations and repairs auditable and reversible', async () => {
+  const migration = await readFile(
+    new URL('../packages/agent/migrations/018_map_location_integrity.sql', import.meta.url),
+    'utf8'
+  );
+  const repairTool = await readFile(
+    new URL('./map-node-location-repair.ts', import.meta.url),
+    'utf8'
+  );
+  const packageJson = await readFile(new URL('../package.json', import.meta.url), 'utf8');
+
+  assert.match(migration, /create table if not exists intake\.map_location_geocode_cache/);
+  assert.match(migration, /create table if not exists intake\.map_location_geocode_throttle/);
+  assert.match(migration, /create table if not exists intake\.map_location_request_limits/);
+  assert.match(migration, /create table if not exists intake\.map_location_confirmations/);
+  assert.match(migration, /create table if not exists intake\.map_node_location_repairs/);
+  assert.match(migration, /map_location_geocode_cache_expiry_idx/);
+  assert.match(migration, /map_location_request_limits_expiry_idx/);
+  assert.match(migration, /map_node_submissions_latitude_range check \(latitude between -90 and 90\) not valid/);
+  assert.match(migration, /map_node_submissions_longitude_range check \(longitude between -180 and 180\) not valid/);
+  assert.match(repairTool, /mode: 'dry-run'/);
+  assert.match(repairTool, /--apply/);
+  assert.match(repairTool, /--revert/);
+  assert.match(repairTool, /exact_place_label_with_context_unique_match/);
+  assert.match(repairTool, /--after/);
+  assert.match(repairTool, /nextCursor/);
+  assert.match(repairTool, /const queryLimit = limit \+ 1/);
+  assert.match(repairTool, /fetchedRows\.slice\(0, limit\)/);
+  assert.match(repairTool, /context\.every/);
+  assert.match(repairTool, /candidate\.kind === 'country'/);
+  assert.match(repairTool, /MAP_LOCATION_RATE_LIMIT_MS/);
+  assert.match(repairTool, /MAX_PROVIDER_THROTTLE_RETRIES/);
+  assert.match(repairTool, /await sleep\(MAP_LOCATION_RATE_LIMIT_MS\)/);
+  assert.match(repairTool, /map_node_location_repairs/);
+  assert.match(packageJson, /db:repair:map-node-locations/);
+});
+
 test('edit-token and update-request migration is replay-safe and public/private aware', async () => {
   const migrationFiles = (await readdir(new URL('../packages/agent/migrations', import.meta.url)))
     .filter((file) => file.endsWith('.sql'))
@@ -827,10 +864,10 @@ test('home map intake requires a valid email and stores local pending only after
   assert.doesNotMatch(component, /type="checkbox"|type='checkbox'/);
   const identityStepMarkup = component.match(/<section class="gp-home-map-addnode-step" data-walkthrough-step="identity" hidden>([\s\S]*?)<\/section>/)?.[1] ?? '';
   assert.ok(
-    identityStepMarkup.indexOf('data-location-text') !== -1 &&
+    identityStepMarkup.indexOf('data-location-query') !== -1 &&
       identityStepMarkup.indexOf('data-location-map') !== -1 &&
-      identityStepMarkup.indexOf('data-location-text') < identityStepMarkup.indexOf('data-location-map'),
-    'identity step should place the city/place selector above the mini map'
+      identityStepMarkup.indexOf('data-location-query') < identityStepMarkup.indexOf('data-location-map'),
+    'identity step should place the place search above the mini map'
   );
 
   // Email is validated client-side, and a local pending node is written ONLY
@@ -1426,27 +1463,48 @@ test('home map defers live arrivals while a node is selected and re-reveals on d
   assert.doesNotMatch(component, /gpMapThreadResettle[\s\S]*?infinite/);
 });
 
-test('home map location picker is pin-first with a bundled city autocomplete', async () => {
+test('home map location picker searches, confirms, then reverse-confirms a dragged pin', async () => {
   const component = await readFile(
     new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
     'utf8'
   );
 
-  // The pin (coordinates) is placed by tap/drag — pointer-driven, not a lone click.
-  assert.match(component, /placeFromPointer/);
+  // Search results come from the agent and hold a short-lived confirmation id.
+  // The browser never chooses authoritative coordinates or labels by itself.
+  assert.match(component, /data-location-search/);
+  assert.match(component, /\$\{agentBaseUrl\}\/map-locations\/search/);
+  assert.match(component, /data-location-confirmation-id/);
+  assert.match(component, /locationConfirmationId/);
+  assert.match(component, /Find and choose a place to confirm your pin/);
+  assert.match(component, /data-location-coordinate-lat/);
+  assert.match(component, /data-location-coordinate-long/);
+  assert.match(component, /data-location-coordinate-confirm/);
+
+  // The mini map keeps its direct-manipulation affordance, but uses proper SVG
+  // coordinate conversion and asks the server to reverse-confirm the final pin.
+  assert.match(component, /DOMPoint/);
+  assert.match(component, /getScreenCTM\(\)/);
+  assert.match(component, /matrix\.inverse\(\)/);
   assert.match(component, /addEventListener\('pointerdown'/);
   assert.match(component, /addEventListener\('pointermove'/);
+  assert.match(component, /\$\{agentBaseUrl\}\/map-locations\/reverse/);
+  assert.match(component, /confirmDraggedLocation/);
+  assert.match(component, /let locationSearchVersion = 0/);
+  assert.match(component, /const invalidateLocationRequests/);
+  assert.match(component, /locationRequestVersion \+= 1/);
+  assert.match(component, /searchVersion !== locationSearchVersion/);
+  assert.match(component, /resetWalkthrough[\s\S]*?invalidateLocationRequests\(\)/);
+  assert.match(component, /pointerdown[\s\S]*?invalidateLocationRequests\(\)/);
+  assert.match(component, /pointercancel[\s\S]*?Pin adjustment canceled/);
+  assert.match(component, /confirmEnteredCoordinates/);
+  assert.match(component, /tap or drag, or enter coordinates below/);
+  assert.doesNotMatch(component, /Find a place first, then adjust its pin/);
 
-  // A native datalist suggests bundled cities, and the list spans continents.
-  assert.match(component, /data-location-datalist/);
-  assert.match(component, /list="gp-home-map-cities"/);
-  assert.match(component, /label: 'Manila'/);
-  assert.match(component, /label: 'Mexico City'/);
-
-  // Free-text override: any typed place becomes the label once a pin gives coords,
-  // so a diverse set of locations all work (no force-match to a tiny list).
-  assert.match(component, /placeInput\.value = raw/);
-  // The either/or mode toggle is gone — pin map and city field show together.
+  // The old bundled city list and free-text label override are intentionally gone.
+  assert.doesNotMatch(component, /data-location-datalist/);
+  assert.doesNotMatch(component, /gp-home-map-cities/);
+  assert.doesNotMatch(component, /placeIndex/);
+  // The either/or mode toggle is gone — search and mini map show together.
   assert.doesNotMatch(component, /data-location-mode-toggle/);
 });
 

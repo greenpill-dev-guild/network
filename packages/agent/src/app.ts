@@ -21,6 +21,11 @@ import {
   publicErrorResponse,
 } from './map-nodes.js';
 import {
+  MAP_LOCATION_REVERSE_ROUTE,
+  MAP_LOCATION_SEARCH_ROUTE,
+  createMapLocationRepository,
+} from './map-locations.js';
+import {
   PUBLIC_COUNTS_ROUTE,
   PUBLIC_MAP_STATE_ROUTE,
   createMapStateRepository,
@@ -48,6 +53,9 @@ import {
 import {
   containsPrivateMapNodeField,
 } from '@greenpill-network/shared/map-nodes';
+import {
+  assertPublicMapLocationPayload,
+} from '@greenpill-network/shared/map-locations';
 
 type UnknownRecord = Record<string, any>;
 
@@ -55,6 +63,7 @@ export interface AgentAppOptions {
   checkDatabase?: () => Promise<UnknownRecord>;
   impactRepository?: UnknownRecord;
   mapNodeRepository?: UnknownRecord;
+  mapLocationRepository?: UnknownRecord;
   mapStateRepository?: UnknownRecord;
   newsletterRepository?: UnknownRecord;
   publicContentRepository?: UnknownRecord;
@@ -103,6 +112,7 @@ export function createAgentApp({
   checkDatabase = checkDatabaseConnection,
   impactRepository = createImpactRepository(),
   mapNodeRepository = createMapNodeRepository(),
+  mapLocationRepository = createMapLocationRepository(),
   mapStateRepository = createMapStateRepository({ mapNodeRepository }),
   newsletterRepository,
   publicContentRepository = createPublicContentRepository(),
@@ -220,6 +230,48 @@ export function createAgentApp({
       return context.json(assertPublicOperationalContentSnapshot(payload));
     } catch (error) {
       const response = publicErrorResponse(error);
+      return context.json(response.body, response.status as any);
+    }
+  });
+
+  app.post(MAP_LOCATION_SEARCH_ROUTE, async (context) => {
+    try {
+      let input: UnknownRecord = {};
+      try {
+        input = await context.req.json() as UnknownRecord;
+      } catch {
+        input = {};
+      }
+      const payload = await mapLocationRepository.search(input.query, getRequestMeta(context));
+      return context.json(assertPublicMapLocationPayload(payload));
+    } catch (error) {
+      const response = publicErrorResponse(error);
+      if (response.status === 429) {
+        context.header('Retry-After', response.body.error.code === 'location_request_rate_limited' ? '60' : '1');
+      }
+      return context.json(response.body, response.status as any);
+    }
+  });
+
+  app.post(MAP_LOCATION_REVERSE_ROUTE, async (context) => {
+    try {
+      let input: UnknownRecord = {};
+      try {
+        input = await context.req.json() as UnknownRecord;
+      } catch {
+        input = {};
+      }
+      const payload = await mapLocationRepository.reverse(
+        input.lat ?? input.latitude,
+        input.long ?? input.lng ?? input.longitude,
+        getRequestMeta(context)
+      );
+      return context.json(assertPublicMapLocationPayload(payload));
+    } catch (error) {
+      const response = publicErrorResponse(error);
+      if (response.status === 429) {
+        context.header('Retry-After', response.body.error.code === 'location_request_rate_limited' ? '60' : '1');
+      }
       return context.json(response.body, response.status as any);
     }
   });

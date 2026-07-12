@@ -16,6 +16,18 @@ import type {
 import type { PublicMapIntakeMode } from '@greenpill-network/shared/map-state';
 import { createDatabaseClient } from './db.js';
 import {
+  AgentDataError,
+  PublicInputError,
+  publicErrorResponse,
+} from './errors.js';
+import { consumeMapLocationConfirmation } from './map-locations.js';
+
+export {
+  AgentDataError,
+  PublicInputError,
+  publicErrorResponse,
+} from './errors.js';
+import {
   deliverQueuedMapNodeModerationNotifications,
   queueMapNodeModerationNotification,
   scheduleMapNodeModerationNotificationDelivery,
@@ -57,6 +69,8 @@ export interface PublicMapNodeSubmissionInput extends UnknownRecord {
   contactConsent?: boolean;
   contact_consent?: boolean;
   website?: string;
+  locationConfirmationId?: string;
+  location_confirmation_id?: string;
 }
 
 export interface PublicMapNodeUpdateRequestInput extends UnknownRecord {
@@ -98,6 +112,10 @@ type MapNodeSubmissionOptions = {
   createSqlForDeferredDelivery?: (options?: { max?: number }) => SqlLike | null;
 };
 
+type MapNodeUpdateRequestOptions = {
+  env?: Record<string, string | undefined>;
+};
+
 export interface QueuedMapNodeEditLinkDeliveryResult {
   queued: number;
   delivered: number;
@@ -132,6 +150,7 @@ const cleanIpAddress = (value: unknown): string => {
 };
 
 const normalizeNumber = (value: unknown): number | null => {
+  if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) return null;
   const number = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(number) ? number : null;
 };
@@ -148,6 +167,15 @@ export function normalizeOwnerEmail(value: unknown): string {
 export function isValidOwnerEmail(value: unknown): boolean {
   const email = normalizeOwnerEmail(value);
   return email.length > 3 && email.length <= 320 && EMAIL_PATTERN.test(email);
+}
+
+// Keep confirmation enforcement secure by default. A short, explicit false
+// window lets the agent deploy before the static website during a coordinated
+// rollout; the rollout guide requires switching it back on immediately after.
+export function isMapLocationConfirmationRequired(
+  env: Record<string, string | undefined> = process.env
+): boolean {
+  return cleanString(env.MAP_LOCATION_CONFIRMATION_REQUIRED).toLowerCase() !== 'false';
 }
 
 // Steward status is resolved privately from active Directus chapter access when
@@ -186,57 +214,6 @@ function publicInputInvalidEditLink(): PublicInputError {
 
 function jsonObject(value: unknown): UnknownRecord {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as UnknownRecord : {};
-}
-
-export class PublicInputError extends Error {
-  code: string;
-  status: number;
-
-  constructor(code: string, message: string, status = 400) {
-    super(message);
-    this.name = 'PublicInputError';
-    this.code = code;
-    this.status = status;
-  }
-}
-
-export class AgentDataError extends Error {
-  code: string;
-  status: number;
-
-  constructor(code: string, message: string, status = 503) {
-    super(message);
-    this.name = 'AgentDataError';
-    this.code = code;
-    this.status = status;
-  }
-}
-
-export function publicErrorResponse(error: unknown): {
-  status: number;
-  body: { error: { code: string; message: string } };
-} {
-  if (error instanceof PublicInputError || error instanceof AgentDataError) {
-    return {
-      status: error.status,
-      body: {
-        error: {
-          code: error.code,
-          message: error.message,
-        },
-      },
-    };
-  }
-
-  return {
-    status: 500,
-    body: {
-      error: {
-        code: 'agent_data_error',
-        message: 'The agent service could not complete the request.',
-      },
-    },
-  };
 }
 
 async function withSql<T>(createSql: (options?: { max?: number }) => SqlLike | null, callback: (sql: SqlLike) => Promise<T> | T): Promise<T> {
@@ -294,26 +271,49 @@ export async function getMapNodeIntakeMode(sql: SqlLike): Promise<PublicMapIntak
   return enabled ? 'live' : 'moderated';
 }
 
-function normalizeSubmissionInput(input: PublicMapNodeSubmissionInput = {}) {
+function normalizeSubmissionInput(
+  input: PublicMapNodeSubmissionInput = {},
+  { requireLocationConfirmation = true }: { requireLocationConfirmation?: boolean } = {}
+) {
   if (cleanString(input.website)) {
     throw new PublicInputError('spam_detected', 'Unable to accept this map-node submission.', 400);
   }
   const displayName = cleanString(input.displayName ?? input.name);
-  const placeName = cleanString(input.placeName ?? input.place);
-  const lat = normalizeNumber(input.lat ?? input.latitude);
-  const long = normalizeNumber(input.long ?? input.lng ?? input.longitude);
+  const locationConfirmationId = cleanString(input.locationConfirmationId ?? input.location_confirmation_id);
+  const hasLegacyLocation = [
+    'placeName', 'place', 'city', 'region', 'country', 'lat', 'latitude', 'long', 'lng', 'longitude',
+  ].some((key) => Object.hasOwn(input, key));
   const email = normalizeOwnerEmail(input.email ?? input.privateEmail ?? input.private_email);
 
   if (!displayName) {
     throw new PublicInputError('missing_display_name', 'Display name is required.');
   }
 
-  if (!placeName) {
-    throw new PublicInputError('missing_place', 'Place is required.');
+  if (locationConfirmationId && hasLegacyLocation) {
+    throw new PublicInputError('invalid_location_input', 'Submit either a confirmed place or legacy location fields, not both.');
   }
 
-  if (lat === null || long === null) {
-    throw new PublicInputError('invalid_coordinates', 'Latitude and longitude are required.');
+  const legacyPlaceName = cleanString(input.placeName ?? input.place);
+  const legacyLat = normalizeNumber(input.lat ?? input.latitude);
+  const legacyLong = normalizeNumber(input.long ?? input.lng ?? input.longitude);
+  const legacyLocation = !locationConfirmationId && !requireLocationConfirmation
+    ? {
+      placeName: legacyPlaceName,
+      city: cleanString(input.city),
+      region: cleanString(input.region),
+      country: cleanString(input.country),
+      lat: legacyLat,
+      long: legacyLong,
+    }
+    : null;
+
+  if (requireLocationConfirmation && !locationConfirmationId) {
+    throw new PublicInputError('location_confirmation_required', 'Find and confirm your place before submitting.');
+  }
+
+  if (!locationConfirmationId && (!legacyLocation?.placeName || legacyLocation.lat === null || legacyLocation.long === null
+    || legacyLocation.lat < -90 || legacyLocation.lat > 90 || legacyLocation.long < -180 || legacyLocation.long > 180)) {
+    throw new PublicInputError('invalid_coordinates', 'A valid place, latitude, and longitude are required during the rollout window.');
   }
 
   if (!isValidOwnerEmail(email)) {
@@ -330,16 +330,11 @@ function normalizeSubmissionInput(input: PublicMapNodeSubmissionInput = {}) {
 
   return {
     displayName,
-    placeName,
-    city: cleanString(input.city),
-    region: cleanString(input.region),
-    country: cleanString(input.country),
-    lat,
-    long,
+    locationConfirmationId,
+    legacyLocation,
     role: normalizeSubmittedRole(),
     chapterSlug: '',
     themes,
-    bioregion: derivePublicBioregionFromCoordinates(lat, long),
     publicNote: cleanString(input.publicNote ?? input.public_note),
     rawNote: cleanString(input.rawNote ?? input.raw_note),
     email,
@@ -388,7 +383,9 @@ export async function createMapNodeSubmission(
     createSqlForDeferredDelivery,
   }: MapNodeSubmissionOptions = {}
 ): Promise<SubmittedMapNode> {
-  const normalized = normalizeSubmissionInput(input);
+  const normalized = normalizeSubmissionInput(input, {
+    requireLocationConfirmation: isMapLocationConfirmationRequired(env),
+  });
   const meta = {
     ipAddress: cleanString(requestMeta.ipAddress),
     userAgent: cleanString(requestMeta.userAgent),
@@ -396,6 +393,22 @@ export async function createMapNodeSubmission(
   };
 
   const result = await sql.begin(async (tx) => {
+    const confirmedLocation = normalized.locationConfirmationId
+      ? await consumeMapLocationConfirmation(tx, normalized.locationConfirmationId)
+      : null;
+    const location = confirmedLocation
+      ? {
+        placeName: confirmedLocation.label,
+        city: '',
+        region: '',
+        country: '',
+        lat: confirmedLocation.lat,
+        long: confirmedLocation.long,
+      }
+      : normalized.legacyLocation;
+    if (!location || location.lat === null || location.long === null) {
+      throw new PublicInputError('location_confirmation_required', 'Find and confirm your place before submitting.');
+    }
     const intakeMode = await getMapNodeIntakeMode(tx);
     const liveOnboarding = intakeMode === 'live';
     if (!liveOnboarding) {
@@ -427,16 +440,16 @@ export async function createMapNodeSubmission(
       values (
         ${submissionStatus}::intake.map_node_status,
         ${normalized.displayName},
-        ${normalized.placeName},
-        ${normalized.city || null},
-        ${normalized.region || null},
-        ${normalized.country || null},
-        ${normalized.lat},
-        ${normalized.long},
+        ${location.placeName},
+        ${location.city || null},
+        ${location.region || null},
+        ${location.country || null},
+        ${location.lat},
+        ${location.long},
         ${normalized.role || null},
         ${normalized.chapterSlug || null},
         ${normalized.themes},
-        ${normalized.bioregion || null},
+        ${derivePublicBioregionFromCoordinates(location.lat, location.long) || null},
         ${normalized.publicNote || null},
         ${normalized.rawNote || null},
         ${meta.rateLimitKey || null},
@@ -576,9 +589,13 @@ function normalizeUpdateThemes(input: UnknownRecord): string[] | undefined {
   return themes;
 }
 
-function normalizeUpdateRequestInput(input: PublicMapNodeUpdateRequestInput = {}) {
+function normalizeUpdateRequestInput(
+  input: PublicMapNodeUpdateRequestInput = {},
+  { requireLocationConfirmation = true }: { requireLocationConfirmation?: boolean } = {}
+) {
   const source = jsonObject(input);
   const proposed: UnknownRecord = {};
+  const locationConfirmationId = cleanString(source.locationConfirmationId ?? source.location_confirmation_id);
 
   for (const key of ['role', 'type', 'nodeType', 'node_type', 'intent']) {
     if (Object.hasOwn(source, key)) {
@@ -595,30 +612,44 @@ function normalizeUpdateRequestInput(input: PublicMapNodeUpdateRequestInput = {}
     proposed.display_name = displayName;
   }
 
-  const placeName = normalizeUpdateText(source, ['place_name', 'placeName', 'place']);
-  if (placeName !== undefined) {
-    if (!placeName) throw new PublicInputError('invalid_update_field', 'Place name cannot be empty.');
-    proposed.place_name = placeName;
+  const hasRawLocationField = [
+    'place_name', 'placeName', 'place', 'city', 'region', 'country', 'latitude', 'lat', 'longitude', 'long', 'lng',
+  ].some((key) => Object.hasOwn(source, key));
+  if (locationConfirmationId && hasRawLocationField) {
+    throw new PublicInputError(
+      'invalid_location_input',
+      'Submit either a confirmed place or legacy location fields, not both.',
+    );
   }
-
-  for (const field of ['city', 'region', 'country']) {
-    const value = normalizeUpdateText(source, [field]);
-    if (value !== undefined) proposed[field] = value;
+  if (hasRawLocationField && requireLocationConfirmation) {
+    throw new PublicInputError(
+      'location_confirmation_required',
+      'Find and confirm the updated place before submitting.',
+    );
   }
-
-  const latitude = normalizeUpdateNumber(source, ['latitude', 'lat'], {
-    min: -90,
-    max: 90,
-    label: 'Latitude',
-  });
-  if (latitude !== undefined) proposed.latitude = latitude;
-
-  const longitude = normalizeUpdateNumber(source, ['longitude', 'long', 'lng'], {
-    min: -180,
-    max: 180,
-    label: 'Longitude',
-  });
-  if (longitude !== undefined) proposed.longitude = longitude;
+  if (hasRawLocationField && !requireLocationConfirmation) {
+    const placeName = normalizeUpdateText(source, ['place_name', 'placeName', 'place']);
+    if (placeName !== undefined) {
+      if (!placeName) throw new PublicInputError('invalid_update_field', 'Place name cannot be empty.');
+      proposed.place_name = placeName;
+    }
+    for (const field of ['city', 'region', 'country']) {
+      const value = normalizeUpdateText(source, [field]);
+      if (value !== undefined) proposed[field] = value;
+    }
+    const latitude = normalizeUpdateNumber(source, ['latitude', 'lat'], {
+      min: -90,
+      max: 90,
+      label: 'Latitude',
+    });
+    if (latitude !== undefined) proposed.latitude = latitude;
+    const longitude = normalizeUpdateNumber(source, ['longitude', 'long', 'lng'], {
+      min: -180,
+      max: 180,
+      label: 'Longitude',
+    });
+    if (longitude !== undefined) proposed.longitude = longitude;
+  }
 
   const themes = normalizeUpdateThemes(source);
   if (themes !== undefined) proposed.themes = themes;
@@ -631,12 +662,13 @@ function normalizeUpdateRequestInput(input: PublicMapNodeUpdateRequestInput = {}
     proposed.public_note = publicNote;
   }
 
-  if (Object.keys(proposed).length === 0) {
+  if (Object.keys(proposed).length === 0 && !locationConfirmationId) {
     throw new PublicInputError('missing_update_fields', 'At least one editable field is required.');
   }
 
   return {
     proposedPublicFields: proposed,
+    locationConfirmationId,
     proposedDisplayName: Object.hasOwn(proposed, 'display_name') ? proposed.display_name : null,
     proposedPlaceName: Object.hasOwn(proposed, 'place_name') ? proposed.place_name : null,
     proposedCity: Object.hasOwn(proposed, 'city') ? proposed.city || null : null,
@@ -1376,7 +1408,8 @@ export async function createMapNodeUpdateRequest(
   sql: SqlLike,
   nodeId: string,
   input: PublicMapNodeUpdateRequestInput = {},
-  requestMeta: RequestMeta = {}
+  requestMeta: RequestMeta = {},
+  { env = process.env }: MapNodeUpdateRequestOptions = {}
 ): Promise<PublicMapNodeUpdateRequestResponse> {
   const tokenValue = cleanString(input.token);
   if (!tokenValue) throw publicInputInvalidEditLink();
@@ -1421,7 +1454,18 @@ export async function createMapNodeUpdateRequest(
       throw publicInputInvalidEditLink();
     }
 
-    const proposal = normalizeUpdateRequestInput(input);
+    const proposal = normalizeUpdateRequestInput(input, {
+      requireLocationConfirmation: isMapLocationConfirmationRequired(env),
+    });
+    if (proposal.locationConfirmationId) {
+      const confirmedLocation = await consumeMapLocationConfirmation(tx, proposal.locationConfirmationId);
+      proposal.proposedPublicFields.place_name = confirmedLocation.label;
+      proposal.proposedPublicFields.latitude = confirmedLocation.lat;
+      proposal.proposedPublicFields.longitude = confirmedLocation.long;
+      proposal.proposedPlaceName = confirmedLocation.label;
+      proposal.proposedLatitude = confirmedLocation.lat;
+      proposal.proposedLongitude = confirmedLocation.long;
+    }
     const existingPending = await tx`
       select id
       from intake.map_node_update_requests
@@ -1661,7 +1705,7 @@ export function createMapNodeRepository({
       return withSql(createSql, (sql) => getMapNodeEditSession(sql, token));
     },
     createUpdateRequest(nodeId, input, requestMeta) {
-      return withSql(createSql, (sql) => createMapNodeUpdateRequest(sql, nodeId, input, requestMeta));
+      return withSql(createSql, (sql) => createMapNodeUpdateRequest(sql, nodeId, input, requestMeta, { env }));
     },
     cleanupEditFlow() {
       return withSql(createSql, cleanupMapNodeEditFlow);

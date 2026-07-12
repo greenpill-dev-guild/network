@@ -44,6 +44,18 @@ import {
   PUBLIC_OPERATIONAL_CONTENT_ROUTE,
 } from '@greenpill-network/agent/public-content';
 import {
+  createMapLocationRepository,
+  getMapGeocoderConfig,
+  MAP_LOCATION_REQUESTS_PER_MINUTE,
+  MAP_LOCATION_REVERSE_ROUTE,
+  MAP_LOCATION_SEARCH_ROUTE,
+} from '@greenpill-network/agent/map-locations';
+import {
+  containsPrivateMapLocationField,
+  normalizeMapLatitude,
+  normalizeMapLongitude,
+} from '@greenpill-network/shared/map-locations';
+import {
   AgentDataError,
   PublicInputError,
   MAP_NODE_EDIT_LINK_NEUTRAL_RESPONSE,
@@ -57,6 +69,7 @@ import {
   getRequestMeta,
   getMapNodeEditSession,
   hashMapNodeEditToken,
+  isMapLocationConfirmationRequired,
   listPublicMapNodes,
   resolveActiveChapterSteward,
 } from '@greenpill-network/agent/map-nodes';
@@ -85,6 +98,8 @@ test('agent package exposes stable public route contracts', () => {
   assert.equal(PUBLIC_MAP_STATE_ROUTE, '/map/state');
   assert.equal(PUBLIC_COUNTS_ROUTE, '/public-counts');
   assert.equal(PUBLIC_OPERATIONAL_CONTENT_ROUTE, '/content/public-snapshot');
+  assert.equal(MAP_LOCATION_SEARCH_ROUTE, '/map-locations/search');
+  assert.equal(MAP_LOCATION_REVERSE_ROUTE, '/map-locations/reverse');
   assert.equal(NEWSLETTER_SUBSCRIBE_ROUTE, '/newsletter/subscribe');
   assert.equal(CHAPTER_IMPACT_ROUTE, '/impact/chapters/:slug');
   assert.equal(RESEND_WEBHOOK_ROUTE, '/webhooks/resend');
@@ -111,11 +126,399 @@ test('agent app registers non-health public routes through exported constants', 
     'PUBLIC_MAP_STATE_ROUTE',
     'PUBLIC_COUNTS_ROUTE',
     'PUBLIC_OPERATIONAL_CONTENT_ROUTE',
+    'MAP_LOCATION_SEARCH_ROUTE',
+    'MAP_LOCATION_REVERSE_ROUTE',
     'NEWSLETTER_SUBSCRIBE_ROUTE',
     'RESEND_WEBHOOK_ROUTE',
   ]) {
     assert.match(source, new RegExp(`app\\.(?:get|post)\\(${routeConstant},`));
   }
+});
+
+test('map-location routes search and reverse-confirm with public-only payloads', async () => {
+  const calls = [];
+  const app = createAgentApp({
+    mapLocationRepository: {
+      async search(query, requestMeta) {
+        calls.push({ method: 'search', query, requestMeta });
+        return {
+          results: [{
+            confirmationId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            label: 'Awka, Anambra, Nigeria',
+            lat: 6.2127,
+            long: 7.0717,
+            kind: 'settlement',
+            attribution: '© OpenStreetMap contributors',
+          }],
+        };
+      },
+      async reverse(lat, long, requestMeta) {
+        calls.push({ method: 'reverse', lat, long, requestMeta });
+        return {
+          confirmation: {
+            confirmationId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+            label: 'Taipei, Taiwan',
+            lat: 25.033,
+            long: 121.5654,
+            kind: 'settlement',
+            attribution: '© OpenStreetMap contributors',
+          },
+        };
+      },
+    },
+  });
+
+  const search = await app.request(MAP_LOCATION_SEARCH_ROUTE, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ query: 'Awka, Nigeria' }),
+  });
+  assert.equal(search.status, 200);
+  const searchPayload = await search.json();
+  assert.equal(containsPrivateMapLocationField(searchPayload), false);
+  assert.deepEqual(calls[0], {
+    method: 'search',
+    query: 'Awka, Nigeria',
+    requestMeta: { ipAddress: '', userAgent: '', rateLimitKey: 'anonymous' },
+  });
+
+  const reverse = await app.request(MAP_LOCATION_REVERSE_ROUTE, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ lat: 25.04, long: 121.57 }),
+  });
+  assert.equal(reverse.status, 200);
+  assert.equal(containsPrivateMapLocationField(await reverse.json()), false);
+  assert.deepEqual(calls[1], {
+    method: 'reverse',
+    lat: 25.04,
+    long: 121.57,
+    requestMeta: { ipAddress: '', userAgent: '', rateLimitKey: 'anonymous' },
+  });
+});
+
+test('map-location route exposes only a retry-safe busy error', async () => {
+  const app = createAgentApp({
+    mapLocationRepository: {
+      async search() {
+        throw new PublicInputError('location_lookup_busy', 'Place search is briefly busy. Please try again in a moment.', 429);
+      },
+      async reverse() {
+        throw new Error('not used');
+      },
+    },
+  });
+  const response = await app.request(MAP_LOCATION_SEARCH_ROUTE, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ query: 'Awka' }),
+  });
+  assert.equal(response.status, 429);
+  assert.equal(response.headers.get('retry-after'), '1');
+  assert.deepEqual(await response.json(), {
+    error: {
+      code: 'location_lookup_busy',
+      message: 'Place search is briefly busy. Please try again in a moment.',
+    },
+  });
+});
+
+test('map-location route gives public request throttling a minute-long retry hint', async () => {
+  const app = createAgentApp({
+    mapLocationRepository: {
+      async search() {
+        throw new PublicInputError(
+          'location_request_rate_limited',
+          'Too many location checks came from this network. Please try again in a minute.',
+          429
+        );
+      },
+      async reverse() {
+        throw new Error('not used');
+      },
+    },
+  });
+  const response = await app.request(MAP_LOCATION_SEARCH_ROUTE, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ query: 'Awka' }),
+  });
+  assert.equal(response.status, 429);
+  assert.equal(response.headers.get('retry-after'), '60');
+});
+
+function createFakeMapLocationSql({ cacheEntries = [] } = {}) {
+  const cache = new Map(cacheEntries);
+  const requestLimits = new Map();
+  const statements = [];
+  let confirmationCount = 0;
+  const sql: any = async (strings, ...values) => {
+    const text = strings.join('?').replace(/\s+/g, ' ').trim();
+    statements.push({ text, values });
+    if (text.includes('from intake.map_location_geocode_cache')) {
+      const row = cache.get(values[0]);
+      return row ? [row] : [];
+    }
+    if (text.includes('insert into intake.map_location_request_limits')) {
+      const [key, windowStartedAt] = values;
+      if (!requestLimits.has(key)) requestLimits.set(key, { windowStartedAt, requestCount: 0 });
+      return [];
+    }
+    if (text.includes('from intake.map_location_request_limits')) {
+      const state = requestLimits.get(values[0]);
+      return state ? [state] : [];
+    }
+    if (text.includes('set request_count = request_count + 1')) {
+      const state = requestLimits.get(values[0]);
+      if (state) state.requestCount += 1;
+      return [];
+    }
+    if (text.includes('set window_started_at')) {
+      const [windowStartedAt, key] = values;
+      requestLimits.set(key, { windowStartedAt, requestCount: 1 });
+      return [];
+    }
+    if (text.includes('select next_request_at')) {
+      return [{ nextRequestAt: new Date(0) }];
+    }
+    if (text.includes('insert into intake.map_location_geocode_cache')) {
+      cache.set(values[0], { payload: values[2], expiresAt: values[3] });
+      return [];
+    }
+    if (text.includes('insert into intake.map_location_confirmations')) {
+      confirmationCount += 1;
+      return [{ confirmationId: `00000000-0000-4000-8000-${String(confirmationCount).padStart(12, '0')}` }];
+    }
+    return [];
+  };
+  sql.json = (value) => value;
+  sql.begin = async (callback) => callback(sql);
+  sql.end = async () => {};
+  return { sql, statements, cache };
+}
+
+test('map-location repository uses the configured server provider once, caches results, and creates opaque confirmations', async () => {
+  const { sql, statements } = createFakeMapLocationSql();
+  const providerRequests = [];
+  const repository = createMapLocationRepository({
+    createSql: () => sql,
+    env: {
+      MAP_GEOCODER_BASE_URL: 'https://geocoder.example.test',
+      MAP_GEOCODER_USER_AGENT: 'GreenpillNetworkMapTest/1.0',
+    },
+    now: () => new Date('2026-07-11T12:00:00.000Z'),
+    fetchImpl: async (url, init) => {
+      providerRequests.push({ url: String(url), init });
+      return Response.json([{
+        display_name: 'Awka, Anambra, Nigeria',
+        lat: '6.2127',
+        lon: '7.0717',
+        addresstype: 'city',
+        osm_type: 'relation',
+        osm_id: '1234',
+      }, {
+        display_name: 'California, United States',
+        lat: '37.0',
+        lon: '-120.0',
+        addresstype: 'state',
+        category: 'boundary',
+        address: { country_code: 'us' },
+        osm_type: 'relation',
+        osm_id: '1235',
+      }]);
+    },
+  });
+
+  const first = await repository.search(' Awka, Nigeria ');
+  const second = await repository.search('Awka, Nigeria');
+
+  assert.equal(providerRequests.length, 1, 'cache must avoid repeated public-provider calls');
+  assert.match(providerRequests[0].url, /https:\/\/geocoder\.example\.test\/search/);
+  assert.equal(new URL(providerRequests[0].url).searchParams.get('q'), 'Awka, Nigeria');
+  assert.equal(providerRequests[0].init.headers['user-agent'], 'GreenpillNetworkMapTest/1.0');
+  assert.equal(first.results[0].label, 'Awka, Anambra, Nigeria');
+  assert.equal(second.results[0].lat, 6.2127);
+  assert.equal(first.results[1].kind, 'region', 'administrative boundaries with a country code remain regions');
+  assert.notEqual(first.results[0].confirmationId, second.results[0].confirmationId);
+  assert.equal(containsPrivateMapLocationField(first), false);
+  assert.equal(
+    statements.some((statement) => statement.text.includes('insert into intake.map_location_geocode_cache')),
+    true
+  );
+});
+
+test('map-location search confirms numeric Nominatim ids and bypasses stale v1 empty cache entries', async () => {
+  const oldCacheKey = createHash('sha256')
+    .update(['search', 'nairobi, kenya'].join('\u0000'), 'utf8')
+    .digest('hex');
+  const { sql, statements } = createFakeMapLocationSql({
+    cacheEntries: [[oldCacheKey, {
+      payload: [],
+      expiresAt: new Date('2026-08-10T12:00:00.000Z'),
+    }]],
+  });
+  const providerRequests = [];
+  const repository = createMapLocationRepository({
+    createSql: () => sql,
+    now: () => new Date('2026-07-12T12:00:00.000Z'),
+    fetchImpl: async (url) => {
+      providerRequests.push(String(url));
+      return Response.json([{
+        display_name: 'Nairobi, Kenya',
+        lat: '-1.2832533',
+        lon: '36.8172449',
+        addresstype: 'city',
+        osm_type: 'relation',
+        osm_id: 9721587,
+      }]);
+    },
+  });
+
+  const payload = await repository.search('Nairobi, Kenya');
+
+  assert.equal(providerRequests.length, 1, 'the stale unversioned empty cache must not mask the provider fix');
+  assert.equal(payload.results[0].label, 'Nairobi, Kenya');
+  assert.match(payload.results[0].confirmationId, /^[0-9a-f-]{36}$/i);
+  const cacheRead = statements.find((statement) => statement.text.includes('from intake.map_location_geocode_cache'));
+  assert.ok(cacheRead);
+  assert.notEqual(cacheRead.values[0], oldCacheKey);
+  const confirmationWrite = statements.find((statement) => statement.text.includes('insert into intake.map_location_confirmations'));
+  assert.ok(confirmationWrite);
+  assert.equal(confirmationWrite.values.includes('relation:9721587'), true);
+});
+
+test('map-location reverse requests locality zoom and confirms a numeric-id Nairobi neighbourhood', async () => {
+  const { sql, statements } = createFakeMapLocationSql();
+  const providerRequests = [];
+  const repository = createMapLocationRepository({
+    createSql: () => sql,
+    now: () => new Date('2026-07-12T12:00:00.000Z'),
+    fetchImpl: async (url) => {
+      providerRequests.push(String(url));
+      return Response.json({
+        display_name: 'Kilimani ward, Nairobi, Kenya',
+        lat: '-1.2920659',
+        lon: '36.7966194',
+        addresstype: 'neighbourhood',
+        osm_type: 'relation',
+        osm_id: 3854414,
+      });
+    },
+  });
+
+  const payload = await repository.reverse(-1.286389, 36.817223);
+
+  assert.equal(providerRequests.length, 1);
+  const requestUrl = new URL(providerRequests[0]);
+  assert.equal(requestUrl.pathname, '/reverse');
+  assert.equal(requestUrl.searchParams.get('zoom'), '10');
+  assert.equal(payload.confirmation.label, 'Kilimani ward, Nairobi, Kenya');
+  assert.match(payload.confirmation.confirmationId, /^[0-9a-f-]{36}$/i);
+  const confirmationWrite = statements.find((statement) => statement.text.includes('insert into intake.map_location_confirmations'));
+  assert.ok(confirmationWrite);
+  assert.equal(confirmationWrite.values.includes('relation:3854414'), true);
+});
+
+test('map-location repository rejects malformed successful provider payloads without caching a false no-result', async () => {
+  const { sql, statements } = createFakeMapLocationSql();
+  const repository = createMapLocationRepository({
+    createSql: () => sql,
+    fetchImpl: async () => Response.json({ error: 'proxy response' }),
+  });
+
+  await assert.rejects(
+    () => repository.search('Awka, Nigeria'),
+    (error) => error instanceof AgentDataError && error.code === 'location_provider_unavailable'
+  );
+  assert.equal(
+    statements.some((statement) => statement.text.includes('insert into intake.map_location_geocode_cache')),
+    false,
+    'an unexpected successful payload must not be cached as a no-result'
+  );
+});
+
+test('map-location repository bounds cached confirmation writes per public client', async () => {
+  const { sql } = createFakeMapLocationSql();
+  const repository = createMapLocationRepository({
+    createSql: () => sql,
+    now: () => new Date('2026-07-11T12:00:00.000Z'),
+    fetchImpl: async () => Response.json([{
+      display_name: 'Awka, Anambra, Nigeria',
+      lat: '6.2127',
+      lon: '7.0717',
+      addresstype: 'city',
+      osm_type: 'relation',
+      osm_id: '1234',
+    }]),
+  });
+
+  for (let request = 0; request < MAP_LOCATION_REQUESTS_PER_MINUTE; request += 1) {
+    await repository.search('Awka, Nigeria', { rateLimitKey: '198.51.100.10' });
+  }
+  await assert.rejects(
+    () => repository.search('Awka, Nigeria', { rateLimitKey: '198.51.100.10' }),
+    (error) => error instanceof PublicInputError && error.code === 'location_request_rate_limited'
+  );
+});
+
+test('map-location coordinates reject blank and non-numeric values instead of coercing to origin', async () => {
+  for (const value of [null, '', '   ', false, true]) {
+    assert.equal(normalizeMapLatitude(value), null);
+    assert.equal(normalizeMapLongitude(value), null);
+  }
+  assert.equal(normalizeMapLatitude('0'), 0);
+  assert.equal(normalizeMapLongitude(0), 0);
+
+  const { sql } = createFakeMapLocationSql();
+  const repository = createMapLocationRepository({ createSql: () => sql });
+  await assert.rejects(
+    () => repository.reverse(null, ''),
+    (error) => error instanceof PublicInputError && error.code === 'invalid_coordinates'
+  );
+});
+
+test('map-location cleanup deletes expired confirmation, cache, and request-limit rows', async () => {
+  const { sql, statements } = createFakeMapLocationSql();
+  const repository = createMapLocationRepository({ createSql: () => sql });
+  const result = await repository.cleanupExpired();
+  assert.deepEqual(result, {
+    confirmationsDeleted: 0,
+    cachedLookupsDeleted: 0,
+    requestLimitsDeleted: 0,
+  });
+  assert.equal(
+    statements.some((statement) => statement.text.includes('delete from intake.map_location_confirmations')),
+    true
+  );
+  assert.equal(
+    statements.some((statement) => statement.text.includes('delete from intake.map_location_request_limits')),
+    true
+  );
+});
+
+test('map-location repository rejects non-HTTPS provider configuration and ocean-distance reverse matches', async () => {
+  assert.throws(
+    () => getMapGeocoderConfig({ MAP_GEOCODER_BASE_URL: 'http://geocoder.example.test' }),
+    (error) => error instanceof AgentDataError && error.code === 'map_geocoder_not_configured'
+  );
+
+  const { sql } = createFakeMapLocationSql();
+  const repository = createMapLocationRepository({
+    createSql: () => sql,
+    now: () => new Date('2026-07-11T12:00:00.000Z'),
+    fetchImpl: async () => Response.json({
+      display_name: 'Taipei, Taiwan',
+      lat: '25.033',
+      lon: '121.5654',
+      addresstype: 'city',
+      osm_type: 'relation',
+      osm_id: '999',
+    }),
+  });
+  await assert.rejects(
+    () => repository.reverse(0, 0),
+    (error) => error instanceof PublicInputError && error.code === 'location_not_confirmed'
+  );
 });
 
 test('agent request metadata ignores spoofable forwarded IP headers', () => {
@@ -159,6 +562,9 @@ test('agent server starts a durable edit-link delivery sweep without logging pri
   assert.match(source, /deliverQueuedEditLinks/);
   assert.match(source, /MAP_NODE_MODERATION_DELIVERY_SWEEP_ENABLED/);
   assert.match(source, /deliverQueuedModerationNotifications/);
+  assert.match(source, /startMapLocationCleanupSweep/);
+  assert.match(source, /MAP_LOCATION_CLEANUP_SWEEP_INTERVAL_MS/);
+  assert.match(source, /cleanupExpired/);
   assert.match(source, /errorName/);
   assert.doesNotMatch(source, /console\.warn\([^;]*(email|token|normalized_email|request_ip)/s);
 });
@@ -1047,6 +1453,17 @@ function createFakeSubmissionSql({ liveOnboardingEnabled, stewardChapterSlug = '
     const text = strings.join('?').replace(/\s+/g, ' ').trim();
     statements.push({ text, values });
 
+    if (text.includes('update intake.map_location_confirmations')) {
+      return [{
+        label: 'Oakland',
+        lat: 37.8044,
+        long: -122.2712,
+        kind: 'settlement',
+        provider: 'nominatim',
+        providerPlaceId: 'R:123',
+      }];
+    }
+
     if (text.includes('from intake.map_node_intake_settings')) {
       return [{ liveOnboardingEnabled }];
     }
@@ -1089,13 +1506,13 @@ function createFakeSubmissionSql({ liveOnboardingEnabled, stewardChapterSlug = '
   return { sql: tx, statements };
 }
 
+const testLocationConfirmationId = '11111111-1111-4111-8111-111111111111';
+
 test('map-node submissions stay pending unless live onboarding is enabled', async () => {
   const { sql, statements } = createFakeSubmissionSql({ liveOnboardingEnabled: false });
   const node = await createMapNodeSubmission(sql, {
     name: 'Session Member',
-    place: 'Oakland',
-    lat: 37.8044,
-    long: -122.2712,
+    locationConfirmationId: testLocationConfirmationId,
     themes: ['public', 'events'],
     email: 'private@example.com',
   });
@@ -1113,6 +1530,61 @@ test('map-node submissions stay pending unless live onboarding is enabled', asyn
   );
 });
 
+test('location confirmation enforcement is secure by default with an explicit rollout compatibility window', async () => {
+  assert.equal(isMapLocationConfirmationRequired({}), true);
+  assert.equal(isMapLocationConfirmationRequired({ MAP_LOCATION_CONFIRMATION_REQUIRED: 'false' }), false);
+
+  const strict = createFakeSubmissionSql({ liveOnboardingEnabled: false });
+  await assert.rejects(
+    () => createMapNodeSubmission(strict.sql, {
+      name: 'Legacy Browser Member',
+      place: 'Oakland',
+      lat: 37.8044,
+      long: -122.2712,
+      themes: ['public'],
+      email: 'legacy@example.org',
+    }),
+    (error) => error instanceof PublicInputError && error.code === 'location_confirmation_required'
+  );
+
+  const rollout = createFakeSubmissionSql({ liveOnboardingEnabled: false });
+  await createMapNodeSubmission(rollout.sql, {
+    name: 'Legacy Browser Member',
+    place: 'Oakland',
+    city: 'Oakland',
+    region: 'California',
+    country: 'United States',
+    lat: 37.8044,
+    long: -122.2712,
+    themes: ['public'],
+    email: 'legacy@example.org',
+  }, {}, { env: { MAP_LOCATION_CONFIRMATION_REQUIRED: 'false' } });
+  assert.equal(
+    rollout.statements.some((statement) => statement.text.includes('update intake.map_location_confirmations')),
+    false
+  );
+  const insert = rollout.statements.find((statement) => statement.text.includes('insert into intake.map_node_submissions'));
+  assert.ok(insert);
+  assert.equal(insert.values.includes('Oakland'), true);
+
+  const blankLegacyCoordinates = createFakeSubmissionSql({ liveOnboardingEnabled: false });
+  await assert.rejects(
+    () => createMapNodeSubmission(blankLegacyCoordinates.sql, {
+      name: 'Legacy Browser Member',
+      place: 'Oakland',
+      lat: '',
+      long: ' ',
+      themes: ['public'],
+      email: 'legacy@example.org',
+    }, {}, { env: { MAP_LOCATION_CONFIRMATION_REQUIRED: 'false' } }),
+    (error) => error instanceof PublicInputError && error.code === 'invalid_coordinates'
+  );
+  assert.equal(
+    blankLegacyCoordinates.statements.some((statement) => statement.text.includes('insert into intake.map_node_submissions')),
+    false
+  );
+});
+
 test('live map-node onboarding does not apply the moderated intake rate limit', async () => {
   const { sql, statements } = createFakeSubmissionSql({
     liveOnboardingEnabled: true,
@@ -1120,9 +1592,7 @@ test('live map-node onboarding does not apply the moderated intake rate limit', 
   });
   const node = await createMapNodeSubmission(sql, {
     name: 'Live session member',
-    place: 'Oakland',
-    lat: 37.8044,
-    long: -122.2712,
+    locationConfirmationId: testLocationConfirmationId,
     themes: ['public'],
     email: 'member@example.com',
   }, { rateLimitKey: '203.0.113.8' });
@@ -1156,9 +1626,7 @@ test('map-node honeypot and daily IP limit reject before storing a submission', 
   await assert.rejects(
     () => createMapNodeSubmission(limited.sql, {
       name: 'Limited Member',
-      place: 'Oakland',
-      lat: 37.8044,
-      long: -122.2712,
+      locationConfirmationId: testLocationConfirmationId,
       themes: ['public'],
       email: 'private@example.com',
     }, { rateLimitKey: '203.0.113.8' }),
@@ -1175,9 +1643,7 @@ test('map-node submissions require one to four themes', async () => {
     await assert.rejects(
       () => createMapNodeSubmission(sql, {
         name: 'Session Member',
-        place: 'Oakland',
-        lat: 37.8044,
-        long: -122.2712,
+        locationConfirmationId: testLocationConfirmationId,
         themes,
         email: 'private@example.com',
       }),
@@ -1194,9 +1660,7 @@ test('map-node steward role is derived from an active Directus chapter assignmen
   const regular = createFakeSubmissionSql({ liveOnboardingEnabled: false });
   await createMapNodeSubmission(regular.sql, {
     name: 'Public Claimed Steward',
-    place: 'Oakland',
-    lat: 37.8044,
-    long: -122.2712,
+    locationConfirmationId: testLocationConfirmationId,
     role: 'chapter steward',
     themes: ['public'],
     email: 'person@example.org',
@@ -1215,9 +1679,7 @@ test('map-node steward role is derived from an active Directus chapter assignmen
   });
   const stewardNode = await createMapNodeSubmission(steward.sql, {
     name: 'Directus Steward',
-    place: 'Lagos',
-    lat: 6.5244,
-    long: 3.3792,
+    locationConfirmationId: testLocationConfirmationId,
     role: 'chapter steward',
     themes: ['public'],
     email: 'Steward@Example.org',
@@ -1341,9 +1803,7 @@ test('live onboarding auto-approves submissions and appends private audit row', 
   const { sql, statements } = createFakeSubmissionSql({ liveOnboardingEnabled: true });
   const node = await createMapNodeSubmission(sql, {
     name: 'Session Member',
-    place: 'Oakland',
-    lat: 37.8044,
-    long: -122.2712,
+    locationConfirmationId: testLocationConfirmationId,
     role: 'member',
     themes: ['public', 'events'],
     publicNote: 'Joining during onboarding.',
@@ -1458,6 +1918,17 @@ function createFakeUpdateRequestSql({
     const text = strings.join('?').replace(/\s+/g, ' ').trim();
     statements.push({ text, values });
 
+    if (text.includes('update intake.map_location_confirmations')) {
+      return [{
+        label: 'Lisbon, Portugal',
+        lat: 38.7223,
+        long: -9.1393,
+        kind: 'settlement',
+        provider: 'nominatim',
+        providerPlaceId: 'R:456',
+      }];
+    }
+
     if (text.includes('from intake.map_node_edit_tokens')) {
       return tokenRow ? [tokenRow] : [];
     }
@@ -1500,8 +1971,7 @@ test('creating an update request consumes the token only after the pending reque
   const updateRequest = await createMapNodeUpdateRequest(sql, nodeId, {
     token: 'valid-token',
     display_name: 'Approved Member Updated',
-    latitude: 38.73,
-    longitude: -9.14,
+    locationConfirmationId: testLocationConfirmationId,
     themes: ['public', 'events'],
     public_note: 'Updated note.',
   }, {
@@ -1517,6 +1987,68 @@ test('creating an update request consumes the token only after the pending reque
   assert.equal(consumeIndex > insertIndex, true);
   assert.equal(statements.some((statement) => statement.text.includes('map_node_intake_settings')), false);
   assert.equal(statements.some((statement) => statement.text.includes('proposed_role')), false);
+});
+
+test('owner update requests preserve a temporary legacy location path only when rollout enforcement is disabled', async () => {
+  const nodeId = '11111111-1111-4111-8111-111111111111';
+  const tokenRow = {
+    tokenId: '22222222-2222-4222-8222-222222222222',
+    normalizedEmail: 'person@example.org',
+    submissionId: nodeId,
+    displayName: 'Approved Member',
+    placeName: 'Lisbon Hub',
+    city: 'Lisbon',
+    region: '',
+    country: 'Portugal',
+    lat: 38.7223,
+    long: -9.1393,
+    themes: ['public'],
+    publicNote: 'Running meetups.',
+    currentSubmissionUpdatedAt: '2026-05-19T18:00:00.000Z',
+  };
+  const strict = createFakeUpdateRequestSql({ tokenRow });
+  await assert.rejects(
+    () => createMapNodeUpdateRequest(strict.sql, nodeId, {
+      token: 'valid-token',
+      place: 'Oakland',
+      lat: 37.8044,
+      long: -122.2712,
+    }),
+    (error) => error instanceof PublicInputError && error.code === 'location_confirmation_required'
+  );
+
+  const rollout = createFakeUpdateRequestSql({ tokenRow });
+  await createMapNodeUpdateRequest(rollout.sql, nodeId, {
+    token: 'valid-token',
+    place: 'Oakland',
+    city: 'Oakland',
+    region: 'California',
+    country: 'United States',
+    lat: 37.8044,
+    long: -122.2712,
+  }, {}, { env: { MAP_LOCATION_CONFIRMATION_REQUIRED: 'false' } });
+  assert.equal(
+    rollout.statements.some((statement) => statement.text.includes('update intake.map_location_confirmations')),
+    false
+  );
+  const insert = rollout.statements.find((statement) => statement.text.includes('insert into intake.map_node_update_requests'));
+  assert.ok(insert);
+  assert.equal(insert.values.includes('Oakland'), true);
+
+  const blankLegacyCoordinates = createFakeUpdateRequestSql({ tokenRow });
+  await assert.rejects(
+    () => createMapNodeUpdateRequest(blankLegacyCoordinates.sql, nodeId, {
+      token: 'valid-token',
+      place: 'Oakland',
+      lat: '',
+      long: ' ',
+    }, {}, { env: { MAP_LOCATION_CONFIRMATION_REQUIRED: 'false' } }),
+    (error) => error instanceof PublicInputError && error.code === 'invalid_update_field'
+  );
+  assert.equal(
+    blankLegacyCoordinates.statements.some((statement) => statement.text.includes('insert into intake.map_node_update_requests')),
+    false
+  );
 });
 
 test('owner update requests validate the token before rejecting role and type changes', async () => {

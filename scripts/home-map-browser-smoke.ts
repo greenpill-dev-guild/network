@@ -428,7 +428,7 @@ function submitNodeExpression({
   yRatio: number;
 }): string {
   return `
-    (() => {
+    (async () => {
       const clean = (value) => String(value || '').trim();
       const trigger = document.querySelector('[data-home-map-open]');
       trigger.click();
@@ -447,6 +447,15 @@ function submitNodeExpression({
       const pinY = rect.top + rect.height * ${yRatio};
       svg.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 31, pointerType: 'mouse', clientX: pinX, clientY: pinY }));
       svg.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 31, pointerType: 'mouse', clientX: pinX, clientY: pinY }));
+      const confirmationReady = async () => {
+        const started = performance.now();
+        while (performance.now() - started < 1500) {
+          if (clean(form.elements.locationConfirmationId.value)) return true;
+          await new Promise((resolve) => setTimeout(resolve, 20));
+        }
+        return false;
+      };
+      if (!await confirmationReady()) throw new Error('map pin did not receive a reverse-confirmed location');
       form.dispatchEvent(new Event('input', { bubbles: true }));
       document.querySelector('[data-walkthrough-next]').click();
       form.requestSubmit();
@@ -456,6 +465,7 @@ function submitNodeExpression({
         place: clean(form.elements.place.value),
         lat: clean(form.elements.lat.value),
         long: clean(form.elements.long.value),
+        locationConfirmationId: clean(form.elements.locationConfirmationId.value),
       };
     })()
   `;
@@ -521,6 +531,34 @@ async function runSmoke(): Promise<void> {
         return;
       }
 
+      if (request.method === 'POST' && request.url.endsWith('/map-locations/search')) {
+        fulfill(200, {
+          results: [{
+            confirmationId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            label: 'Oakland, California, United States',
+            lat: 37.8044,
+            long: -122.2712,
+            kind: 'settlement',
+            attribution: '© OpenStreetMap contributors',
+          }],
+        });
+        return;
+      }
+
+      if (request.method === 'POST' && request.url.endsWith('/map-locations/reverse')) {
+        fulfill(200, {
+          confirmation: {
+            confirmationId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+            label: 'Oakland, California, United States',
+            lat: 37.8044,
+            long: -122.2712,
+            kind: 'settlement',
+            attribution: '© OpenStreetMap contributors',
+          },
+        });
+        return;
+      }
+
       if (request.method === 'POST' && request.url.endsWith('/map-nodes')) {
         const body = JSON.parse(request.postData || '{}');
         mapNodePosts.push(body);
@@ -530,9 +568,9 @@ async function runSmoke(): Promise<void> {
               id: 'pending-browser-node',
               status: 'pending',
               displayName: body.displayName,
-              placeName: body.placeName,
-              lat: body.lat,
-              long: body.long,
+              placeName: 'Oakland, California, United States',
+              lat: 37.8044,
+              long: -122.2712,
               role: 'member',
               themes: body.themes,
               publicNote: body.publicNote,
@@ -742,9 +780,11 @@ async function runSmoke(): Promise<void> {
         form.elements.name.value = 'Review Browser Member';
         form.elements.contact.value = 'review-browser@example.org';
         form.elements.publicNote.value = 'One-line required tagline.';
-        form.elements.place.value = 'Oakland';
-        form.elements.lat.value = '37.804400';
-        form.elements.long.value = '-122.271200';
+        const locationQuery = document.querySelector('[data-location-query]');
+        locationQuery.value = 'Oakland';
+        document.querySelector('[data-location-search]')?.click();
+        await wait(80);
+        document.querySelector('[data-location-results-list] button')?.click();
         form.dispatchEvent(new Event('input', { bubbles: true }));
         document.querySelector('[data-walkthrough-next]')?.click();
         await wait(80);
@@ -900,6 +940,7 @@ async function runSmoke(): Promise<void> {
     assert.equal(pendingPlacement.selectedThemeCount, 1);
     assert.notEqual(pendingPlacement.lat, '');
     assert.notEqual(pendingPlacement.long, '');
+    assert.notEqual(pendingPlacement.locationConfirmationId, '');
     await waitForExpression(
       client,
       sessionId,
@@ -1719,6 +1760,8 @@ async function runSmoke(): Promise<void> {
     assert.equal(mapNodePosts[0].themes.length, 1, 'moderated flow should accept one theme');
     assert.equal(mapNodePosts[1].themes.length, 2, 'live member flow should accept multiple themes');
     assert.equal(mapNodePosts[2].email, stewardEmail, 'steward flow should use the allowlisted email path');
+    assert.equal(mapNodePosts.every((body) => typeof body.locationConfirmationId === 'string' && body.locationConfirmationId.length > 0), true);
+    assert.equal(mapNodePosts.some((body) => Object.hasOwn(body, 'placeName') || Object.hasOwn(body, 'lat') || Object.hasOwn(body, 'long')), false);
 
     console.log('[home-map-browser-smoke] passed');
   } finally {

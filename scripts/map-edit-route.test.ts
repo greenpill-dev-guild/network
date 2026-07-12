@@ -17,6 +17,7 @@ function makeElement(id): any {
     value: '',
     checked: false,
     children: [],
+    dataset: {},
     listeners: new Map(),
     addEventListener(type, listener) {
       this.listeners.set(type, listener);
@@ -24,6 +25,13 @@ function makeElement(id): any {
     append(child) {
       this.children.push(child);
     },
+    replaceChildren(...children) {
+      this.children = children;
+    },
+    removeAttribute(name) {
+      if (name === 'data-tone') delete this.dataset.tone;
+    },
+    focus() {},
   };
 }
 
@@ -55,12 +63,6 @@ function createHarness({
   const domListeners = new Map();
   const inputs = new Map([
     ['display_name', makeElement('display_name')],
-    ['place_name', makeElement('place_name')],
-    ['city', makeElement('city')],
-    ['region', makeElement('region')],
-    ['country', makeElement('country')],
-    ['latitude', makeElement('latitude')],
-    ['longitude', makeElement('longitude')],
     ['public_note', makeElement('public_note')],
   ]);
   const themeInputs = ['trees', 'food', 'ai'].map((id) => ({
@@ -86,6 +88,12 @@ function createHarness({
     ['map-edit-form', form],
     ['map-edit-submit', makeElement('map-edit-submit')],
     ['map-edit-extra-themes', makeElement('map-edit-extra-themes')],
+    ['map-edit-location-query', makeElement('map-edit-location-query')],
+    ['map-edit-location-search', makeElement('map-edit-location-search')],
+    ['map-edit-location-results', makeElement('map-edit-location-results')],
+    ['map-edit-location-results-list', makeElement('map-edit-location-results-list')],
+    ['map-edit-location-status', makeElement('map-edit-location-status')],
+    ['map-edit-location-current', makeElement('map-edit-location-current')],
   ]);
 
   class FakeFormData {
@@ -212,7 +220,8 @@ test('built map edit route clears tokens before resource links and avoids token 
   assert.ok(scriptIndex < stylesheetIndex, 'token cleanup script must run before stylesheet/resource links');
   assert.equal(html.includes('localStorage'), false);
   assert.equal(html.includes('sessionStorage'), false);
-  assert.equal(html.includes('dataset'), false);
+  // dataset is used only for the visible, non-sensitive location status tone;
+  // it is not a token persistence surface.
   assert.equal(html.includes('console.'), false);
   assert.equal(html.includes('navigator.sendBeacon'), false);
   assert.equal(html.includes('<a '), false);
@@ -223,6 +232,11 @@ test('built map edit route defines the H1 type token it relies on', () => {
   // previously rendered the panel H1 at the tiny UA default size.
   assert.match(routeHtml, /--gp-h1-size:\s*clamp\(/);
   assert.match(routeHtml, /font-size:\s*var\(--gp-h1-size\)/);
+});
+
+test('map edit ignores stale place-search responses', () => {
+  assert.match(routeHtml, /let locationSearchVersion = 0/);
+  assert.match(routeHtml, /searchVersion !== locationSearchVersion/);
 });
 
 test('missing token shows invalid-link state without calling the agent', async () => {
@@ -300,9 +314,10 @@ test('valid edit-session renders editable public fields and preserves unknown th
 
   assert.equal(visible(harness.elements.get('map-edit-form')), true);
   assert.equal(harness.inputs.get('display_name').value, editableNode.display_name);
-  assert.equal(harness.inputs.get('place_name').value, editableNode.place_name);
-  assert.equal(harness.inputs.get('latitude').value, editableNode.latitude);
-  assert.equal(harness.inputs.get('longitude').value, editableNode.longitude);
+  assert.equal(
+    harness.elements.get('map-edit-location-current').textContent,
+    `Current location: ${editableNode.place_name}`
+  );
   assert.equal(harness.themeInputs.find((input) => input.value === 'trees').checked, true);
   assert.equal(harness.themeInputs.find((input) => input.value === 'ai').checked, true);
   assert.equal(
@@ -326,7 +341,7 @@ test('unchanged submit is blocked before update-request token consumption', asyn
 
   assert.equal(fetches.length, 1);
   assert.equal(fetches[0].url.endsWith('/map-nodes/edit-session'), true);
-  assert.match(harness.elements.get('map-edit-failure').textContent, /at least one public-field change/i);
+  assert.match(harness.elements.get('map-edit-failure').textContent, /at least one public-field or confirmed-location change/i);
   assert.equal(harness.elements.get('map-edit-success').hidden, true);
 });
 
@@ -354,14 +369,8 @@ test('changed submit posts only editable public fields plus token to update-requ
   );
   const body = JSON.parse(fetches[1].init.body);
   assert.deepEqual(Object.keys(body).sort(), [
-    'city',
-    'country',
     'display_name',
-    'latitude',
-    'longitude',
-    'place_name',
     'public_note',
-    'region',
     'themes',
     'token',
   ]);
@@ -372,6 +381,48 @@ test('changed submit posts only editable public fields plus token to update-requ
   assert.equal(Object.hasOwn(body, 'email'), false);
   assert.equal(visible(harness.elements.get('map-edit-success')), true);
   assert.equal(harness.elements.get('map-edit-form').hidden, true);
+});
+
+test('confirmed place search submits only a server confirmation id, never raw coordinates', async () => {
+  const fetches = [];
+  const harness = createHarness({
+    fetchImpl: async (url, init) => {
+      fetches.push({ url, init });
+      if (url.endsWith('/map-nodes/edit-session')) {
+        return routeFetchResponse(200, { node: editableNode });
+      }
+      if (url.endsWith('/map-locations/search')) {
+        return routeFetchResponse(200, {
+          results: [{
+            confirmationId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            label: 'Awka, Anambra, Nigeria',
+            lat: 6.2127,
+            long: 7.0717,
+            kind: 'settlement',
+            attribution: '© OpenStreetMap contributors',
+          }],
+        });
+      }
+      return routeFetchResponse(201, { updateRequest: { id: 'request-1', status: 'pending' } });
+    },
+  });
+
+  await runDomLoaded(harness);
+  harness.elements.get('map-edit-location-query').value = 'Awka, Nigeria';
+  await harness.elements.get('map-edit-location-search').listeners.get('click')();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const resultButton = harness.elements.get('map-edit-location-results-list').children[0]?.children[0];
+  assert.ok(resultButton, 'expected a searchable location result');
+  resultButton.listeners.get('click')();
+  await harness.form.listeners.get('submit')({ preventDefault() {} });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(fetches.length, 3);
+  const body = JSON.parse(fetches[2].init.body);
+  assert.equal(body.locationConfirmationId, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+  assert.equal(Object.hasOwn(body, 'latitude'), false);
+  assert.equal(Object.hasOwn(body, 'longitude'), false);
+  assert.equal(Object.hasOwn(body, 'place_name'), false);
 });
 
 test('production hostname uses the production agent endpoint', async () => {

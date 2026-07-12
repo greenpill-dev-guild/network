@@ -462,16 +462,24 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
         <div class="gp-home-map-addnode-location">
           <label class="gp-home-map-addnode-city" data-location-text>
-            <span>City or place name</span>
-            <input type="text" name="placeQuery" autocomplete="address-level2" list="gp-home-map-cities" placeholder="Start typing, or name where your pin is…" />
-            <datalist id="gp-home-map-cities" data-location-datalist></datalist>
+            <span>Find your city, region, or country</span>
+            <span class="gp-home-map-location-search-row">
+              <input type="search" name="placeQuery" autocomplete="off" minlength="3" maxlength="120" placeholder="e.g. Awka, Nigeria" data-location-query />
+              <button type="button" data-location-search>Find place</button>
+            </span>
+            <small>Choose a public community location, not a home address.</small>
           </label>
 
+          <div class="gp-home-map-location-results" data-location-results hidden>
+            <p data-location-results-title>Choose a matching place</p>
+            <ul data-location-results-list></ul>
+          </div>
+
           <div class="gp-home-map-addnode-map-field">
-            <span>Or place yourself on the map</span>
+            <span>Adjust the confirmed pin if needed</span>
             <div class="gp-home-map-addnode-mini-map" data-location-map>
               <div class="gp-home-map-addnode-mini-topo" aria-hidden="true"></div>
-              <svg viewBox={`0 0 ${VIEW_W} ${MAP_VIEW_H}`} preserveAspectRatio="xMidYMid meet" aria-label="Tap or drag to place your pin on the world map">
+              <svg viewBox={`0 0 ${VIEW_W} ${MAP_VIEW_H}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">
                 <g aria-hidden="true">
                   {landDots.map((d) => (
                     <circle cx={d.cx} cy={d.cy} r="0.42" />
@@ -479,13 +487,31 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
                 </g>
                 <circle data-location-pin cx="100" cy="50" r="2.8" hidden />
               </svg>
-              <span data-location-map-hint>· tap or drag to place ·</span>
+              <span data-location-map-hint>· tap or drag, or enter coordinates below ·</span>
+            </div>
+
+            <div class="gp-home-map-location-coordinates">
+              <span>Or enter a coordinate</span>
+              <div class="gp-home-map-location-coordinate-row">
+                <label>
+                  <span>Latitude</span>
+                  <input type="number" inputmode="decimal" min="-90" max="90" step="any" autocomplete="off" data-location-coordinate-lat aria-describedby="gp-home-map-coordinate-help" />
+                </label>
+                <label>
+                  <span>Longitude</span>
+                  <input type="number" inputmode="decimal" min="-180" max="180" step="any" autocomplete="off" data-location-coordinate-long aria-describedby="gp-home-map-coordinate-help" />
+                </label>
+                <button type="button" data-location-coordinate-confirm>Confirm coordinate</button>
+              </div>
+              <small id="gp-home-map-coordinate-help">We reverse-check the nearest public place before using this pin.</small>
             </div>
           </div>
 
           <input type="hidden" name="place" data-location-place />
           <input type="hidden" name="lat" data-location-lat />
           <input type="hidden" name="long" data-location-long />
+          <input type="hidden" name="locationConfirmationId" data-location-confirmation-id />
+          <p class="gp-home-map-location-confirmation" data-location-confirmation role="status" aria-live="polite">Find and choose a place to confirm your pin.</p>
         </div>
       </section>
 
@@ -3336,10 +3362,17 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const locationSvg = locationMap?.querySelector('svg') as SVGSVGElement | null;
     const locationPin = scope.querySelector('[data-location-pin]') as SVGCircleElement | null;
     const locationQuery = scope.querySelector('input[name="placeQuery"]') as HTMLInputElement | null;
-    const locationDatalist = scope.querySelector('[data-location-datalist]') as HTMLDataListElement | null;
+    const locationSearchButton = scope.querySelector('[data-location-search]') as HTMLButtonElement | null;
+    const locationResults = scope.querySelector('[data-location-results]') as HTMLElement | null;
+    const locationResultsList = scope.querySelector('[data-location-results-list]') as HTMLUListElement | null;
+    const locationConfirmation = scope.querySelector('[data-location-confirmation]') as HTMLElement | null;
+    const locationConfirmationInput = scope.querySelector('[data-location-confirmation-id]') as HTMLInputElement | null;
     const placeInput = scope.querySelector('[data-location-place]') as HTMLInputElement | null;
     const latInput = scope.querySelector('[data-location-lat]') as HTMLInputElement | null;
     const longInput = scope.querySelector('[data-location-long]') as HTMLInputElement | null;
+    const locationCoordinateLat = scope.querySelector('[data-location-coordinate-lat]') as HTMLInputElement | null;
+    const locationCoordinateLong = scope.querySelector('[data-location-coordinate-long]') as HTMLInputElement | null;
+    const locationCoordinateConfirm = scope.querySelector('[data-location-coordinate-confirm]') as HTMLButtonElement | null;
     const reviewName = scope.querySelector('[data-review-name]') as HTMLElement | null;
     const reviewPlace = scope.querySelector('[data-review-place]') as HTMLElement | null;
     const reviewThemes = scope.querySelector('[data-review-themes]') as HTMLElement | null;
@@ -3364,88 +3397,27 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       paddingInlineEnd: '',
     };
 
-    const xToLon = (x: number) => (x / VIEW_W) * 360 - 180;
     const yToLat = (y: number) => 90 - (y / VIEW_H) * 180;
-    const placeIndex = [
-      ...Array.from(root.querySelectorAll('[data-node-type="chapter"]')).map((node) => {
-        const dot = node.querySelector('.gp-home-map-node-dot') as SVGCircleElement | null;
-        const x = Number(dot?.getAttribute('cx'));
-        const y = Number(dot?.getAttribute('cy'));
-        return {
-          label: clean((node as HTMLElement).dataset.nodeName) || 'Greenpill chapter',
-          lat: yToLat(y),
-          long: xToLon(x),
-        };
-      }).filter((place) => Number.isFinite(place.lat) && Number.isFinite(place.long)),
-      // A compact bundled spread of major world cities — enough to autocomplete and
-      // auto-label most pins. Anywhere not listed still works: the pin gives the
-      // coordinates and a free-typed name becomes the label.
-      { label: 'Lagos', lat: 6.5244, long: 3.3792 },
-      { label: 'Accra', lat: 5.6037, long: -0.187 },
-      { label: 'Nairobi', lat: -1.2864, long: 36.8172 },
-      { label: 'Cairo', lat: 30.0444, long: 31.2357 },
-      { label: 'Cape Town', lat: -33.9249, long: 18.4241 },
-      { label: 'Johannesburg', lat: -26.2041, long: 28.0473 },
-      { label: 'Casablanca', lat: 33.5731, long: -7.5898 },
-      { label: 'Addis Ababa', lat: 9.03, long: 38.74 },
-      { label: 'Dar es Salaam', lat: -6.7924, long: 39.2083 },
-      { label: 'Kinshasa', lat: -4.4419, long: 15.2663 },
-      { label: 'London', lat: 51.5072, long: -0.1276 },
-      { label: 'Berlin', lat: 52.52, long: 13.405 },
-      { label: 'Paris', lat: 48.8566, long: 2.3522 },
-      { label: 'Madrid', lat: 40.4168, long: -3.7038 },
-      { label: 'Lisbon', lat: 38.7223, long: -9.1393 },
-      { label: 'Amsterdam', lat: 52.3676, long: 4.9041 },
-      { label: 'Rome', lat: 41.9028, long: 12.4964 },
-      { label: 'Istanbul', lat: 41.0082, long: 28.9784 },
-      { label: 'Warsaw', lat: 52.2297, long: 21.0122 },
-      { label: 'Stockholm', lat: 59.3293, long: 18.0686 },
-      { label: 'Kyiv', lat: 50.4501, long: 30.5234 },
-      { label: 'Delhi', lat: 28.6139, long: 77.209 },
-      { label: 'Mumbai', lat: 19.076, long: 72.8777 },
-      { label: 'Bangalore', lat: 12.9716, long: 77.5946 },
-      { label: 'Bangkok', lat: 13.7563, long: 100.5018 },
-      { label: 'Singapore', lat: 1.3521, long: 103.8198 },
-      { label: 'Jakarta', lat: -6.2088, long: 106.8456 },
-      { label: 'Bali', lat: -8.3405, long: 115.092 },
-      { label: 'Manila', lat: 14.5995, long: 120.9842 },
-      { label: 'Seoul', lat: 37.5665, long: 126.978 },
-      { label: 'Tokyo', lat: 35.6762, long: 139.6503 },
-      { label: 'Shanghai', lat: 31.2304, long: 121.4737 },
-      { label: 'Beijing', lat: 39.9042, long: 116.4074 },
-      { label: 'Ho Chi Minh City', lat: 10.8231, long: 106.6297 },
-      { label: 'Dhaka', lat: 23.8103, long: 90.4125 },
-      { label: 'Karachi', lat: 24.8607, long: 67.0011 },
-      { label: 'Dubai', lat: 25.2048, long: 55.2708 },
-      { label: 'New York City', lat: 40.7128, long: -74.006 },
-      { label: 'Toronto', lat: 43.6532, long: -79.3832 },
-      { label: 'Vancouver', lat: 49.2827, long: -123.1207 },
-      { label: 'Los Angeles', lat: 34.0522, long: -118.2437 },
-      { label: 'Chicago', lat: 41.8781, long: -87.6298 },
-      { label: 'Mexico City', lat: 19.4326, long: -99.1332 },
-      { label: 'Bogota', lat: 4.711, long: -74.0721 },
-      { label: 'Medellin', lat: 6.2442, long: -75.5812 },
-      { label: 'Lima', lat: -12.0464, long: -77.0428 },
-      { label: 'Santiago', lat: -33.4489, long: -70.6693 },
-      { label: 'Buenos Aires', lat: -34.6037, long: -58.3816 },
-      { label: 'Sao Paulo', lat: -23.5505, long: -46.6333 },
-      { label: 'Rio de Janeiro', lat: -22.9068, long: -43.1729 },
-      { label: 'Sydney', lat: -33.8688, long: 151.2093 },
-      { label: 'Melbourne', lat: -37.8136, long: 144.9631 },
-      { label: 'Auckland', lat: -36.8485, long: 174.7633 },
-    ];
+    type ConfirmedLocation = {
+      confirmationId: string;
+      label: string;
+      lat: number;
+      long: number;
+      kind: string;
+      attribution: string;
+    };
+    let locationRequestVersion = 0;
+    let locationSearchVersion = 0;
+    let pendingLocationPoint: { lat: number; long: number } | null = null;
 
-    const nearestPlace = (lat: number, long: number) => (
-      placeIndex
-        .map((place) => ({
-          ...place,
-          distance: Math.hypot(
-            place.lat - lat,
-            (place.long - long) * Math.cos(((place.lat + lat) / 2) * Math.PI / 180)
-          ),
-        }))
-        .sort((a, b) => a.distance - b.distance)[0]
-    );
+    const invalidateLocationRequests = () => {
+      locationRequestVersion += 1;
+      locationSearchVersion += 1;
+      pendingLocationPoint = null;
+      // A superseding drag, coordinate entry, or reset must not leave the next
+      // fresh search disabled when an old request eventually settles.
+      if (locationSearchButton) locationSearchButton.disabled = false;
+    };
 
     const setAddStatus = (message: string, tone: 'idle' | 'success' | 'error' = 'idle') => {
       if (!addStatus) return;
@@ -3462,16 +3434,44 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     const selectedThemeIds = () => Array.from(selectedThemes);
 
-    const setLocation = (lat: number, long: number, label: string) => {
-      if (!placeInput || !latInput || !longInput) return;
-      placeInput.value = label;
-      latInput.value = lat.toFixed(6);
-      longInput.value = long.toFixed(6);
+    const setLocationStatus = (message: string, tone: 'idle' | 'error' | 'success' = 'idle') => {
+      if (!locationConfirmation) return;
+      locationConfirmation.textContent = message;
+      if (tone === 'idle') locationConfirmation.removeAttribute('data-tone');
+      else locationConfirmation.dataset.tone = tone;
+    };
+
+    const renderLocationPin = (lat: number, long: number) => {
       if (locationPin) {
         locationPin.setAttribute('cx', lonToX(long).toFixed(2));
         locationPin.setAttribute('cy', latToY(lat).toFixed(2));
         locationPin.hidden = false;
       }
+    };
+
+    const renderLocationCoordinates = (lat: number, long: number) => {
+      if (locationCoordinateLat) locationCoordinateLat.value = lat.toFixed(6);
+      if (locationCoordinateLong) locationCoordinateLong.value = long.toFixed(6);
+    };
+
+    const readLocationCoordinate = (value: unknown, min: number, max: number): number | null => {
+      const raw = clean(value);
+      if (!raw) return null;
+      const number = Number(raw);
+      return Number.isFinite(number) && number >= min && number <= max ? number : null;
+    };
+
+    const setConfirmedLocation = (location: ConfirmedLocation) => {
+      if (!placeInput || !latInput || !longInput || !locationConfirmationInput) return;
+      // A chosen place supersedes any in-flight lookup or stale search result.
+      invalidateLocationRequests();
+      placeInput.value = location.label;
+      latInput.value = location.lat.toFixed(6);
+      longInput.value = location.long.toFixed(6);
+      locationConfirmationInput.value = location.confirmationId;
+      renderLocationPin(location.lat, location.long);
+      renderLocationCoordinates(location.lat, location.long);
+      setLocationStatus(`Confirmed: ${location.label}. ${location.attribution}`, 'success');
       syncWalkthroughState();
     };
 
@@ -3511,6 +3511,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         clean(data.get('place')) &&
         toFiniteNumber(data.get('lat')) !== null &&
         toFiniteNumber(data.get('long')) !== null &&
+        clean(data.get('locationConfirmationId')) &&
         emailInput?.checkValidity()
       );
     }
@@ -3561,13 +3562,20 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     };
 
     const resetWalkthrough = () => {
+      invalidateLocationRequests();
       addForm?.reset();
       selectedThemes.clear();
       currentStep = 0;
       if (placeInput) placeInput.value = '';
       if (latInput) latInput.value = '';
       if (longInput) longInput.value = '';
+      if (locationCoordinateLat) locationCoordinateLat.value = '';
+      if (locationCoordinateLong) locationCoordinateLong.value = '';
+      if (locationConfirmationInput) locationConfirmationInput.value = '';
       if (locationPin) locationPin.hidden = true;
+      if (locationResults) locationResults.hidden = true;
+      if (locationResultsList) locationResultsList.replaceChildren();
+      setLocationStatus('Find and choose a place to confirm your pin.');
       setAddStatus('');
       syncWalkthroughState();
     };
@@ -3723,81 +3731,213 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     });
 
     addForm?.addEventListener('input', syncWalkthroughState);
-    // Pin = coordinates. Drag or tap anywhere on the mini-map to place it; the
-    // nearest bundled city auto-labels it, and a custom typed name takes
-    // precedence so any place reads correctly.
-    const cityIsKnown = (value: string) => {
-      const lower = value.toLowerCase();
-      return placeIndex.some((place) => place.label.toLowerCase() === lower);
+    const safeJson = async (response: Response) => response.json().catch(() => ({}));
+    const renderSearchResults = (results: ConfirmedLocation[]) => {
+      if (!locationResults || !locationResultsList) return;
+      locationResultsList.replaceChildren();
+      results.forEach((result) => {
+        const item = document.createElement('li');
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = result.label;
+        button.addEventListener('click', () => {
+          setConfirmedLocation(result);
+          locationResults.hidden = true;
+          locationResultsList.replaceChildren();
+        });
+        item.append(button);
+        locationResultsList.append(item);
+      });
+      locationResults.hidden = results.length === 0;
     };
-    const placeFromPointer = (event: PointerEvent) => {
-      if (!locationSvg) return;
-      const rect = locationSvg.getBoundingClientRect();
-      const x = Math.min(VIEW_W, Math.max(0, ((event.clientX - rect.left) / rect.width) * VIEW_W));
-      const y = Math.min(VISIBLE_VIEW_H, Math.max(0, ((event.clientY - rect.top) / rect.height) * VISIBLE_VIEW_H));
-      const lat = yToLat(y);
-      const long = xToLon(x);
-      const typed = clean(locationQuery?.value);
-      const label = typed.length >= 2 && !cityIsKnown(typed)
-        ? typed
-        : (nearestPlace(lat, long)?.label || 'your place');
-      setLocation(lat, long, label);
+
+    const findLocation = async () => {
+      const query = clean(locationQuery?.value);
+      if (query.length < 3) {
+        setLocationStatus('Enter at least three characters to find a place.', 'error');
+        locationQuery?.focus();
+        return;
+      }
+      const searchVersion = ++locationSearchVersion;
+      locationRequestVersion += 1;
+      if (locationSearchButton) locationSearchButton.disabled = true;
+      setLocationStatus('Finding matching places…');
+      try {
+        const response = await fetch(`${agentBaseUrl}/map-locations/search`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query }),
+        });
+        const payload = await safeJson(response);
+        if (searchVersion !== locationSearchVersion) return;
+        if (!response.ok || !Array.isArray(payload?.results)) {
+          throw new Error(payload?.error?.message || 'We could not find that place.');
+        }
+        const results = payload.results.map((result: Record<string, unknown>) => ({
+          confirmationId: clean(result.confirmationId),
+          label: clean(result.label),
+          lat: toFiniteNumber(result.lat),
+          long: toFiniteNumber(result.long),
+          kind: clean(result.kind),
+          attribution: clean(result.attribution),
+        })).filter((result: { confirmationId: string; label: string; lat: number | null; long: number | null }) => (
+          Boolean(result.confirmationId && result.label && result.lat !== null && result.long !== null)
+        )).map((result: { confirmationId: string; label: string; lat: number | null; long: number | null; kind: string; attribution: string }) => ({
+          ...result,
+          lat: result.lat as number,
+          long: result.long as number,
+        }));
+        if (results.length === 0) throw new Error('No city, region, or country matched that search.');
+        renderSearchResults(results);
+        setLocationStatus('Choose one matching place to confirm its pin.');
+      } catch (error) {
+        if (searchVersion !== locationSearchVersion) return;
+        renderSearchResults([]);
+        setLocationStatus(error instanceof Error ? error.message : 'We could not find that place.', 'error');
+      } finally {
+        if (locationSearchButton && searchVersion === locationSearchVersion) locationSearchButton.disabled = false;
+      }
     };
+
+    locationSearchButton?.addEventListener('click', () => void findLocation());
+    locationQuery?.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      void findLocation();
+    });
+
+    const pointFromLocationPointer = (event: PointerEvent) => {
+      const matrix = locationSvg?.getScreenCTM();
+      if (!locationSvg || !matrix) return null;
+      const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse());
+      const x = Math.min(VIEW_W, Math.max(0, point.x));
+      const y = Math.min(MAP_VIEW_H, Math.max(0, point.y));
+      return {
+        lat: yToLat(y),
+        long: (x / VIEW_W) * 360 - 180,
+      };
+    };
+
     let locationDragging = false;
+    const clearLocationConfirmation = (): boolean => {
+      const hadConfirmation = Boolean(locationConfirmationInput?.value);
+      if (locationConfirmationInput) locationConfirmationInput.value = '';
+      if (placeInput) placeInput.value = '';
+      if (latInput) latInput.value = '';
+      if (longInput) longInput.value = '';
+      return hadConfirmation;
+    };
+    const confirmDraggedLocation = async (point: { lat: number; long: number }) => {
+      const requestVersion = ++locationRequestVersion;
+      setLocationStatus('Confirming this pin…');
+      try {
+        const response = await fetch(`${agentBaseUrl}/map-locations/reverse`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(point),
+        });
+        const payload = await safeJson(response);
+        if (requestVersion !== locationRequestVersion) return;
+        if (!response.ok || !payload?.confirmation) {
+          throw new Error(payload?.error?.message || 'We could not confirm that pin.');
+        }
+        const confirmation = payload.confirmation;
+        const lat = toFiniteNumber(confirmation.lat);
+        const long = toFiniteNumber(confirmation.long);
+        if (!clean(confirmation.confirmationId) || !clean(confirmation.label) || lat === null || long === null) {
+          throw new Error('We could not confirm that pin.');
+        }
+        setConfirmedLocation({
+          confirmationId: clean(confirmation.confirmationId),
+          label: clean(confirmation.label),
+          lat,
+          long,
+          kind: clean(confirmation.kind),
+          attribution: clean(confirmation.attribution),
+        });
+      } catch (error) {
+        if (requestVersion !== locationRequestVersion) return;
+        clearLocationConfirmation();
+        setLocationStatus(error instanceof Error ? error.message : 'We could not confirm that pin.', 'error');
+        syncWalkthroughState();
+      }
+    };
+    const updateDraggedPin = (event: PointerEvent) => {
+      const point = pointFromLocationPointer(event);
+      if (!point) return;
+      pendingLocationPoint = point;
+      const hadConfirmation = clearLocationConfirmation();
+      renderLocationPin(point.lat, point.long);
+      renderLocationCoordinates(point.lat, point.long);
+      if (hadConfirmation) setLocationStatus('Pin moved. Release to confirm this place.');
+      syncWalkthroughState();
+    };
     locationSvg?.addEventListener('pointerdown', (event) => {
+      if (!event.isPrimary || event.button !== 0) return;
+      // A new pointer gesture must invalidate a previous reverse lookup before
+      // it can update the form with an older place.
+      invalidateLocationRequests();
       locationDragging = true;
-      try { locationSvg?.setPointerCapture(event.pointerId); } catch {}
-      placeFromPointer(event);
+      try { locationSvg.setPointerCapture(event.pointerId); } catch {}
+      updateDraggedPin(event);
     });
     locationSvg?.addEventListener('pointermove', (event) => {
-      if (locationDragging) placeFromPointer(event);
+      if (locationDragging) updateDraggedPin(event);
     });
     const endLocationDrag = (event: PointerEvent) => {
       if (!locationDragging) return;
       locationDragging = false;
       try { locationSvg?.releasePointerCapture(event.pointerId); } catch {}
+      if (pendingLocationPoint) void confirmDraggedLocation(pendingLocationPoint);
     };
     locationSvg?.addEventListener('pointerup', endLocationDrag);
-    locationSvg?.addEventListener('pointercancel', endLocationDrag);
-
-    // Type to search the bundled list (a native datalist suggests matches). A
-    // matched city jumps the pin; any other text becomes the label as long as a
-    // pin supplies the coordinates — so a diverse set of places all work.
-    locationQuery?.addEventListener('input', () => {
-      const raw = clean(locationQuery.value);
-      if (raw.length < 2) {
-        return;
-      }
-      const query = raw.toLowerCase();
-      const match = placeIndex.find((place) => place.label.toLowerCase() === query)
-        || placeIndex.find((place) => place.label.toLowerCase().startsWith(query))
-        || placeIndex.find((place) => place.label.toLowerCase().includes(query));
-      if (match) {
-        setLocation(match.lat, match.long, match.label);
-        return;
-      }
-      const lat = toFiniteNumber(latInput?.value);
-      const long = toFiniteNumber(longInput?.value);
-      if (lat !== null && long !== null) {
-        setLocation(lat, long, raw);
-      } else {
-        if (placeInput) placeInput.value = raw;
-        syncWalkthroughState();
-      }
+    locationSvg?.addEventListener('pointercancel', (event) => {
+      if (!locationDragging) return;
+      locationDragging = false;
+      try { locationSvg?.releasePointerCapture(event.pointerId); } catch {}
+      invalidateLocationRequests();
+      clearLocationConfirmation();
+      if (locationPin) locationPin.hidden = true;
+      if (locationCoordinateLat) locationCoordinateLat.value = '';
+      if (locationCoordinateLong) locationCoordinateLong.value = '';
+      setLocationStatus('Pin adjustment canceled. Choose or confirm a place to continue.');
+      syncWalkthroughState();
     });
 
-    // Populate the city autocomplete from the bundled list (deduped).
-    if (locationDatalist) {
-      const seenCities = new Set<string>();
-      placeIndex.forEach((place) => {
-        const label = clean(place.label);
-        if (!label || seenCities.has(label.toLowerCase())) return;
-        seenCities.add(label.toLowerCase());
-        const option = document.createElement('option');
-        option.value = label;
-        locationDatalist.append(option);
+    const confirmEnteredCoordinates = () => {
+      const lat = readLocationCoordinate(locationCoordinateLat?.value, -90, 90);
+      const long = readLocationCoordinate(locationCoordinateLong?.value, -180, 180);
+      if (lat === null || long === null) {
+        setLocationStatus('Enter a latitude from −90 to 90 and longitude from −180 to 180.', 'error');
+        (lat === null ? locationCoordinateLat : locationCoordinateLong)?.focus();
+        return;
+      }
+      invalidateLocationRequests();
+      clearLocationConfirmation();
+      renderLocationPin(lat, long);
+      void confirmDraggedLocation({ lat, long });
+    };
+
+    const previewEnteredCoordinates = () => {
+      invalidateLocationRequests();
+      const hadConfirmation = clearLocationConfirmation();
+      const lat = readLocationCoordinate(locationCoordinateLat?.value, -90, 90);
+      const long = readLocationCoordinate(locationCoordinateLong?.value, -180, 180);
+      if (lat !== null && long !== null) renderLocationPin(lat, long);
+      else if (locationPin) locationPin.hidden = true;
+      if (hadConfirmation) setLocationStatus('Coordinate changed. Confirm it to find a place.');
+      syncWalkthroughState();
+    };
+    locationCoordinateLat?.addEventListener('input', previewEnteredCoordinates);
+    locationCoordinateLong?.addEventListener('input', previewEnteredCoordinates);
+    locationCoordinateConfirm?.addEventListener('click', confirmEnteredCoordinates);
+    [locationCoordinateLat, locationCoordinateLong].forEach((input) => {
+      input?.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        confirmEnteredCoordinates();
       });
-    }
+    });
 
     addForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -3806,6 +3946,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const place = clean(data.get('place'));
       const lat = toFiniteNumber(data.get('lat'));
       const long = toFiniteNumber(data.get('long'));
+      const locationConfirmationId = clean(data.get('locationConfirmationId'));
       const themes = selectedThemeIds();
       const publicNote = clean(data.get('publicNote'));
       const emailInput = addForm.elements.namedItem('contact') as HTMLInputElement | null;
@@ -3813,9 +3954,9 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const website = clean(data.get('website'));
       if (emailInput) emailInput.value = email;
 
-      if (!name || !publicNote || !place || lat === null || long === null || !emailInput?.checkValidity()) {
+      if (!name || !publicNote || !place || lat === null || long === null || !locationConfirmationId || !emailInput?.checkValidity()) {
         setWalkthroughStep('identity');
-        setAddStatus('Add a name, one-line tagline, place, and valid private email before submitting.', 'error');
+        setAddStatus('Add a name, one-line tagline, confirmed place, and valid private email before submitting.', 'error');
         return;
       }
       if (themes.length < 1 || themes.length > MAX_THEME_COUNT) {
@@ -3832,9 +3973,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             displayName: name,
-            placeName: place,
-            lat,
-            long,
+            locationConfirmationId,
             role: 'member',
             themes,
             publicNote,
@@ -5939,6 +6078,134 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     padding: 0;
   }
 
+  .gp-home-map-addnode-city small,
+  .gp-home-map-location-confirmation {
+    color: var(--gp-fg-muted);
+    font-size: var(--gp-caption);
+    line-height: 1.45;
+  }
+
+  .gp-home-map-location-search-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .gp-home-map-location-search-row button,
+  .gp-home-map-location-results button,
+  .gp-home-map-location-coordinate-row button {
+    min-height: 44px;
+    border: 1px solid color-mix(in srgb, var(--gp-map-member) 42%, transparent);
+    border-radius: var(--gp-radius-md);
+    background: color-mix(in srgb, var(--gp-green-700) 88%, transparent);
+    color: var(--gp-fg);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .gp-home-map-location-search-row button {
+    padding-inline: 14px;
+  }
+
+  .gp-home-map-location-search-row button:disabled {
+    cursor: wait;
+    opacity: 0.68;
+  }
+
+  .gp-home-map-location-results {
+    border: 1px solid color-mix(in srgb, var(--gp-map-member) 24%, transparent);
+    border-radius: var(--gp-radius-md);
+    background: color-mix(in srgb, var(--gp-green-950) 78%, transparent);
+    padding: 10px;
+  }
+
+  .gp-home-map-location-results p {
+    margin: 0 0 8px;
+    color: var(--gp-fg-muted);
+    font-size: var(--gp-caption);
+    font-weight: 700;
+  }
+
+  .gp-home-map-location-results ul {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .gp-home-map-location-results button {
+    width: 100%;
+    min-height: 40px;
+    padding: 8px 10px;
+    text-align: start;
+  }
+
+  .gp-home-map-location-search-row button:hover,
+  .gp-home-map-location-search-row button:focus-visible,
+  .gp-home-map-location-results button:hover,
+  .gp-home-map-location-results button:focus-visible,
+  .gp-home-map-location-coordinate-row button:hover,
+  .gp-home-map-location-coordinate-row button:focus-visible {
+    border-color: var(--gp-map-member);
+    background: color-mix(in srgb, var(--gp-green-600) 88%, transparent);
+    outline: none;
+  }
+
+  .gp-home-map-location-confirmation {
+    margin: 0;
+  }
+
+  .gp-home-map-location-confirmation[data-tone="success"] { color: var(--gp-success); }
+  .gp-home-map-location-confirmation[data-tone="error"] { color: var(--gp-error); }
+
+  .gp-home-map-location-coordinates {
+    display: grid;
+    gap: 7px;
+  }
+
+  .gp-home-map-location-coordinates > span {
+    color: var(--gp-map-member);
+    font-size: var(--gp-caption);
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .gp-home-map-location-coordinate-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 8px;
+  }
+
+  .gp-home-map-location-coordinate-row label {
+    display: grid;
+    gap: 5px;
+  }
+
+  .gp-home-map-location-coordinate-row label > span {
+    color: var(--gp-fg-muted);
+    font-size: var(--gp-caption);
+    font-weight: 700;
+  }
+
+  .gp-home-map-location-coordinate-row input {
+    min-height: 44px;
+  }
+
+  .gp-home-map-location-coordinate-row button {
+    min-height: 44px;
+    padding-inline: 12px;
+    white-space: nowrap;
+  }
+
+  .gp-home-map-location-coordinates small {
+    color: var(--gp-fg-muted);
+    font-size: var(--gp-caption);
+    line-height: 1.45;
+  }
+
   .gp-home-map-addnode-location-head {
     display: flex;
     align-items: center;
@@ -6040,6 +6307,16 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     text-transform: uppercase;
     white-space: nowrap;
     pointer-events: none;
+  }
+
+  @container (max-width: 500px) {
+    .gp-home-map-location-coordinate-row {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .gp-home-map-location-coordinate-row button {
+      grid-column: 1 / -1;
+    }
   }
 
   .gp-home-map-addnode-note {

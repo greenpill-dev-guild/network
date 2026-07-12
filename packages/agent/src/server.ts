@@ -1,5 +1,6 @@
 import { serve } from '@hono/node-server';
 import { app } from './app.js';
+import { createMapLocationRepository } from './map-locations.js';
 import { createMapNodeRepository } from './map-nodes.js';
 
 const parsePort = (value: string | undefined, fallback: number): number => {
@@ -21,6 +22,10 @@ const editLinkDeliverySweepIntervalMs = parsePositiveInteger(
 const moderationDeliverySweepIntervalMs = parsePositiveInteger(
   process.env.MAP_NODE_MODERATION_DELIVERY_SWEEP_INTERVAL_MS,
   editLinkDeliverySweepIntervalMs
+);
+const mapLocationCleanupSweepIntervalMs = parsePositiveInteger(
+  process.env.MAP_LOCATION_CLEANUP_SWEEP_INTERVAL_MS,
+  6 * 60 * 60 * 1000
 );
 
 export function startMapNodeEditLinkDeliverySweep({
@@ -75,6 +80,47 @@ export function startMapNodeEditLinkDeliverySweep({
   };
 }
 
+export function startMapLocationCleanupSweep({
+  env = process.env,
+  repository = createMapLocationRepository({ env }),
+}: {
+  env?: Record<string, string | undefined>;
+  repository?: { cleanupExpired?: () => Promise<unknown> };
+} = {}): (() => void) | null {
+  if (!env.DATABASE_URL || env.MAP_LOCATION_CLEANUP_SWEEP_ENABLED === 'false') return null;
+  const cleanupExpired = repository.cleanupExpired?.bind(repository);
+  if (!cleanupExpired) return null;
+
+  let running = false;
+  const run = async () => {
+    if (running) return;
+    running = true;
+    try {
+      await cleanupExpired();
+    } catch (error) {
+      console.warn('map_location_cleanup_sweep_failed', {
+        errorName: error instanceof Error ? error.name : 'UnknownError',
+      });
+    } finally {
+      running = false;
+    }
+  };
+
+  const bootTimer = setTimeout(() => {
+    void run();
+  }, 2000);
+  const interval = setInterval(() => {
+    void run();
+  }, mapLocationCleanupSweepIntervalMs);
+  bootTimer.unref?.();
+  interval.unref?.();
+
+  return () => {
+    clearTimeout(bootTimer);
+    clearInterval(interval);
+  };
+}
+
 serve({
   fetch: app.fetch,
   hostname,
@@ -84,3 +130,4 @@ serve({
 });
 
 startMapNodeEditLinkDeliverySweep();
+startMapLocationCleanupSweep();
