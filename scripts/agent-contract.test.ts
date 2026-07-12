@@ -247,7 +247,7 @@ test('map-location route gives public request throttling a minute-long retry hin
   assert.equal(response.headers.get('retry-after'), '60');
 });
 
-function createFakeMapLocationSql({ cacheEntries = [] } = {}) {
+function createFakeMapLocationSql({ cacheEntries = [], confirmationError = null } = {}) {
   const cache = new Map(cacheEntries);
   const requestLimits = new Map();
   const statements = [];
@@ -286,6 +286,7 @@ function createFakeMapLocationSql({ cacheEntries = [] } = {}) {
       return [];
     }
     if (text.includes('insert into intake.map_location_confirmations')) {
+      if (confirmationError) throw confirmationError;
       confirmationCount += 1;
       return [{ confirmationId: `00000000-0000-4000-8000-${String(confirmationCount).padStart(12, '0')}` }];
     }
@@ -370,6 +371,13 @@ test('map-location search confirms numeric Nominatim ids and bypasses stale v1 e
         addresstype: 'city',
         osm_type: 'relation',
         osm_id: 9721587,
+      }, {
+        display_name: 'Nairobi, Kenya',
+        lat: '-1.3024317',
+        lon: '36.8172234',
+        addresstype: 'city',
+        osm_type: 'node',
+        osm_id: 249298629,
       }]);
     },
   });
@@ -377,6 +385,7 @@ test('map-location search confirms numeric Nominatim ids and bypasses stale v1 e
   const payload = await repository.search('Nairobi, Kenya');
 
   assert.equal(providerRequests.length, 1, 'the stale unversioned empty cache must not mask the provider fix');
+  assert.equal(payload.results.length, 1, 'identical public labels must not produce indistinguishable choices');
   assert.equal(payload.results[0].label, 'Nairobi, Kenya');
   assert.match(payload.results[0].confirmationId, /^[0-9a-f-]{36}$/i);
   const cacheRead = statements.find((statement) => statement.text.includes('from intake.map_location_geocode_cache'));
@@ -417,6 +426,84 @@ test('map-location reverse requests locality zoom and confirms a numeric-id Nair
   const confirmationWrite = statements.find((statement) => statement.text.includes('insert into intake.map_location_confirmations'));
   assert.ok(confirmationWrite);
   assert.equal(confirmationWrite.values.includes('relation:3854414'), true);
+});
+
+test('map-location reverse reports only safe confirmation-write diagnostics and preserves the error', async () => {
+  const databaseError = Object.assign(new Error('private database detail'), {
+    name: 'PostgresError',
+    code: '23514',
+    detail: 'private row detail',
+  });
+  const diagnosticEvents = [];
+  const { sql } = createFakeMapLocationSql({ confirmationError: databaseError });
+  const repository = createMapLocationRepository({
+    createSql: () => sql,
+    reportError: (event) => diagnosticEvents.push(event),
+    now: () => new Date('2026-07-12T12:00:00.000Z'),
+    fetchImpl: async () => Response.json({
+      display_name: 'Kilimani ward, Nairobi, Kenya',
+      lat: '-1.2920659',
+      lon: '36.7966194',
+      addresstype: 'neighbourhood',
+      osm_type: 'relation',
+      osm_id: 3854414,
+    }),
+  });
+
+  await assert.rejects(
+    repository.reverse(-1.286389, 36.817223),
+    (error) => error === databaseError
+  );
+  assert.deepEqual(diagnosticEvents, [{
+    stage: 'reverse_confirmation_write',
+    errorName: 'PostgresError',
+    errorCode: '23514',
+  }]);
+  assert.equal(JSON.stringify(diagnosticEvents).includes('private'), false);
+});
+
+test('map-location reverse reports only safe lookup diagnostics and preserves the error', async () => {
+  const databaseError = Object.assign(new Error('private database detail'), {
+    name: 'PostgresError',
+    code: '57P01',
+    detail: 'private connection detail',
+  });
+  const diagnosticEvents = [];
+  const repository = createMapLocationRepository({
+    createSql: () => { throw databaseError; },
+    reportError: (event) => diagnosticEvents.push(event),
+  });
+
+  await assert.rejects(
+    repository.reverse(-1.286389, 36.817223),
+    (error) => error === databaseError
+  );
+  assert.deepEqual(diagnosticEvents, [{
+    stage: 'reverse_lookup',
+    errorName: 'PostgresError',
+    errorCode: '57P01',
+  }]);
+  assert.equal(JSON.stringify(diagnosticEvents).includes('private'), false);
+});
+
+test('map-location reverse does not report expected public request limits as failures', async () => {
+  const diagnosticEvents = [];
+  const repository = createMapLocationRepository({
+    createSql: () => {
+      throw new PublicInputError(
+        'location_request_rate_limited',
+        'Too many location checks came from this network. Please try again in a minute.',
+        429
+      );
+    },
+    reportError: (event) => diagnosticEvents.push(event),
+  });
+
+  await assert.rejects(
+    repository.reverse(-1.286389, 36.817223),
+    (error) => error instanceof PublicInputError && error.status === 429
+  );
+  assert.deepEqual(diagnosticEvents, []);
 });
 
 test('map-location repository rejects malformed successful provider payloads without caching a false no-result', async () => {

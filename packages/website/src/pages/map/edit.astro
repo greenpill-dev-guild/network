@@ -66,6 +66,7 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
           let initialPublicFields = null;
           let locationConfirmationId = '';
           let locationSearchVersion = 0;
+          let currentLocationLabel = '';
 
           const hideAllStates = () => {
             loading.hidden = true;
@@ -150,7 +151,8 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
             nodeId = clean(node?.id);
             setTextField('display_name', clean(node?.display_name));
             locationConfirmationId = '';
-            locationCurrent.textContent = `Current location: ${clean(node?.place_name) || 'Unknown place'}`;
+            currentLocationLabel = clean(node?.place_name) || 'Unknown place';
+            locationCurrent.textContent = `Current location: ${currentLocationLabel}`;
             locationStatus.textContent = 'Find a new place only if you want to move this node.';
             locationStatus.removeAttribute('data-tone');
             locationResults.hidden = true;
@@ -285,6 +287,15 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
             else locationStatus.removeAttribute('data-tone');
           };
 
+          const clearLocationSelection = () => {
+            const hadConfirmation = Boolean(locationConfirmationId);
+            locationConfirmationId = '';
+            locationResults.hidden = true;
+            locationResultsList.replaceChildren();
+            locationCurrent.textContent = `Current location: ${currentLocationLabel || 'Unknown place'}`;
+            return hadConfirmation;
+          };
+
           const renderLocationResults = (results) => {
             locationResultsList.replaceChildren();
             results.forEach((result) => {
@@ -308,10 +319,14 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
           const findLocation = async () => {
             const query = clean(locationQuery.value);
             if (query.length < 3) {
+              locationSearchVersion += 1;
+              locationSearch.disabled = false;
+              clearLocationSelection();
               setLocationStatus('Enter at least three characters to find a place.', 'error');
               locationQuery.focus();
               return;
             }
+            clearLocationSelection();
             const searchVersion = ++locationSearchVersion;
             locationSearch.disabled = true;
             setLocationStatus('Finding matching places…');
@@ -342,6 +357,15 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
           };
 
           locationSearch.addEventListener('click', () => void findLocation());
+          locationQuery.addEventListener('input', () => {
+            const hadActiveSearch = Boolean(locationSearch.disabled || !locationResults.hidden);
+            locationSearchVersion += 1;
+            locationSearch.disabled = false;
+            const hadConfirmation = clearLocationSelection();
+            if (hadConfirmation || hadActiveSearch) {
+              setLocationStatus('Place changed. Find and choose a result to confirm the new location.');
+            }
+          });
           locationQuery.addEventListener('keydown', (event) => {
             if (event.key !== 'Enter') return;
             event.preventDefault();

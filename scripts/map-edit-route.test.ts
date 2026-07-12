@@ -425,6 +425,55 @@ test('confirmed place search submits only a server confirmation id, never raw co
   assert.equal(Object.hasOwn(body, 'place_name'), false);
 });
 
+test('changing a confirmed place query clears the stale confirmation before submit', async () => {
+  const fetches = [];
+  const harness = createHarness({
+    fetchImpl: async (url, init) => {
+      fetches.push({ url, init });
+      if (url.endsWith('/map-nodes/edit-session')) {
+        return routeFetchResponse(200, { node: editableNode });
+      }
+      if (url.endsWith('/map-locations/search')) {
+        return routeFetchResponse(200, {
+          results: [{
+            confirmationId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            label: 'Awka, Anambra, Nigeria',
+            lat: 6.2127,
+            long: 7.0717,
+            kind: 'settlement',
+            attribution: '© OpenStreetMap contributors',
+          }],
+        });
+      }
+      return routeFetchResponse(201, { updateRequest: { id: 'request-1', status: 'pending' } });
+    },
+  });
+
+  await runDomLoaded(harness);
+  const query = harness.elements.get('map-edit-location-query');
+  query.value = 'Awka, Nigeria';
+  await harness.elements.get('map-edit-location-search').listeners.get('click')();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  harness.elements.get('map-edit-location-results-list').children[0].children[0].listeners.get('click')();
+
+  query.value = 'London, United Kingdom';
+  query.listeners.get('input')();
+  assert.equal(
+    harness.elements.get('map-edit-location-current').textContent,
+    `Current location: ${editableNode.place_name}`
+  );
+  assert.equal(harness.elements.get('map-edit-location-results').hidden, true);
+  assert.match(harness.elements.get('map-edit-location-status').textContent, /Place changed/i);
+
+  harness.inputs.get('public_note').value = 'Updated public note.';
+  await harness.form.listeners.get('submit')({ preventDefault() {} });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(fetches.length, 3);
+  const body = JSON.parse(fetches[2].init.body);
+  assert.equal(Object.hasOwn(body, 'locationConfirmationId'), false);
+});
+
 test('production hostname uses the production agent endpoint', async () => {
   const fetches = [];
   const harness = createHarness({

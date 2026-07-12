@@ -3732,6 +3732,24 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     addForm?.addEventListener('input', syncWalkthroughState);
     const safeJson = async (response: Response) => response.json().catch(() => ({}));
+    const clearLocationConfirmation = (): boolean => {
+      const hadConfirmation = Boolean(locationConfirmationInput?.value);
+      if (locationConfirmationInput) locationConfirmationInput.value = '';
+      if (placeInput) placeInput.value = '';
+      if (latInput) latInput.value = '';
+      if (longInput) longInput.value = '';
+      return hadConfirmation;
+    };
+    const clearLocationSelection = () => {
+      const hadConfirmation = clearLocationConfirmation();
+      if (locationPin) locationPin.hidden = true;
+      if (locationCoordinateLat) locationCoordinateLat.value = '';
+      if (locationCoordinateLong) locationCoordinateLong.value = '';
+      if (locationResults) locationResults.hidden = true;
+      if (locationResultsList) locationResultsList.replaceChildren();
+      syncWalkthroughState();
+      return hadConfirmation;
+    };
     const renderSearchResults = (results: ConfirmedLocation[]) => {
       if (!locationResults || !locationResultsList) return;
       locationResultsList.replaceChildren();
@@ -3754,10 +3772,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const findLocation = async () => {
       const query = clean(locationQuery?.value);
       if (query.length < 3) {
+        invalidateLocationRequests();
+        clearLocationSelection();
         setLocationStatus('Enter at least three characters to find a place.', 'error');
         locationQuery?.focus();
         return;
       }
+      clearLocationSelection();
       const searchVersion = ++locationSearchVersion;
       locationRequestVersion += 1;
       if (locationSearchButton) locationSearchButton.disabled = true;
@@ -3800,6 +3821,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     };
 
     locationSearchButton?.addEventListener('click', () => void findLocation());
+    locationQuery?.addEventListener('input', () => {
+      const hadActiveSearch = Boolean(locationSearchButton?.disabled || !locationResults?.hidden);
+      invalidateLocationRequests();
+      const hadConfirmation = clearLocationSelection();
+      if (hadConfirmation || hadActiveSearch) {
+        setLocationStatus('Place changed. Find and choose a result to confirm your pin.');
+      }
+    });
     locationQuery?.addEventListener('keydown', (event) => {
       if (event.key !== 'Enter') return;
       event.preventDefault();
@@ -3819,14 +3848,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     };
 
     let locationDragging = false;
-    const clearLocationConfirmation = (): boolean => {
-      const hadConfirmation = Boolean(locationConfirmationInput?.value);
-      if (locationConfirmationInput) locationConfirmationInput.value = '';
-      if (placeInput) placeInput.value = '';
-      if (latInput) latInput.value = '';
-      if (longInput) longInput.value = '';
-      return hadConfirmation;
-    };
     const confirmDraggedLocation = async (point: { lat: number; long: number }) => {
       const requestVersion = ++locationRequestVersion;
       setLocationStatus('Confirming this pin…');
