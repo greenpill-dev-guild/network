@@ -1493,6 +1493,9 @@ test('home map location picker searches, confirms, then reverse-confirms a dragg
   assert.match(component, /const invalidateLocationRequests/);
   assert.match(component, /locationRequestVersion \+= 1/);
   assert.match(component, /searchVersion !== locationSearchVersion/);
+  assert.match(component, /locationQuery\?\.addEventListener\('input',[\s\S]*?invalidateLocationRequests\(\)[\s\S]*?clearLocationSelection\(\)/);
+  assert.match(component, /const clearLocationConfirmation[\s\S]*?locationConfirmationInput\.value = ''/);
+  assert.match(component, /const clearLocationSelection[\s\S]*?clearLocationConfirmation\(\)[\s\S]*?locationPin\.hidden = true/);
   assert.match(component, /resetWalkthrough[\s\S]*?invalidateLocationRequests\(\)/);
   assert.match(component, /pointerdown[\s\S]*?invalidateLocationRequests\(\)/);
   assert.match(component, /pointercancel[\s\S]*?Pin adjustment canceled/);

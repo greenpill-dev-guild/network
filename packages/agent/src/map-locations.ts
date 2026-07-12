@@ -15,6 +15,13 @@ import { AgentDataError, PublicInputError } from './errors.js';
 type SqlLike = any;
 type FetchLike = typeof fetch;
 type UnknownRecord = Record<string, any>;
+export type MapLocationErrorStage = 'reverse_lookup' | 'reverse_confirmation_write';
+
+export interface MapLocationErrorEvent {
+  stage: MapLocationErrorStage;
+  errorName: string;
+  errorCode?: string;
+}
 
 export const MAP_LOCATION_SEARCH_ROUTE = '/map-locations/search';
 export const MAP_LOCATION_REVERSE_ROUTE = '/map-locations/reverse';
@@ -74,6 +81,16 @@ export interface MapLocationRepository {
 }
 
 const cleanString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
+
+function mapLocationErrorEvent(stage: MapLocationErrorStage, error: unknown): MapLocationErrorEvent {
+  const errorRecord = error && typeof error === 'object' ? error as UnknownRecord : {};
+  const errorCode = cleanString(errorRecord.code);
+  return {
+    stage,
+    errorName: error instanceof Error ? error.name : 'UnknownError',
+    ...(errorCode ? { errorCode } : {}),
+  };
+}
 
 function normalizeOsmId(value: unknown): string {
   if (typeof value === 'number' && Number.isSafeInteger(value) && value > 0) {
@@ -157,10 +174,13 @@ function normalizeCandidate(raw: unknown): NormalizedLocationCandidate | null {
 }
 
 function dedupeCandidates(candidates: NormalizedLocationCandidate[]): NormalizedLocationCandidate[] {
-  const seen = new Set<string>();
+  const seenProviderIds = new Set<string>();
+  const seenLabels = new Set<string>();
   return candidates.filter((candidate) => {
-    if (seen.has(candidate.providerId)) return false;
-    seen.add(candidate.providerId);
+    const labelKey = candidate.label.normalize('NFKC').replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
+    if (seenProviderIds.has(candidate.providerId) || seenLabels.has(labelKey)) return false;
+    seenProviderIds.add(candidate.providerId);
+    seenLabels.add(labelKey);
     return true;
   }).slice(0, 5);
 }
@@ -515,11 +535,13 @@ export function createMapLocationRepository({
   fetchImpl = globalThis.fetch,
   env = process.env,
   now = () => new Date(),
+  reportError = (event) => console.warn('map_location_request_failed', event),
 }: {
   createSql?: (options?: { max?: number }) => SqlLike | null;
   fetchImpl?: FetchLike;
   env?: Record<string, string | undefined>;
   now?: () => Date;
+  reportError?: (event: MapLocationErrorEvent) => void;
 } = {}): MapLocationRepository {
   return {
     async findRepairCandidates(query) {
@@ -568,25 +590,39 @@ export function createMapLocationRepository({
       if (latitude === null || longitude === null) {
         throw new PublicInputError('invalid_coordinates', 'Choose a valid point on the map.');
       }
-      const candidates = await withSql(createSql, async (sql) => {
-        const timestamp = now();
-        await reservePublicLocationRequest(sql, requestMeta, timestamp);
-        return lookupCandidates(sql, {
-          key: geocoderCacheKey('reverse', latitude.toFixed(4), longitude.toFixed(4)),
-          kind: 'reverse',
-          now: timestamp,
-          load: () => nominatimRequest('reverse', {
-            lat: String(latitude),
-            lon: String(longitude),
-            zoom: '10',
-          }, { fetchImpl, env }),
+      let candidates: NormalizedLocationCandidate[];
+      try {
+        candidates = await withSql(createSql, async (sql) => {
+          const timestamp = now();
+          await reservePublicLocationRequest(sql, requestMeta, timestamp);
+          return lookupCandidates(sql, {
+            key: geocoderCacheKey('reverse', latitude.toFixed(4), longitude.toFixed(4)),
+            kind: 'reverse',
+            now: timestamp,
+            load: () => nominatimRequest('reverse', {
+              lat: String(latitude),
+              lon: String(longitude),
+              zoom: '10',
+            }, { fetchImpl, env }),
+          });
         });
-      });
+      } catch (error) {
+        if (!(error instanceof PublicInputError)) {
+          reportError(mapLocationErrorEvent('reverse_lookup', error));
+        }
+        throw error;
+      }
       const candidate = candidates[0];
       if (!candidate || distanceKm(latitude, longitude, candidate.lat, candidate.long) > MAP_LOCATION_REVERSE_MAX_DISTANCE_KM) {
         throw new PublicInputError('location_not_confirmed', 'That pin is too far from a confirmed place. Try another point.', 422);
       }
-      const confirmation = await withSql(createSql, (sql) => createConfirmation(sql, candidate, 'reverse'));
+      let confirmation: PublicMapLocation;
+      try {
+        confirmation = await withSql(createSql, (sql) => createConfirmation(sql, candidate, 'reverse'));
+      } catch (error) {
+        reportError(mapLocationErrorEvent('reverse_confirmation_write', error));
+        throw error;
+      }
       return assertPublicMapLocationPayload({ confirmation });
     },
 
