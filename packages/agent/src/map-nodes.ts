@@ -15,6 +15,11 @@ import type {
 } from '@greenpill-network/shared/map-nodes';
 import type { PublicMapIntakeMode } from '@greenpill-network/shared/map-state';
 import { createDatabaseClient } from './db.js';
+import {
+  deliverQueuedMapNodeModerationNotifications,
+  queueMapNodeModerationNotification,
+  scheduleMapNodeModerationNotificationDelivery,
+} from './map-node-moderation.js';
 
 type SqlLike = any;
 type UnknownRecord = Record<string, any>;
@@ -51,6 +56,7 @@ export interface PublicMapNodeSubmissionInput extends UnknownRecord {
   private_email?: string;
   contactConsent?: boolean;
   contact_consent?: boolean;
+  website?: string;
 }
 
 export interface PublicMapNodeUpdateRequestInput extends UnknownRecord {
@@ -85,6 +91,13 @@ type EditLinkRequestOptions = {
   createSqlForDeferredDelivery?: (options?: { max?: number }) => SqlLike | null;
 };
 
+type MapNodeSubmissionOptions = {
+  env?: Record<string, string | undefined>;
+  fetchImpl?: FetchLike;
+  deferProviderSend?: boolean;
+  createSqlForDeferredDelivery?: (options?: { max?: number }) => SqlLike | null;
+};
+
 export interface QueuedMapNodeEditLinkDeliveryResult {
   queued: number;
   delivered: number;
@@ -107,6 +120,7 @@ export const MAP_NODE_EDIT_LINK_COOLDOWN_MINUTES = 15;
 export const MAP_NODE_EDIT_LINK_DAILY_IP_LIMIT = 30;
 export const MAP_NODE_EDIT_LINK_DAILY_EMAIL_LIMIT = 10;
 export const MAP_NODE_EDIT_LINK_STALE_DELIVERY_CLAIM_MINUTES = 10;
+export const MAP_NODE_SUBMISSION_DAILY_IP_LIMIT = 5;
 export const RESEND_EMAILS_ENDPOINT = 'https://api.resend.com/emails';
 export const MAP_NODE_THEME_MIN_COUNT = 1;
 export const MAP_NODE_THEME_MAX_COUNT = 4;
@@ -281,6 +295,9 @@ export async function getMapNodeIntakeMode(sql: SqlLike): Promise<PublicMapIntak
 }
 
 function normalizeSubmissionInput(input: PublicMapNodeSubmissionInput = {}) {
+  if (cleanString(input.website)) {
+    throw new PublicInputError('spam_detected', 'Unable to accept this map-node submission.', 400);
+  }
   const displayName = cleanString(input.displayName ?? input.name);
   const placeName = cleanString(input.placeName ?? input.place);
   const lat = normalizeNumber(input.lat ?? input.latitude);
@@ -342,10 +359,34 @@ export function getRequestMeta(context: {
   };
 }
 
+async function assertMapNodeSubmissionRateLimit(tx: SqlLike, rateLimitKey: string): Promise<void> {
+  const normalizedRateLimitKey = cleanString(rateLimitKey) || 'anonymous';
+  await tx`select pg_advisory_xact_lock(hashtext(${normalizedRateLimitKey}))`;
+  const [bucket] = await tx`
+    select count(*)::int as count
+    from intake.map_node_submissions
+    where rate_limit_key = ${normalizedRateLimitKey}
+      and created_at >= now() - interval '24 hours'
+  `;
+  if ((bucket?.count ?? 0) >= MAP_NODE_SUBMISSION_DAILY_IP_LIMIT) {
+    throw new PublicInputError(
+      'rate_limited',
+      'Too many map-node submissions came from this network. Please try again tomorrow.',
+      429
+    );
+  }
+}
+
 export async function createMapNodeSubmission(
   sql: SqlLike,
   input: PublicMapNodeSubmissionInput,
-  requestMeta: RequestMeta = {}
+  requestMeta: RequestMeta = {},
+  {
+    env = process.env,
+    fetchImpl = globalThis.fetch,
+    deferProviderSend = false,
+    createSqlForDeferredDelivery,
+  }: MapNodeSubmissionOptions = {}
 ): Promise<SubmittedMapNode> {
   const normalized = normalizeSubmissionInput(input);
   const meta = {
@@ -354,9 +395,12 @@ export async function createMapNodeSubmission(
     rateLimitKey: cleanString(requestMeta.rateLimitKey),
   };
 
-  return sql.begin(async (tx) => {
+  const result = await sql.begin(async (tx) => {
     const intakeMode = await getMapNodeIntakeMode(tx);
     const liveOnboarding = intakeMode === 'live';
+    if (!liveOnboarding) {
+      await assertMapNodeSubmissionRateLimit(tx, meta.rateLimitKey);
+    }
     const submissionStatus = liveOnboarding ? 'approved' : 'pending';
     const approvedAt = liveOnboarding ? new Date() : null;
     const [submission] = await tx`
@@ -434,6 +478,7 @@ export async function createMapNodeSubmission(
       `;
     }
 
+    let moderationNotificationQueued = false;
     if (liveOnboarding) {
       await tx`
         insert into intake.map_node_reviews (
@@ -449,6 +494,8 @@ export async function createMapNodeSubmission(
           'Auto-approved while live onboarding mode was enabled.'
         )
       `;
+    } else {
+      moderationNotificationQueued = await queueMapNodeModerationNotification(tx, submission.id);
     }
 
     const steward = liveOnboarding
@@ -476,8 +523,19 @@ export async function createMapNodeSubmission(
       );
     }
 
-    return publicNode;
+    return { node: publicNode, moderationNotificationQueued };
   });
+
+  if (result.moderationNotificationQueued && !deferProviderSend) {
+    scheduleMapNodeModerationNotificationDelivery({
+      sql,
+      env,
+      fetchImpl,
+      createSqlForDeferredDelivery,
+    });
+  }
+
+  return result.node;
 }
 
 function normalizeUpdateText(input: UnknownRecord, keys: string[]): string | undefined {
@@ -1579,7 +1637,11 @@ export function createMapNodeRepository({
 } = {}) {
   return {
     createSubmission(input, requestMeta) {
-      return withSql(createSql, (sql) => createMapNodeSubmission(sql, input, requestMeta));
+      return withSql(createSql, (sql) => createMapNodeSubmission(sql, input, requestMeta, {
+        env,
+        fetchImpl,
+        createSqlForDeferredDelivery: createSql,
+      }));
     },
     requestEditLink(nodeId, email, requestMeta) {
       return withSql(createSql, (sql) => createMapNodeEditLinkRequest(sql, nodeId, email, requestMeta, {
@@ -1606,6 +1668,13 @@ export function createMapNodeRepository({
     },
     deliverQueuedEditLinks(options?: { limit?: number }) {
       return withSql(createSql, (sql) => deliverQueuedMapNodeEditLinks(sql, {
+        env,
+        fetchImpl,
+        ...options,
+      }));
+    },
+    deliverQueuedModerationNotifications(options?: { limit?: number; now?: Date }) {
+      return withSql(createSql, (sql) => deliverQueuedMapNodeModerationNotifications(sql, {
         env,
         fetchImpl,
         ...options,

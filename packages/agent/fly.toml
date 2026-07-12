@@ -12,6 +12,7 @@ primary_region = 'iad'
 [env]
   NODE_ENV = 'production'
   PORT = '8080'
+  MAP_NODE_MODERATION_DIRECTUS_URL = 'https://admin.greenpill.network'
 
 [http_service]
   internal_port = 8080

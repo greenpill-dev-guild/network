@@ -552,6 +552,7 @@ test('Directus operational access plan separates draft editors from publishers',
     'intake.map_node_submissions',
     'intake.map_node_private_contacts',
     'intake.map_node_reviews',
+    'intake.map_node_moderation_notifications',
     'intake.map_node_intake_settings',
     'intake.map_node_edit_tokens',
     'intake.map_node_update_requests',
@@ -587,9 +588,19 @@ test('Directus operational access plan separates draft editors from publishers',
     permission.collection === 'intake.map_node_private_contacts' &&
     permission.action === 'read'
   ));
+  const moderatorModerationNotificationRead = plan.permissions.find((permission) => (
+    permission.role === 'Greenpill Steward Moderator' &&
+    permission.collection === 'intake.map_node_moderation_notifications' &&
+    permission.action === 'read'
+  ));
   const trustedPrivateContactRead = plan.permissions.find((permission) => (
     permission.role === 'Greenpill Trusted Publisher' &&
     permission.collection === 'intake.map_node_private_contacts' &&
+    permission.action === 'read'
+  ));
+  const trustedModerationNotificationRead = plan.permissions.find((permission) => (
+    permission.role === 'Greenpill Trusted Publisher' &&
+    permission.collection === 'intake.map_node_moderation_notifications' &&
     permission.action === 'read'
   ));
   const moderatorUpdateRequestRead = plan.permissions.find((permission) => (
@@ -628,6 +639,11 @@ test('Directus operational access plan separates draft editors from publishers',
   assert.equal(moderatorSubmissionRead.fields.includes('ip_address'), false);
   assert.equal(moderatorSubmissionRead.fields.includes('user_agent'), false);
   assert.equal(moderatorPrivateContactRead, undefined);
+  assert.ok(moderatorModerationNotificationRead);
+  assert.ok(trustedModerationNotificationRead);
+  assert.equal(moderatorModerationNotificationRead.fields.includes('provider_error'), true);
+  assert.equal(moderatorModerationNotificationRead.fields.includes('email'), false);
+  assert.equal(moderatorModerationNotificationRead.fields.includes('recipient'), false);
   assert.ok(moderatorUpdateRequestRead);
   assert.equal(moderatorUpdateRequestRead.fields.includes('current_public_fields'), true);
   assert.equal(moderatorUpdateRequestRead.fields.includes('proposed_public_fields'), true);

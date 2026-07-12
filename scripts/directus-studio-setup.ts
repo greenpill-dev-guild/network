@@ -99,6 +99,28 @@ const STEWARD_WORKFLOW_COLLECTION_META = Object.freeze({
   },
 });
 
+const MAP_NODE_MODERATION_COLLECTIONS = Object.freeze([
+  'map_node_submissions',
+  'map_node_moderation_notifications',
+]);
+
+const MAP_NODE_MODERATION_COLLECTION_META = Object.freeze({
+  map_node_submissions: {
+    hidden: false,
+    singleton: false,
+    icon: 'approval',
+    note: 'Private map-node intake. Review the submission, then set its moderation status.',
+    display_template: '{{ display_name }} · {{ place_name }}',
+  },
+  map_node_moderation_notifications: {
+    hidden: false,
+    singleton: false,
+    icon: 'mark_email_unread',
+    note: 'Private delivery audit for map moderation alerts. Failed alerts are retained here for operator follow-up.',
+    display_template: '{{ kind }} · {{ status }}',
+  },
+});
+
 const PUBLICATION_STATUS_CHOICES = Object.freeze([
   { text: 'Draft', value: 'draft' },
   { text: 'Pending Review', value: 'pending_review' },
@@ -113,6 +135,22 @@ const REQUEST_STATUS_CHOICES = Object.freeze([
   { text: 'Accepted', value: 'accepted' },
   { text: 'Declined', value: 'declined' },
   { text: 'Archived', value: 'archived' },
+]);
+
+const MAP_NODE_STATUS_CHOICES = Object.freeze([
+  { text: 'Pending approval', value: 'pending' },
+  { text: 'Approved', value: 'approved' },
+  { text: 'Rejected', value: 'rejected' },
+  { text: 'Archived', value: 'archived' },
+]);
+
+const MAP_NODE_MODERATION_NOTIFICATION_STATUS_CHOICES = Object.freeze([
+  { text: 'Queued', value: 'queued' },
+  { text: 'Delivery claimed', value: 'delivery_claimed' },
+  { text: 'Retry scheduled', value: 'retry_scheduled' },
+  { text: 'Sent', value: 'sent' },
+  { text: 'Failed', value: 'failed' },
+  { text: 'Skipped', value: 'skipped' },
 ]);
 
 const ENTITY_STATUS_CHOICES = Object.freeze([
@@ -474,6 +512,62 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
     created_at: fieldMeta({ sort: 5, width: 'half', interface: 'datetime', readonly: true, hidden: true }),
     updated_at: fieldMeta({ sort: 6, width: 'half', interface: 'datetime', readonly: true, hidden: true }),
   },
+  map_node_submissions: {
+    id: fieldMeta({ sort: 1, width: 'half', interface: 'input', readonly: true, hidden: true }),
+    status: fieldMeta({
+      sort: 2,
+      width: 'half',
+      note: 'Approve only after reviewing the submission. Directus records the actor and status transition.',
+      interface: 'select-dropdown',
+      options: { choices: MAP_NODE_STATUS_CHOICES },
+      display: 'labels',
+      required: true,
+    }),
+    display_name: fieldMeta({ sort: 3, width: 'half', interface: 'input', readonly: true }),
+    place_name: fieldMeta({ sort: 4, width: 'half', interface: 'input', readonly: true }),
+    city: fieldMeta({ sort: 5, width: 'half', interface: 'input', readonly: true }),
+    region: fieldMeta({ sort: 6, width: 'half', interface: 'input', readonly: true }),
+    country: fieldMeta({ sort: 7, width: 'half', interface: 'input', readonly: true }),
+    latitude: fieldMeta({ sort: 8, width: 'half', interface: 'input', options: { type: 'number' }, readonly: true }),
+    longitude: fieldMeta({ sort: 9, width: 'half', interface: 'input', options: { type: 'number' }, readonly: true }),
+    role: fieldMeta({ sort: 10, width: 'half', interface: 'input', readonly: true }),
+    chapter_slug: fieldMeta({ sort: 11, width: 'half', interface: 'input', readonly: true }),
+    themes: fieldMeta({
+      sort: 12,
+      note: 'Public themes selected by the submitter.',
+      width: 'full',
+      interface: 'tags',
+      display: 'labels',
+      readonly: true,
+    }),
+    public_note: textarea(13, 'Public tagline submitted for the map.'),
+    approved_at: fieldMeta({ sort: 14, width: 'half', interface: 'datetime', readonly: true }),
+    created_at: fieldMeta({ sort: 15, width: 'half', interface: 'datetime', readonly: true }),
+    updated_at: fieldMeta({ sort: 16, width: 'half', interface: 'datetime', readonly: true }),
+  },
+  map_node_moderation_notifications: {
+    id: fieldMeta({ sort: 1, width: 'half', interface: 'input', readonly: true, hidden: true }),
+    kind: fieldMeta({ sort: 2, width: 'half', interface: 'select-dropdown', readonly: true }),
+    submission_id: fieldMeta({ sort: 3, width: 'half', interface: 'input', readonly: true }),
+    digest_date: fieldMeta({ sort: 4, width: 'half', interface: 'datetime', readonly: true }),
+    status: fieldMeta({
+      sort: 5,
+      width: 'half',
+      note: 'Delivery status is maintained by the agent. A failed alert remains visible here for operator follow-up.',
+      interface: 'select-dropdown',
+      options: { choices: MAP_NODE_MODERATION_NOTIFICATION_STATUS_CHOICES },
+      display: 'labels',
+      readonly: true,
+    }),
+    attempts: fieldMeta({ sort: 6, width: 'half', interface: 'input', readonly: true }),
+    next_attempt_at: fieldMeta({ sort: 7, width: 'half', interface: 'datetime', readonly: true }),
+    delivery_claimed_at: fieldMeta({ sort: 8, width: 'half', interface: 'datetime', readonly: true }),
+    provider_message_id: fieldMeta({ sort: 9, width: 'full', interface: 'input', readonly: true }),
+    provider_error: fieldMeta({ sort: 10, width: 'full', interface: 'input', readonly: true }),
+    sent_at: fieldMeta({ sort: 11, width: 'half', interface: 'datetime', readonly: true }),
+    created_at: fieldMeta({ sort: 12, width: 'half', interface: 'datetime', readonly: true }),
+    updated_at: fieldMeta({ sort: 13, width: 'half', interface: 'datetime', readonly: true }),
+  },
 });
 
 function cleanCollectionName(collection) {
@@ -503,12 +597,14 @@ function encodePathSegment(segment) {
 export function buildDirectusStudioMetadataPlan(
   operationalCollectionNames = DIRECTUS_OPERATIONAL_COLLECTIONS,
   accessCollectionNames = DIRECTUS_STEWARD_ACCESS_COLLECTIONS,
-  workflowCollectionNames = DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS
+  workflowCollectionNames = DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS,
+  mapModerationCollectionNames = MAP_NODE_MODERATION_COLLECTIONS
 ) {
   const collections = [
     ...operationalCollectionNames,
     ...accessCollectionNames,
     ...workflowCollectionNames,
+    ...mapModerationCollectionNames,
   ];
 
   return {
@@ -516,7 +612,8 @@ export function buildDirectusStudioMetadataPlan(
       const base = cleanCollectionName(collection);
       const meta = OPERATIONAL_COLLECTION_META[base] ??
         ACCESS_COLLECTION_META[base] ??
-        STEWARD_WORKFLOW_COLLECTION_META[base];
+        STEWARD_WORKFLOW_COLLECTION_META[base] ??
+        MAP_NODE_MODERATION_COLLECTION_META[base];
       if (!meta) throw new Error(`Missing Directus Studio collection metadata for ${base}.`);
       return {
         collection,
@@ -588,11 +685,48 @@ const STUDIO_BOOKMARKS = Object.freeze([
     filter: { request_status: { _eq: 'pending_review' } },
     fields: ['title', 'chapter_slug', 'request_status', 'updated_at'],
   },
+  {
+    role: 'Greenpill Steward Moderator',
+    collection: 'map_node_submissions',
+    bookmark: 'Pending map node approvals',
+    icon: 'approval',
+    color: '#005c8a',
+    filter: { status: { _eq: 'pending' } },
+    fields: ['display_name', 'place_name', 'themes', 'status', 'created_at'],
+  },
+  {
+    role: 'Greenpill Trusted Publisher',
+    collection: 'map_node_submissions',
+    bookmark: 'Pending map node approvals',
+    icon: 'approval',
+    color: '#005c8a',
+    filter: { status: { _eq: 'pending' } },
+    fields: ['display_name', 'place_name', 'themes', 'status', 'created_at'],
+  },
+  {
+    role: 'Greenpill Steward Moderator',
+    collection: 'map_node_moderation_notifications',
+    bookmark: 'Failed map moderation alerts',
+    icon: 'mark_email_unread',
+    color: '#b42318',
+    filter: { status: { _eq: 'failed' } },
+    fields: ['submission_id', 'kind', 'attempts', 'provider_error', 'updated_at'],
+  },
+  {
+    role: 'Greenpill Trusted Publisher',
+    collection: 'map_node_moderation_notifications',
+    bookmark: 'Failed map moderation alerts',
+    icon: 'mark_email_unread',
+    color: '#b42318',
+    filter: { status: { _eq: 'failed' } },
+    fields: ['submission_id', 'kind', 'attempts', 'provider_error', 'updated_at'],
+  },
 ]);
 
 export function buildDirectusStudioBookmarkPlan(collectionNames = [
   ...DIRECTUS_OPERATIONAL_COLLECTIONS,
   ...DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS,
+  ...MAP_NODE_MODERATION_COLLECTIONS,
 ]) {
   const collectionByBase = new Map(collectionNames.map((collection) => [cleanCollectionName(collection), collection]));
 
@@ -754,7 +888,13 @@ export async function applyDirectusStudioMetadata(options: {
   const operationalCollections = resolveSchemaCollectionNames(available, 'content', DIRECTUS_OPERATIONAL_COLLECTIONS);
   const accessCollections = resolveSchemaCollectionNames(available, 'content', DIRECTUS_STEWARD_ACCESS_COLLECTIONS);
   const workflowCollections = resolveSchemaCollectionNames(available, 'content', DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS);
-  const plan = buildDirectusStudioMetadataPlan(operationalCollections, accessCollections, workflowCollections);
+  const mapModerationCollections = resolveSchemaCollectionNames(available, 'intake', MAP_NODE_MODERATION_COLLECTIONS);
+  const plan = buildDirectusStudioMetadataPlan(
+    operationalCollections,
+    accessCollections,
+    workflowCollections,
+    mapModerationCollections
+  );
   const relationKeys = await getRelationKeys(client);
 
   for (const collection of plan.collections) {
@@ -770,6 +910,7 @@ export async function applyDirectusStudioMetadata(options: {
   const bookmarks = await applyDirectusStudioBookmarks(client, [
     ...operationalCollections,
     ...workflowCollections,
+    ...mapModerationCollections,
   ]);
 
   return {

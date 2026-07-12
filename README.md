@@ -178,6 +178,8 @@ shared contracts instead of one-off route or website fetch logic.
 
 Public map-node submissions require an owner email. The agent stores that email only in `intake.map_node_private_contacts` so future owner updates can use one-use email magic links. Configure email sending on the agent with `RESEND_API_KEY`, `MAP_NODE_EMAIL_FROM`, `MAP_NODE_EMAIL_REPLY_TO`, and `MAP_NODE_EDIT_BASE_URL`; do not expose those values to the static website, Keystatic, generated JSON, or browser bundles. Map magic-link replies should route to the monitored map mailbox on the verified sending subdomain, currently `Greenpill Network <map@mail.greenpill.network>`. Missing or failing email provider configuration still returns the same neutral public edit-link response.
 
+When Live Onboarding Mode is off, every accepted map node is pending. Configure the private `MAP_NODE_MODERATION_RECIPIENTS` secret on `network-agent` (comma-separated operational addresses) to receive an immediate Resend alert and a 9:00 AM Pacific daily reminder while pending nodes remain. Each alert links to the exact authenticated Directus record at `MAP_NODE_MODERATION_DIRECTUS_URL`; approve or reject there so Directus records the actor and change history. Alerts contain only review-safe map fields, never the owner email, raw note, IP address, user agent, or spam metadata. The public form also enforces a server-side daily IP limit and a non-visible bot trap before either a pending record or an alert is created.
+
 For steward onboarding sessions, an approved node is projected as a steward only
 when its private owner email matches an **active** Directus user with one chapter
 editor assignment. The agent resolves this privately on every map read and

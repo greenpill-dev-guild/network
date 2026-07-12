@@ -1233,6 +1233,14 @@ test('map-node edit flow has an operator cleanup command', async () => {
     new URL('../packages/agent/migrations/017_map_node_edit_link_delivery_claims.sql', import.meta.url),
     'utf8'
   );
+  const moderationDeliveryScript = await readFile(
+    new URL('../scripts/map-node-moderation-delivery.ts', import.meta.url),
+    'utf8'
+  );
+  const moderationSql = await readFile(
+    new URL('../packages/agent/migrations/019_map_node_moderation_notifications.sql', import.meta.url),
+    'utf8'
+  );
 
   assert.equal(
     packageJson.scripts['db:cleanup:map-node-edit-flow'],
@@ -1241,6 +1249,18 @@ test('map-node edit flow has an operator cleanup command', async () => {
   assert.equal(
     packageJson.scripts['db:deliver:map-node-edit-links'],
     'bun run build:packages && bun --no-env-file --env-file-if-exists=.env.local scripts/map-node-edit-link-delivery.ts'
+  );
+  assert.equal(
+    packageJson.scripts['db:deliver:map-node-moderation'],
+    'bun run build:packages && bun --no-env-file --env-file-if-exists=.env.local scripts/map-node-moderation-delivery.ts'
+  );
+  assert.equal(
+    packageJson.scripts['test:agent'],
+    'bun run build:packages && bun test scripts/agent-contract.test.ts && bun test scripts/map-node-moderation.test.ts'
+  );
+  assert.equal(
+    packageJson.scripts['directus:map-moderation:smoke'],
+    'bun --no-env-file scripts/directus-map-moderation-smoke.ts'
   );
   assert.equal(
     packageJson.scripts['test:map-edit:browser'],
@@ -1252,6 +1272,13 @@ test('map-node edit flow has an operator cleanup command', async () => {
   assert.match(deliveryScript, /DATABASE_URL is required/);
   assert.match(deliveryClaimSql, /add column if not exists delivery_claimed_at timestamptz/);
   assert.match(deliveryClaimSql, /map_node_edit_tokens_delivery_queue_idx/);
+  assert.match(moderationDeliveryScript, /deliverQueuedModerationNotifications/);
+  assert.match(moderationDeliveryScript, /DATABASE_URL is required/);
+  assert.match(moderationSql, /create table if not exists intake\.map_node_moderation_notifications/);
+  assert.match(moderationSql, /map_node_moderation_notification_submission_idx/);
+  assert.match(moderationSql, /map_node_submission_moderation_transition/);
+  assert.match(moderationSql, /new\.approved_at = now\(\)/);
+  assert.doesNotMatch(moderationSql, /recipient|owner_email|raw_note|ip_address/i);
 });
 
 test('home map tints resting lines faintly and reserves full theme colour for selection', async () => {

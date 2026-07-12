@@ -409,6 +409,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     <form id="gp-home-map-addnode-form" class="gp-home-map-addnode-form" data-home-map-addnode-form novalidate>
       <h2 id="gp-home-map-addnode-dialog-title" class="gp-home-map-sr" data-addnode-dialog-title>What are you here to grow?</h2>
+      <div class="gp-home-map-sr" aria-hidden="true">
+        <label>
+          <span>Website</span>
+          <input name="website" type="text" tabindex="-1" autocomplete="off" />
+        </label>
+      </div>
       <section class="gp-home-map-addnode-step is-active" data-walkthrough-step="themes">
         <h2 id="gp-home-map-addnode-title">What are you here to grow?</h2>
         <p class="gp-home-map-addnode-copy">Choose 1 to 4 themes to continue. These choose the color of your threads on the map and find your people.</p>
@@ -3804,6 +3810,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const publicNote = clean(data.get('publicNote'));
       const emailInput = addForm.elements.namedItem('contact') as HTMLInputElement | null;
       const email = clean(data.get('contact')).toLowerCase();
+      const website = clean(data.get('website'));
       if (emailInput) emailInput.value = email;
 
       if (!name || !publicNote || !place || lat === null || long === null || !emailInput?.checkValidity()) {
@@ -3833,6 +3840,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
             publicNote,
             email,
             contactConsent: true,
+            website,
           }),
         });
         const payload = await response.json().catch(() => ({}));
