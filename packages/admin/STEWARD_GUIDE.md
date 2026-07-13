@@ -35,6 +35,10 @@ or unapproved claims out of Directus fields that publish to the website.
 
 ## Account Setup
 
+Every active chapter steward should already have received a Directus invite email
+from Greenpill Network. Check your inbox and spam folder for that invite before
+asking for access.
+
 1. Open the Directus invite email from Greenpill Network.
 2. Accept the invite and set a password.
 3. Log in at the admin URL shared by the operator.
@@ -44,8 +48,8 @@ or unapproved claims out of Directus fields that publish to the website.
    - `Chapter Initiatives`
    - `Chapter Update Requests`
 
-If the assigned chapter or guild is missing, email Afolabi at
-`afo@greenpill.builders` so the content-access assignment can be checked.
+If the assigned chapter or guild is missing, message the Telegram steward chat
+with your chapter name and the email address used for your invite.
 
 ## First 10-Minute Walkthrough
 
@@ -118,19 +122,19 @@ not fit the structured fields above.
 Chapter update requests move through this flow:
 
 1. `draft`: steward is still editing.
-2. `pending_review`: steward is ready for publisher review.
-3. `needs_changes`: publisher has asked the steward to revise.
-4. `accepted` or `declined`: publisher completed review.
-5. Publisher applies accepted changes to the chapter record.
+2. `pending_review`: steward is ready for review.
+3. `needs_changes`: a Network steward has asked the steward to revise.
+4. `accepted` or `declined`: a Network steward completed review.
+5. A Network steward applies accepted changes to the chapter record.
 6. The published snapshot or website build is refreshed.
 
 Accepted update requests do not publish the website by themselves. They are the
 review handoff that tells a trusted publisher what to apply.
 
-When you move a request or initiative to `pending_review`, email
-`afo@greenpill.builders` with the subject `Greenpill chapter review: [Chapter
-name]`. Include the Directus item link and a one-sentence summary of what is
-ready for review. This makes sure Afolabi sees the review request promptly.
+When you move a request or initiative to `pending_review`, message the Telegram
+steward chat with `Greenpill chapter review: [Chapter name]`. Include the
+Directus item link and a one-sentence summary of what is ready for review. This
+makes sure a Network steward sees the review request promptly.
 
 ## Previewing Changes
 
