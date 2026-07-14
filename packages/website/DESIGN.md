@@ -359,7 +359,7 @@ Headlines never use Manrope. Body never uses Spectral. Overlines never use anyth
 
 Headline color is `secondary` (Steward Gold), body color is `fg` (Off-white). Mono overlines are colored `primary` (Lime) when used as section labels, `fg-dim` when used as inline metadata.
 
-**Note for implementation:** `gp-tokens.css` imports Spectral and Manrope via Google Fonts. JetBrains Mono is referenced in the `mono` family but not auto-loaded — add a `@fontsource/jetbrains-mono` (or equivalent) import when wiring fonts into Astro.
+**Note for implementation:** `GpLayout.astro` loads Spectral, Manrope, and JetBrains Mono with one Google Fonts stylesheet. `gp-tokens.css` defines only the font stacks so standalone credential-bearing pages can reuse the tokens without making external requests; those pages intentionally render with the system fallbacks.
 
 ## Layout
 

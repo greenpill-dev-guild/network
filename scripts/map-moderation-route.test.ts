@@ -39,9 +39,27 @@ function makeElement(id): any {
 }
 
 function extractInlineController(html) {
-  const match = html.match(/<script>([\s\S]*?)<\/script>/);
-  assert.ok(match?.[1], 'expected an inline moderation controller');
-  return match[1];
+  const openingTag = '<script>';
+  const closingTag = '</script>';
+  const start = html.indexOf(openingTag);
+  const end = start === -1 ? -1 : html.indexOf(closingTag, start + openingTag.length);
+  assert.ok(start !== -1 && end !== -1, 'expected an inline moderation controller');
+  return html.slice(start + openingTag.length, end);
+}
+
+function openingTags(html, tagName) {
+  const normalized = html.toLowerCase();
+  const tags = [];
+  let cursor = 0;
+  while (cursor < normalized.length) {
+    const start = normalized.indexOf(`<${tagName}`, cursor);
+    if (start === -1) break;
+    const end = normalized.indexOf('>', start);
+    assert.notEqual(end, -1, `expected closing bracket for ${tagName} tag`);
+    tags.push(normalized.slice(start, end + 1));
+    cursor = end + 1;
+  }
+  return tags;
 }
 
 function response(status, body) {
@@ -160,8 +178,14 @@ test('moderation page clears the fragment before resources and has no credential
   assert.equal(routeHtml.includes('sessionStorage'), false);
   assert.equal(routeHtml.includes('?token='), false);
   assert.equal(routeHtml.includes('<a '), false);
-  assert.equal(routeHtml.includes('fonts.googleapis.com'), false);
-  assert.equal(routeHtml.includes('fonts.gstatic.com'), false);
+  const resourceTags = ['iframe', 'img', 'link', 'script', 'source']
+    .flatMap((tagName) => openingTags(routeHtml, tagName));
+  assert.equal(resourceTags.some((tag) => tag.includes('://')), false);
+  const normalizedHtml = routeHtml.toLowerCase();
+  assert.equal(normalizedHtml.includes('url(http://'), false);
+  assert.equal(normalizedHtml.includes('url(https://'), false);
+  assert.equal(normalizedHtml.includes('@import "http'), false);
+  assert.equal(normalizedHtml.includes("@import 'http"), false);
   assert.match(routeHtml, /Content-Security-Policy/);
   assert.match(routeHtml, /default-src 'none'/);
   assert.match(routeHtml, /connect-src https:\/\/agent\.greenpill\.network http:\/\/127\.0\.0\.1:3303/);
