@@ -74,6 +74,10 @@ import {
   resolveActiveChapterSteward,
 } from '@greenpill-network/agent/map-nodes';
 import {
+  MAP_NODE_MODERATION_DECISION_ROUTE,
+  MAP_NODE_MODERATION_SESSION_ROUTE,
+} from '@greenpill-network/agent';
+import {
   containsPrivateMapStateField,
   toPublicAggregateCountsPayload,
   toPublicMapStatePayload,
@@ -95,6 +99,8 @@ test('agent package exposes stable public route contracts', () => {
   assert.equal(MAP_NODE_EDIT_LINK_ROUTE, '/map-nodes/:id/edit-link');
   assert.equal(MAP_NODE_EDIT_SESSION_ROUTE, '/map-nodes/edit-session');
   assert.equal(MAP_NODE_UPDATE_REQUESTS_ROUTE, '/map-nodes/:id/update-requests');
+  assert.equal(MAP_NODE_MODERATION_SESSION_ROUTE, '/map-nodes/moderation-session');
+  assert.equal(MAP_NODE_MODERATION_DECISION_ROUTE, '/map-nodes/:id/moderation');
   assert.equal(PUBLIC_MAP_STATE_ROUTE, '/map/state');
   assert.equal(PUBLIC_COUNTS_ROUTE, '/public-counts');
   assert.equal(PUBLIC_OPERATIONAL_CONTENT_ROUTE, '/content/public-snapshot');
@@ -123,6 +129,8 @@ test('agent app registers non-health public routes through exported constants', 
     'MAP_NODE_EDIT_LINK_ROUTE',
     'MAP_NODE_EDIT_SESSION_ROUTE',
     'MAP_NODE_UPDATE_REQUESTS_ROUTE',
+    'MAP_NODE_MODERATION_SESSION_ROUTE',
+    'MAP_NODE_MODERATION_DECISION_ROUTE',
     'PUBLIC_MAP_STATE_ROUTE',
     'PUBLIC_COUNTS_ROUTE',
     'PUBLIC_OPERATIONAL_CONTENT_ROUTE',

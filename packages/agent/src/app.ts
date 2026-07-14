@@ -44,6 +44,10 @@ import {
   handleResendWebhookRequest,
 } from './resend-webhooks.js';
 import {
+  MAP_NODE_MODERATION_DECISION_ROUTE,
+  MAP_NODE_MODERATION_SESSION_ROUTE,
+} from './map-node-moderation.js';
+import {
   assertPublicAggregateCountsPayload,
   assertPublicMapStatePayload,
 } from '@greenpill-network/shared/map-state';
@@ -80,6 +84,37 @@ export const PUBLIC_CORS_ORIGINS = Object.freeze([
 ]);
 
 const PUBLIC_MAP_STATE_CACHE_CONTROL = 'no-store, max-age=0';
+const PRIVATE_MODERATION_CACHE_CONTROL = 'no-store, max-age=0';
+
+function isAllowedModerationOrigin(origin: unknown): boolean {
+  return typeof origin === 'string' && PUBLIC_CORS_ORIGINS.includes(origin);
+}
+
+function preparePrivateModerationResponse(context): void {
+  context.header('Cache-Control', PRIVATE_MODERATION_CACHE_CONTROL);
+  context.header('Referrer-Policy', 'no-referrer');
+  context.header('X-Content-Type-Options', 'nosniff');
+}
+
+function isJsonRequest(context): boolean {
+  return context.req.header('content-type')?.split(';', 1)[0]?.trim().toLowerCase() === 'application/json';
+}
+
+async function readModerationJsonObject(context): Promise<UnknownRecord | null> {
+  const declaredLength = Number(context.req.header('content-length'));
+  if (Number.isFinite(declaredLength) && declaredLength > 4096) return null;
+
+  const rawBody = await context.req.text();
+  if (new TextEncoder().encode(rawBody).byteLength > 4096) return null;
+  try {
+    const value = JSON.parse(rawBody);
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? value as UnknownRecord
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 function toRouteErrorResponse(error) {
   const response = publicErrorResponse(error);
@@ -395,6 +430,82 @@ export function createAgentApp({
         getRequestMeta(context)
       );
       return context.json({ updateRequest }, 201);
+    } catch (error) {
+      const response = publicErrorResponse(error);
+      return context.json(response.body, response.status as any);
+    }
+  });
+
+  app.post(MAP_NODE_MODERATION_SESSION_ROUTE, async (context) => {
+    preparePrivateModerationResponse(context);
+    if (!isAllowedModerationOrigin(context.req.header('origin'))) {
+      return context.json({
+        error: {
+          code: 'invalid_moderation_origin',
+          message: 'This moderation request is not allowed.',
+        },
+      }, 403);
+    }
+    if (!isJsonRequest(context)) {
+      return context.json({
+        error: {
+          code: 'invalid_moderation_request',
+          message: 'This moderation request must use JSON.',
+        },
+      }, 415);
+    }
+
+    const input = await readModerationJsonObject(context);
+    if (!input) {
+      return context.json({
+        error: {
+          code: 'invalid_moderation_request',
+          message: 'This moderation request is invalid.',
+        },
+      }, 400);
+    }
+
+    try {
+      const session = await mapNodeRepository.getModerationSession(input?.token);
+      return context.json(session);
+    } catch (error) {
+      const response = publicErrorResponse(error);
+      return context.json(response.body, response.status as any);
+    }
+  });
+
+  app.post(MAP_NODE_MODERATION_DECISION_ROUTE, async (context) => {
+    preparePrivateModerationResponse(context);
+    if (!isAllowedModerationOrigin(context.req.header('origin'))) {
+      return context.json({
+        error: {
+          code: 'invalid_moderation_origin',
+          message: 'This moderation request is not allowed.',
+        },
+      }, 403);
+    }
+    if (!isJsonRequest(context)) {
+      return context.json({
+        error: {
+          code: 'invalid_moderation_request',
+          message: 'This moderation request must use JSON.',
+        },
+      }, 415);
+    }
+
+    const input = await readModerationJsonObject(context);
+    if (!input) {
+      return context.json({
+        error: {
+          code: 'invalid_moderation_request',
+          message: 'This moderation request is invalid.',
+        },
+      }, 400);
+    }
+
+    try {
+      const result = await mapNodeRepository.moderateNode(context.req.param('id'), input);
+      return context.json(result);
     } catch (error) {
       const response = publicErrorResponse(error);
       return context.json(response.body, response.status as any);

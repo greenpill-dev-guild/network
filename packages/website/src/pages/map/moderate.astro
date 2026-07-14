@@ -1,0 +1,497 @@
+---
+import '../../styles/gp-tokens.css';
+
+const pageTitle = 'Review a Greenpill Network map node';
+const pageDescription = 'Private email-authenticated moderation for a pending Greenpill Network map node.';
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; connect-src https://agent.greenpill.network http://127.0.0.1:3303; style-src 'self' 'unsafe-inline'; script-src 'unsafe-inline'; font-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <script is:inline>
+      (() => {
+        const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+        let moderationToken = hashParams.get('token') || '';
+
+        if (window.location.hash) {
+          window.history.replaceState(
+            window.history.state,
+            document.title,
+            `${window.location.pathname}${window.location.search}`
+          );
+        }
+
+        const clean = (value) => (typeof value === 'string' ? value.trim() : '');
+        const safeJson = async (response) => {
+          try {
+            return await response.json();
+          } catch {
+            return {};
+          }
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+          const states = {
+            loading: document.getElementById('moderation-loading'),
+            invalid: document.getElementById('moderation-invalid'),
+            failure: document.getElementById('moderation-failure'),
+            resolved: document.getElementById('moderation-resolved'),
+            pending: document.getElementById('moderation-pending'),
+          };
+          const name = document.getElementById('moderation-name');
+          const place = document.getElementById('moderation-place');
+          const coordinates = document.getElementById('moderation-coordinates');
+          const themes = document.getElementById('moderation-themes');
+          const publicNote = document.getElementById('moderation-public-note');
+          const submitted = document.getElementById('moderation-submitted');
+          const expiry = document.getElementById('moderation-expiry');
+          const approveButton = document.getElementById('moderation-approve');
+          const declineButton = document.getElementById('moderation-decline');
+          const approveDialog = document.getElementById('moderation-approve-dialog');
+          const declineDialog = document.getElementById('moderation-decline-dialog');
+          const approveConfirm = document.getElementById('moderation-approve-confirm');
+          const approveCancel = document.getElementById('moderation-approve-cancel');
+          const declineConfirm = document.getElementById('moderation-decline-confirm');
+          const declineCancel = document.getElementById('moderation-decline-cancel');
+          const declineNote = document.getElementById('moderation-decline-note');
+          const declineCount = document.getElementById('moderation-decline-count');
+          const actionFailure = document.getElementById('moderation-action-failure');
+          const resolvedTitle = document.getElementById('moderation-resolved-title');
+          const resolvedMessage = document.getElementById('moderation-resolved-message');
+
+          if (
+            Object.values(states).some((state) => !state) || !name || !place || !coordinates ||
+            !themes || !publicNote || !submitted || !expiry || !approveButton || !declineButton ||
+            !approveDialog || !declineDialog || !approveConfirm || !approveCancel || !declineConfirm ||
+            !declineCancel || !declineNote || !declineCount || !actionFailure || !resolvedTitle ||
+            !resolvedMessage
+          ) {
+            moderationToken = '';
+            return;
+          }
+
+          const isLocalHost = ['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(window.location.hostname);
+          const agentBaseUrl = isLocalHost ? 'http://127.0.0.1:3303' : 'https://agent.greenpill.network';
+          let nodeId = '';
+          let submitting = false;
+
+          const showState = (key) => {
+            Object.entries(states).forEach(([name, element]) => {
+              element.hidden = name !== key;
+            });
+            const heading = states[key]?.querySelector?.('h1, h2');
+            heading?.focus?.();
+          };
+
+          const showFailure = (message) => {
+            states.failure.querySelector('p').textContent = message;
+            showState('failure');
+          };
+
+          const formatDate = (value) => {
+            const date = new Date(value);
+            if (!Number.isFinite(date.getTime())) return 'Not available';
+            return new Intl.DateTimeFormat('en', {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+            }).format(date);
+          };
+
+          const showResolved = (decision, reviewedAt) => {
+            moderationToken = '';
+            nodeId = '';
+            const approved = decision === 'approved';
+            resolvedTitle.textContent = approved ? 'Node approved' : 'Node declined';
+            resolvedMessage.textContent = reviewedAt
+              ? `${approved ? 'Approved' : 'Declined'} ${formatDate(reviewedAt)}. No further action is needed.`
+              : `This node has already been ${approved ? 'approved' : 'declined'}. No further action is needed.`;
+            states.resolved.dataset.decision = approved ? 'approved' : 'rejected';
+            showState('resolved');
+          };
+
+          const renderPending = (session) => {
+            const node = session?.node;
+            nodeId = clean(node?.id);
+            if (!nodeId || !clean(node?.displayName) || !clean(node?.placeName)) {
+              showFailure('We could not load this moderation request right now. Please reopen the email and try again.');
+              return;
+            }
+
+            name.textContent = clean(node.displayName);
+            place.textContent = [node.placeName, node.city, node.region, node.country]
+              .map(clean)
+              .filter(Boolean)
+              .filter((value, index, values) => values.indexOf(value) === index)
+              .join(', ');
+            const lat = Number(node.lat);
+            const long = Number(node.long);
+            coordinates.textContent = Number.isFinite(lat) && Number.isFinite(long)
+              ? `${lat.toFixed(4)}, ${long.toFixed(4)}`
+              : 'Not available';
+            themes.replaceChildren();
+            const values = Array.isArray(node.themes) ? node.themes.map(clean).filter(Boolean) : [];
+            if (values.length === 0) {
+              const empty = document.createElement('span');
+              empty.textContent = 'None provided';
+              themes.append(empty);
+            } else {
+              values.forEach((value) => {
+                const chip = document.createElement('span');
+                chip.className = 'theme-chip';
+                chip.textContent = value;
+                themes.append(chip);
+              });
+            }
+            publicNote.textContent = clean(node.publicNote) || 'No public note provided.';
+            submitted.textContent = formatDate(node.createdAt);
+            expiry.textContent = `This private link expires ${formatDate(session.expiresAt)}.`;
+            showState('pending');
+          };
+
+          const loadSession = async () => {
+            showState('loading');
+            if (!moderationToken) {
+              showState('invalid');
+              return;
+            }
+            try {
+              const response = await fetch(`${agentBaseUrl}/map-nodes/moderation-session`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: moderationToken }),
+              });
+              const payload = await safeJson(response);
+              if (!response.ok) {
+                if (payload?.error?.code === 'invalid_moderation_link') {
+                  moderationToken = '';
+                  showState('invalid');
+                  return;
+                }
+                showFailure('We could not check this moderation link right now. Please reopen the email and try again.');
+                return;
+              }
+              if (payload?.state === 'resolved') {
+                showResolved(payload.decision, payload.reviewedAt);
+                return;
+              }
+              if (payload?.state !== 'pending') {
+                showFailure('We could not load this moderation request right now. Please reopen the email and try again.');
+                return;
+              }
+              renderPending(payload);
+            } catch {
+              showFailure('We could not reach the moderation service. Check your connection and reopen the email to try again.');
+            }
+          };
+
+          const setSubmitting = (value) => {
+            submitting = value;
+            approveButton.disabled = value;
+            declineButton.disabled = value;
+            approveConfirm.disabled = value;
+            declineConfirm.disabled = value;
+            approveConfirm.textContent = value ? 'Approving…' : 'Approve node';
+            declineConfirm.textContent = value ? 'Declining…' : 'Decline node';
+          };
+
+          const submitDecision = async (decision) => {
+            if (submitting || !moderationToken || !nodeId) return;
+            actionFailure.hidden = true;
+            setSubmitting(true);
+            try {
+              const response = await fetch(`${agentBaseUrl}/map-nodes/${encodeURIComponent(nodeId)}/moderation`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  token: moderationToken,
+                  decision,
+                  ...(decision === 'rejected' && clean(declineNote.value) ? { note: clean(declineNote.value) } : {}),
+                }),
+              });
+              const payload = await safeJson(response);
+              if (response.status === 409 && payload?.error?.code === 'moderation_already_resolved') {
+                approveDialog.close();
+                declineDialog.close();
+                await loadSession();
+                return;
+              }
+              if (!response.ok || payload?.state !== 'resolved') {
+                if (payload?.error?.code === 'invalid_moderation_link') {
+                  moderationToken = '';
+                  approveDialog.close();
+                  declineDialog.close();
+                  showState('invalid');
+                  return;
+                }
+                approveDialog.close();
+                declineDialog.close();
+                actionFailure.textContent = payload?.error?.message || 'We could not save this decision. Please try again.';
+                actionFailure.hidden = false;
+                return;
+              }
+              approveDialog.close();
+              declineDialog.close();
+              showResolved(payload.decision, payload.reviewedAt);
+            } catch {
+              approveDialog.close();
+              declineDialog.close();
+              actionFailure.textContent = 'We could not save this decision. Check your connection and try again.';
+              actionFailure.hidden = false;
+            } finally {
+              setSubmitting(false);
+            }
+          };
+
+          approveButton.addEventListener('click', () => approveDialog.showModal());
+          declineButton.addEventListener('click', () => {
+            actionFailure.hidden = true;
+            declineDialog.showModal();
+            declineNote.focus();
+          });
+          approveCancel.addEventListener('click', () => approveDialog.close());
+          declineCancel.addEventListener('click', () => declineDialog.close());
+          approveConfirm.addEventListener('click', () => void submitDecision('approved'));
+          declineConfirm.addEventListener('click', () => void submitDecision('rejected'));
+          declineNote.addEventListener('input', () => {
+            declineCount.textContent = `${declineNote.value.length} / 500`;
+          });
+
+          loadSession();
+        });
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={pageDescription} />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <style is:inline>
+      :root {
+        color-scheme: dark;
+      }
+
+      * { box-sizing: border-box; }
+      html { min-height: 100%; background: var(--gp-green-950); }
+      body {
+        container-type: inline-size;
+        margin: 0;
+        min-height: 100dvh;
+        color: var(--gp-fg);
+        background: var(--gp-bg);
+        font-family: var(--gp-font-body);
+        line-height: 1.6;
+      }
+      button, textarea { font: inherit; }
+      button { min-height: 48px; }
+      [hidden] { display: none !important; }
+
+      main {
+        width: min(100% - 32px, 760px);
+        margin-inline: auto;
+        padding-block: clamp(32px, 8vw, 88px);
+      }
+      .eyebrow {
+        margin: 0 0 12px;
+        color: var(--gp-primary);
+        font: 700 var(--gp-overline)/1.2 var(--gp-font-mono);
+        letter-spacing: .14em;
+        text-transform: uppercase;
+      }
+      .panel {
+        padding: clamp(24px, 5vw, 48px);
+        border: 1px solid var(--gp-border);
+        border-radius: var(--gp-radius-lg);
+        background: color-mix(in srgb, var(--gp-surface) 96%, transparent);
+        box-shadow: var(--gp-shadow-card-lg);
+      }
+      h1, h2 {
+        margin: 0;
+        font-family: var(--gp-font-display);
+        font-size: var(--gp-h1-size);
+        font-weight: 500;
+        line-height: 1.08;
+        letter-spacing: -.02em;
+      }
+      .lede { margin: 16px 0 0; color: var(--gp-fg-muted); }
+      .status-mark {
+        display: grid;
+        place-items: center;
+        width: 52px;
+        height: 52px;
+        margin-bottom: 20px;
+        border-radius: 50%;
+        background: var(--gp-primary);
+        color: var(--gp-primary-fg);
+        font-size: var(--gp-h3-size);
+        font-weight: 800;
+      }
+      #moderation-resolved[data-decision="rejected"] .status-mark {
+        background: var(--gp-secondary);
+      }
+      dl {
+        display: grid;
+        grid-template-columns: minmax(120px, .45fr) minmax(0, 1fr);
+        gap: 0;
+        margin: 32px 0 0;
+        border-block: 1px solid var(--gp-border);
+      }
+      dt, dd {
+        margin: 0;
+        padding-block: 14px;
+        border-bottom: 1px solid color-mix(in srgb, var(--gp-border) 70%, transparent);
+      }
+      dt { color: var(--gp-fg-muted); font-size: var(--gp-body-sm); font-weight: 700; }
+      dd { overflow-wrap: anywhere; }
+      dt:last-of-type, dd:last-of-type { border-bottom: 0; }
+      .themes { display: flex; flex-wrap: wrap; gap: 8px; }
+      .theme-chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        padding-inline: 12px;
+        border: 1px solid var(--gp-border);
+        border-radius: 999px;
+        color: var(--gp-primary);
+        font-size: var(--gp-label-sm);
+        font-weight: 700;
+      }
+      .expiry { margin: 20px 0 0; color: var(--gp-fg-muted); font-size: var(--gp-body-sm); }
+      .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+      .button {
+        flex: 1 1 180px;
+        padding: 12px 22px;
+        border: 1px solid var(--gp-border);
+        border-radius: 999px;
+        background: transparent;
+        color: var(--gp-fg);
+        font-weight: 750;
+        cursor: pointer;
+      }
+      .button:hover { background: var(--gp-card); }
+      .button:focus-visible, textarea:focus-visible {
+        outline: 3px solid var(--gp-secondary);
+        outline-offset: 3px;
+      }
+      .button-primary { border-color: var(--gp-primary); background: var(--gp-primary); color: var(--gp-primary-fg); }
+      .button-primary:hover { background: var(--gp-primary-hover); }
+      .button-primary:active { background: var(--gp-lime-600); }
+      .button:disabled { cursor: wait; opacity: .65; }
+      .error { margin: 16px 0 0; color: var(--gp-error); font-weight: 650; }
+
+      dialog {
+        width: min(100% - 32px, 520px);
+        padding: 0;
+        border: 1px solid var(--gp-border);
+        border-radius: var(--gp-radius-lg);
+        background: var(--gp-surface);
+        color: var(--gp-fg);
+        box-shadow: var(--gp-shadow-card-lg);
+      }
+      dialog::backdrop { background: color-mix(in srgb, var(--gp-green-950) 78%, transparent); backdrop-filter: blur(4px); }
+      .dialog-body { padding: 28px; }
+      .dialog-body h2 { font-size: var(--gp-h2-size); }
+      .dialog-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+      label { display: block; margin-top: 20px; font-weight: 750; }
+      textarea {
+        width: 100%;
+        min-height: 120px;
+        margin-top: 8px;
+        padding: 14px;
+        resize: vertical;
+        border: 1px solid var(--gp-border);
+        border-radius: 12px;
+        background: var(--gp-green-950);
+        color: var(--gp-fg);
+      }
+      .counter { margin: 4px 0 0; color: var(--gp-fg-muted); font-size: var(--gp-caption); text-align: right; }
+
+      @container (max-width: 560px) {
+        main { width: min(100% - 20px, 760px); padding-block: 20px; }
+        .panel { border-radius: 18px; }
+        dl { grid-template-columns: 1fr; }
+        dt { padding-bottom: 0; border-bottom: 0; }
+        dd { padding-top: 4px; }
+        .actions { flex-direction: column; }
+        .button { flex-basis: auto; width: 100%; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Greenpill Network · Private moderation</p>
+
+      <section id="moderation-loading" class="panel">
+        <h1 tabindex="-1">Checking your review link…</h1>
+        <p class="lede">Loading the pending node securely.</p>
+      </section>
+
+      <section id="moderation-invalid" class="panel" hidden>
+        <h1 tabindex="-1">This review link is no longer valid</h1>
+        <p class="lede">It may have expired, been revoked, or already been replaced. Use Directus as the fallback moderation queue.</p>
+      </section>
+
+      <section id="moderation-failure" class="panel" role="alert" hidden>
+        <h1 tabindex="-1">We couldn’t load this review</h1>
+        <p class="lede">Please reopen the original email and try again.</p>
+      </section>
+
+      <section id="moderation-resolved" class="panel" aria-live="polite" hidden>
+        <div class="status-mark" aria-hidden="true">✓</div>
+        <h1 id="moderation-resolved-title" tabindex="-1">Review complete</h1>
+        <p id="moderation-resolved-message" class="lede">No further action is needed.</p>
+      </section>
+
+      <article id="moderation-pending" class="panel" hidden>
+        <h1 id="moderation-name" tabindex="-1">Pending map node</h1>
+        <p class="lede">Review the public information below. Approving publishes this node to the public map.</p>
+        <dl>
+          <dt>Place</dt><dd id="moderation-place"></dd>
+          <dt>Coordinates</dt><dd id="moderation-coordinates"></dd>
+          <dt>Themes</dt><dd id="moderation-themes" class="themes"></dd>
+          <dt>Public note</dt><dd id="moderation-public-note"></dd>
+          <dt>Submitted</dt><dd id="moderation-submitted"></dd>
+        </dl>
+        <p id="moderation-expiry" class="expiry"></p>
+        <p id="moderation-action-failure" class="error" role="alert" hidden></p>
+        <div class="actions">
+          <button id="moderation-decline" class="button" type="button">Decline</button>
+          <button id="moderation-approve" class="button button-primary" type="button">Approve</button>
+        </div>
+      </article>
+    </main>
+
+    <dialog id="moderation-approve-dialog" aria-labelledby="moderation-approve-title">
+      <div class="dialog-body">
+        <h2 id="moderation-approve-title">Approve this node?</h2>
+        <p class="lede">The node will become visible on the public Greenpill Network map.</p>
+        <div class="dialog-actions">
+          <button id="moderation-approve-cancel" class="button" type="button">Cancel</button>
+          <button id="moderation-approve-confirm" class="button button-primary" type="button">Approve node</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="moderation-decline-dialog" aria-labelledby="moderation-decline-title">
+      <div class="dialog-body">
+        <h2 id="moderation-decline-title">Decline this node?</h2>
+        <p class="lede">The node will stay off the public map. A private reason is optional.</p>
+        <label for="moderation-decline-note">Private decline note</label>
+        <textarea id="moderation-decline-note" maxlength="500" placeholder="Optional context for the moderation record"></textarea>
+        <p id="moderation-decline-count" class="counter">0 / 500</p>
+        <div class="dialog-actions">
+          <button id="moderation-decline-cancel" class="button" type="button">Cancel</button>
+          <button id="moderation-decline-confirm" class="button button-primary" type="button">Decline node</button>
+        </div>
+      </div>
+    </dialog>
+  </body>
+</html>

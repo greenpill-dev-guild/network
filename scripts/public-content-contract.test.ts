@@ -553,6 +553,7 @@ test('Directus operational access plan separates draft editors from publishers',
     'intake.map_node_private_contacts',
     'intake.map_node_reviews',
     'intake.map_node_moderation_notifications',
+    'intake.map_node_moderation_access_links',
     'intake.map_node_intake_settings',
     'intake.map_node_edit_tokens',
     'intake.map_node_update_requests',
@@ -603,6 +604,16 @@ test('Directus operational access plan separates draft editors from publishers',
     permission.collection === 'intake.map_node_moderation_notifications' &&
     permission.action === 'read'
   ));
+  const moderatorAccessLinkRead = plan.permissions.find((permission) => (
+    permission.role === 'Greenpill Steward Moderator' &&
+    permission.collection === 'intake.map_node_moderation_access_links' &&
+    permission.action === 'read'
+  ));
+  const trustedAccessLinkRead = plan.permissions.find((permission) => (
+    permission.role === 'Greenpill Trusted Publisher' &&
+    permission.collection === 'intake.map_node_moderation_access_links' &&
+    permission.action === 'read'
+  ));
   const moderatorUpdateRequestRead = plan.permissions.find((permission) => (
     permission.role === 'Greenpill Steward Moderator' &&
     permission.collection === 'intake.map_node_update_requests' &&
@@ -635,6 +646,8 @@ test('Directus operational access plan separates draft editors from publishers',
   assert.equal(publisherUpdate.fields.includes('reviewed_by'), true);
   assert.ok(moderatorSubmissionRead);
   assert.ok(trustedPrivateContactRead);
+  assert.equal(moderatorAccessLinkRead, undefined);
+  assert.equal(trustedAccessLinkRead, undefined);
   assert.equal(moderatorSubmissionRead.fields.includes('raw_note'), false);
   assert.equal(moderatorSubmissionRead.fields.includes('ip_address'), false);
   assert.equal(moderatorSubmissionRead.fields.includes('user_agent'), false);

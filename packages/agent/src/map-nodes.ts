@@ -29,6 +29,8 @@ export {
 } from './errors.js';
 import {
   deliverQueuedMapNodeModerationNotifications,
+  getMapNodeModerationSession,
+  moderateMapNode,
   queueMapNodeModerationNotification,
   scheduleMapNodeModerationNotificationDelivery,
 } from './map-node-moderation.js';
@@ -1723,6 +1725,12 @@ export function createMapNodeRepository({
         fetchImpl,
         ...options,
       }));
+    },
+    getModerationSession(token) {
+      return withSql(createSql, (sql) => getMapNodeModerationSession(sql, token, { env }));
+    },
+    moderateNode(nodeId, input) {
+      return withSql(createSql, (sql) => moderateMapNode(sql, nodeId, input, { env }));
     },
     listPublic() {
       return withSql(createSql, listPublicMapNodes);

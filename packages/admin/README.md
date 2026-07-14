@@ -260,12 +260,42 @@ the approved public projection available through `/map/state`. Turn it off
 manually after the session. Do not expose this toggle through public URLs,
 query parameters, browser storage, or generated website content.
 
-In moderated mode, the agent sends configured operators a Resend alert with a
-link to the exact `map_node_submissions` record in Directus. Sign in, review the
-safe fields, and set `status` to `approved`, `rejected`, or `archived`; Directus
-records the actor and status transition, while the database sets `approved_at`
-on first approval. The `Pending map node approvals` bookmark is the fallback
-queue when an email link has expired or been missed.
+In moderated mode, the agent can send each configured operator a recipient-specific
+seven-day review link at `https://greenpill.network/map/moderate`. The link shows
+only review-safe fields and can approve or decline that one pending node without
+a Directus login. It never exposes the submission owner email, raw notes, IP
+address, user agent, or spam metadata. The database records the first decision
+and an opaque access-link actor in `map_node_reviews`; the hidden operator-only
+`map_node_moderation_access_links` collection correlates that actor to the email
+recipient when an audit requires it.
+
+Magic-link delivery requires all of:
+
+- `MAP_NODE_MODERATION_MAGIC_LINK_ENABLED=true`
+- `MAP_NODE_MODERATION_BASE_URL=https://greenpill.network/map/moderate`
+- `MAP_NODE_MODERATION_LINK_SECRET` containing at least 32 random bytes
+
+If the feature is disabled or incompletely configured, the agent preserves the
+existing Resend alert linking to the exact `map_node_submissions` record in
+Directus. The `Pending map node approvals` bookmark and daily digest remain the
+emergency fallback when a magic link has expired or been missed. Directus can
+still set `status` to `approved`, `rejected`, or `archived`; the database sets
+`approved_at` on first approval.
+
+Release the flow in this order:
+
+1. Publish the static `/map/moderate` page and verify it is live.
+2. Apply agent migration `020_map_node_moderation_access_links.sql`.
+3. Run `bun run directus:content:setup` and `bun run directus:studio:setup`, then
+   confirm the existing moderation bookmarks and hidden access-link collection.
+4. Set a newly generated 32-byte-or-longer `MAP_NODE_MODERATION_LINK_SECRET` as
+   a Fly secret without printing it, and deploy the agent with the flag off.
+5. Verify `/ready`, enable `MAP_NODE_MODERATION_MAGIC_LINK_ENABLED`, and perform
+   an explicitly authorized real-recipient approve/decline smoke test.
+
+Rollback is immediate: set `MAP_NODE_MODERATION_MAGIC_LINK_ENABLED=false`.
+New alerts then return to Directus links, and existing magic links stop
+authenticating while the Directus queue remains available.
 
 The agent retries temporary alert failures and Resend deduplicates a retry of
 the same alert. If retries are exhausted, the `Failed map moderation alerts`
