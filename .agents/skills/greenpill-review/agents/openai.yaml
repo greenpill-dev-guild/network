@@ -1,0 +1,4 @@
+interface:
+  display_name: "Greenpill Review"
+  short_description: "Run the repository production-readiness review"
+  default_prompt: "Review this change using the Greenpill Network production-readiness contract."
