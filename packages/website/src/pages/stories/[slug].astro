@@ -139,7 +139,7 @@ const storyImageAlt = data.media?.imageAlt || `${data.title} story image`;
                   </Tag>
                 );
               }
-              return <p>{part.text}</p>;
+              return part.kind === 'p' ? <p>{part.text}</p> : null;
             })}
           </div>
         </Container>

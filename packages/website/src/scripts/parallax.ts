@@ -6,5 +6,5 @@ gsap.registerPlugin(ScrollTrigger);
 gsap.to('.parallax-bg', {
   scrollTrigger: { scrub: true },
   y: window.innerHeight,
-  x: (_i: number, target: HTMLElement) => target.dataset.movex,
+  x: (_i: number, target: HTMLElement) => parseFloat(target.dataset.movex ?? '0'),
 });

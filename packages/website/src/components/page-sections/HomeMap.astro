@@ -485,7 +485,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
                     <circle cx={d.cx} cy={d.cy} r="0.42" />
                   ))}
                 </g>
-                <circle data-location-pin cx="100" cy="50" r="2.8" hidden />
+                <circle data-location-pin cx="100" cy="50" r="2.8" {...{ hidden: true }} />
               </svg>
               <span data-location-map-hint>· tap or drag, or enter coordinates below ·</span>
             </div>
@@ -662,6 +662,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const VIEW_W = 200;
     const VIEW_H = 100;
     const VISIBLE_VIEW_H = 88;
+    const MAP_VIEW_H = 88; // client-scope mirror of the server mini-map viewBox height (0 0 200 88)
     const SVG_NS = 'http://www.w3.org/2000/svg';
     const NODE_HIT_RADIUS = 4.8;
     const lonToX = (lon: number) => ((lon + 180) / 360) * VIEW_W;
@@ -982,7 +983,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     const scaleNodeCircle = (circle: SVGCircleElement | null, scale: number) => {
       const base = baseRadius(circle);
-      if (!base) return;
+      if (!circle || !base) return;
       circle.setAttribute('r', Math.max(0.12, base * scale).toFixed(2));
     };
 
@@ -1620,17 +1621,17 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const minViewRadius = minClientRadius > 0 ? minClientRadius / clientScaleForBox(currentViewBox) : 0;
 
       let nearest: { node: Element; distance: number } | null = null;
-      root.querySelectorAll('.gp-home-map-node-link:not(.is-filtered-out)').forEach((node) => {
+      for (const node of root.querySelectorAll('.gp-home-map-node-link:not(.is-filtered-out)')) {
         const dot = node.querySelector('.gp-home-map-node-dot') as SVGCircleElement | null;
         const cx = Number(dot?.getAttribute('cx'));
         const cy = Number(dot?.getAttribute('cy'));
         const r = Number(dot?.getAttribute('r')) || 1.4;
-        if (!Number.isFinite(cx) || !Number.isFinite(cy)) return;
+        if (!Number.isFinite(cx) || !Number.isFinite(cy)) continue;
         const distance = Math.hypot(point.x - cx, point.y - cy);
         const hitRadius = Math.max(NODE_HIT_RADIUS, r + 3.2, minViewRadius);
-        if (distance > hitRadius) return;
+        if (distance > hitRadius) continue;
         if (!nearest || distance < nearest.distance) nearest = { node, distance };
-      });
+      }
       return nearest?.node ?? null;
     };
 
@@ -2385,7 +2386,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const member = {
         key: memberKey,
         sourceId: approved ? sourceId : '',
-        type: rawType === 'steward' ? 'steward' : 'member',
+        type: (rawType === 'steward' ? 'steward' : 'member') as DynamicMapNodeType,
         name: clean((link as HTMLElement).dataset.nodeName) || clean(link.querySelector('title')?.textContent).split('·')[0].trim(),
         place: clean((link as HTMLElement).dataset.nodePlace),
         chapterSlug: clean((link as HTMLElement).dataset.nodeChapterSlug),
@@ -3445,7 +3446,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (locationPin) {
         locationPin.setAttribute('cx', lonToX(long).toFixed(2));
         locationPin.setAttribute('cy', latToY(lat).toFixed(2));
-        locationPin.hidden = false;
+        locationPin.removeAttribute('hidden');
       }
     };
 
@@ -3572,7 +3573,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (locationCoordinateLat) locationCoordinateLat.value = '';
       if (locationCoordinateLong) locationCoordinateLong.value = '';
       if (locationConfirmationInput) locationConfirmationInput.value = '';
-      if (locationPin) locationPin.hidden = true;
+      if (locationPin) locationPin.setAttribute('hidden', 'hidden');
       if (locationResults) locationResults.hidden = true;
       if (locationResultsList) locationResultsList.replaceChildren();
       setLocationStatus('Find and choose a place to confirm your pin.');
@@ -3742,7 +3743,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     };
     const clearLocationSelection = () => {
       const hadConfirmation = clearLocationConfirmation();
-      if (locationPin) locationPin.hidden = true;
+      if (locationPin) locationPin.setAttribute('hidden', 'hidden');
       if (locationCoordinateLat) locationCoordinateLat.value = '';
       if (locationCoordinateLong) locationCoordinateLong.value = '';
       if (locationResults) locationResults.hidden = true;
@@ -3918,7 +3919,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       try { locationSvg?.releasePointerCapture(event.pointerId); } catch {}
       invalidateLocationRequests();
       clearLocationConfirmation();
-      if (locationPin) locationPin.hidden = true;
+      if (locationPin) locationPin.setAttribute('hidden', 'hidden');
       if (locationCoordinateLat) locationCoordinateLat.value = '';
       if (locationCoordinateLong) locationCoordinateLong.value = '';
       setLocationStatus('Pin adjustment canceled. Choose or confirm a place to continue.');
@@ -3945,7 +3946,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const lat = readLocationCoordinate(locationCoordinateLat?.value, -90, 90);
       const long = readLocationCoordinate(locationCoordinateLong?.value, -180, 180);
       if (lat !== null && long !== null) renderLocationPin(lat, long);
-      else if (locationPin) locationPin.hidden = true;
+      else if (locationPin) locationPin.setAttribute('hidden', 'hidden');
       if (hadConfirmation) setLocationStatus('Coordinate changed. Confirm it to find a place.');
       syncWalkthroughState();
     };
@@ -4062,7 +4063,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         clusterDirty();
       }, 80);
     };
-    if ('ResizeObserver' in window) {
+    if (typeof ResizeObserver !== 'undefined') {
       new ResizeObserver(scheduleMapResizeSync).observe(root);
     } else {
       window.addEventListener('resize', scheduleMapResizeSync);

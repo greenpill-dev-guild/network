@@ -100,8 +100,8 @@ function episodeMeta(episode: typeof recentPodcastEpisodes[number]) {
 function guildHref(guild: typeof guilds[number]) {
   return (
     publicGuildPath(guild.id || guild.slug) ||
-    (guild.data.links ?? []).find((link) => link.url)?.url ||
-    (guild.data.connectLinks ?? []).find((link) => link.url)?.url ||
+    (guild.data.links ?? []).find((link: any) => link.url)?.url ||
+    (guild.data.connectLinks ?? []).find((link: any) => link.url)?.url ||
     '#'
   );
 }

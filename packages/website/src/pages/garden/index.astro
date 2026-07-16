@@ -104,7 +104,7 @@ const isExternalHref = (href = '') => /^https?:\/\//.test(href);
                   <small>/ {String(steps.length).padStart(2, '0')}</small>
                 </div>
                 <div class="gp-garden-step-copy">
-                  <Meta items={[step.kicker || 'Garden', step.meta || step.stage || 'Open path']} accentIndex={0} />
+                  <Meta items={[step.kicker || 'Garden', step.meta || 'Open path']} accentIndex={0} />
                   <Text variant="h3">{step.title}</Text>
                   <Text variant="body-sm">{step.body}</Text>
                   {level === 1 ? (

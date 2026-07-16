@@ -17,7 +17,7 @@ const classes = ['gp-overline-atom', `is-${tone}`, className].filter(Boolean).jo
 
 <Tag class={classes}>
   {segments ? (
-    segments.map((segment, index) => (
+    segments.map((segment: string, index: number) => (
       <>
         <span>{segment}</span>
         {index < segments.length - 1 && <span aria-hidden="true" class="gp-overline-sep">&middot;</span>}

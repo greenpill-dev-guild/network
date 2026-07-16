@@ -95,7 +95,7 @@ const surfaceLabel = data.type === 'guild' ? 'Guild' : 'Pod';
               <div class="gp-guild-mandate">
                 <Overline>Mandate</Overline>
                 <div class="gp-guild-mandate-prose">
-                  {mandate.map((para) => (
+                  {mandate.map((para: any) => (
                     <Text variant="body">{para}</Text>
                   ))}
                 </div>
@@ -106,7 +106,7 @@ const surfaceLabel = data.type === 'guild' ? 'Guild' : 'Pod';
               <div class="gp-guild-principles">
                 <Overline>Principles</Overline>
                 <ol class="gp-guild-principle-list">
-                  {principles.map((p) => (
+                  {principles.map((p: any) => (
                     <li>
                       <span class="gp-guild-principle-num">{String(p.order || 0).padStart(2, '0')}</span>
                       <div>
@@ -131,7 +131,7 @@ const surfaceLabel = data.type === 'guild' ? 'Guild' : 'Pod';
             <Text variant="caption">{outputs.length} surfaces</Text>
           </div>
           <div class="gp-guild-output-grid">
-            {outputs.map((output) => (
+            {outputs.map((output: any) => (
               <a class="gp-guild-output" href={output.href || '#'} target={output.href?.startsWith('http') ? '_blank' : undefined} rel="noopener">
                 <Text variant="title-lg" class="gp-guild-output-title">{output.label}</Text>
                 {output.summary && <Text variant="body-sm">{output.summary}</Text>}
@@ -176,7 +176,7 @@ const surfaceLabel = data.type === 'guild' ? 'Guild' : 'Pod';
             <Text variant="caption">{proofSignals.length} source-backed signal{proofSignals.length === 1 ? '' : 's'}</Text>
           </div>
           <div class="gp-guild-proof-grid">
-            {proofSignals.map((signal) => (
+            {proofSignals.map((signal: any) => (
               <a class="gp-guild-proof" href={signal.href || '#'} target="_blank" rel="noopener">
                 <Text variant="mono">{signal.source || 'Public source'}</Text>
                 <Text variant="title-md" class="gp-guild-proof-value">{signal.value}</Text>
@@ -196,7 +196,7 @@ const surfaceLabel = data.type === 'guild' ? 'Guild' : 'Pod';
             <Text variant="caption">{publicMembers.length} public reference{publicMembers.length === 1 ? '' : 's'}</Text>
           </div>
           <div class="gp-guild-member-grid">
-            {publicMembers.map((m) => (
+            {publicMembers.map((m: any) => (
               <Card padded="md">
                 <Text variant="title-md">{m.name}</Text>
                 {m.role && <Text variant="caption">{m.role}</Text>}
