@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "bun --cwd ../.. scripts/dev-website.ts",
     "build": "bun run --cwd ../.. build:packages && bun --bun astro build",
+    "check": "bun run --cwd ../.. build:packages && astro check",
     "preview": "bun run --cwd ../.. build:packages && bun --bun astro preview",
     "astro": "astro"
   },
@@ -22,6 +23,7 @@
     "react-dom": "^19.2.4"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.9",
     "autoprefixer": "^10.4.27",
     "postcss": "^8.5.8",
     "prettier": "^2.8.8",

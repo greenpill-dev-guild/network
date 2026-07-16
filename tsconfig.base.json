@@ -11,13 +11,11 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "types": ["node"],
-    "ignoreDeprecations": "6.0",
-    "baseUrl": ".",
     "paths": {
-      "@greenpill-network/agent": ["packages/agent/src/index.ts"],
-      "@greenpill-network/agent/*": ["packages/agent/src/*.ts"],
-      "@greenpill-network/shared": ["packages/shared/src/index.ts"],
-      "@greenpill-network/shared/*": ["packages/shared/src/*.ts"]
+      "@greenpill-network/agent": ["./packages/agent/src/index.ts"],
+      "@greenpill-network/agent/*": ["./packages/agent/src/*.ts"],
+      "@greenpill-network/shared": ["./packages/shared/src/index.ts"],
+      "@greenpill-network/shared/*": ["./packages/shared/src/*.ts"]
     }
   }
 }
