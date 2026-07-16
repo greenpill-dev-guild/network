@@ -47,6 +47,40 @@ export interface EditablePublicMapNode {
   public_note: string;
 }
 
+export type MapNodeModerationDecision = 'approved' | 'rejected';
+
+export interface AuthenticatedMapNodeModerationNode {
+  id: string;
+  displayName: string;
+  placeName: string;
+  city: string;
+  region: string;
+  country: string;
+  lat: number;
+  long: number;
+  themes: string[];
+  publicNote: string;
+  createdAt: string;
+}
+
+export type AuthenticatedMapNodeModerationSession =
+  | {
+      state: 'pending';
+      node: AuthenticatedMapNodeModerationNode;
+      expiresAt: string;
+    }
+  | {
+      state: 'resolved';
+      decision: MapNodeModerationDecision;
+      reviewedAt: string;
+    };
+
+export interface AuthenticatedMapNodeModerationResult {
+  state: 'resolved';
+  decision: MapNodeModerationDecision;
+  reviewedAt: string;
+}
+
 export interface OptimisticPendingMapNode extends Omit<PublicMapNode, 'status' | 'source' | 'lat' | 'long'> {
   lat: number | null;
   long: number | null;
@@ -444,6 +478,40 @@ export function toEditablePublicMapNode(submission: UnknownRecord): EditablePubl
     themes: normalizeThemes(submission.themes),
     public_note: cleanString(submission.public_note ?? submission.publicNote),
   };
+}
+
+export function toAuthenticatedMapNodeModerationNode(
+  submission: UnknownRecord
+): AuthenticatedMapNodeModerationNode | null {
+  if (!submission) return null;
+
+  const lat = normalizeNumber(submission.lat ?? submission.latitude);
+  const long = normalizeNumber(submission.long ?? submission.longitude ?? submission.lng);
+  const id = cleanString(submission.id);
+  const displayName = cleanString(submission.displayName ?? submission.display_name ?? submission.name);
+  const placeName = cleanString(submission.placeName ?? submission.place_name ?? submission.place);
+  const createdAtValue = submission.createdAt ?? submission.created_at;
+  const createdAt = createdAtValue instanceof Date
+    ? createdAtValue.toISOString()
+    : cleanString(createdAtValue);
+
+  if (!id || !displayName || !placeName || lat === null || long === null || !createdAt) return null;
+
+  const node: AuthenticatedMapNodeModerationNode = {
+    id,
+    displayName,
+    placeName,
+    city: cleanString(submission.city),
+    region: cleanString(submission.region),
+    country: cleanString(submission.country),
+    lat,
+    long,
+    themes: normalizeThemes(submission.themes),
+    publicNote: cleanString(submission.publicNote ?? submission.public_note),
+    createdAt,
+  };
+
+  return containsPrivateMapNodeField(node) ? null : node;
 }
 
 export function createOptimisticPendingNode(

@@ -102,6 +102,7 @@ const STEWARD_WORKFLOW_COLLECTION_META = Object.freeze({
 const MAP_NODE_MODERATION_COLLECTIONS = Object.freeze([
   'map_node_submissions',
   'map_node_moderation_notifications',
+  'map_node_moderation_access_links',
 ]);
 
 const MAP_NODE_MODERATION_COLLECTION_META = Object.freeze({
@@ -118,6 +119,13 @@ const MAP_NODE_MODERATION_COLLECTION_META = Object.freeze({
     icon: 'mark_email_unread',
     note: 'Private delivery audit for map moderation alerts. Failed alerts are retained here for operator follow-up.',
     display_template: '{{ kind }} · {{ status }}',
+  },
+  map_node_moderation_access_links: {
+    hidden: true,
+    singleton: false,
+    icon: 'vpn_key_off',
+    note: 'Operator-only delivery and audit records for recipient-specific moderation links. Never expose this collection to steward roles.',
+    display_template: '{{ delivery_status }} · {{ submission_id }}',
   },
 });
 
@@ -567,6 +575,25 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
     sent_at: fieldMeta({ sort: 11, width: 'half', interface: 'datetime', readonly: true }),
     created_at: fieldMeta({ sort: 12, width: 'half', interface: 'datetime', readonly: true }),
     updated_at: fieldMeta({ sort: 13, width: 'half', interface: 'datetime', readonly: true }),
+  },
+  map_node_moderation_access_links: {
+    id: fieldMeta({ sort: 1, width: 'half', interface: 'input', readonly: true, hidden: true }),
+    notification_id: fieldMeta({ sort: 2, width: 'half', interface: 'input', readonly: true }),
+    submission_id: fieldMeta({ sort: 3, width: 'half', interface: 'input', readonly: true }),
+    recipient_email: fieldMeta({ sort: 4, width: 'full', interface: 'input', readonly: true }),
+    token_expires_at: fieldMeta({ sort: 5, width: 'half', interface: 'datetime', readonly: true }),
+    delivery_status: fieldMeta({ sort: 6, width: 'half', interface: 'select-dropdown', readonly: true }),
+    attempts: fieldMeta({ sort: 7, width: 'half', interface: 'input', readonly: true }),
+    next_attempt_at: fieldMeta({ sort: 8, width: 'half', interface: 'datetime', readonly: true }),
+    delivery_claimed_at: fieldMeta({ sort: 9, width: 'half', interface: 'datetime', readonly: true }),
+    provider_message_id: fieldMeta({ sort: 10, width: 'full', interface: 'input', readonly: true }),
+    provider_error: fieldMeta({ sort: 11, width: 'full', interface: 'input', readonly: true }),
+    sent_at: fieldMeta({ sort: 12, width: 'half', interface: 'datetime', readonly: true }),
+    consumed_at: fieldMeta({ sort: 13, width: 'half', interface: 'datetime', readonly: true }),
+    resolved_at: fieldMeta({ sort: 14, width: 'half', interface: 'datetime', readonly: true }),
+    decision: fieldMeta({ sort: 15, width: 'half', interface: 'select-dropdown', readonly: true }),
+    created_at: fieldMeta({ sort: 16, width: 'half', interface: 'datetime', readonly: true }),
+    updated_at: fieldMeta({ sort: 17, width: 'half', interface: 'datetime', readonly: true }),
   },
 });
 

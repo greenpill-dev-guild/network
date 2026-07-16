@@ -16,6 +16,7 @@ export const DIRECTUS_INTAKE_COLLECTIONS = Object.freeze([
   'map_node_private_contacts',
   'map_node_reviews',
   'map_node_moderation_notifications',
+  'map_node_moderation_access_links',
   'map_node_intake_settings',
   'map_node_edit_tokens',
   'map_node_update_requests',
