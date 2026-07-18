@@ -1,4 +1,6 @@
-import { defineCollection, z } from 'astro:content';
+import { defineCollection } from 'astro:content';
+import { glob } from 'astro/loaders';
+import { z } from 'astro/zod';
 
 const slugListSchema = z.array(z.string()).optional().default([]);
 
@@ -42,7 +44,7 @@ const libraryCardSchema = z.object({
 }).optional().default({});
 
 const stories = defineCollection({
-  type: 'data',
+  loader: glob({ pattern: '**/*.json', base: './src/content/stories' }),
   schema: z.object({
     title: z.string(),
     status: z.enum(['draft', 'published', 'archived']).optional().default('draft'),
@@ -81,7 +83,7 @@ const stories = defineCollection({
 });
 
 const resources = defineCollection({
-  type: 'data',
+  loader: glob({ pattern: '**/*.json', base: './src/content/resources' }),
   schema: z.object({
     title: z.string(),
     kind: z.enum(['book', 'podcast', 'guide', 'tool', 'deck', 'article', 'video', 'external']).default('external'),
@@ -114,7 +116,7 @@ const resources = defineCollection({
 });
 
 const books = defineCollection({
-  type: 'data',
+  loader: glob({ pattern: '**/*.json', base: './src/content/books' }),
   schema: z.object({
     title: z.string(),
     description: z.string().optional().default(''),
