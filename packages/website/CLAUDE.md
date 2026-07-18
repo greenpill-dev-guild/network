@@ -60,7 +60,7 @@ New components are `.astro` with a scoped `<style>` block, `gp-`-prefixed classe
 
 ## Legacy — do not use or copy
 
-Tailwind is being retired from this package (its utilities are unused; `@apply` = 0). Do not add Tailwind utility classes or `@apply`. The dead `global.css` and old root components (Hero/Nav/Footer/etc.) have been removed — don't reintroduce their `--green`/`font-volkhov` patterns.
+Tailwind has been retired from this package (integration, configs, and deps removed; `gp-tokens.css` owns the reset). Do not add Tailwind utility classes or `@apply`. The dead `global.css` and old root components (Hero/Nav/Footer/etc.) have been removed — don't reintroduce their `--green`/`font-volkhov` patterns.
 
 ## Canonical references
 

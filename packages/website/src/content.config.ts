@@ -44,7 +44,7 @@ const libraryCardSchema = z.object({
 }).optional().default({});
 
 const stories = defineCollection({
-  loader: glob({ pattern: '**/*.json', base: './src/content/stories' }),
+  loader: glob({ pattern: '**/[^_]*.json', base: './src/content/stories' }),
   schema: z.object({
     title: z.string(),
     status: z.enum(['draft', 'published', 'archived']).optional().default('draft'),
@@ -83,7 +83,7 @@ const stories = defineCollection({
 });
 
 const resources = defineCollection({
-  loader: glob({ pattern: '**/*.json', base: './src/content/resources' }),
+  loader: glob({ pattern: '**/[^_]*.json', base: './src/content/resources' }),
   schema: z.object({
     title: z.string(),
     kind: z.enum(['book', 'podcast', 'guide', 'tool', 'deck', 'article', 'video', 'external']).default('external'),
@@ -116,7 +116,7 @@ const resources = defineCollection({
 });
 
 const books = defineCollection({
-  loader: glob({ pattern: '**/*.json', base: './src/content/books' }),
+  loader: glob({ pattern: '**/[^_]*.json', base: './src/content/books' }),
   schema: z.object({
     title: z.string(),
     description: z.string().optional().default(''),
