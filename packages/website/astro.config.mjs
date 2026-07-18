@@ -10,10 +10,10 @@ const rootDir = resolve(websiteDir, '../..');
 const sharedSrcDir = resolve(rootDir, 'packages/shared/src');
 
 const isDevCommand =
-  process.env.npm_lifecycle_event === 'dev' ||
-  process.argv.some((arg) => arg === 'dev' || arg.endsWith('/astro dev'));
+  process.env.npm_lifecycle_event === 'dev' || process.argv.includes('dev');
 
 export default defineConfig({
+  site: 'https://greenpill.network',
   integrations: [
     tailwind(),
     ...(isDevCommand ? [react(), keystatic()] : []),

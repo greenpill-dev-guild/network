@@ -5,7 +5,7 @@ import { hasPublicGuildPage } from '../lib/public-routes';
 
 export const prerender = true;
 
-const SITE_URL = 'https://greenpill.network';
+const SITE_URL = (import.meta.env.SITE ?? 'https://greenpill.network').replace(/\/+$/, '');
 
 type SitemapEntry = {
   path: string;
@@ -47,11 +47,13 @@ export const GET: APIRoute = async () => {
     { path: '/library', changefreq: 'weekly', priority: '0.9' },
     { path: '/chapters', changefreq: 'weekly', priority: '0.8' },
     { path: '/stories', changefreq: 'weekly', priority: '0.8' },
-    ...chapters.map((chapter) => ({
-      path: `/chapters/${chapter.id}`,
-      changefreq: 'monthly' as const,
-      priority: '0.7',
-    })),
+    ...chapters
+      .filter((chapter) => !chapter.data.seo?.noindex)
+      .map((chapter) => ({
+        path: `/chapters/${chapter.id}`,
+        changefreq: 'monthly' as const,
+        priority: '0.7',
+      })),
     ...guilds
       .filter((guild) => hasPublicGuildPage(guild.id) && !guild.data.seo?.noindex)
       .map((guild) => ({
@@ -61,6 +63,8 @@ export const GET: APIRoute = async () => {
       })),
     ...stories
       .filter((story) => story.data.status === 'published' && !story.data.seo?.noindex)
+      // getCollection order follows the content store's ingest order; sort for stable output.
+      .sort((a, b) => a.id.localeCompare(b.id))
       .map((story) => ({
         path: `/stories/${story.id}`,
         changefreq: 'monthly' as const,
