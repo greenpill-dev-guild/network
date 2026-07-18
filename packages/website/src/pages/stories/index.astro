@@ -246,12 +246,14 @@ function storyImageAlt(story: typeof published[number]) {
     background: rgba(20, 63, 48, 0.7);
     border-color: rgba(240, 220, 160, 0.18);
     backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
 
   :global(.gp-stories-empty-card),
   :global(.gp-stories-submit) {
     background: rgba(20, 63, 48, 0.7);
     backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
 
   .gp-stories-empty-copy {
@@ -281,6 +283,7 @@ function storyImageAlt(story: typeof published[number]) {
     text-decoration: none;
     min-width: 0;
     backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     transition: border-color 200ms, background 200ms;
   }
 
@@ -365,6 +368,7 @@ function storyImageAlt(story: typeof published[number]) {
     color: var(--gp-fg);
     text-decoration: none;
     backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     transition: border-color 200ms, background 200ms;
   }
 
