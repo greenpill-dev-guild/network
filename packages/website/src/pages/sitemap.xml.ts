@@ -63,8 +63,9 @@ export const GET: APIRoute = async () => {
       })),
     ...stories
       .filter((story) => story.data.status === 'published' && !story.data.seo?.noindex)
-      // getCollection order follows the content store's ingest order; sort for stable output.
-      .sort((a, b) => a.id.localeCompare(b.id))
+      // getCollection order follows the content store's ingest order; sort by
+      // codepoint (not localeCompare) so output is stable across build hosts.
+      .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
       .map((story) => ({
         path: `/stories/${story.id}`,
         changefreq: 'monthly' as const,

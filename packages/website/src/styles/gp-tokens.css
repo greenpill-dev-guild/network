@@ -6,9 +6,9 @@
 
 /* Cascade layer order: later layers win. Component <style> blocks are
    UNLAYERED and therefore override everything here by design.
-   Names are gp- prefixed to avoid colliding with Tailwind's reserved
-   base/components/utilities layer directives while Tailwind is still
-   in the pipeline (removed in a later phase). */
+   Names are gp- prefixed; historically this avoided colliding with
+   Tailwind's reserved base/components/utilities layer directives
+   (Tailwind has since been removed from this package). */
 @layer gp-reset, gp-tokens, gp-base, gp-components, gp-utilities;
 
 @layer gp-tokens {
