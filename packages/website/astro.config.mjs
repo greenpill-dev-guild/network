@@ -1,6 +1,5 @@
 import { defineConfig, passthroughImageService } from 'astro/config';
 import react from '@astrojs/react';
-import tailwind from '@astrojs/tailwind';
 import keystatic from '@keystatic/astro';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,10 +13,7 @@ const isDevCommand =
 
 export default defineConfig({
   site: 'https://greenpill.network',
-  integrations: [
-    tailwind(),
-    ...(isDevCommand ? [react(), keystatic()] : []),
-  ],
+  integrations: [...(isDevCommand ? [react(), keystatic()] : [])],
   output: 'static',
   image: {
     service: passthroughImageService(),

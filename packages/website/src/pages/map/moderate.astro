@@ -393,7 +393,7 @@ const pageDescription = 'Private email-authenticated moderation for a pending Gr
         color: var(--gp-fg);
         box-shadow: var(--gp-shadow-card-lg);
       }
-      dialog::backdrop { background: color-mix(in srgb, var(--gp-green-950) 78%, transparent); backdrop-filter: blur(4px); }
+      dialog::backdrop { background: color-mix(in srgb, var(--gp-green-950) 78%, transparent); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
       .dialog-body { padding: 28px; }
       .dialog-body h2 { font-size: var(--gp-h2-size); }
       .dialog-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
