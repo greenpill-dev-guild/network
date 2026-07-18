@@ -18,7 +18,7 @@ interface Props {
 const {
   title,
   description,
-  ogImage = 'https://greenpill.network/images/greenpill-twitter-card.png',
+  ogImage = '/images/greenpill-twitter-card.png',
   canonicalPath = '',
   activeNav = null,
   noindex = false,
@@ -26,7 +26,10 @@ const {
   backgroundMode = 'graphic',
   ogType = 'website',
 } = Astro.props;
-const canonicalUrl = canonicalPath ? `https://greenpill.network${canonicalPath}` : 'https://greenpill.network';
+const site = Astro.site ?? new URL('https://greenpill.network');
+const canonicalUrl = canonicalPath ? `${site.origin}${canonicalPath}` : site.origin;
+// og:image / twitter:image must be absolute URLs; content values are site-relative paths.
+const ogImageUrl = new URL(ogImage, site).href;
 
 const bodyClasses = [
   'gp-root',
@@ -46,11 +49,11 @@ const bodyClasses = [
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={ogImage} />
+    <meta name="twitter:image" content={ogImageUrl} />
     <meta property="og:title" content={title} />
     <meta property="og:type" content={ogType} />
     <meta property="og:url" content={canonicalUrl} />
-    <meta property="og:image" content={ogImage} />
+    <meta property="og:image" content={ogImageUrl} />
     <meta property="og:description" content={description} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
