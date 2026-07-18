@@ -30,7 +30,7 @@ const repoGuidancePaths = [
   join(rootDir, 'README.md'),
 ];
 const keystaticConfigPath = join(rootDir, 'packages/website/keystatic.config.ts');
-const astroContentConfigPath = join(rootDir, 'packages/website/src/content/config.ts');
+const astroContentConfigPath = join(rootDir, 'packages/website/src/content.config.ts');
 const snapshotPath = join(rootDir, 'packages/website/src/data/operational-content-snapshot.json');
 const podcastSnapshotPath = join(rootDir, 'packages/website/src/data/podcast-feed-snapshot.json');
 const operationalContentScriptPath = join(rootDir, 'scripts/operational-content.ts');
