@@ -51,7 +51,7 @@ Run installs and validation from the repo root.
 
 ## Linear-Spawned Issue Contract
 
-Linear (workspace `greenpill-dev-guild`; teams Product `PRD` / Research `RESR`) is the durable backlog — never open GitHub Issues for backlog work. Codex work is labeled `agent:codex` (distinct from `agent:claude` interactive and `agent:routine` cron writes). The Linear MCP is wired into the Codex environment for read/query and state transitions.
+Linear (workspace `greenpill-dev-guild`; teams Product `PRD` / Research `RESR`) is the durable backlog — never open GitHub Issues for backlog work. Codex work is labeled `ai:codex` (distinct from `ai:claude` interactive and `ai:routine` cron writes). The Linear MCP is wired into the Codex environment for read/query and state transitions.
 
 **Plan Hub Linear Mirror Policy**: scoped `.plans/ideas` and `.plans/backlog` hubs get one parent Linear issue for visibility. Do not create lane child issues, delegate agents, or treat scoped lane sketches as implementation specs until the human explicitly starts implementation or the hub moves to active execution. When implementation starts, create child issues only for the `.plans` lanes that are actionable at that time. If a scoped plan drifts before implementation, update the hub and parent issue first; do not rewrite a stale child tree.
 
