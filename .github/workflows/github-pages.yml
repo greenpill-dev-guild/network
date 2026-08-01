@@ -12,6 +12,14 @@ on:
       - "packages/agent/**"
       - "packages/website/**"
       - "scripts/**"
+  # Rebuild on a schedule so approved Directus edits reach the public site
+  # without a code push. Stewards publish in Directus; this picks it up.
+  schedule:
+    - cron: "0 * * * *"
+  # Lets a Directus flow (or an operator) trigger an immediate rebuild:
+  # gh api repos/:owner/:repo/dispatches -f event_type=operational-content-updated
+  repository_dispatch:
+    types: [operational-content-updated]
   workflow_dispatch:
 
 permissions:
@@ -41,8 +49,18 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      # The agent may be scaled to zero; give it a chance to wake before the
+      # build fetches the snapshot, and fail loudly if it never answers.
+      - name: Wait for operational content API
+        run: bun scripts/wait-for-http.ts "${{ vars.AGENT_READY_URL || 'https://agent.greenpill.network/ready' }}" 120000
+
       - name: Build website
         run: bun run build:website
+        env:
+          # Build against approved live operational content instead of the
+          # checked-in snapshot fallback. If this fetch fails the build fails,
+          # which leaves the currently deployed site untouched.
+          OPERATIONAL_CONTENT_SNAPSHOT_URL: ${{ vars.OPERATIONAL_CONTENT_SNAPSHOT_URL || 'https://agent.greenpill.network/content/public-snapshot' }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
