@@ -1190,23 +1190,44 @@ async function pruneManagedPermissions(client, policyMap, managedCollections, ex
   }
 }
 
-function resolveSchemaCollectionNames(availableCollectionNames, schema, collectionNames) {
+// A single collection can legitimately be absent while a migration is still
+// pending, and that must not block permission setup for everything else. A
+// whole group resolving to nothing is different: that is the DB_SEARCH_PATH
+// misconfiguration this check was built to catch, so it still fails hard.
+export function resolveSchemaCollectionNames(availableCollectionNames, schema, collectionNames) {
   const names = new Set(availableCollectionNames);
-  return collectionNames.map((collection) => {
+  const resolved: string[] = [];
+  const missing: string[] = [];
+
+  for (const collection of collectionNames) {
     const candidates = [
       collection,
       `${schema}.${collection}`,
       `${schema}_${collection}`,
     ];
     const match = candidates.find((candidate) => names.has(candidate));
-    if (!match) {
-      throw new Error(
-        `Directus collection for ${schema}.${collection} was not found. ` +
-        'Verify DB_SEARCH_PATH includes public,content,intake,impact,workspace,audit.'
-      );
+    if (match) {
+      resolved.push(match);
+    } else {
+      missing.push(collection);
     }
-    return match;
-  });
+  }
+
+  if (collectionNames.length > 0 && resolved.length === 0) {
+    throw new Error(
+      `No Directus collections resolved for schema "${schema}" (expected ${collectionNames.join(', ')}). ` +
+      'Verify DB_SEARCH_PATH includes public,content,intake,impact,workspace,audit.'
+    );
+  }
+
+  for (const collection of missing) {
+    console.warn(
+      `Skipping Directus permissions for ${schema}.${collection}: collection not found. ` +
+      'Apply the pending database migration, then re-run this setup to configure it.'
+    );
+  }
+
+  return resolved;
 }
 
 function resolveOperationalCollectionNames(availableCollectionNames) {

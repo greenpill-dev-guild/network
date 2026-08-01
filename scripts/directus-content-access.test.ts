@@ -7,7 +7,10 @@ import {
   parseAssignments,
   readAssignmentsFromDirectus,
 } from './directus-content-access.ts';
-import { buildDirectusOperationalPermissionPlan } from './directus-operational-content-setup.ts';
+import {
+  buildDirectusOperationalPermissionPlan,
+  resolveSchemaCollectionNames,
+} from './directus-operational-content-setup.ts';
 
 test('parseAssignments reads chapter and guild assignment TSV rows', () => {
   const assignments = parseAssignments([
@@ -113,6 +116,24 @@ test('readAssignmentsFromDirectus derives assignments from live Directus rows', 
     { email: 'steward.two@example.com', kind: 'chapter', slug: 'nigeria' },
     { email: 'steward.one@example.com', kind: 'guild', slug: 'dev-guild' },
   ]);
+});
+
+test('collection resolution skips a single pending collection but fails on a bad search path', () => {
+  const available = ['intake.map_node_submissions', 'intake.map_node_reviews'];
+
+  assert.deepEqual(
+    resolveSchemaCollectionNames(available, 'intake', [
+      'map_node_submissions',
+      'map_node_moderation_access_links',
+      'map_node_reviews',
+    ]),
+    ['intake.map_node_submissions', 'intake.map_node_reviews']
+  );
+
+  assert.throws(
+    () => resolveSchemaCollectionNames(['content.chapters'], 'intake', ['map_node_submissions']),
+    /No Directus collections resolved for schema "intake"/
+  );
 });
 
 test('operational permission plan keeps base steward role read-only for operational content', () => {
