@@ -34,6 +34,7 @@ const astroContentConfigPath = join(rootDir, 'packages/website/src/content.confi
 const snapshotPath = join(rootDir, 'packages/website/src/data/operational-content-snapshot.json');
 const podcastSnapshotPath = join(rootDir, 'packages/website/src/data/podcast-feed-snapshot.json');
 const operationalContentScriptPath = join(rootDir, 'scripts/operational-content.ts');
+const operationalContentLibraryPath = join(rootDir, 'packages/website/src/lib/operational-content.ts');
 const homePagePath = join(rootDir, 'packages/website/src/pages/index.astro');
 const libraryPagePath = join(rootDir, 'packages/website/src/pages/library/index.astro');
 const storyDetailPagePath = join(rootDir, 'packages/website/src/pages/stories/[slug].astro');
@@ -279,6 +280,27 @@ test('chapter initiative cards do not render dead links when no URL is present',
 
   assert.match(source, /<article class="gp-chapter-initiative">/);
   assert.doesNotMatch(source, /href=\{href \|\| '#'\}/);
+});
+
+test('noindex chapters keep their own page while staying out of discovery', async () => {
+  const [librarySource, chapterPage] = await Promise.all([
+    readFile(operationalContentLibraryPath, 'utf8'),
+    readFile(chapterPagePath, 'utf8'),
+  ]);
+
+  assert.match(
+    librarySource,
+    /getOperationalChapterPages\(\)[\s\S]*?getOperationalCollection\('chapters'\)/
+  );
+  assert.match(
+    librarySource,
+    /getOperationalChapters\(\)[\s\S]*?getOperationalChapterPages\(\)[\s\S]*?!hasNoindex/
+  );
+  assert.match(
+    chapterPage,
+    /getStaticPaths\(\)[\s\S]*?getOperationalChapterPages\(\)/
+  );
+  assert.match(chapterPage, /noindex=\{data\.seo\?\.noindex\}/);
 });
 
 test('chapter pages render approved media and steward avatar cards', async () => {

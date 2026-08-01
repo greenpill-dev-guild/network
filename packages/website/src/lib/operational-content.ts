@@ -62,8 +62,12 @@ export async function getOperationalCollection(collection: PublicOperationalCont
   return snapshot[collection].map(asContentEntry);
 }
 
+export async function getOperationalChapterPages() {
+  return getOperationalCollection('chapters');
+}
+
 export async function getOperationalChapters() {
-  const chapters = await getOperationalCollection('chapters');
+  const chapters = await getOperationalChapterPages();
   return chapters.filter((item) => !hasNoindex(item.data));
 }
 
