@@ -5,6 +5,7 @@ import {
   buildScopedPolicyPermissions,
   parseArgs,
   parseAssignments,
+  readAssignmentsFromDirectus,
 } from './directus-content-access.ts';
 import { buildDirectusOperationalPermissionPlan } from './directus-operational-content-setup.ts';
 
@@ -62,11 +63,56 @@ test('chapter assignment preflight rejects a different existing chapter', async 
 test('parseArgs defaults to role sync with dry-run support', () => {
   const options = parseArgs(['assign', '--input', '/tmp/access.tsv', '--dry-run']);
 
+  assert.equal(options.command, 'assign');
   assert.equal(options.input, '/tmp/access.tsv');
   assert.equal(options.role, 'Greenpill Steward Editor');
   assert.equal(options.operatorRole, 'Greenpill Operator');
   assert.equal(options.syncRole, true);
   assert.equal(options.dryRun, true);
+});
+
+test('parseArgs supports sync without a TSV input', () => {
+  const options = parseArgs(['sync']);
+
+  assert.equal(options.command, 'sync');
+  assert.equal(options.input, undefined);
+  assert.equal(options.role, 'Greenpill Steward Editor');
+
+  assert.throws(() => parseArgs(['assign']), /Missing --input/);
+  assert.throws(() => parseArgs(['sync', '--input', '/tmp/access.tsv']), /does not accept --input/);
+});
+
+test('readAssignmentsFromDirectus derives assignments from live Directus rows', async () => {
+  const client = {
+    async request(path: string) {
+      if (path.startsWith('/items/chapter_editor_assignments')) {
+        return {
+          data: [
+            { chapter_slug: 'greensofa', directus_user_id: 'user-1' },
+            { chapter_slug: 'nigeria', directus_user_id: 'user-2' },
+            { chapter_slug: '', directus_user_id: 'user-3' },
+          ],
+        };
+      }
+      if (path.startsWith('/items/guild_editor_assignments')) {
+        return { data: [{ guild_slug: 'dev-guild', directus_user_id: 'user-1' }] };
+      }
+      if (path.startsWith('/users/user-1')) return { data: { email: 'Steward.One@example.com' } };
+      if (path.startsWith('/users/user-2')) return { data: { email: 'steward.two@example.com' } };
+      throw new Error(`unexpected request: ${path}`);
+    },
+  };
+
+  const assignments = await readAssignmentsFromDirectus(client, {
+    chapterAssignments: 'chapter_editor_assignments',
+    guildAssignments: 'guild_editor_assignments',
+  });
+
+  assert.deepEqual(assignments, [
+    { email: 'steward.one@example.com', kind: 'chapter', slug: 'greensofa' },
+    { email: 'steward.two@example.com', kind: 'chapter', slug: 'nigeria' },
+    { email: 'steward.one@example.com', kind: 'guild', slug: 'dev-guild' },
+  ]);
 });
 
 test('operational permission plan keeps base steward role read-only for operational content', () => {
@@ -180,7 +226,7 @@ test('scoped chapter and guild policies use static parent filters', () => {
     _and: [
       {
         publication_status: {
-          _in: ['draft', 'pending_review'],
+          _in: ['draft', 'pending_review', 'published'],
         },
       },
       {
@@ -193,9 +239,17 @@ test('scoped chapter and guild policies use static parent filters', () => {
   assert.equal(chapterUpdate?.fields.includes('slug'), false);
   assert.deepEqual(chapterUpdate?.validation, {
     publication_status: {
-      _in: ['draft', 'pending_review'],
+      _in: ['draft', 'pending_review', 'published'],
     },
   });
+
+  const chapterRead = chapterPermissions.find(
+    (permission) => permission.collection === 'chapters' && permission.action === 'read'
+  );
+  assert.equal(
+    ((chapterRead?.permissions as any)._and[0].publication_status._in as string[]).includes('published'),
+    true
+  );
 
   const initiativeCreate = chapterPermissions.find(
     (permission) => permission.collection === 'chapter_initiatives' && permission.action === 'create'
@@ -212,7 +266,7 @@ test('scoped chapter and guild policies use static parent filters', () => {
   });
   assert.deepEqual(initiativeCreate?.validation, {
     publication_status: {
-      _in: ['draft', 'pending_review'],
+      _in: ['draft', 'pending_review', 'published'],
     },
   });
 
@@ -222,7 +276,7 @@ test('scoped chapter and guild policies use static parent filters', () => {
   assert.equal(initiativeUpdate?.fields.includes('chapter_slug'), false);
   assert.deepEqual(initiativeUpdate?.validation, {
     publication_status: {
-      _in: ['draft', 'pending_review'],
+      _in: ['draft', 'pending_review', 'published'],
     },
   });
 
@@ -335,7 +389,7 @@ test('scoped chapter and guild policies use static parent filters', () => {
   });
   assert.deepEqual(projectCreate?.validation, {
     publication_status: {
-      _in: ['draft', 'pending_review'],
+      _in: ['draft', 'pending_review', 'published'],
     },
   });
 
@@ -345,7 +399,7 @@ test('scoped chapter and guild policies use static parent filters', () => {
   assert.equal(projectUpdate?.fields.includes('guild_slug'), false);
   assert.deepEqual(projectUpdate?.validation, {
     publication_status: {
-      _in: ['draft', 'pending_review'],
+      _in: ['draft', 'pending_review', 'published'],
     },
   });
 });

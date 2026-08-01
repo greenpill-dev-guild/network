@@ -41,7 +41,8 @@ Run installs and validation from the repo root.
 - `bun run content:snapshot` - validate current operational content and refresh the static fallback snapshot.
 - `bun run content:migrate` - one-time seed current operational content into the Postgres `content` schema; it refuses to run after rows exist unless `--allow-existing` is passed for controlled missing-row recovery.
 - `bun run directus:content:setup` - apply Directus roles, policies, and permissions for operational content and intake moderation after Directus boots.
-- `bun run directus:content-access` - assign Directus users to chapter or guild editing scopes from a TSV file.
+- `bun run directus:content-access -- assign --input <tsv>` - assign Directus users to chapter or guild editing scopes from a TSV file.
+- `bun run directus:content-access -- sync` - re-apply scoped policies for every assignment already in Directus. Run this after any change to the scoped permission shape, otherwise stewards provisioned earlier stay on a stale policy.
 - `bun run directus:studio:setup` - apply steward-friendly Directus Data Studio collection and field metadata.
 - `bun run directus:local:bootstrap` - wait for local Directus, then apply local roles/permissions and Data Studio metadata; this local path ignores root `.env.local` to avoid production Directus admin settings.
 - `bun run directus:steward:smoke` - create a temporary steward user and verify scoped Directus editing behavior.

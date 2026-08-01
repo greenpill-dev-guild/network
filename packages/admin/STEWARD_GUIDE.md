@@ -8,12 +8,15 @@ or website build is published.
 ## What Stewards Can Do
 
 - View published operational content as reference.
-- Edit assigned chapter or guild records when those records are in `draft` or
-  `pending_review`.
+- Edit their assigned chapter or guild record directly at any status, including
+  `published`. Edits to a live profile do not wait for approval.
 - Create chapter initiatives for assigned chapters.
-- Create chapter update requests when a published chapter should stay live while
-  edits are reviewed.
-- Move their own draft work to `pending_review`.
+- Create chapter update requests when a change should be reviewed or discussed
+  before it goes out. This is now optional, not the only route.
+- Move their own draft work to `pending_review` or `published`.
+
+Stewards can only edit their own assigned chapter or guild. Every other chapter
+stays read-only.
 
 Standard stewards cannot publish, edit unrelated chapters or guilds, view
 private intake/contact data, or change Directus configuration.
@@ -68,16 +71,22 @@ with your chapter name and the email address used for your invite.
    - `longitude`
    - `primary_link`
    - `theme_slugs`
-5. If the chapter row is editable, update the draft fields and set
-   `publication_status` to `pending_review` when ready.
-6. If the chapter row is already published and not editable, create a
-   `Chapter Update Request` instead. For syncs, the operator may pre-create
-   this draft so you can open it directly.
+5. Edit the fields directly and save. Your chapter row is editable whether it is
+   a draft or already published.
+6. Leave `publication_status` on `published` to keep the profile live.
 
 ## Updating A Published Chapter
 
-Published chapter rows stay online until a trusted publisher applies and
-publishes changes. Use `Chapter Update Requests` for live-profile edits.
+Edit the published chapter row directly and save. The profile stays online while
+you edit and no approval step is involved.
+
+Two things to know:
+
+- Saved edits reach the public website on the next content snapshot refresh and
+  website build, not the instant you save.
+- Use `Chapter Update Requests` when you want a second pair of eyes on a change
+  before it goes out, or when the edit needs discussion. It is a review tool
+  now, not a requirement.
 
 Create a request with:
 
@@ -130,6 +139,9 @@ Chapter update requests move through this flow:
 
 Accepted update requests do not publish the website by themselves. They are the
 review handoff that tells a trusted publisher what to apply.
+
+Direct edits to your own chapter skip steps 1 to 5 entirely. They still depend
+on step 6 to appear on the public website.
 
 When you move a request or initiative to `pending_review`, message the Telegram
 steward chat with `Greenpill chapter review: [Chapter name]`. Include the

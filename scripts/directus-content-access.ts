@@ -16,7 +16,10 @@ type AssignmentInput = {
   slug: string;
 };
 
+type AssignCommand = 'assign' | 'sync';
+
 type AssignOptions = {
+  command: AssignCommand;
   input?: string;
   role: string;
   operatorRole: string;
@@ -26,7 +29,11 @@ type AssignOptions = {
 
 const DEFAULT_STEWARD_ROLE = 'Greenpill Steward Editor';
 const DEFAULT_OPERATOR_ROLE = 'Greenpill Operator';
-const EDITOR_STATUSES = ['draft', 'pending_review'];
+// Scoped editors are trusted to edit their own live records directly, so a
+// published row stays public while they update it. The chapter update request
+// workflow remains available for changes a steward wants reviewed first.
+// Reaching the public website still requires a snapshot refresh + site build.
+const EDITOR_STATUSES = ['draft', 'pending_review', 'published'];
 const CHAPTER_UPDATE_REQUEST_CREATE_STATUSES = ['draft', 'pending_review'];
 const CHAPTER_UPDATE_REQUEST_UPDATE_STATUSES = ['draft', 'pending_review', 'needs_changes'];
 
@@ -246,6 +253,13 @@ function cleanEmail(value: unknown) {
 function usage() {
   return [
     'Usage: bun run directus:content-access -- assign --input assignments.tsv [options]',
+    '       bun run directus:content-access -- sync [options]',
+    '',
+    'Commands:',
+    '  assign   Apply assignments from a TSV file.',
+    '  sync     Re-apply scoped policies for every assignment already in Directus.',
+    '           Use after changing the scoped permission shape so no steward is',
+    '           left on a stale policy. Needs no TSV and is safe to re-run.',
     '',
     'Input TSV columns:',
     '  email<TAB>kind<TAB>slug',
@@ -270,8 +284,10 @@ function takeValue(args: string[], index: number, flag: string) {
 }
 
 export function parseArgs(argv: string[]): AssignOptions {
-  const args = argv[0] === 'assign' ? argv.slice(1) : argv;
+  const command: AssignCommand = argv[0] === 'sync' ? 'sync' : 'assign';
+  const args = argv[0] === 'assign' || argv[0] === 'sync' ? argv.slice(1) : argv;
   const options: AssignOptions = {
+    command,
     role: DEFAULT_STEWARD_ROLE,
     operatorRole: DEFAULT_OPERATOR_ROLE,
     dryRun: false,
@@ -310,8 +326,11 @@ export function parseArgs(argv: string[]): AssignOptions {
     throw new Error(`Unknown option: ${arg}\n\n${usage()}`);
   }
 
-  if (!options.input) {
+  if (options.command === 'assign' && !options.input) {
     throw new Error(`Missing --input.\n\n${usage()}`);
+  }
+  if (options.command === 'sync' && options.input) {
+    throw new Error(`sync reads assignments from Directus and does not accept --input.\n\n${usage()}`);
   }
 
   return options;
@@ -905,9 +924,59 @@ async function assignContentAccess(assignments: AssignmentInput[], options: Assi
   };
 }
 
+export async function readAssignmentsFromDirectus(client, collections): Promise<AssignmentInput[]> {
+  const sources = [
+    { collection: collections.chapterAssignments, kind: 'chapter' as const, ownerField: 'chapter_slug' },
+    { collection: collections.guildAssignments, kind: 'guild' as const, ownerField: 'guild_slug' },
+  ];
+  const emailByUserId = new Map<string, string>();
+  const assignments: AssignmentInput[] = [];
+
+  for (const { collection, kind, ownerField } of sources) {
+    const params = new URLSearchParams();
+    params.set('fields', `${ownerField},directus_user_id`);
+    params.set('limit', '-1');
+    const rows = await client.request(`/items/${encodeCollection(collection)}?${params.toString()}`);
+
+    for (const row of rows?.data ?? []) {
+      const userId = cleanString(row?.directus_user_id);
+      const slug = cleanString(row?.[ownerField]);
+      if (!userId || !slug) continue;
+
+      if (!emailByUserId.has(userId)) {
+        const user = await client.request(`/users/${encodeURIComponent(userId)}?fields=email`)
+          .catch(() => null);
+        const email = cleanEmail(user?.data?.email);
+        if (!email) {
+          console.warn(`Skipped ${kind}:${slug} because Directus user ${userId} has no readable email.`);
+          continue;
+        }
+        emailByUserId.set(userId, email);
+      }
+
+      assignments.push({ email: emailByUserId.get(userId)!, kind, slug });
+    }
+  }
+
+  return assignments;
+}
+
+async function readSyncAssignments(): Promise<AssignmentInput[]> {
+  const client = await createDirectusClient();
+  const collections = await resolveCollections(client);
+  return readAssignmentsFromDirectus(client, collections);
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  const assignments = parseAssignments(await readFile(options.input!, 'utf8'));
+  const assignments = options.command === 'sync'
+    ? await readSyncAssignments()
+    : parseAssignments(await readFile(options.input!, 'utf8'));
+
+  if (options.command === 'sync') {
+    console.log(`Syncing ${assignments.length} live Directus assignment(s).`);
+  }
+
   const result = await assignContentAccess(assignments, options);
 
   console.log(`Directus target: ${result.url}`);

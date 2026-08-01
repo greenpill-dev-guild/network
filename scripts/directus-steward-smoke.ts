@@ -238,6 +238,26 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
       },
     }));
 
+    // Scoped editors may edit their own chapter at any publication status,
+    // including published. Re-writing the current summary proves the write is
+    // permitted without changing live content.
+    const assignedChapter = await admin.request(
+      `/items/chapters/${encodePathSegment(options.chapter)}?fields=slug,summary,publication_status`
+    );
+    const assignedSummary = assignedChapter?.data?.summary ?? null;
+    await steward.request(`/items/chapters/${encodePathSegment(options.chapter)}`, {
+      method: 'PATCH',
+      body: { summary: assignedSummary },
+    });
+
+    await expectForbidden('unassigned chapter update', () => steward.request(
+      `/items/chapters/${encodePathSegment(options.unassignedChapter)}`,
+      {
+        method: 'PATCH',
+        body: { summary: 'Blocked Directus smoke chapter summary.' },
+      }
+    ));
+
     await steward.request('/items/chapter_initiatives', {
       method: 'POST',
       body: {
