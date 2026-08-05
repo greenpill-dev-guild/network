@@ -208,6 +208,73 @@ test('magic-link delivery keeps successful recipients sent when another recipien
   )), true);
 });
 
+test('expired access links are purged after magic links are rolled back or mail is unconfigured', async () => {
+  const cleanupText = 'select intake.cleanup_map_node_moderation_access_links() as count';
+  const rolledBack = createMagicDeliverySql();
+  await deliverQueuedMapNodeModerationNotifications(rolledBack.sql, {
+    now: new Date('2026-07-11T16:00:00.000Z'),
+    // The documented rollback: magic links off, Directus record-link alerts still live.
+    env: { ...magicEnv, MAP_NODE_MODERATION_MAGIC_LINK_ENABLED: 'false' },
+    fetchImpl: async () => Response.json({ id: 'email_1' }),
+  });
+  assert.equal(rolledBack.statements.some((statement) => statement.text === cleanupText), true);
+
+  const unconfigured = createMagicDeliverySql();
+  const result = await deliverQueuedMapNodeModerationNotifications(unconfigured.sql, {
+    now: new Date('2026-07-11T16:00:00.000Z'),
+    env: {},
+    fetchImpl: async () => Response.json({ id: 'email_1' }),
+  });
+  assert.deepEqual(result, { queued: 0, delivered: 0, failed: 0, skipped: 0 });
+  assert.equal(unconfigured.statements.some((statement) => statement.text === cleanupText), true);
+});
+
+test('a failing cleanup never blocks moderation delivery', async () => {
+  const { sql } = createMagicDeliverySql();
+  const guarded = async (strings, ...values) => {
+    const text = strings.join('?').replace(/\s+/g, ' ').trim();
+    if (text.includes('cleanup_map_node_moderation_access_links')) {
+      throw new Error('relation "intake.map_node_moderation_access_links" does not exist');
+    }
+    return sql(strings, ...values);
+  };
+  const calls = [];
+  const result = await deliverQueuedMapNodeModerationNotifications(guarded, {
+    now: new Date('2026-07-11T16:00:00.000Z'),
+    env: magicEnv,
+    fetchImpl: async (_url, options) => {
+      calls.push(options);
+      return Response.json({ id: `email_${calls.length}` });
+    },
+  });
+
+  assert.deepEqual(result, { queued: 1, delivered: 1, failed: 0, skipped: 0 });
+  assert.equal(calls.length, 2);
+});
+
+test('magic-link alerts still send when no Directus queue URL is configured', async () => {
+  const { sql, statements } = createMagicDeliverySql();
+  const calls = [];
+  const { MAP_NODE_MODERATION_DIRECTUS_URL: _omitted, ...envWithoutDirectus } = magicEnv;
+  const result = await deliverQueuedMapNodeModerationNotifications(sql, {
+    now: new Date('2026-07-11T16:00:00.000Z'),
+    env: envWithoutDirectus,
+    fetchImpl: async (_url, options) => {
+      calls.push(options);
+      return Response.json({ id: `email_${calls.length}` });
+    },
+  });
+
+  assert.deepEqual(result, { queued: 1, delivered: 1, failed: 0, skipped: 0 });
+  assert.equal(calls.length, 2);
+  const payloads = calls.map((call) => JSON.parse(String(call.body)));
+  assert.equal(payloads.every((payload) => payload.text.includes('/map/moderate#token=v1.')), true);
+  // A digest can only point at Directus, so none is queued without a queue URL.
+  assert.equal(statements.some((statement) => (
+    statement.text.includes('insert into intake.map_node_moderation_notifications')
+  )), false);
+});
+
 function createModerationAccessSql(row) {
   const statements = [];
   const sql: any = async (strings, ...values) => {
@@ -351,22 +418,41 @@ test('a magic-link decision updates the pending node, logs an opaque actor, and 
   );
 });
 
-test('a valid sibling link reports a Directus-first resolution without pending details', async () => {
+test('a valid sibling link reports a Directus-first resolution without a guessed review time', async () => {
   const row = pendingAccessRow();
   const token = createMapNodeModerationToken(row, linkSecret);
   row.submissionStatus = 'approved';
-  row.submissionUpdatedAt = new Date('2026-07-12T18:00:00.000Z');
   const { sql } = createModerationAccessSql(row);
   const session = await getMapNodeModerationSession(sql, token, {
     env: magicEnv,
     now: new Date('2026-07-12T16:00:00.000Z'),
   });
+  // Directus records no decision timestamp on the access link, and submission.updated_at
+  // moves with any later edit, so the review time is omitted rather than guessed.
+  assert.deepEqual(session, { state: 'resolved', decision: 'approved' });
+  assert.equal(Object.hasOwn(session, 'node'), false);
+  assert.equal(Object.hasOwn(session, 'reviewedAt'), false);
+});
+
+test('a link resolved through the moderation page reports its recorded review time', async () => {
+  const base = pendingAccessRow();
+  const token = createMapNodeModerationToken(base, linkSecret);
+  const row = {
+    ...base,
+    submissionStatus: 'rejected',
+    decision: 'rejected',
+    resolvedAt: new Date('2026-07-12T18:00:00.000Z'),
+  };
+  const { sql } = createModerationAccessSql(row);
+  const session = await getMapNodeModerationSession(sql, token, {
+    env: magicEnv,
+    now: new Date('2026-07-12T19:00:00.000Z'),
+  });
   assert.deepEqual(session, {
     state: 'resolved',
-    decision: 'approved',
+    decision: 'rejected',
     reviewedAt: '2026-07-12T18:00:00.000Z',
   });
-  assert.equal(Object.hasOwn(session, 'node'), false);
 });
 
 test('moderation input limits decline notes and never accepts an approval note', async () => {
@@ -452,4 +538,43 @@ test('agent moderation routes require an allowed browser origin and disable cach
   assert.equal(decision.status, 200);
   assert.equal(decision.headers.get('cache-control'), 'no-store, max-age=0');
   assert.equal(calls.length, 2);
+});
+
+test('moderation routes stop reading an oversized body instead of buffering it', async () => {
+  const calls = [];
+  const app = createAgentApp({
+    mapNodeRepository: {
+      async getModerationSession(token) {
+        calls.push(['session', token]);
+        return { state: 'resolved', decision: 'approved', reviewedAt: '2026-07-11T16:05:00.000Z' };
+      },
+    },
+  });
+
+  // No content-length and no end: a chunked request must be cut off at the cap, not drained.
+  let produced = 0;
+  let cancelled = false;
+  const endless = new ReadableStream({
+    pull(controller) {
+      produced += 1024;
+      controller.enqueue(new TextEncoder().encode('x'.repeat(1024)));
+    },
+    cancel() {
+      cancelled = true;
+    },
+  });
+
+  const oversized = await app.request(MAP_NODE_MODERATION_SESSION_ROUTE, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', origin: 'https://greenpill.network' },
+    body: endless,
+    duplex: 'half',
+  } as any);
+
+  assert.equal(oversized.status, 400);
+  assert.equal(calls.length, 0);
+  assert.equal(cancelled, true);
+  // Returning at all proves the endless body was never drained. The bound stays generous
+  // because the stream reads ahead past the chunk that crossed the 4 KiB cap.
+  assert.equal(produced <= 4096 * 2, true);
 });

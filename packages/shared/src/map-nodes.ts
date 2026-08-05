@@ -72,7 +72,9 @@ export type AuthenticatedMapNodeModerationSession =
   | {
       state: 'resolved';
       decision: MapNodeModerationDecision;
-      reviewedAt: string;
+      // Absent when the submission was resolved in Directus, which records no
+      // decision timestamp on the access link.
+      reviewedAt?: string;
     };
 
 export interface AuthenticatedMapNodeModerationResult {

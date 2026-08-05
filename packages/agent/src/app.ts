@@ -100,12 +100,52 @@ function isJsonRequest(context): boolean {
   return context.req.header('content-type')?.split(';', 1)[0]?.trim().toLowerCase() === 'application/json';
 }
 
+const MODERATION_BODY_MAX_BYTES = 4096;
+
+// Stops reading once the cap is crossed, so an unauthenticated request that omits
+// content-length or uses chunked transfer encoding cannot make us buffer an arbitrary body.
+// Returns null when the body is oversized.
+async function readCappedRequestBody(context): Promise<string | null> {
+  const body = context.req.raw?.body;
+  if (!body || typeof body.getReader !== 'function') {
+    const rawBody = await context.req.text();
+    return new TextEncoder().encode(rawBody).byteLength > MODERATION_BODY_MAX_BYTES ? null : rawBody;
+  }
+
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      total += value.byteLength;
+      if (total > MODERATION_BODY_MAX_BYTES) {
+        await reader.cancel().catch(() => {});
+        return null;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock?.();
+  }
+
+  const merged = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(merged);
+}
+
 async function readModerationJsonObject(context): Promise<UnknownRecord | null> {
   const declaredLength = Number(context.req.header('content-length'));
-  if (Number.isFinite(declaredLength) && declaredLength > 4096) return null;
+  if (Number.isFinite(declaredLength) && declaredLength > MODERATION_BODY_MAX_BYTES) return null;
 
-  const rawBody = await context.req.text();
-  if (new TextEncoder().encode(rawBody).byteLength > 4096) return null;
+  const rawBody = await readCappedRequestBody(context);
+  if (rawBody === null) return null;
   try {
     const value = JSON.parse(rawBody);
     return value && typeof value === 'object' && !Array.isArray(value)

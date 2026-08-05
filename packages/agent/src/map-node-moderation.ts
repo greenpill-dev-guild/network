@@ -43,7 +43,6 @@ interface ModerationAccessLinkRow {
   decision?: string;
   consumedAt?: string | Date;
   submissionStatus?: string;
-  submissionUpdatedAt?: string | Date;
   displayName?: string;
   placeName?: string;
   city?: string;
@@ -140,7 +139,10 @@ function magicLinkConfigured(env: Record<string, string | undefined> = process.e
 
 function canSendModerationEmail(env: Record<string, string | undefined> = process.env): boolean {
   const config = moderationConfig(env);
-  return Boolean(config.apiKey && config.from && config.recipients.length && config.queueUrl);
+  if (!config.apiKey || !config.from || !config.recipients.length) return false;
+  // The Directus queue URL is only needed by the fallback record-link alert and the
+  // daily digest; magic-link alerts carry their own review URL.
+  return Boolean(config.queueUrl) || magicLinkConfigured(env);
 }
 
 function moderationLinkExpiry(now = new Date()): Date {
@@ -810,13 +812,25 @@ export async function deliverQueuedMapNodeModerationNotifications(
     now?: Date;
   } = {}
 ): Promise<QueuedMapNodeModerationDeliveryResult> {
+  // Purge expired access links before any delivery gate. Rows hold recipient emails, so
+  // the documented rollback (MAP_NODE_MODERATION_MAGIC_LINK_ENABLED=false) and an
+  // unconfigured mail provider must both keep retiring them. A missing migration 020 or a
+  // transient failure here must never block notification delivery.
+  try {
+    await cleanupMapNodeModerationAccessLinks(sql);
+  } catch (error) {
+    console.warn('map_node_moderation_access_link_cleanup_failed', {
+      errorName: error instanceof Error ? error.name : 'UnknownError',
+    });
+  }
+
   if (!canSendModerationEmail(env)) {
     return { queued: 0, delivered: 0, failed: 0, skipped: 0 };
   }
 
-  if (magicLinkConfigured(env)) await cleanupMapNodeModerationAccessLinks(sql);
   await retireResolvedSubmissionNotifications(sql);
-  await queueDailyDigestIfDue(sql, now);
+  // The digest only ever links to the Directus queue, so skip queueing one we cannot address.
+  if (moderationConfig(env).queueUrl) await queueDailyDigestIfDue(sql, now);
 
   const numericLimit = Number(limit);
   const cappedLimit = Math.min(100, Math.max(1, Number.isFinite(numericLimit) ? Math.trunc(numericLimit) : 20));
@@ -945,7 +959,6 @@ async function selectModerationAccessLink(
           access.resolved_at as "resolvedAt",
           access.decision::text,
           submission.status::text as "submissionStatus",
-          submission.updated_at as "submissionUpdatedAt",
           submission.display_name as "displayName",
           submission.place_name as "placeName",
           submission.city,
@@ -974,7 +987,6 @@ async function selectModerationAccessLink(
           access.resolved_at as "resolvedAt",
           access.decision::text,
           submission.status::text as "submissionStatus",
-          submission.updated_at as "submissionUpdatedAt",
           submission.display_name as "displayName",
           submission.place_name as "placeName",
           submission.city,
@@ -996,12 +1008,13 @@ async function selectModerationAccessLink(
 function resolvedModerationSession(row: ModerationAccessLinkRow): AuthenticatedMapNodeModerationSession | null {
   const decision = cleanString(row.decision || row.submissionStatus);
   if (decision !== 'approved' && decision !== 'rejected') return null;
-  const reviewedAtValue = row.resolvedAt ?? row.submissionUpdatedAt;
-  const reviewedAt = reviewedAtValue instanceof Date
-    ? reviewedAtValue.toISOString()
-    : cleanString(reviewedAtValue);
-  if (!reviewedAt) return null;
-  return { state: 'resolved', decision, reviewedAt };
+  // Only the access-link row records a real decision time. When Directus resolved the
+  // submission first there is no transition timestamp, and submission.updated_at moves with
+  // any later field edit, so omit the timestamp rather than report an edit as the decision.
+  const reviewedAt = row.resolvedAt instanceof Date
+    ? row.resolvedAt.toISOString()
+    : cleanString(row.resolvedAt);
+  return reviewedAt ? { state: 'resolved', decision, reviewedAt } : { state: 'resolved', decision };
 }
 
 export async function getMapNodeModerationSession(

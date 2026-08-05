@@ -248,9 +248,16 @@ const pageDescription = 'Private email-authenticated moderation for a pending Gr
             }
           };
 
+          const resetDeclineNote = () => {
+            declineNote.value = '';
+            declineCount.textContent = '0 / 500';
+          };
+
           approveButton.addEventListener('click', () => approveDialog.showModal());
           declineButton.addEventListener('click', () => {
             actionFailure.hidden = true;
+            // Start every decline from a blank note so a cancelled draft is never resubmitted.
+            resetDeclineNote();
             declineDialog.showModal();
             declineNote.focus();
           });
@@ -356,7 +363,7 @@ const pageDescription = 'Private email-authenticated moderation for a pending Gr
         min-height: 30px;
         padding-inline: 12px;
         border: 1px solid var(--gp-border);
-        border-radius: 999px;
+        border-radius: var(--gp-radius-pill);
         color: var(--gp-primary);
         font-size: var(--gp-label-sm);
         font-weight: 700;
@@ -367,17 +374,13 @@ const pageDescription = 'Private email-authenticated moderation for a pending Gr
         flex: 1 1 180px;
         padding: 12px 22px;
         border: 1px solid var(--gp-border);
-        border-radius: 999px;
+        border-radius: var(--gp-radius-pill);
         background: transparent;
         color: var(--gp-fg);
         font-weight: 750;
         cursor: pointer;
       }
       .button:hover { background: var(--gp-card); }
-      .button:focus-visible, textarea:focus-visible {
-        outline: 3px solid var(--gp-secondary);
-        outline-offset: 3px;
-      }
       .button-primary { border-color: var(--gp-primary); background: var(--gp-primary); color: var(--gp-primary-fg); }
       .button-primary:hover { background: var(--gp-primary-hover); }
       .button-primary:active { background: var(--gp-lime-600); }
@@ -405,7 +408,7 @@ const pageDescription = 'Private email-authenticated moderation for a pending Gr
         padding: 14px;
         resize: vertical;
         border: 1px solid var(--gp-border);
-        border-radius: 12px;
+        border-radius: var(--gp-radius-md);
         background: var(--gp-green-950);
         color: var(--gp-fg);
       }
@@ -413,7 +416,6 @@ const pageDescription = 'Private email-authenticated moderation for a pending Gr
 
       @container (max-width: 560px) {
         main { width: min(100% - 20px, 760px); padding-block: 20px; }
-        .panel { border-radius: 18px; }
         dl { grid-template-columns: 1fr; }
         dt { padding-bottom: 0; border-bottom: 0; }
         dd { padding-top: 4px; }
@@ -426,7 +428,7 @@ const pageDescription = 'Private email-authenticated moderation for a pending Gr
       }
     </style>
   </head>
-  <body>
+  <body class="gp-root">
     <main>
       <p class="eyebrow">Greenpill Network · Private moderation</p>
 

@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { runInNewContext } from 'node:vm';
 
-const rootDir = resolve(new URL('..', import.meta.url).pathname);
+// fileURLToPath, not URL.pathname: pathname keeps percent-encoding and prefixes a leading
+// slash on Windows drive paths, so a checkout under a directory with a space resolves wrong.
+const rootDir = fileURLToPath(new URL('..', import.meta.url));
 const routeHtmlPath = join(rootDir, 'packages/website/dist/map/moderate/index.html');
 let routeHtml = '';
 
