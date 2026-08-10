@@ -203,17 +203,18 @@ chapter impact source bindings. These tables live in the Greenpill-owned
 Directus schema drift.
 
 Only `publication_status='published'` rows enter the agent's
-`/content/public-snapshot` route. Standard stewards should draft or request
-review; trusted publishers/operators approve and publish. The static website
+`/content/public-snapshot` route. Scope-assigned stewards edit their own
+chapter or guild records directly at any status, including `published`, and
+those edits do not wait for approval. Stewards without an assignment have
+read-only access to published rows; trusted publishers/operators handle
+everything else, including creating and archiving records. The static website
 then consumes the approved snapshot at build time.
 
-For published chapter profiles that must stay online during review, stewards
-should create `content.chapter_update_requests` rows instead of editing the
-published chapter row directly. Assigned stewards can draft and submit update
-requests for their chapter; trusted publishers review, apply accepted changes
-to the live chapter record, and publish the updated snapshot. This avoids
-moving a public chapter back to `draft` or `pending_review` just to collect
-edits.
+When a change should be reviewed or discussed before it goes live, assigned
+stewards can optionally create `content.chapter_update_requests` rows instead
+of editing the published chapter row directly. Trusted publishers review,
+apply accepted changes to the live chapter record, and publish the updated
+snapshot. Direct edits to an assigned chapter remain the default path.
 
 Directus Flows may send notifications or trigger rebuilds, but privacy
 projection logic stays in SQL, `@greenpill-network/shared/public-content`, and

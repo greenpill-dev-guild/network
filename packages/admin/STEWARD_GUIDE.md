@@ -18,8 +18,9 @@ or website build is published.
 Stewards can only edit their own assigned chapter or guild. Every other chapter
 stays read-only.
 
-Standard stewards cannot publish, edit unrelated chapters or guilds, view
-private intake/contact data, or change Directus configuration.
+Standard stewards cannot edit unrelated chapters or guilds, view private
+intake/contact data, or change Directus configuration. Publishing new records
+and archiving remain trusted publisher/operator actions.
 
 ## Steward Starter Checklist
 

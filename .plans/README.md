@@ -88,8 +88,8 @@ If later work needs those behaviors, extend the contract through a dedicated pla
 
 Use the fastest honest validation loop for the touched surface:
 
-- `node scripts/plan-hub.mjs validate` for hub and lane-state changes
-- `node --test scripts/plan-hub.test.mjs` when touching the helper or templates
+- `bun run plans:validate` for hub and lane-state changes
+- `bun run test:plans` when touching the helper or templates
 - `bun run build` only when the changed work touches the runtime website
 
 The helper validates required root files, templates, hub files, lane contracts, lane statuses and owners, taxonomy shape, and dependency references.
@@ -111,8 +111,8 @@ Every hub in `active/` or `backlog/` must include real content in `brief.md`, `s
 Use the repo helper for scaffolding and validation:
 
 ```sh
-node scripts/plan-hub.mjs scaffold my-feature --title "My Feature"
-node scripts/plan-hub.mjs validate
+bun run plans:scaffold my-feature --title "My Feature"
+bun run plans:validate
 ```
 
 ## Lifecycle

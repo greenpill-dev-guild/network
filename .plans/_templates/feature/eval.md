@@ -4,7 +4,7 @@
 
 - The hub files are complete and internally consistent
 - `status.json` matches the intended stage and lane state
-- Validation passes with `node scripts/plan-hub.mjs validate`
+- Validation passes with `bun run plans:validate`
 
 ## Proof
 
