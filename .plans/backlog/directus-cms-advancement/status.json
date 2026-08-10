@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "feature": {
+    "slug": "directus-cms-advancement",
+    "title": "Directus CMS Advancement",
+    "kind": "feature",
+    "stage": "backlog"
+  },
+  "workflow": {
+    "overall_status": "backlog",
+    "priority": "p1",
+    "created_at": "2026-08-10T22:49:27.561Z",
+    "updated_at": "2026-08-10T22:49:27.561Z"
+  },
+  "links": {
+    "brief": "brief.md",
+    "spec": "spec.md",
+    "plan": "plan.todo.md",
+    "eval": "eval.md"
+  },
+  "notes": [
+    "status.json is authoritative for hub state.",
+    ".plans carries planning truth; packages carry runtime contracts.",
+    "This repo uses manual plan updates plus validation in v1."
+  ],
+  "taxonomy": {
+    "initiative": "steward-experience",
+    "tracks": ["admin-cms", "content-pipeline", "permissions"],
+    "work_types": ["audit", "implementation"],
+    "surfaces": ["packages/admin", "packages/agent", "packages/shared", "scripts", "docs"],
+    "depends_on_features": ["content-private-node-scaffold"]
+  },
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "todo",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "content": {
+      "owner": "claude",
+      "status": "todo",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "platform": {
+      "owner": "codex",
+      "status": "todo",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "qa_pass_1": {
+      "owner": "claude",
+      "status": "blocked",
+      "depends_on": ["ui", "content", "platform"],
+      "handoff": "handoffs/README.md"
+    },
+    "qa_pass_2": {
+      "owner": "codex",
+      "status": "blocked",
+      "depends_on": ["qa_pass_1"],
+      "handoff": "handoffs/README.md"
+    }
+  },
+  "history": [
+    {
+      "timestamp": "2026-08-10T22:49:27.561Z",
+      "actor": "codex",
+      "lane": "system",
+      "status": "scaffolded",
+      "note": "Scaffolded feature hub in backlog"
+    },
+    {
+      "timestamp": "2026-08-10T23:05:00.000Z",
+      "actor": "claude",
+      "lane": "content",
+      "status": "in_progress",
+      "note": "Full CMS review completed; brief/spec/plan/eval written from reports/cms-review-2026-08-10.md; phase-0 doc corrections shipped alongside"
+    }
+  ]
+}
