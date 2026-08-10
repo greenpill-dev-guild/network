@@ -60,7 +60,7 @@ function approvedImageFor(chapter: typeof all[number]) {
   const media = chapter.data.media ?? {};
   const seo = chapter.data.seo ?? {};
   if (media.reviewStatus !== 'approved') return '';
-  return media.image || chapter.data.image || media.ogImage || seo.ogImage || '';
+  return chapter.data.image || media.image || media.ogImage || seo.ogImage || '';
 }
 
 const hero = chaptersIndex.hero ?? {};

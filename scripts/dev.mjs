@@ -28,6 +28,7 @@ const directusEnv = {
 
 const agentEnv = {
   ...dbEnv,
+  DIRECTUS_PUBLIC_URL: "http://localhost:3302",
   AGENT_HOST: "localhost",
   AGENT_PORT: "3303",
   PORT: "3303",

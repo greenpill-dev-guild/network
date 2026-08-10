@@ -41,6 +41,7 @@ const storyDetailPagePath = join(rootDir, 'packages/website/src/pages/stories/[s
 const storiesIndexPagePath = join(rootDir, 'packages/website/src/pages/stories/index.astro');
 const chapterPagePath = join(rootDir, 'packages/website/src/pages/chapters/[slug].astro');
 const chapterInitiativesMigrationPath = join(rootDir, 'packages/agent/migrations/010_chapter_initiatives_operational_content.sql');
+const chapterImageUploadsMigrationPath = join(rootDir, 'packages/agent/migrations/022_chapter_image_uploads.sql');
 const activeChapterEnrichmentSlugs = [
   'brasil',
   'c-te-d-ivoire',
@@ -311,10 +312,12 @@ test('chapter pages render approved media and steward avatar cards', async () =>
 
   assert.match(chapterPage, /import Avatar from/);
   assert.match(chapterPage, /media\.reviewStatus === 'approved'/);
+  assert.match(chapterPage, /data\.image \|\| media\.image/);
   assert.match(chapterPage, /gp-chapter-hero-media/);
   assert.match(chapterPage, /gp-chapter-steward-card/);
   assert.match(chapterIndexPage, /import AvatarStack from/);
   assert.match(chapterIndexPage, /approvedImageFor/);
+  assert.match(chapterIndexPage, /chapter\.data\.image \|\| media\.image/);
   assert.match(chapterIndexPage, /gp-chapters-card-stewards/);
 });
 
@@ -525,6 +528,17 @@ test('public operational chapter media requires approved provenance', () => {
       }],
     })
   );
+});
+
+test('chapter upload migration preserves legacy URLs and projects only a Directus file id', async () => {
+  const migration = await readFile(chapterImageUploadsMigrationPath, 'utf8');
+  assert.match(migration, /add column if not exists image_file uuid/);
+  assert.match(migration, /foreign key \(image_file\) references public\.directus_files\(id\)/);
+  assert.match(migration, /'imageFileId', image_file/);
+  assert.match(migration, /'image', image/);
+  assert.match(migration, /content\.safe_jsonb_boolean\(impact_sources, 'impactEnabled', false\)/);
+  assert.doesNotMatch(migration, /\bdata\s*\|\|/);
+  assert.doesNotMatch(migration, /STORAGE_TIGRIS_SECRET|DATABASE_URL/);
 });
 
 test('Directus chapter enrichment targets visible active chapters and public people only', async () => {

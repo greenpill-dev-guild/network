@@ -38,7 +38,7 @@ const stewardRecords = (data.stewards ?? []).filter((s: any) => s.name);
 const relatedSlugs: string[] = data.relatedChapterSlugs ?? [];
 const media = data.media ?? {};
 const hasApprovedMedia = media.reviewStatus === 'approved';
-const chapterImage = hasApprovedMedia ? (media.image || data.image || '') : '';
+const chapterImage = hasApprovedMedia ? (data.image || media.image || '') : '';
 const chapterImageAlt = media.imageAlt || `${data.name} chapter activity`;
 const chapterImageSource = hasApprovedMedia ? media.imageSourceUrl || '' : '';
 const chapterOgImage = hasApprovedMedia

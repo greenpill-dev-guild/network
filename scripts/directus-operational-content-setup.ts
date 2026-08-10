@@ -33,6 +33,69 @@ export const DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS = Object.freeze([
   'chapter_update_request_proof_signals',
 ]);
 
+export const DIRECTUS_CHAPTER_IMAGE_FOLDER_ID = 'bd3c5b2d-8b70-4ee1-b8a8-bb78c36c928d';
+export const DIRECTUS_CHAPTER_IMAGE_FOLDER_NAME = 'Chapter Images';
+export const DIRECTUS_PUBLIC_POLICY_NAME = '$t:public_label';
+export const DIRECTUS_PUBLISHED_CHAPTER_IMAGE_ALIAS = 'published_chapter_image';
+
+const DIRECTUS_CHAPTER_IMAGE_MIME_TYPES = Object.freeze([
+  'image/avif',
+  'image/gif',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+]);
+
+const DIRECTUS_FILE_READ_FIELDS = Object.freeze([
+  'id',
+  'storage',
+  'filename_disk',
+  'filename_download',
+  'title',
+  'type',
+  'folder',
+  'uploaded_by',
+  'uploaded_on',
+  'modified_by',
+  'modified_on',
+  'charset',
+  'filesize',
+  'width',
+  'height',
+  'duration',
+  'embed',
+  'description',
+  'location',
+  'tags',
+  'metadata',
+  'focal_point_x',
+  'focal_point_y',
+]);
+
+const DIRECTUS_PUBLIC_FILE_READ_FIELDS = Object.freeze([
+  'id',
+  'filename_download',
+  'title',
+  'type',
+  'folder',
+  'filesize',
+  'width',
+  'height',
+  'description',
+]);
+
+const DIRECTUS_FILE_CREATE_FIELDS = Object.freeze([
+  'storage',
+  'filename_download',
+  'title',
+  'type',
+  'folder',
+  'description',
+  'tags',
+  'focal_point_x',
+  'focal_point_y',
+]);
+
 const WORKFLOW_FIELDS = Object.freeze([
   'publication_status',
   'published_at',
@@ -75,6 +138,7 @@ const OPERATIONAL_COLLECTION_FIELDS = Object.freeze({
     'intro_quote',
     'intro_quote_attribution',
     'image',
+    'image_file',
     'founded',
     'latitude',
     'longitude',
@@ -646,6 +710,111 @@ function buildStewardUserContextPermissions() {
   ];
 }
 
+function buildChapterImagePermissions() {
+  const folderFilter = {
+    folder: {
+      _eq: DIRECTUS_CHAPTER_IMAGE_FOLDER_ID,
+    },
+  };
+  const imageValidation = {
+    _and: [
+      folderFilter,
+      {
+        type: {
+          _in: DIRECTUS_CHAPTER_IMAGE_MIME_TYPES,
+        },
+      },
+    ],
+  };
+  const publishedChapterImageFilter = {
+    _and: [
+      folderFilter,
+      {
+        [DIRECTUS_PUBLISHED_CHAPTER_IMAGE_ALIAS]: {
+          _some: {
+            publication_status: {
+              _eq: 'published',
+            },
+          },
+        },
+      },
+    ],
+  };
+
+  return [
+    {
+      role: 'Greenpill Steward Editor',
+      policy: 'Greenpill Steward Editor',
+      collection: 'directus_folders',
+      action: 'read',
+      permissions: { id: { _eq: DIRECTUS_CHAPTER_IMAGE_FOLDER_ID } },
+      validation: null,
+      presets: null,
+      fields: ['id', 'name', 'parent'],
+    },
+    {
+      role: 'Greenpill Steward Editor',
+      policy: 'Greenpill Steward Editor',
+      collection: 'directus_files',
+      action: 'read',
+      permissions: folderFilter,
+      validation: null,
+      presets: null,
+      fields: DIRECTUS_FILE_READ_FIELDS,
+    },
+    {
+      role: 'Greenpill Steward Editor',
+      policy: 'Greenpill Steward Editor',
+      collection: 'directus_files',
+      action: 'create',
+      permissions: folderFilter,
+      validation: imageValidation,
+      presets: { folder: DIRECTUS_CHAPTER_IMAGE_FOLDER_ID },
+      fields: DIRECTUS_FILE_CREATE_FIELDS,
+    },
+    {
+      role: 'Greenpill Trusted Publisher',
+      policy: 'Greenpill Trusted Publisher',
+      collection: 'directus_folders',
+      action: 'read',
+      permissions: { id: { _eq: DIRECTUS_CHAPTER_IMAGE_FOLDER_ID } },
+      validation: null,
+      presets: null,
+      fields: ['id', 'name', 'parent'],
+    },
+    {
+      role: 'Greenpill Trusted Publisher',
+      policy: 'Greenpill Trusted Publisher',
+      collection: 'directus_files',
+      action: 'read',
+      permissions: folderFilter,
+      validation: null,
+      presets: null,
+      fields: DIRECTUS_FILE_READ_FIELDS,
+    },
+    {
+      role: 'Greenpill Trusted Publisher',
+      policy: 'Greenpill Trusted Publisher',
+      collection: 'directus_files',
+      action: 'create',
+      permissions: folderFilter,
+      validation: imageValidation,
+      presets: { folder: DIRECTUS_CHAPTER_IMAGE_FOLDER_ID },
+      fields: DIRECTUS_FILE_CREATE_FIELDS,
+    },
+    {
+      role: 'Public',
+      policy: DIRECTUS_PUBLIC_POLICY_NAME,
+      collection: 'directus_files',
+      action: 'read',
+      permissions: publishedChapterImageFilter,
+      validation: null,
+      presets: null,
+      fields: DIRECTUS_PUBLIC_FILE_READ_FIELDS,
+    },
+  ];
+}
+
 function buildIntakeModerationPermissions(collectionNames = []) {
   const collections = new Map(collectionNames.map((collection) => [baseCollectionName(collection), collection]));
   const submission = collections.get('map_node_submissions');
@@ -1001,6 +1170,7 @@ export function buildDirectusOperationalPermissionPlan(
     ],
     permissions: [
       ...permissions,
+      ...buildChapterImagePermissions(),
       ...buildIntakeModerationPermissions(intakeCollectionNames),
       ...buildStewardAccessAssignmentPermissions(stewardAccessCollectionNames),
       ...buildStewardWorkflowPermissions(stewardWorkflowCollectionNames),
@@ -1113,6 +1283,40 @@ async function upsertNamed(client, resource, payload) {
   const created = await client.request(`/${resource}`, {
     method: 'POST',
     body: payload,
+  });
+  return created?.data;
+}
+
+async function getNamed(client, resource, name) {
+  const existing = await client.request(`/${resource}?${filterByName(name)}`);
+  return existing?.data?.[0] ?? null;
+}
+
+async function ensureChapterImageFolder(client) {
+  const params = new URLSearchParams();
+  params.set('filter[id][_eq]', DIRECTUS_CHAPTER_IMAGE_FOLDER_ID);
+  params.set('limit', '1');
+  const existing = await client.request(`/folders?${params.toString()}`);
+  const folder = existing?.data?.[0];
+
+  if (folder?.id) {
+    if (folder.name !== DIRECTUS_CHAPTER_IMAGE_FOLDER_NAME) {
+      const updated = await client.request(`/folders/${folder.id}`, {
+        method: 'PATCH',
+        body: { name: DIRECTUS_CHAPTER_IMAGE_FOLDER_NAME },
+      });
+      return updated?.data ?? folder;
+    }
+    return folder;
+  }
+
+  const created = await client.request('/folders', {
+    method: 'POST',
+    body: {
+      id: DIRECTUS_CHAPTER_IMAGE_FOLDER_ID,
+      name: DIRECTUS_CHAPTER_IMAGE_FOLDER_NAME,
+      parent: null,
+    },
   });
   return created?.data;
 }
@@ -1499,6 +1703,20 @@ async function ensureStewardAccessRelations(client, collectionNames) {
       console.warn('Skipped Directus projects.guild_slug relation metadata until the database foreign key exists.');
     }
   }
+
+  if (chapters && await fieldExists(client, chapters, 'image_file')) {
+    await ensureRelation(client, {
+      collection_many: chapters,
+      field_many: 'image_file',
+      collection_one: 'directus_files',
+      field_one: DIRECTUS_PUBLISHED_CHAPTER_IMAGE_ALIAS,
+    });
+    await ensureAliasField(client, 'directus_files', DIRECTUS_PUBLISHED_CHAPTER_IMAGE_ALIAS, {
+      hidden: true,
+      readonly: true,
+      note: 'Published chapters currently using this file as their public chapter image.',
+    });
+  }
 }
 
 export async function applyDirectusOperationalContentAccess(options: {
@@ -1506,6 +1724,7 @@ export async function applyDirectusOperationalContentAccess(options: {
   [key: string]: any;
 } = {}) {
   const client = options.client ?? await createDirectusClient(options);
+  await ensureChapterImageFolder(client);
   const available = await getAvailableCollectionNames(client);
   const operationalCollections = resolveOperationalCollectionNames(available);
   const intakeCollections = resolveIntakeCollectionNames(available);
@@ -1532,6 +1751,11 @@ export async function applyDirectusOperationalContentAccess(options: {
   for (const policy of plan.policies) {
     policies.set(policy.name, await upsertNamed(client, 'policies', policy));
   }
+  const publicPolicy = await getNamed(client, 'policies', DIRECTUS_PUBLIC_POLICY_NAME);
+  if (!publicPolicy?.id) {
+    throw new Error('Directus public policy was not found.');
+  }
+  policies.set(DIRECTUS_PUBLIC_POLICY_NAME, publicPolicy);
 
   for (const [name, role] of roles) {
     const policy = policies.get(name);
@@ -1546,6 +1770,8 @@ export async function applyDirectusOperationalContentAccess(options: {
     ...intakeCollections,
     ...stewardAccessCollections,
     ...stewardWorkflowCollections,
+    'directus_files',
+    'directus_folders',
   ]);
 
   for (const permission of plan.permissions) {

@@ -31,6 +31,8 @@ test('Directus Studio metadata plan hides assignment collections and labels cont
     collection.collection === 'map_node_moderation_access_links'
   ));
   const chapterSummary = plan.fields.find((field) => field.collection === 'chapters' && field.field === 'summary');
+  const chapterImage = plan.fields.find((field) => field.collection === 'chapters' && field.field === 'image_file');
+  const legacyChapterImage = plan.fields.find((field) => field.collection === 'chapters' && field.field === 'image');
   const initiativeChapter = plan.fields.find((field) => (
     field.collection === 'chapter_initiatives' &&
     field.field === 'chapter_slug'
@@ -90,6 +92,10 @@ test('Directus Studio metadata plan hides assignment collections and labels cont
   assert.equal(mapNodeNotifications?.meta.icon, 'mark_email_unread');
   assert.equal(mapNodeAccessLinks?.meta.hidden, true);
   assert.equal((chapterSummary?.meta as any).interface, 'input-multiline');
+  assert.equal((chapterImage?.meta as any).interface, 'file-image');
+  assert.deepEqual((chapterImage?.meta as any).special, ['file']);
+  assert.equal((legacyChapterImage?.meta as any).hidden, true);
+  assert.equal((legacyChapterImage?.meta as any).readonly, true);
   assert.equal((initiativeChapter?.meta as any).interface, 'select-dropdown-m2o');
   assert.deepEqual((initiativeChapter?.meta as any).special, ['m2o']);
   assert.equal((updateRequestChapter?.meta as any).required, true);

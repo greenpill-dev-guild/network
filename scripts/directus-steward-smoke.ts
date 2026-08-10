@@ -3,7 +3,10 @@
 import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { ensureScopedContentPolicy } from './directus-content-access.ts';
-import { createDirectusClient } from './directus-operational-content-setup.ts';
+import {
+  DIRECTUS_CHAPTER_IMAGE_FOLDER_ID,
+  createDirectusClient,
+} from './directus-operational-content-setup.ts';
 
 type SmokeOptions = {
   chapter: string;
@@ -11,6 +14,7 @@ type SmokeOptions = {
   guild: string;
   unassignedGuild: string;
   emailDomain: string;
+  agentUrl: string;
   keep: boolean;
 };
 
@@ -20,6 +24,7 @@ const DEFAULT_OPTIONS: SmokeOptions = Object.freeze({
   guild: 'dev-guild',
   unassignedGuild: 'writers-guild',
   emailDomain: 'greenpill.network',
+  agentUrl: 'http://localhost:3303',
   keep: false,
 });
 
@@ -36,6 +41,7 @@ function usage() {
     `  --guild <slug>                Assigned guild. Defaults to "${DEFAULT_OPTIONS.guild}".`,
     `  --unassigned-guild <slug>     Guild that should be forbidden. Defaults to "${DEFAULT_OPTIONS.unassignedGuild}".`,
     `  --email-domain <domain>       Temporary email domain. Defaults to "${DEFAULT_OPTIONS.emailDomain}".`,
+    `  --agent-url <url>             Agent snapshot base URL. Defaults to "${DEFAULT_OPTIONS.agentUrl}".`,
     '  --keep                       Leave temporary records in place for manual inspection.',
   ].join('\n');
 }
@@ -79,6 +85,11 @@ export function parseArgs(argv: string[]): SmokeOptions {
     }
     if (arg === '--email-domain') {
       options.emailDomain = takeValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+    if (arg === '--agent-url') {
+      options.agentUrl = takeValue(argv, index, arg).replace(/\/+$/, '');
       index += 1;
       continue;
     }
@@ -157,6 +168,32 @@ async function deleteIfPresent(client, path: string) {
   });
 }
 
+const ONE_PIXEL_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+  'base64'
+);
+
+async function uploadChapterImage(url: string, token: string, fileName: string) {
+  const body = new FormData();
+  body.append('folder', DIRECTUS_CHAPTER_IMAGE_FOLDER_ID);
+  body.append('title', 'Directus steward upload smoke');
+  body.append('file', new File([ONE_PIXEL_PNG], fileName, { type: 'image/png' }));
+
+  const response = await fetch(`${url}/files`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${token}` },
+    body,
+  });
+  const responseText = await response.text();
+  if (!response.ok) {
+    throw new Error(`chapter image upload failed with ${response.status}: ${responseText}`);
+  }
+  const payload = responseText ? JSON.parse(responseText) : null;
+  const fileId = payload?.data?.id;
+  if (!fileId) throw new Error('Directus did not return an uploaded chapter image id.');
+  return fileId as string;
+}
+
 export async function runDirectusStewardSmoke(options: SmokeOptions) {
   const admin = await createDirectusClient();
   const roleId = await getRoleId(admin, 'Greenpill Steward Editor');
@@ -167,6 +204,9 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
   const projectSlug = `directus-smoke-project-${id}`;
   let updateRequestId: string | null = null;
   let unassignedUpdateRequestId: string | null = null;
+  let uploadedFileId: string | null = null;
+  let originalImageFile: string | null = null;
+  let chapterImageChanged = false;
   const cleanup = {
     userId: null,
     chapterAssignmentId: null,
@@ -242,13 +282,51 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
     // including published. Re-writing the current summary proves the write is
     // permitted without changing live content.
     const assignedChapter = await admin.request(
-      `/items/chapters/${encodePathSegment(options.chapter)}?fields=slug,summary,publication_status`
+      `/items/chapters/${encodePathSegment(options.chapter)}?fields=slug,summary,image_file,publication_status`
     );
     const assignedSummary = assignedChapter?.data?.summary ?? null;
+    originalImageFile = assignedChapter?.data?.image_file ?? null;
     await steward.request(`/items/chapters/${encodePathSegment(options.chapter)}`, {
       method: 'PATCH',
       body: { summary: assignedSummary },
     });
+
+    uploadedFileId = await uploadChapterImage(
+      admin.url,
+      token,
+      `directus-steward-smoke-${id}.png`
+    );
+    const privateUnattachedAsset = await fetch(`${admin.url}/assets/${encodePathSegment(uploadedFileId)}`);
+    if (![403, 404].includes(privateUnattachedAsset.status)) {
+      throw new Error(`unattached chapter image was unexpectedly public with ${privateUnattachedAsset.status}`);
+    }
+    chapterImageChanged = true;
+    await steward.request(`/items/chapters/${encodePathSegment(options.chapter)}`, {
+      method: 'PATCH',
+      body: { image_file: uploadedFileId },
+    });
+
+    const publicAsset = await fetch(`${admin.url}/assets/${encodePathSegment(uploadedFileId)}`);
+    if (!publicAsset.ok || !String(publicAsset.headers.get('content-type')).startsWith('image/png')) {
+      throw new Error(
+        `public chapter image asset failed with ${publicAsset.status} and ${publicAsset.headers.get('content-type')}`
+      );
+    }
+    await publicAsset.arrayBuffer();
+
+    const snapshotResponse = await fetch(`${options.agentUrl}/content/public-snapshot`);
+    if (!snapshotResponse.ok) {
+      throw new Error(`agent chapter image snapshot failed with ${snapshotResponse.status}`);
+    }
+    const snapshot = await snapshotResponse.json();
+    const snapshotChapter = snapshot?.chapters?.find((chapter) => chapter?.slug === options.chapter);
+    const snapshotImagePath = typeof snapshotChapter?.image === 'string'
+      ? new URL(snapshotChapter.image).pathname
+      : '';
+    const expectedImagePath = `/assets/${encodePathSegment(uploadedFileId)}`;
+    if (snapshotImagePath !== expectedImagePath || Object.hasOwn(snapshotChapter ?? {}, 'imageFileId')) {
+      throw new Error('agent snapshot did not project the uploaded chapter image as a public Directus asset URL.');
+    }
 
     await expectForbidden('unassigned chapter update', () => steward.request(
       `/items/chapters/${encodePathSegment(options.unassignedChapter)}`,
@@ -400,9 +478,21 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
       initiativeSlug,
       projectSlug,
       updateRequestId,
+      uploadedFileId,
+      agentUrl: options.agentUrl,
     };
   } finally {
+    if (chapterImageChanged) {
+      await admin.request(`/items/chapters/${encodePathSegment(options.chapter)}`, {
+        method: 'PATCH',
+        body: { image_file: originalImageFile },
+      });
+      chapterImageChanged = false;
+    }
     if (!options.keep) {
+      if (uploadedFileId) {
+        await deleteIfPresent(admin, `/files/${encodePathSegment(uploadedFileId)}`);
+      }
       if (unassignedUpdateRequestId) {
         await deleteIfPresent(admin, `/items/chapter_update_requests/${encodePathSegment(unassignedUpdateRequestId)}`);
       }
@@ -434,6 +524,8 @@ async function main() {
   console.log(`Temporary initiative: ${result.initiativeSlug}`);
   console.log(`Temporary project: ${result.projectSlug}`);
   console.log(`Temporary chapter update request: ${result.updateRequestId}`);
+  console.log(`Uploaded chapter image: ${result.uploadedFileId}`);
+  console.log(`Agent snapshot: ${result.agentUrl}/content/public-snapshot`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {

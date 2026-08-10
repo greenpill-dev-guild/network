@@ -41,6 +41,7 @@ import {
   subscribeToNewsletter,
 } from '@greenpill-network/agent/newsletter';
 import {
+  buildDirectusAssetUrl,
   PUBLIC_OPERATIONAL_CONTENT_ROUTE,
 } from '@greenpill-network/agent/public-content';
 import {
@@ -114,6 +115,17 @@ test('agent package exposes stable public route contracts', () => {
     buildPublicChapterImpactUrl('nigeria', 'https://agent.greenpill.network/'),
     'https://agent.greenpill.network/impact/chapters/nigeria'
   );
+});
+
+test('Directus chapter file ids become canonical public asset URLs', () => {
+  assert.equal(
+    buildDirectusAssetUrl(
+      'bd3c5b2d-8b70-4ee1-b8a8-bb78c36c928d',
+      'http://localhost:3302/'
+    ),
+    'http://localhost:3302/assets/bd3c5b2d-8b70-4ee1-b8a8-bb78c36c928d'
+  );
+  assert.equal(buildDirectusAssetUrl('not-a-file-id'), '');
 });
 
 test('agent app registers non-health public routes through exported constants', async () => {

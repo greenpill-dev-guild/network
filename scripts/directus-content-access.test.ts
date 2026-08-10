@@ -154,6 +154,33 @@ test('operational permission plan keeps base steward role read-only for operatio
   assert.equal(stewardPermissions.some((permission) => permission.collection === 'chapters' && permission.action === 'create'), false);
   assert.equal(stewardPermissions.some((permission) => permission.collection === 'chapters' && permission.action === 'update'), false);
   assert.equal(stewardPermissions.some((permission) => permission.collection === 'chapter_initiatives' && permission.action === 'create'), false);
+  const stewardFileCreate = stewardPermissions.find(
+    (permission) => permission.collection === 'directus_files' && permission.action === 'create'
+  );
+  const publicFileRead = plan.permissions.find(
+    (permission) => permission.policy === '$t:public_label' &&
+      permission.collection === 'directus_files' &&
+      permission.action === 'read'
+  );
+  assert.deepEqual(stewardFileCreate?.validation, {
+    _and: [
+      { folder: { _eq: 'bd3c5b2d-8b70-4ee1-b8a8-bb78c36c928d' } },
+      { type: { _in: ['image/avif', 'image/gif', 'image/jpeg', 'image/png', 'image/webp'] } },
+    ],
+  });
+  assert.deepEqual(publicFileRead?.permissions, {
+    _and: [
+      { folder: { _eq: 'bd3c5b2d-8b70-4ee1-b8a8-bb78c36c928d' } },
+      {
+        published_chapter_image: {
+          _some: {
+            publication_status: { _eq: 'published' },
+          },
+        },
+      },
+    ],
+  });
+  assert.equal(publicFileRead?.fields.includes('uploaded_by'), false);
 
   const currentUserContext = stewardPermissions.find(
     (permission) => permission.collection === 'directus_users' && permission.action === 'read'
@@ -258,6 +285,7 @@ test('scoped chapter and guild policies use static parent filters', () => {
     ],
   });
   assert.equal(chapterUpdate?.fields.includes('slug'), false);
+  assert.equal(chapterUpdate?.fields.includes('image_file'), true);
   assert.deepEqual(chapterUpdate?.validation, {
     publication_status: {
       _in: ['draft', 'pending_review', 'published'],

@@ -3,6 +3,7 @@
 import { pathToFileURL } from 'node:url';
 import {
   DIRECTUS_OPERATIONAL_COLLECTIONS,
+  DIRECTUS_CHAPTER_IMAGE_FOLDER_ID,
   DIRECTUS_STEWARD_ACCESS_COLLECTIONS,
   DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS,
   createDirectusClient,
@@ -252,6 +253,15 @@ const url = (sort, note = null, width = 'half') => fieldMeta({
   interface: 'input',
   options: { iconRight: 'link' },
 });
+const imageFile = (sort, note = null, width = 'half') => fieldMeta({
+  sort,
+  note,
+  width,
+  interface: 'file-image',
+  options: { folder: DIRECTUS_CHAPTER_IMAGE_FOLDER_ID },
+  display: 'image',
+  special: ['file'],
+});
 const relation = (sort, note, template = '{{ name }}', required = false) => fieldMeta({
   sort,
   note,
@@ -327,7 +337,14 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
     summary: textarea(7, 'Short public summary for cards and chapter listings.'),
     intro_quote: textarea(8, 'Optional quote shown on the chapter detail page.'),
     intro_quote_attribution: input(9, 'Attribution for the intro quote.', 'half'),
-    image: url(10, 'Primary public image URL.', 'half'),
+    image_file: imageFile(10, 'Upload the primary public chapter image. JPEG, PNG, WebP, GIF, and AVIF are supported.', 'full'),
+    image: fieldMeta({
+      sort: 1000,
+      note: 'Legacy external image URL retained for existing records. Use the chapter image upload instead.',
+      interface: 'input',
+      hidden: true,
+      readonly: true,
+    }),
     founded: input(11, 'Founding date or year as public text.', 'half'),
     latitude: number(12, 'Map latitude.', 'half'),
     longitude: number(13, 'Map longitude.', 'half'),

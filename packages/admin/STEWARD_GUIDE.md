@@ -29,7 +29,8 @@ Before the steward sync, have these public-safe details ready:
 - Primary public link.
 - Public website, social, program, event, or contact links.
 - Proof signals with public sources when available.
-- Public image URL, alt text, and image credit if proposing a new image.
+- A public-safe chapter image file, alt text, and image credit if proposing a
+  new image. Use JPEG, PNG, WebP, GIF, or AVIF, up to 25 MB.
 - Local initiatives, programs, events, campaigns, cleanups, education series, or
   Water Cup-style work.
 
@@ -66,7 +67,7 @@ with your chapter name and the email address used for your invite.
    - `region`
    - `entity_status`
    - `summary`
-   - `image`
+   - `image_file`
    - `latitude`
    - `longitude`
    - `primary_link`
@@ -74,6 +75,22 @@ with your chapter name and the email address used for your invite.
 5. Edit the fields directly and save. Your chapter row is editable whether it is
    a draft or already published.
 6. Leave `publication_status` on `published` to keep the profile live.
+
+## Uploading A Chapter Image
+
+1. Open your assigned chapter in `Chapters`.
+2. Find `Chapter image` and choose `Upload File From Device`. You can also pick
+   an image already in the `Chapter Images` library.
+3. Select a JPEG, PNG, WebP, GIF, or AVIF file no larger than 25 MB.
+4. Confirm the image is safe to publish. Do not upload private screenshots,
+   contact details, private chat content, or location-sensitive metadata.
+5. Keep the public alt text and credit in the chapter's `media` details current.
+6. Save the chapter.
+
+The original upload bucket remains private. New uploads stay private until they
+are attached to a published chapter. Published images are then delivered
+through Directus' permission-checked `/assets/<file-id>` route and reach the
+public website on the next snapshot refresh and site build.
 
 ## Updating A Published Chapter
 

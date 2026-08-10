@@ -9,7 +9,13 @@ test('parseArgs keeps Directus steward smoke defaults explicit', () => {
   assert.equal(options.unassignedChapter, 'nigeria');
   assert.equal(options.guild, 'dev-guild');
   assert.equal(options.unassignedGuild, 'writers-guild');
+  assert.equal(options.agentUrl, 'http://localhost:3303');
   assert.equal(options.keep, false);
+});
+
+test('parseArgs accepts an explicit production agent URL', () => {
+  const options = parseArgs(['--agent-url', 'https://agent.greenpill.network/']);
+  assert.equal(options.agentUrl, 'https://agent.greenpill.network');
 });
 
 test('parseArgs rejects identical assigned and forbidden scopes', () => {

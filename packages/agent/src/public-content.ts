@@ -7,6 +7,7 @@ import { createDatabaseClient } from './db.js';
 import { AgentDataError } from './map-nodes.js';
 
 export const PUBLIC_OPERATIONAL_CONTENT_ROUTE = '/content/public-snapshot';
+export const DEFAULT_DIRECTUS_PUBLIC_URL = 'https://admin.greenpill.network';
 
 type SqlLike = any;
 type UnknownRecord = Record<string, any>;
@@ -38,9 +39,30 @@ function rowsToRecords(rows: UnknownRecord[]): UnknownRecord[] {
   }));
 }
 
+function directusPublicUrlFromEnv(env = process.env): string {
+  return String(env.DIRECTUS_PUBLIC_URL || DEFAULT_DIRECTUS_PUBLIC_URL).trim().replace(/\/+$/, '');
+}
+
+export function buildDirectusAssetUrl(fileId: unknown, directusPublicUrl = directusPublicUrlFromEnv()): string {
+  const normalizedFileId = typeof fileId === 'string' ? fileId.trim() : '';
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(normalizedFileId)) {
+    return '';
+  }
+  const baseUrl = String(directusPublicUrl || DEFAULT_DIRECTUS_PUBLIC_URL).trim().replace(/\/+$/, '');
+  return `${baseUrl}/assets/${encodeURIComponent(normalizedFileId)}`;
+}
+
+function toPublicChapterRecord(row: UnknownRecord, directusPublicUrl: string): UnknownRecord {
+  const record = rowsToRecords([row])[0] ?? {};
+  const assetUrl = buildDirectusAssetUrl(record.imageFileId, directusPublicUrl);
+  const { imageFileId: _imageFileId, ...publicRecord } = record;
+  return assetUrl ? { ...publicRecord, image: assetUrl } : publicRecord;
+}
+
 export async function getPublicOperationalContentSnapshot(
   sql: SqlLike,
-  now: Date | string = new Date()
+  now: Date | string = new Date(),
+  directusPublicUrl = directusPublicUrlFromEnv()
 ): Promise<PublicOperationalContentSnapshot> {
   const themes = await sql`
     select slug, data
@@ -77,19 +99,23 @@ export async function getPublicOperationalContentSnapshot(
     generatedAt: now,
     themes: rowsToRecords(themes),
     people: rowsToRecords(people),
-    chapters: rowsToRecords(chapters),
+    chapters: chapters.map((chapter) => toPublicChapterRecord(chapter, directusPublicUrl)),
     chapterInitiatives: rowsToRecords(chapterInitiatives),
     guilds: rowsToRecords(guilds),
     projects: rowsToRecords(projects),
   }));
 }
 
-export function createPublicContentRepository({ createSql = createDatabaseClient }: {
+export function createPublicContentRepository({
+  createSql = createDatabaseClient,
+  directusPublicUrl = directusPublicUrlFromEnv(),
+}: {
   createSql?: (options?: { max?: number }) => SqlLike | null;
+  directusPublicUrl?: string;
 } = {}): PublicContentRepository {
   return {
     getSnapshot(now = new Date()) {
-      return withSql(createSql, (sql) => getPublicOperationalContentSnapshot(sql, now));
+      return withSql(createSql, (sql) => getPublicOperationalContentSnapshot(sql, now, directusPublicUrl));
     },
   };
 }
