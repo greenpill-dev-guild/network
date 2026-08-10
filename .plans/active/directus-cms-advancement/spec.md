@@ -84,20 +84,30 @@ pinned version already ships.
   (retained minimal per-scope create policy, agent-side check, or accept +
   publisher review).
 
+## Decisions (Afo, 2026-08-10)
+
+- **Update requests**: build the SQL apply function mirroring the map-node
+  pattern (`007_...sql:143-230`) - publisher sets `request_status='accepted'`
+  and a trigger applies proposed fields to `content.chapters` with
+  optimistic-concurrency checks. Native content versioning is NOT pursued in
+  this push.
+- **Magic-link moderation**: enable in production following the documented
+  release order (verify `/map/moderate`, migration 020, fresh 32+ byte
+  secret as Fly secret, flip flag, authorized real-recipient smoke).
+- **Multi-chapter stewards**: keep 1:1 (retain migration-018 unique
+  constraint and current map projection). Dynamic permissions make lifting
+  this later a small change.
+- **MCP**: enable with a dedicated scoped machine user (minimal
+  operational-content policy, `mcp_allow_deletes` off) and update
+  `docs/agentic-mcp-tooling-runbook.md` in the same change.
+- **AI assistant**: defer - provider keys stay unset; revisit with a
+  governance note when there is a concrete use case.
+- **`content.people`**: defer - keep as published-read reference data; the
+  dual source of truth stays documented debt.
+
 ## Open Questions
 
-- Multi-chapter stewards: drop the `unique (directus_user_id)` constraint
-  (migration 018) and update the agent steward projection, or keep
-  one-chapter-per-steward?
-- Update requests: build the SQL apply function, or pilot native Directus
-  content versioning (global draft versions, 11.16+) and retire the bespoke
-  request tables? What does draft preview require from the website side?
-- Magic-link moderation is built + tested but disabled in prod
-  (`packages/agent/fly.toml:18`): enable it or delete the dark code?
-- `content.people`: render it publicly (replacing the `chapters.stewards`
-  JSON blob) or retire the collection?
-- AI assistant: which provider key, whose budget, and what governance before
-  enabling in an admin holding private intake data? (MCP can ship first
-  without it.)
 - Steward UI languages: is a pt-BR/es translation pass worth it for the
-  current steward cohort?
+  current steward cohort? (English label fixes are in scope now.)
+- Directus 12 licensing: set a decision date for the Open Innovation Grant
+  application if v12 is ever wanted.

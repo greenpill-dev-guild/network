@@ -62,8 +62,15 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
       media and `mailto:` link cases.
 - [ ] Live Onboarding auto-off: add expiry timestamp to
       `intake.map_node_intake_settings`; agent enforces and logs.
-- [ ] Decision: enable magic-link moderation in prod (flag + secret already
-      built) or delete the dark code path.
+- [ ] Update-request apply path (DECIDED 2026-08-10): SQL apply function +
+      trigger on `request_status -> accepted`, mirroring
+      `apply_approved_map_node_update_request` (`007_...sql:143-230`) incl.
+      optimistic-concurrency staleness check; publishers stop retyping.
+- [ ] Enable magic-link moderation in prod (DECIDED 2026-08-10): follow the
+      documented release order - verify `/map/moderate` live, migration 020
+      applied, fresh 32+ byte `MAP_NODE_MODERATION_LINK_SECRET` Fly secret,
+      flip `MAP_NODE_MODERATION_MAGIC_LINK_ENABLED`, authorized
+      real-recipient smoke.
 
 ### Phase 2 - Permissions v2 (kill the staleness class)
 
@@ -86,8 +93,9 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
       publisher/moderator roles from the sync downgrade bug.
 - [ ] Repoint `directus:content-access` to a verifier (`verify` mode asserts
       effective access matches junction rows; `sync` becomes a no-op alias).
-- [ ] Decision + follow-through on multi-chapter stewards (drop migration-018
-      unique constraint + update agent steward projection, or keep 1:1).
+- [x] Multi-chapter stewards DECIDED 2026-08-10: keep 1:1 (retain
+      migration-018 constraint and current map projection); dynamic filters
+      make lifting it later a small change.
 - [ ] Extend `directus:steward:smoke` to cover: revocation taking effect,
       cross-chapter denial, publisher role preserved after re-assignment.
 
@@ -124,30 +132,23 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
 
 ### Phase 4 - Platform adoption and strategy
 
-- [ ] Update-request terminus decision: implement the SQL apply function
-      (mirror `007`'s `apply_approved_map_node_update_request` pattern) OR
-      pilot native content versioning (global draft versions + role-gated
-      promote, available since 11.16) on `chapters` and plan the bespoke
-      request tables' retirement. Includes a draft-preview answer for the
-      static site.
-- [ ] Enable the native MCP server: dedicated machine user + minimal policy,
-      `mcp_enabled` on, document in the runbook (explicit contract change
-      from "no project-scoped `.mcp.json`"), scoped to operational content
-      only; never expose private intake through MCP-visible collections
-      beyond existing role permissions.
+- [ ] Enable the native MCP server (DECIDED 2026-08-10): dedicated machine
+      user + minimal operational-content policy, `mcp_enabled` on,
+      `mcp_allow_deletes` off, document in the runbook (explicit contract
+      change from "no project-scoped `.mcp.json`"); never expose private
+      intake through MCP beyond existing role permissions.
 - [ ] Enable collaborative editing (websockets already on) and verify with
       two concurrent editors.
-- [ ] AI assistant governance decision (provider, key custody, allowed
-      models, private-data posture); if approved, start with alt-text and
-      summary suggestions on chapter media.
+- [x] AI assistant DECIDED 2026-08-10: deferred - provider keys stay unset;
+      revisit with a governance note on first concrete use case.
+- [x] `content.people` DECIDED 2026-08-10: deferred - stays published-read
+      reference data; dual source of truth remains documented debt in the
+      review report.
 - [ ] Version + licensing position: hold on latest 11.17.x patches; document
       Directus 12 MSCL caps (3 seats / 25 collections / 5 flows) as blocking;
-      decide whether to pursue the Open Innovation Grant (<$5M revenue, <50
-      employees) on a set date; note the 12.2 Tiptap WYSIWYG HTML
+      set a decision date for the Open Innovation Grant (<$5M revenue, <50
+      employees) if v12 is wanted; note the 12.2 Tiptap WYSIWYG HTML
       normalization risk for any future migration.
-- [ ] `content.people` decision: render public steward profiles from it
-      (retiring the `chapters.stewards` JSON blob) or drop the collection;
-      either way remove the dead dual source of truth.
 - [ ] Run `bun run plans:validate`
 
 ## Exit Criteria
