@@ -10,7 +10,7 @@
     "overall_status": "active",
     "priority": "p1",
     "created_at": "2026-08-10T22:49:27.561Z",
-    "updated_at": "2026-08-11T04:04:23.000Z"
+    "updated_at": "2026-08-11T17:24:12.000Z"
   },
   "links": {
     "brief": "brief.md",
@@ -47,8 +47,8 @@
   },
   "lanes": {
     "ui": {
-      "owner": "claude",
-      "status": "completed",
+      "owner": "codex",
+      "status": "in_progress",
       "depends_on": [],
       "handoff": "handoffs/README.md"
     },
@@ -59,8 +59,8 @@
       "handoff": "handoffs/README.md"
     },
     "platform": {
-      "owner": "claude",
-      "status": "completed",
+      "owner": "codex",
+      "status": "in_progress",
       "depends_on": [],
       "handoff": "handoffs/README.md"
     },
@@ -76,7 +76,7 @@
     },
     "qa_pass_2": {
       "owner": "codex",
-      "status": "ready",
+      "status": "blocked",
       "depends_on": [
         "qa_pass_1"
       ],
@@ -118,6 +118,13 @@
       "lane": "platform",
       "status": "completed",
       "note": "Activated and proved GitHub dispatch and content-review recipients, delivered a sent two-recipient magic-link moderation test awaiting the human decision, and minted and scope-verified the API-only Directus MCP machine token."
+    },
+    {
+      "timestamp": "2026-08-11T17:24:12.000Z",
+      "actor": "codex",
+      "lane": "system",
+      "status": "in_progress",
+      "note": "Reconciled the active plan with the child-issue audit: Codex owns the reopened platform and UI lanes for the freshness watchdog, operator dashboard, direct-edit image metadata, and locale labels; qa_pass_2 is blocked until those slices and the human magic-link decision are complete."
     }
   ]
 }

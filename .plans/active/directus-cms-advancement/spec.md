@@ -50,16 +50,19 @@ pinned version already ships.
    notifications on the existing Resend queue, review-outcome visibility for
    stewards, publish-timestamp trigger, impact sync scheduling + steward
    feedback, per-record snapshot quarantine with operator alert, Live
-   Onboarding auto-off, magic-link moderation enable/remove decision.
+   Onboarding auto-off, magic-link moderation delivery + human release-order
+   proof, and a durable deployed-snapshot freshness/Pages-failure watchdog.
 3. **Permissions v2 (phase 2)**: replace per-slug scoped policies with one
    static policy using `$CURRENT_USER` relational filters over the existing
    junction tables; assignment/revocation become pure data operations
    manageable in the Directus UI; retire `sync` into a verifier; decide
    multi-chapter stewardship.
 4. **Data Studio UX (phase 3)**: field groups, structured list editors for
-   links/proof/media, conditional fields + validation messages, missing O2M
-   aliases, label translations, bookmark refresh, module/branding cleanup,
-   steward + operator dashboards, scoped file update/delete.
+   links/proof, first-class direct chapter image alt/credit columns with a
+   backward-compatible public projection, conditional fields + validation
+   messages, missing O2M aliases, English + pt-BR/es label metadata, bookmark
+   refresh, module/branding cleanup, steward landing bookmarks + operator
+   Insights dashboard, and scoped file update/delete.
 5. **Platform decisions (phase 4)**: update-request apply path vs native
    content versioning, MCP enablement (runbook contract change), collaborative
    editing, AI assistant governance, v11 hold + Directus 12 licensing
@@ -105,9 +108,27 @@ pinned version already ships.
 - **`content.people`**: defer - keep as published-read reference data; the
   dual source of truth stays documented debt.
 
+## Remaining implementation contract (Codex reconciliation, 2026-08-11)
+
+- **Freshness source**: publish a public-safe static build-metadata artifact
+  from the website build. The agent must compare that deployed artifact with
+  the database content watermark; the live agent snapshot `generatedAt` is
+  request-time metadata and cannot prove deployed-site freshness.
+- **Watchdog state**: persist content watermark, deployed build timestamp,
+  Pages workflow conclusion, check time, active alert, and recovery state.
+  Route state transitions through the existing durable Resend queue and
+  deduplicate repeated sweeps.
+- **GitHub permission**: production activation requires a fine-grained token
+  with Actions read as well as Contents read/write.
+- **Image metadata**: add Greenpill-owned chapter alt/credit columns, backfill
+  from `media` JSON, retain a compatibility fallback, and converge direct
+  edits with the accepted update-request apply path.
+- **Dashboard dependency**: PRD-809's freshness panels consume PRD-808's
+  persisted health state, so the platform contract lands first.
+
 ## Open Questions
 
-- Steward UI languages: is a pt-BR/es translation pass worth it for the
-  current steward cohort? (English label fixes are in scope now.)
+- Which exact Directus locale keys are active for the production pt-BR and
+  Spanish users? Confirm them before writing field/group translation metadata.
 - Directus 12 licensing: set a decision date for the Open Innovation Grant
   application if v12 is ever wanted.

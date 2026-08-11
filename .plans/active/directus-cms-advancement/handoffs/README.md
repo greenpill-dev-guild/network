@@ -2,9 +2,10 @@
 
 ## 2026-08-11 implementation handoff (Claude -> Afo)
 
-Implementation state after the 2026-08-10/11 push: phases 0-4 shipped except
-the two items marked open in `plan.todo.md` (freshness watchdog, operator
-Insights dashboard). Production has migrations 023-027, the deployed agent
+Implementation state after the 2026-08-10/11 push: the main production slice
+shipped, but the platform and UI lanes remain active for the freshness
+watchdog, operator Insights dashboard, direct-edit chapter image metadata, and
+pt-BR/es label metadata. Production has migrations 023-027, the deployed agent
 with content-operations sweeps, and the v2 permission model applied.
 
 ### Operator activations
@@ -38,13 +39,16 @@ with content-operations sweeps, and the v2 permission model applied.
 - `content-access -- cleanup-legacy` removes the retired per-slug policies
   once the prod smoke passes.
 
-### Remaining open items (tracked in plan.todo.md)
+### Remaining implementation sequence (tracked in plan.todo.md)
 
-- Freshness watchdog (site `generatedAt` vs `max(updated_at)` + build-failure
-  alerting).
-- Operator Insights dashboard (pending reviews, failed alerts, impact health).
-- Follow-up debt noted in the review report: first-class alt/credit columns
-  for direct chapter edits (today: `media` JSON keys `imageAlt`/`imageCredit`;
-  the update-request path has first-class fields), pt-BR/es label pass,
-  `content.people` dual-source decision (deferred), Directus 12 licensing
-  decision date (Open Innovation Grant).
+1. PRD-808: static deployed build metadata, durable publish-health state,
+   GitHub Pages failure detection, and deduplicated Resend alerts/recoveries.
+   Activation requires Actions read on the fine-grained GitHub token.
+2. PRD-809: first-class direct chapter alt/credit columns with backfill and
+   projection compatibility, followed by the operator Insights dashboard and
+   confirmed pt-BR/es Data Studio locale metadata.
+3. Human QA: decide the delivered `[TEST] magic link check` node from the
+   email and archive it, then complete the second QA pass.
+
+Deferred strategy items remain unchanged: `content.people` dual-source
+decision and the Directus 12 licensing/Open Innovation Grant decision date.

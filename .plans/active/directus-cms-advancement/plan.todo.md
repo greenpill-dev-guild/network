@@ -39,10 +39,20 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
       to `greenpill-dev-guild/network`; PAT stays in agent Fly secrets.
       Directus Flow variant explicitly declined to avoid future flow caps and
       keep secrets off the CMS.
-- [ ] Publish-failure + freshness alerting: compare deployed site
-      `generatedAt` against `max(updated_at)` in content schema on a sweep;
-      alert operators via the existing Resend queue when drift exceeds a
-      threshold or the Pages build fails.
+- [ ] Publish-failure + freshness alerting:
+  - [ ] Add a public-safe, static website build-metadata artifact containing
+        the operational snapshot `generatedAt`; the agent must poll the
+        deployed artifact rather than its live snapshot endpoint.
+  - [ ] Persist the latest content watermark, deployed build timestamp,
+        GitHub Pages workflow conclusion, check time, and alert state so
+        stale/failing/recovered transitions are durable and deduplicated.
+  - [ ] Compare the deployed timestamp with `max(updated_at)` across the
+        operational-content tables on the existing content-operations sweep;
+        make the URL and stale threshold explicit agent env settings.
+  - [ ] Query the `github-pages.yml` workflow result and route stale/build
+        failure alerts through the existing durable Resend queue, including a
+        recovery notification. The production fine-grained token must include
+        Actions read in addition to Contents read/write before activation.
 - [x] Content-review notifications: `pending_review` update requests and
       initiative submissions alert publishers; accept/decline alerts the
       submitting steward. Reuse the durable notification queue + templates.
@@ -69,8 +79,11 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
 - [x] Enable magic-link moderation in prod (DECIDED 2026-08-10): follow the
       documented release order - verify `/map/moderate` live, migration 020
       applied, fresh 32+ byte `MAP_NODE_MODERATION_LINK_SECRET` Fly secret,
-      flip `MAP_NODE_MODERATION_MAGIC_LINK_ENABLED`, authorized
-      real-recipient smoke.
+      flip `MAP_NODE_MODERATION_MAGIC_LINK_ENABLED`, and prove generation +
+      delivery with an authorized real-recipient smoke.
+- [ ] Complete the human release-order check: approve or decline the pending
+      `[TEST] magic link check` node from the delivered email, verify the
+      moderation outcome, then archive the node.
 
 ### Phase 2 - Permissions v2 (kill the staleness class)
 
@@ -104,17 +117,23 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
 - [x] Chapters/guilds form structure: field groups (Identity / Story / Links
       & Media / Impact / SEO / Workflow), workflow fields grouped last,
       `slug` visually separated with its warning note.
-- [x] Structured editors: replace raw JSON `input-code` for `links`,
-      `proof_signals`, and `media` with Directus list interfaces (typed rows:
-      label/url, alt/credit as first-class inputs); keep JSON storage shape
-      compatible with `packages/shared` normalizers.
+- [x] Structured editors for `links` and `proof_signals`: replace raw JSON
+      `input-code` with typed Directus O2M rows while keeping the public shape
+      compatible with `packages/shared` normalizers. Direct chapter `media`
+      remains JSON and is tracked separately below.
+- [ ] Add first-class direct chapter image alt/credit fields: migrate and
+      backfill from the existing `media.imageAlt`/`media.imageCredit` keys,
+      retain a safe compatibility fallback, update the public projection and
+      accepted update-request apply path, and expose the fields in Data Studio.
 - [x] Conditional fields + validations with messages: `proposed_image_alt`
       required when `proposed_image` set; URL format validation on link
       fields; enforce the notes that today are advisory only.
 - [x] Create the missing O2M alias fields `chapters.initiatives` and
       `guilds.projects` so stewards manage child rows from the parent record.
-- [x] Label translations pass so UI names match the guide ("Chapter image",
-      not "Image File"); evaluate a pt-BR/es UI pass after.
+- [x] English label pass so UI names match the guide ("Chapter image", not
+      "Image File").
+- [ ] Add pt-BR and Spanish Data Studio field/group label metadata after
+      confirming the exact Directus locale keys used by production users.
 - [x] Bookmarks: fix "My draft initiatives" to include published rows or add
       "My published work"; add `$CURRENT_USER`-scoped "My chapter" preset;
       re-check publisher bookmarks.
@@ -123,9 +142,10 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
       uploads; decide per-chapter subfolders.
 - [x] Module bar + branding: curate visible modules per role, set project
       name/logo/colors, help/report URLs.
-- [ ] Dashboards: operator dashboard (pending reviews, failed alerts,
-      snapshot freshness, impact sync health) and steward landing bookmark
-      set; requires the phase-1 freshness metrics to exist.
+- [ ] Dashboards: idempotently create/update an operator Insights dashboard
+      and panels for pending reviews, failed alerts, deployed snapshot
+      freshness, and impact sync health; add the steward landing bookmark set.
+      The freshness panels depend on the phase-1 persisted health metrics.
 - [x] Studio metadata for the raw intake collections operators do see
       (`map_node_intake_settings` singleton esp.), and hide remaining
       technical collections from the admin sidebar.
@@ -151,8 +171,29 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
       normalization risk for any future migration.
 - [x] Run `bun run plans:validate`
 
+## Remaining implementation sequence
+
+1. **Platform health contract (PRD-808).** Add the build-metadata artifact,
+   persistent publish-health state, GitHub Pages result check, deduplicated
+   Resend alerts/recoveries, and focused agent/content tests. Do not activate
+   production polling until the fine-grained token has Actions read.
+2. **Steward/operator UX closure (PRD-809).** Add direct chapter image
+   alt/credit columns and compatibility projection first; then implement the
+   idempotent Insights dashboard against the persisted health state and add
+   pt-BR/es metadata after locale keys are confirmed.
+3. **Release-order QA.** The human decides the delivered magic-link test and
+   archives it; then run the full focused validation set and move
+   `qa_pass_2` from blocked to completed.
+
+Implementation validation gate: `bun run typecheck`, `bun run test:agent`,
+`bun run test:content`, the affected Directus setup/steward smoke tests,
+`bun run build`, and `bun run plans:validate`. Production migrations, setup
+re-apply, Fly deploys, or secret changes require a separately authorized
+release step with live evidence.
+
 ## Exit Criteria
 
-Hub moves to `active/` when the human picks the first implementation phase;
-child Linear issues are created per actionable lane at that point
-(parent-issue-only until then per the Plan Hub Linear Mirror Policy).
+Hub moves to completed only when all remaining checkboxes are implemented or
+explicitly deferred with rationale, the human magic-link decision is verified
+and archived, `qa_pass_2` is completed, and the child Linear issues mirror the
+validated `.plans` state.

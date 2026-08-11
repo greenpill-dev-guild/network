@@ -42,6 +42,12 @@
 - A steward edit to a published chapter is visible on greenpill.network in
   under 10 minutes without any human action (dispatch observed in the Pages
   workflow run list with event `repository_dispatch`).
+- A static deployed build-metadata artifact exposes only the public snapshot
+  timestamp needed for freshness proof; it contains no private Directus or
+  intake data.
+- A stale deployed timestamp and a failed `github-pages.yml` run each create
+  one durable operator alert; repeated unhealthy sweeps do not duplicate it,
+  and recovery creates one recovery notification and clears active state.
 - Moving an update request to `pending_review` produces a publisher email;
   accept/decline produces a steward email; both visible in the notification
   queue with delivery status.
@@ -54,6 +60,8 @@
 - A chapter with an unapproved image no longer 500s
   `/content/public-snapshot` or fails the site build; the record is
   quarantined and an operator alert exists.
+- The delivered `[TEST] magic link check` email is used by a human to approve
+  or decline the node, the outcome is verified, and the test node is archived.
 
 ### Phase 2
 - Creating a `chapter_editor_assignments` row in the Directus UI grants
@@ -66,13 +74,20 @@
   steward at once (no per-user sync step).
 
 ### Phase 3
-- Chapters form renders grouped sections; links/proof/media edited through
-  list interfaces; produced JSON still passes
-  `bun run test:content` and `bun run test:agent` contracts.
+- Chapters form renders grouped sections; links/proof use structured O2M
+  editors, while direct chapter image alt/credit use first-class fields.
+- Existing `media.imageAlt`/`media.imageCredit` values survive migration and
+  the public projection remains backward compatible; direct edits and
+  accepted update requests produce the same authoritative metadata.
 - `proposed_image_alt` is enforced when an image is proposed.
 - Stewards can fix focal point/title on their own uploads; cannot touch other
   stewards' files (smoke-asserted).
-- Field labels match STEWARD_GUIDE wording.
+- Field labels match STEWARD_GUIDE wording and resolve for the confirmed
+  English, pt-BR, and Spanish Directus locale keys.
+- Re-running studio setup updates one named operator Insights dashboard and
+  its panels without duplicates. Panels show pending reviews, failed alerts,
+  deployed snapshot freshness, and impact-sync health without private intake
+  payloads or hidden technical fields.
 
 ### Phase 4
 - Either: accepted update requests apply to the live chapter row without
