@@ -315,6 +315,33 @@ export function toPublicOperationalImpactSourceBindings(
   };
 }
 
+export interface QuarantinedOperationalRecord {
+  collection: string;
+  slug: string;
+  reason: 'private_field' | 'unapproved_media';
+}
+
+function quarantineUnsafeRecords(
+  records: ReturnType<typeof normalizeCollection>,
+  collection: string,
+  quarantined: QuarantinedOperationalRecord[],
+  extraReason?: (record: UnknownRecord) => QuarantinedOperationalRecord['reason'] | null
+) {
+  return records.filter((record) => {
+    const slug = cleanString((record as UnknownRecord).slug) || 'unknown';
+    if (containsPrivateOperationalContentField(record)) {
+      quarantined.push({ collection, slug, reason: 'private_field' });
+      return false;
+    }
+    const extra = extraReason?.(record as UnknownRecord) ?? null;
+    if (extra) {
+      quarantined.push({ collection, slug, reason: extra });
+      return false;
+    }
+    return true;
+  });
+}
+
 export function toPublicOperationalContentSnapshot({
   themes = [],
   people = [],
@@ -331,26 +358,57 @@ export function toPublicOperationalContentSnapshot({
   guilds?: UnknownRecord[];
   projects?: UnknownRecord[];
   generatedAt?: Date | string;
-} = {}): PublicOperationalContentSnapshot {
+} = {},
+  options: {
+    onQuarantine?: (records: QuarantinedOperationalRecord[]) => void;
+  } = {}
+): PublicOperationalContentSnapshot {
   assertPublishedOperationalInput({ themes, people, chapters, chapterInitiatives, guilds, projects });
 
-  const publicChapters = normalizeCollection(chapters, 'chapters');
-  const publicGuilds = normalizeCollection(guilds, 'guilds');
+  // Records that would violate the privacy boundary or media-review gate are
+  // quarantined (dropped from the projection) instead of failing the whole
+  // snapshot: one bad record must not take down the agent route and every
+  // site deploy. Privacy still fails closed per record, and the final assert
+  // below stays absolute for the surviving snapshot.
+  const quarantined: QuarantinedOperationalRecord[] = [];
+
+  const publicChapters = quarantineUnsafeRecords(
+    normalizeCollection(chapters, 'chapters'),
+    'chapters',
+    quarantined,
+    (chapter) => (containsUnapprovedChapterMedia({ chapters: [chapter] }) ? 'unapproved_media' : null)
+  );
+  const publicGuilds = quarantineUnsafeRecords(normalizeCollection(guilds, 'guilds'), 'guilds', quarantined);
   const publicGuildSlugs = new Set(publicGuilds.map((guild) => guild.slug).filter(Boolean));
-  const publicProjects = normalizeCollection(projects, 'projects')
-    .filter((project) => publicGuildSlugs.has(cleanString(project.guild ?? project.guildSlug)));
+  const publicProjects = quarantineUnsafeRecords(
+    normalizeCollection(projects, 'projects'),
+    'projects',
+    quarantined
+  ).filter((project) => publicGuildSlugs.has(cleanString(project.guild ?? project.guildSlug)));
   const snapshot: PublicOperationalContentSnapshot = {
     version: PUBLIC_OPERATIONAL_CONTENT_VERSION,
     generatedAt: toIso(generatedAt),
-    themes: normalizeCollection(themes, 'themes'),
-    people: normalizeCollection(people, 'people'),
+    themes: quarantineUnsafeRecords(normalizeCollection(themes, 'themes'), 'themes', quarantined),
+    people: quarantineUnsafeRecords(normalizeCollection(people, 'people'), 'people', quarantined),
     chapters: publicChapters,
-    chapterInitiatives: normalizeCollection(chapterInitiatives, 'chapterInitiatives'),
+    chapterInitiatives: quarantineUnsafeRecords(
+      normalizeCollection(chapterInitiatives, 'chapterInitiatives'),
+      'chapterInitiatives',
+      quarantined
+    ),
     guilds: publicGuilds,
     projects: publicProjects,
     locations: toPublicOperationalLocations(publicChapters),
     impactSourceBindings: toPublicOperationalImpactSourceBindings(publicChapters, generatedAt),
   };
+
+  if (quarantined.length > 0) {
+    if (options.onQuarantine) {
+      options.onQuarantine(quarantined);
+    } else {
+      console.warn('public_operational_content_records_quarantined', quarantined);
+    }
+  }
 
   return assertPublicOperationalContentSnapshot(snapshot);
 }

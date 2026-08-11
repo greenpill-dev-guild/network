@@ -17,6 +17,9 @@ const snapshotPath = join(rootDir, 'packages/website/src/data/operational-conten
 const shouldWriteSnapshot = process.argv.includes('--write-snapshot');
 const shouldMigrate = process.argv.includes('--migrate');
 const shouldAllowExistingMigration = process.argv.includes('--allow-existing');
+const shouldLoadFromAgent = process.argv.includes('--from-agent');
+
+const AGENT_SNAPSHOT_DEFAULT_URL = 'https://agent.greenpill.network/content/public-snapshot';
 
 const cleanString = (value) => (typeof value === 'string' ? value.trim() : '');
 const asArray = (value) => (Array.isArray(value) ? value : []);
@@ -50,6 +53,15 @@ async function loadOperationalContent() {
     guilds: await readCollection('guilds'),
     projects: await readCollection('projects'),
   });
+}
+
+async function loadAgentSnapshot() {
+  const url = cleanString(process.env.OPERATIONAL_CONTENT_SNAPSHOT_URL) || AGENT_SNAPSHOT_DEFAULT_URL;
+  const response = await fetch(url, { headers: { accept: 'application/json' } });
+  if (!response.ok) {
+    throw new Error(`Agent snapshot fetch failed with ${response.status} for ${url}`);
+  }
+  return toPublicOperationalContentSnapshot(await response.json());
 }
 
 const numberOrNull = (value) => {
@@ -422,7 +434,13 @@ async function migrateSnapshot(snapshot) {
   }
 }
 
-const snapshot = assertPublicOperationalContentSnapshot(await loadOperationalContent());
+if (shouldLoadFromAgent && shouldMigrate) {
+  throw new Error('--from-agent cannot be combined with --migrate; the agent snapshot already comes from the database.');
+}
+
+const snapshot = assertPublicOperationalContentSnapshot(
+  shouldLoadFromAgent ? await loadAgentSnapshot() : await loadOperationalContent()
+);
 
 if (shouldWriteSnapshot) {
   await mkdir(dirname(snapshotPath), { recursive: true });
@@ -433,6 +451,11 @@ if (shouldMigrate) {
   await migrateSnapshot(snapshot);
 }
 
+console.log(
+  shouldLoadFromAgent
+    ? 'Source: live agent public snapshot (database-backed).'
+    : 'Source: static seed files under operational-content-seed/ (NOT the database). Use --from-agent to refresh from live content.'
+);
 console.log(`Validated public operational content snapshot v${snapshot.version}`);
 console.log(`Themes: ${snapshot.themes.length}`);
 console.log(`People: ${snapshot.people.length}`);

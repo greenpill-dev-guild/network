@@ -2,7 +2,11 @@ import {
   assertPublicOperationalContentSnapshot,
   toPublicOperationalContentSnapshot,
 } from '@greenpill-network/shared/public-content';
-import type { PublicOperationalContentSnapshot } from '@greenpill-network/shared/public-content';
+import type {
+  PublicOperationalContentSnapshot,
+  QuarantinedOperationalRecord,
+} from '@greenpill-network/shared/public-content';
+import { enqueueQuarantineAlerts } from './content-operations.js';
 import { createDatabaseClient } from './db.js';
 import { AgentDataError } from './map-nodes.js';
 
@@ -95,7 +99,8 @@ export async function getPublicOperationalContentSnapshot(
     order by name
   `;
 
-  return assertPublicOperationalContentSnapshot(toPublicOperationalContentSnapshot({
+  const quarantined: QuarantinedOperationalRecord[] = [];
+  const snapshot = assertPublicOperationalContentSnapshot(toPublicOperationalContentSnapshot({
     generatedAt: now,
     themes: rowsToRecords(themes),
     people: rowsToRecords(people),
@@ -103,7 +108,18 @@ export async function getPublicOperationalContentSnapshot(
     chapterInitiatives: rowsToRecords(chapterInitiatives),
     guilds: rowsToRecords(guilds),
     projects: rowsToRecords(projects),
+  }, {
+    onQuarantine: (records) => {
+      quarantined.push(...records);
+    },
   }));
+
+  if (quarantined.length > 0) {
+    console.warn('public_operational_content_records_quarantined', quarantined);
+    await enqueueQuarantineAlerts(sql, quarantined);
+  }
+
+  return snapshot;
 }
 
 export function createPublicContentRepository({

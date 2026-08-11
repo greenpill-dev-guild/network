@@ -261,15 +261,29 @@ function toPublicPendingMapNode(submission: UnknownRecord): SubmittedPendingMapN
 }
 
 export async function getMapNodeIntakeMode(sql: SqlLike): Promise<PublicMapIntakeMode> {
-  const rows = await sql`
-    select live_onboarding_enabled as "liveOnboardingEnabled"
-    from intake.map_node_intake_settings
-    where id = 1
-    limit 1
-  `;
+  let rows: Array<{ liveOnboardingEnabled?: unknown }> = [];
+  try {
+    // Migration 025: expiry-aware read, so a forgotten Live Onboarding toggle
+    // stops auto-approving as soon as live_onboarding_expires_at passes.
+    rows = await sql`
+      select intake.effective_live_onboarding_enabled() as "liveOnboardingEnabled"
+    `;
+  } catch {
+    rows = [];
+  }
 
-  const enabled = rows[0]?.liveOnboardingEnabled === true
-    || rows[0]?.liveOnboardingEnabled === 'true';
+  if (rows?.[0]?.liveOnboardingEnabled === undefined || rows?.[0]?.liveOnboardingEnabled === null) {
+    // Fallback for databases that have not applied migration 025 yet.
+    rows = await sql`
+      select live_onboarding_enabled as "liveOnboardingEnabled"
+      from intake.map_node_intake_settings
+      where id = 1
+      limit 1
+    `;
+  }
+
+  const enabled = rows?.[0]?.liveOnboardingEnabled === true
+    || rows?.[0]?.liveOnboardingEnabled === 'true';
   return enabled ? 'live' : 'moderated';
 }
 

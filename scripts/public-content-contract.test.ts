@@ -429,19 +429,40 @@ test('library podcast section uses RSS snapshot and in-page audio', async () => 
   assert.doesNotMatch(libraryPage, /gp-library-play/);
 });
 
-test('operational content snapshot generation rejects private fields and non-published records', () => {
-  assert.throws(
-    () => toPublicOperationalContentSnapshot({
-      chapters: [{
+test('operational content snapshot generation quarantines unsafe records and rejects non-published input', () => {
+  const quarantined = [];
+  const snapshot = toPublicOperationalContentSnapshot({
+    chapters: [
+      {
         slug: 'private-node',
         name: 'Private Node',
         lat: 1,
         long: 1,
         privateEmail: 'private@example.com',
-      }],
-    }),
-    /private fields/
-  );
+      },
+      {
+        slug: 'unreviewed-media',
+        name: 'Unreviewed Media',
+        image: 'https://example.com/image.jpg',
+        media: { image: 'https://example.com/image.jpg' },
+      },
+      {
+        slug: 'safe-chapter',
+        name: 'Safe Chapter',
+        summary: 'A public-safe chapter.',
+      },
+    ],
+  }, {
+    onQuarantine: (records) => quarantined.push(...records),
+  });
+
+  // Privacy still fails closed per record: unsafe records are dropped from the
+  // projection instead of failing the entire snapshot (agent route + deploys).
+  assert.deepEqual(snapshot.chapters.map((chapter) => chapter.slug), ['safe-chapter']);
+  assert.deepEqual(quarantined, [
+    { collection: 'chapters', slug: 'private-node', reason: 'private_field' },
+    { collection: 'chapters', slug: 'unreviewed-media', reason: 'unapproved_media' },
+  ]);
 
   assert.equal(containsPrivateOperationalContentField({ ip: '127.0.0.1' }), true);
   assert.equal(containsPrivateOperationalContentField({ media: { reviewStatus: 'approved' } }), false);

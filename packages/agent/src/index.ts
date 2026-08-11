@@ -1,5 +1,6 @@
 export * from './impact.js';
 export * from './app.js';
+export * from './content-operations.js';
 export * from './db.js';
 export * from './map-nodes.js';
 export * from './map-node-moderation.js';

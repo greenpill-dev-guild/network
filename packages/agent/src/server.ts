@@ -1,5 +1,8 @@
 import { serve } from '@hono/node-server';
 import { app } from './app.js';
+import { createContentOperationsRepository } from './content-operations.js';
+import { getImpactSyncConfig, syncChapterImpactSnapshots } from './green-goods-impact.js';
+import { createImpactRepository } from './impact-cache.js';
 import { createMapLocationRepository } from './map-locations.js';
 import { createMapNodeRepository } from './map-nodes.js';
 
@@ -121,6 +124,104 @@ export function startMapLocationCleanupSweep({
   };
 }
 
+export function startContentOperationsSweep({
+  env = process.env,
+  repository = createContentOperationsRepository({ env }),
+}: {
+  env?: Record<string, string | undefined>;
+  repository?: {
+    maybeDispatchContentRebuild?: () => Promise<unknown>;
+    deliverQueuedReviewNotifications?: (options?: { limit?: number }) => Promise<unknown>;
+    expireLiveOnboardingIfDue?: () => Promise<unknown>;
+  };
+} = {}): (() => void) | null {
+  if (!env.DATABASE_URL || env.CONTENT_OPERATIONS_SWEEP_ENABLED === 'false') return null;
+  const dispatch = repository.maybeDispatchContentRebuild?.bind(repository);
+  const deliver = repository.deliverQueuedReviewNotifications?.bind(repository);
+  const expire = repository.expireLiveOnboardingIfDue?.bind(repository);
+  if (!dispatch && !deliver && !expire) return null;
+
+  const intervalMs = parsePositiveInteger(env.CONTENT_OPERATIONS_SWEEP_INTERVAL_MS, 60 * 1000);
+
+  let running = false;
+  const run = async () => {
+    if (running) return;
+    running = true;
+    try {
+      if (expire) await expire();
+      if (dispatch) await dispatch();
+      if (deliver) await deliver({ limit: 20 });
+    } catch (error) {
+      console.warn('content_operations_sweep_failed', {
+        errorName: error instanceof Error ? error.name : 'UnknownError',
+      });
+    } finally {
+      running = false;
+    }
+  };
+
+  const bootTimer = setTimeout(() => {
+    void run();
+  }, 3000);
+  const interval = setInterval(() => {
+    void run();
+  }, intervalMs);
+  bootTimer.unref?.();
+  interval.unref?.();
+
+  return () => {
+    clearTimeout(bootTimer);
+    clearInterval(interval);
+  };
+}
+
+export function startImpactSyncSweep({
+  env = process.env,
+}: {
+  env?: Record<string, string | undefined>;
+} = {}): (() => void) | null {
+  if (!env.DATABASE_URL || env.IMPACT_SYNC_SWEEP_ENABLED === 'false') return null;
+
+  const intervalMs = parsePositiveInteger(env.IMPACT_SYNC_SWEEP_INTERVAL_MS, 6 * 60 * 60 * 1000);
+
+  let running = false;
+  const run = async () => {
+    if (running) return;
+    running = true;
+    try {
+      const result = await syncChapterImpactSnapshots({
+        repository: createImpactRepository(),
+        config: getImpactSyncConfig(env),
+      });
+      console.log('impact_sync_sweep_completed', {
+        checked: result.checked,
+        saved: result.saved,
+        failed: result.failed,
+      });
+    } catch (error) {
+      console.warn('impact_sync_sweep_failed', {
+        errorName: error instanceof Error ? error.name : 'UnknownError',
+      });
+    } finally {
+      running = false;
+    }
+  };
+
+  const bootTimer = setTimeout(() => {
+    void run();
+  }, 15_000);
+  const interval = setInterval(() => {
+    void run();
+  }, intervalMs);
+  bootTimer.unref?.();
+  interval.unref?.();
+
+  return () => {
+    clearTimeout(bootTimer);
+    clearInterval(interval);
+  };
+}
+
 serve({
   fetch: app.fetch,
   hostname,
@@ -131,3 +232,5 @@ serve({
 
 startMapNodeEditLinkDeliverySweep();
 startMapLocationCleanupSweep();
+startContentOperationsSweep();
+startImpactSyncSweep();

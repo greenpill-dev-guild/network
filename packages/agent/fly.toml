@@ -16,6 +16,12 @@ primary_region = 'iad'
   MAP_NODE_MODERATION_DIRECTUS_URL = 'https://admin.greenpill.network'
   MAP_NODE_MODERATION_BASE_URL = 'https://greenpill.network/map/moderate'
   MAP_NODE_MODERATION_MAGIC_LINK_ENABLED = 'false'
+  # Dispatch-on-publish: requires the CONTENT_DISPATCH_GITHUB_TOKEN Fly secret
+  # (fine-grained PAT with contents:write on the repo); disabled without it.
+  CONTENT_DISPATCH_ENABLED = 'true'
+  CONTENT_DISPATCH_GITHUB_REPO = 'greenpill-dev-guild/network'
+  # Content review notifications also need the CONTENT_REVIEW_RECIPIENTS Fly
+  # secret (comma-separated emails); deliveries are skipped without it.
 
 [http_service]
   internal_port = 8080
