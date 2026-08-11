@@ -15,7 +15,10 @@ primary_region = 'iad'
   DIRECTUS_PUBLIC_URL = 'https://admin.greenpill.network'
   MAP_NODE_MODERATION_DIRECTUS_URL = 'https://admin.greenpill.network'
   MAP_NODE_MODERATION_BASE_URL = 'https://greenpill.network/map/moderate'
-  MAP_NODE_MODERATION_MAGIC_LINK_ENABLED = 'false'
+  # Enabled 2026-08-10 (decision in .plans/active/directus-cms-advancement):
+  # per-recipient login-free moderation links with the staged 32-byte secret.
+  # Rollback: set to 'false' and deploy - alerts return to Directus deep links.
+  MAP_NODE_MODERATION_MAGIC_LINK_ENABLED = 'true'
   # Dispatch-on-publish: requires the CONTENT_DISPATCH_GITHUB_TOKEN Fly secret
   # (fine-grained PAT with contents:write on the repo); disabled without it.
   CONTENT_DISPATCH_ENABLED = 'true'

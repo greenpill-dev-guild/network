@@ -1,5 +1,32 @@
 # Directus CMS Advancement - Eval
 
+## Evidence log
+
+### 2026-08-11 implementation pass
+
+- Local stack (fresh bootstrap): migrations 023-027 applied; dynamic-policy
+  setup + studio groups/settings applied cleanly; extended
+  `directus:steward:smoke` PASSED - junction-row-only grant, dynamic create
+  validations, image chain, cross-chapter denials, stray-child containment
+  (migration-027 trigger + scope invisibility), and immediate revocation on
+  assignment-row delete.
+- Migration behaviors verified against local Directus: accept->apply copied
+  proposed summary/links/media alt onto the chapter with `reviewed_at`
+  stamped; notification queue enqueued `update_request_pending` +
+  `update_request_decided`; child slug fill; publish defaults
+  (`published_at`, `reviewed_at`, `reviewed_by='system:auto-publish'`).
+- Test suites green: content-access (10), studio-setup, steward-smoke,
+  users, sync-prep (25 total), `test:agent` 64, `test:content` 21,
+  `test:map-nodes` 42/43 (1 pre-existing HomeMap picker source failure,
+  spawned as its own task).
+- Production: migrations 023-027 applied via the network-admin machine
+  (28 tracked); agent deployed with content-operations + impact sweeps
+  (`impact_sync_sweep_completed { checked: 4, saved: 4, failed: 0 }` - first
+  scheduled impact sync ever); magic-link moderation enabled with a fresh
+  staged secret; `/ready` and `/content/public-snapshot` healthy post-deploy.
+- Prod resync (pre-v2 shape) completed earlier the same day: 17/17
+  assignments `role ok, policy ok`.
+
 ## Acceptance Checks
 
 ### Phase 0
