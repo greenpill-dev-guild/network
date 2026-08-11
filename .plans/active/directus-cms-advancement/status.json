@@ -10,7 +10,7 @@
     "overall_status": "active",
     "priority": "p1",
     "created_at": "2026-08-10T22:49:27.561Z",
-    "updated_at": "2026-08-10T23:30:00.000Z"
+    "updated_at": "2026-08-11T00:30:00.000Z"
   },
   "links": {
     "brief": "brief.md",
@@ -48,25 +48,25 @@
   "lanes": {
     "ui": {
       "owner": "claude",
-      "status": "in_progress",
+      "status": "completed",
       "depends_on": [],
       "handoff": "handoffs/README.md"
     },
     "content": {
       "owner": "claude",
-      "status": "in_progress",
+      "status": "completed",
       "depends_on": [],
       "handoff": "handoffs/README.md"
     },
     "platform": {
       "owner": "claude",
-      "status": "in_progress",
+      "status": "completed",
       "depends_on": [],
       "handoff": "handoffs/README.md"
     },
     "qa_pass_1": {
       "owner": "claude",
-      "status": "blocked",
+      "status": "completed",
       "depends_on": [
         "ui",
         "content",
@@ -76,7 +76,7 @@
     },
     "qa_pass_2": {
       "owner": "codex",
-      "status": "blocked",
+      "status": "ready",
       "depends_on": [
         "qa_pass_1"
       ],
@@ -104,6 +104,13 @@
       "lane": "system",
       "status": "active",
       "note": "Afo resolved all six open decisions (apply function, enable magic links, keep 1:1, enable MCP scoped, defer AI assistant, defer people) and approved prod resync + full implementation; hub moved backlog -> active"
+    },
+    {
+      "timestamp": "2026-08-11T00:30:00.000Z",
+      "actor": "claude",
+      "lane": "qa_pass_1",
+      "status": "completed",
+      "note": "Implementation shipped and verified: local + PRODUCTION steward smokes passed on the dynamic model; migrations 023-027 in prod; agent deployed (dispatch/notifications/impact/quarantine sweeps); magic links enabled; 12 legacy scoped policies removed after verify. Open: freshness watchdog, Insights dashboard, operator secrets (see handoffs/README.md)."
     }
   ]
 }
