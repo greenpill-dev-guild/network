@@ -27,11 +27,13 @@ Run installs and validation from the repo root.
 - `bun run dev:admin` - run the local Directus admin service against local Postgres.
 - `bun run db:local:up` / `bun run db:local:down` - start or stop local Postgres.
 - `bun run db:migrate` - apply the local agent database baseline.
-- `bun run content:snapshot` - validate current operational content and refresh the static fallback snapshot.
+- `bun run content:snapshot` - validate the static seed files and rewrite the fallback snapshot from them; it does NOT read the database.
+- `bun run content:snapshot:from-agent` - refresh the committed fallback snapshot from the live agent public snapshot (database-backed).
 - `bun run content:migrate` - one-time seed current operational content into the Postgres `content` schema; it refuses to run after rows exist unless `--allow-existing` is passed for controlled missing-row recovery.
 - `bun run directus:content:setup` - apply Directus roles, policies, and permissions for operational content and intake moderation after Directus boots.
-- `bun run directus:content-access -- assign --input <tsv>` - assign Directus users to chapter or guild editing scopes from a TSV file.
-- `bun run directus:content-access -- sync` - re-apply scoped policies for every assignment already in Directus. Run this after any change to the scoped permission shape, otherwise stewards provisioned earlier stay on a stale policy.
+- `bun run directus:content-access -- assign --input <tsv>` - create chapter/guild assignment rows from a TSV file. The assignment row IS the grant: the role-level dynamic policy scopes access via `$CURRENT_USER`, and deleting a row (CLI or Directus UI) revokes immediately.
+- `bun run directus:content-access -- verify` - read-only report of assignment rows, steward role status, and leftover legacy per-slug policies (`sync` is a deprecated alias).
+- `bun run directus:content-access -- cleanup-legacy` - delete legacy per-slug scoped policies after `directus:steward:smoke` verifies the dynamic model.
 - `bun run directus:studio:setup` - apply steward-friendly Directus Data Studio collection and field metadata.
 - `bun run directus:local:bootstrap` - wait for local Directus, then apply local roles/permissions and Data Studio metadata; this local path ignores root `.env.local` to avoid production Directus admin settings.
 - `bun run directus:steward:smoke` - create a temporary steward user and verify scoped Directus editing behavior.

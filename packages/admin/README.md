@@ -320,7 +320,10 @@ Before inviting stewards, run `bun run directus:content:setup` and confirm the
 generated roles:
 
 - Public role: no access to `content`, `intake`, `impact`, `workspace`, or `audit`.
-- Steward editor: draft/update scoped `content` records, but no publish access.
+- Steward editor: read published content; the dynamic `Greenpill Assigned
+  Editor` policy adds direct editing of the assigned chapter or guild at any
+  status via `$CURRENT_USER` filters over the assignment rows. Creating new
+  chapters/guilds and archiving stay with trusted publishers.
 - Steward moderator: read review-safe submission fields, update moderation
   status fields, and append review rows without private contacts or request
   metadata.

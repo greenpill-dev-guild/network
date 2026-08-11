@@ -88,10 +88,14 @@ with your chapter name and the email address used for your invite.
 5. Keep the public alt text and credit in the chapter's `media` details current.
 6. Save the chapter.
 
+You can fix the focal point, title, and description of images you uploaded
+yourself, and delete your own uploads while no published chapter is using
+them. Files uploaded by other stewards are read-only for you.
+
 The original upload bucket remains private. New uploads stay private until they
 are attached to a published chapter. Published images are then delivered
 through Directus' permission-checked `/assets/<file-id>` route and reach the
-public website on the next snapshot refresh and site build.
+public website on the next automatic build.
 
 ## Updating A Published Chapter
 
@@ -149,22 +153,20 @@ not fit the structured fields above.
 Chapter update requests move through this flow:
 
 1. `draft`: steward is still editing.
-2. `pending_review`: steward is ready for review.
+2. `pending_review`: steward is ready for review. Reviewers get an automatic
+   email; no chat ping is needed (the Telegram steward chat still works as a
+   backup if a review sits unanswered).
 3. `needs_changes`: a Network steward has asked the steward to revise.
-4. `accepted` or `declined`: a Network steward completed review.
-5. A Network steward applies accepted changes to the chapter record.
-6. The published snapshot or website build is refreshed.
+4. `accepted` or `declined`: a Network steward completed review. You get an
+   email, and the request stays visible in your `My change request outcomes`
+   bookmark together with any reviewer notes.
+5. Accepting applies the proposed summary, primary link, links, proof signals,
+   and image details to the chapter record automatically - nothing is retyped
+   by hand.
+6. The public website picks the change up on the next automatic build.
 
-Accepted update requests do not publish the website by themselves. They are the
-review handoff that tells a trusted publisher what to apply.
-
-Direct edits to your own chapter skip steps 1 to 5 entirely. They still depend
-on step 6 to appear on the public website.
-
-When you move a request or initiative to `pending_review`, message the Telegram
-steward chat with `Greenpill chapter review: [Chapter name]`. Include the
-Directus item link and a one-sentence summary of what is ready for review. This
-makes sure a Network steward sees the review request promptly.
+Direct edits to your own chapter skip steps 1 to 5 entirely and reach the
+website the same way as step 6.
 
 ## Previewing Changes
 
@@ -180,17 +182,21 @@ series, cleanups, impact efforts, and Water Cup-style work.
 
 Create a new initiative with:
 
+- `Chapter`: pick your own chapter. Directus only accepts chapters you are
+  assigned to.
 - `title`
 - `entity_status`
 - `summary`
 - `description`
 - `theme_slugs`
-- `links`
-- `proof_signals`
+- `links` and `proof_signals`: use the structured row editors (Add New), not
+  raw JSON.
 - `impact_sources`, only when there is an approved public impact source
 
-Set `publication_status` to `pending_review` when the initiative is ready for a
-publisher.
+You can publish your own initiative directly, or set `publication_status` to
+`pending_review` when you want a publisher to look first. The
+`My chapter initiatives` bookmark shows all of your chapter's initiatives at
+any status.
 
 ## Steward Sync Agenda
 
