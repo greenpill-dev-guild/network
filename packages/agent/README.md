@@ -62,3 +62,25 @@ from the Resend webhook details page before enabling the production endpoint, an
 set `RESEND_WEBHOOK_RECIPIENT_HASH_SECRET` so stored recipient hashes are keyed.
 The route verifies Svix signatures and stores only operational metadata, never
 message bodies, raw recipient addresses, or free-form provider diagnostics.
+
+## Website Publish Health
+
+The content-operations sweep can compare the deployed static website build with
+the latest operational-content update and completed GitHub Pages workflow. It is
+off unless all of these agent settings are supplied explicitly:
+
+- `CONTENT_PUBLISH_HEALTH_ENABLED=true`
+- `CONTENT_PUBLISH_HEALTH_METADATA_URL=https://greenpill.network/build-metadata.json`
+- `CONTENT_PUBLISH_HEALTH_STALE_THRESHOLD_MS=<positive milliseconds>`
+
+The check reuses `CONTENT_DISPATCH_GITHUB_REPO` and
+`CONTENT_DISPATCH_GITHUB_TOKEN`, and defaults the workflow filename to
+`github-pages.yml` and production branch to `main` unless
+`CONTENT_PUBLISH_HEALTH_WORKFLOW` or `CONTENT_PUBLISH_HEALTH_BRANCH` is set. The
+token must have Actions read in addition to the Contents access used for
+dispatch. Alerts and recoveries use `CONTENT_REVIEW_RECIPIENTS` and the existing
+durable Resend queue.
+
+Apply migration `028_content_publish_health.sql` before enabling this sweep.
+Enabling it, changing the production token, deploying the agent, and proving a
+live alert are separate operator actions, not part of the implementation PR.

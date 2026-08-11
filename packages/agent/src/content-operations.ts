@@ -5,6 +5,7 @@
 // triggers enqueue and the agent observes/delivers. Secrets (GitHub dispatch
 // token, Resend key) stay on the agent; the CMS never holds them.
 
+import { assertPublicWebsiteBuildMetadata } from '@greenpill-network/shared/public-content';
 import { createDatabaseClient } from './db.js';
 
 type SqlLike = any;
@@ -19,6 +20,8 @@ export const CONTENT_REVIEW_NOTIFICATION_RETRY_MINUTES = Object.freeze([5, 30, 1
 export const CONTENT_DISPATCH_EVENT_TYPE = 'operational-content-updated';
 export const CONTENT_DISPATCH_DEFAULT_REPO = 'greenpill-dev-guild/network';
 export const CONTENT_DISPATCH_MIN_INTERVAL_MS = 5 * 60 * 1000;
+export const CONTENT_PUBLISH_HEALTH_DEFAULT_WORKFLOW = 'github-pages.yml';
+export const CONTENT_PUBLISH_HEALTH_DEFAULT_BRANCH = 'main';
 
 const cleanString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
@@ -34,6 +37,15 @@ function parseRecipients(value: unknown): string[] {
       .map((entry) => entry.toLowerCase())
       .filter((entry) => entry.length <= 320 && EMAIL_PATTERN.test(entry))
   )];
+}
+
+function parseHttpUrl(value: unknown): string {
+  try {
+    const url = new URL(cleanString(value));
+    return (url.protocol === 'http:' || url.protocol === 'https:') && !url.username && !url.password ? url.href : '';
+  } catch {
+    return '';
+  }
 }
 
 function buildDirectusUrl(baseUrl: string, path: string): string {
@@ -58,6 +70,14 @@ export function getContentOperationsConfig(env: Record<string, string | undefine
     dispatchMinIntervalMs: Number.parseInt(env.CONTENT_DISPATCH_MIN_INTERVAL_MS ?? '', 10) > 0
       ? Number.parseInt(env.CONTENT_DISPATCH_MIN_INTERVAL_MS ?? '', 10)
       : CONTENT_DISPATCH_MIN_INTERVAL_MS,
+    publishHealthEnabled: cleanString(env.CONTENT_PUBLISH_HEALTH_ENABLED).toLowerCase() === 'true',
+    publishHealthMetadataUrl: parseHttpUrl(env.CONTENT_PUBLISH_HEALTH_METADATA_URL),
+    publishHealthStaleThresholdMs:
+      Number.parseInt(env.CONTENT_PUBLISH_HEALTH_STALE_THRESHOLD_MS ?? '', 10) > 0
+        ? Number.parseInt(env.CONTENT_PUBLISH_HEALTH_STALE_THRESHOLD_MS ?? '', 10)
+        : 0,
+    publishHealthWorkflow: cleanString(env.CONTENT_PUBLISH_HEALTH_WORKFLOW) || CONTENT_PUBLISH_HEALTH_DEFAULT_WORKFLOW,
+    publishHealthBranch: cleanString(env.CONTENT_PUBLISH_HEALTH_BRANCH) || CONTENT_PUBLISH_HEALTH_DEFAULT_BRANCH,
     resendApiKey: cleanString(env.RESEND_API_KEY),
     emailFrom: cleanString(env.CONTENT_REVIEW_EMAIL_FROM) || cleanString(env.MAP_NODE_EMAIL_FROM),
     emailReplyTo: cleanString(env.CONTENT_REVIEW_EMAIL_REPLY_TO) || cleanString(env.MAP_NODE_EMAIL_REPLY_TO),
@@ -167,13 +187,323 @@ export async function maybeDispatchContentRebuild(
   return { status: 'dispatched', watermark };
 }
 
+// --- Deployed publish health -------------------------------------------------
+
+export interface ContentPublishHealthObservation {
+  contentWatermark: string;
+  deployedBuildAt: string;
+  deployedSnapshotGeneratedAt: string;
+  pagesRunId: string;
+  pagesRunUrl: string;
+  pagesConclusion: string;
+  pagesCompletedAt: string;
+  checkedAt: string;
+  staleThresholdMs: number;
+}
+
+export interface ContentPublishHealthState {
+  staleAlertActive: boolean;
+  buildFailedAlertActive: boolean;
+  staleRecoveredAt: string;
+  buildFailedRecoveredAt: string;
+}
+
+export interface ContentPublishHealthTransition {
+  kind: 'stale' | 'build_failed';
+  status: 'active' | 'recovered';
+}
+
+export interface ContentPublishHealthEvaluation {
+  status: 'healthy' | 'stale' | 'build_failed' | 'stale_and_build_failed';
+  transitions: ContentPublishHealthTransition[];
+  nextState: ContentPublishHealthState;
+}
+
+const toIsoOrEmpty = (value: unknown): string => {
+  const cleaned = cleanString(value);
+  const date = value instanceof Date ? value : new Date(cleaned);
+  return (value instanceof Date || cleaned) && !Number.isNaN(date.valueOf()) ? date.toISOString() : '';
+};
+
+const toBoolean = (value: unknown): boolean => value === true || value === 'true';
+
+export function evaluateContentPublishHealth(
+  previous: ContentPublishHealthState,
+  observation: ContentPublishHealthObservation
+): ContentPublishHealthEvaluation {
+  const contentWatermarkMs = new Date(observation.contentWatermark).valueOf();
+  const deployedSnapshotMs = new Date(observation.deployedSnapshotGeneratedAt).valueOf();
+  if (
+    Number.isNaN(contentWatermarkMs) ||
+    Number.isNaN(deployedSnapshotMs) ||
+    !Number.isFinite(observation.staleThresholdMs) ||
+    observation.staleThresholdMs <= 0
+  ) {
+    throw new Error('invalid_publish_health_observation');
+  }
+
+  const stale = contentWatermarkMs - deployedSnapshotMs > observation.staleThresholdMs;
+  const buildFailed = cleanString(observation.pagesConclusion).toLowerCase() !== 'success';
+  const transitions: ContentPublishHealthTransition[] = [];
+
+  if (stale !== previous.staleAlertActive) {
+    transitions.push({ kind: 'stale', status: stale ? 'active' : 'recovered' });
+  }
+  if (buildFailed !== previous.buildFailedAlertActive) {
+    transitions.push({
+      kind: 'build_failed',
+      status: buildFailed ? 'active' : 'recovered',
+    });
+  }
+
+  return {
+    status: stale ? (buildFailed ? 'stale_and_build_failed' : 'stale') : buildFailed ? 'build_failed' : 'healthy',
+    transitions,
+    nextState: {
+      staleAlertActive: stale,
+      buildFailedAlertActive: buildFailed,
+      staleRecoveredAt: previous.staleAlertActive && !stale ? observation.checkedAt : previous.staleRecoveredAt,
+      buildFailedRecoveredAt:
+        previous.buildFailedAlertActive && !buildFailed ? observation.checkedAt : previous.buildFailedRecoveredAt,
+    },
+  };
+}
+
+export async function computeContentUpdatedAtWatermark(sql: SqlLike): Promise<string> {
+  const [row] = await sql`
+    select greatest(
+      coalesce((select max(updated_at) from content.themes), '-infinity'::timestamptz),
+      coalesce((select max(updated_at) from content.people), '-infinity'::timestamptz),
+      coalesce((select max(updated_at) from content.chapters), '-infinity'::timestamptz),
+      coalesce((select max(updated_at) from content.chapter_initiatives), '-infinity'::timestamptz),
+      coalesce((select max(updated_at) from content.guilds), '-infinity'::timestamptz),
+      coalesce((select max(updated_at) from content.projects), '-infinity'::timestamptz)
+    )::text as "contentWatermark"
+  `;
+  return toIsoOrEmpty(row?.contentWatermark);
+}
+
+function buildPagesWorkflowRunsUrl(repo: string, workflow: string, branch: string): string {
+  const [owner, name, ...extra] = cleanString(repo).split('/');
+  if (!owner || !name || extra.length > 0 || !cleanString(branch)) return '';
+  return (
+    `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}` +
+    `/actions/workflows/${encodeURIComponent(workflow)}/runs` +
+    `?branch=${encodeURIComponent(branch)}&status=completed&per_page=1`
+  );
+}
+
+export async function fetchContentPublishHealthObservation(
+  sql: SqlLike,
+  {
+    env = process.env,
+    fetchImpl = globalThis.fetch,
+    now = new Date(),
+  }: {
+    env?: Record<string, string | undefined>;
+    fetchImpl?: FetchLike;
+    now?: Date | string;
+  } = {}
+): Promise<ContentPublishHealthObservation> {
+  const config = getContentOperationsConfig(env);
+  const workflowRunsUrl = buildPagesWorkflowRunsUrl(
+    config.dispatchRepo,
+    config.publishHealthWorkflow,
+    config.publishHealthBranch
+  );
+  if (
+    !config.publishHealthMetadataUrl ||
+    !config.publishHealthStaleThresholdMs ||
+    !config.dispatchToken ||
+    !workflowRunsUrl ||
+    typeof fetchImpl !== 'function'
+  ) {
+    throw new Error('publish_health_not_configured');
+  }
+
+  const [contentWatermark, metadataResponse, workflowResponse] = await Promise.all([
+    computeContentUpdatedAtWatermark(sql),
+    fetchImpl(config.publishHealthMetadataUrl, {
+      headers: { accept: 'application/json' },
+    }),
+    fetchImpl(workflowRunsUrl, {
+      headers: {
+        authorization: `Bearer ${config.dispatchToken}`,
+        accept: 'application/vnd.github+json',
+        'user-agent': 'greenpill-network-agent',
+      },
+    }),
+  ]);
+
+  if (!contentWatermark) throw new Error('publish_health_content_watermark_unavailable');
+  if (!metadataResponse.ok) throw new Error(`publish_health_metadata_http_${metadataResponse.status}`);
+  if (!workflowResponse.ok) throw new Error(`publish_health_workflow_http_${workflowResponse.status}`);
+
+  const metadata = assertPublicWebsiteBuildMetadata(await metadataResponse.json());
+  const workflowPayload = (await workflowResponse.json()) as {
+    workflow_runs?: unknown[];
+  };
+  const run = Array.isArray(workflowPayload?.workflow_runs)
+    ? (workflowPayload.workflow_runs[0] as Record<string, unknown> | undefined)
+    : undefined;
+  const pagesRunId = cleanString(run?.id === undefined || run?.id === null ? '' : String(run.id));
+  const pagesConclusion = cleanString(run?.conclusion).toLowerCase();
+  const pagesCompletedAt = toIsoOrEmpty(run?.updated_at);
+  if (!run || !pagesRunId || !pagesConclusion || !pagesCompletedAt) {
+    throw new Error('publish_health_workflow_run_unavailable');
+  }
+
+  return {
+    contentWatermark,
+    deployedBuildAt: metadata.builtAt,
+    deployedSnapshotGeneratedAt: metadata.operationalSnapshot.generatedAt,
+    pagesRunId,
+    pagesRunUrl: parseHttpUrl(run.html_url),
+    pagesConclusion,
+    pagesCompletedAt,
+    checkedAt: toIsoOrEmpty(now) || new Date().toISOString(),
+    staleThresholdMs: config.publishHealthStaleThresholdMs,
+  };
+}
+
+function publishHealthEventKey(
+  transition: ContentPublishHealthTransition,
+  observation: ContentPublishHealthObservation
+): string {
+  const marker =
+    transition.kind === 'build_failed'
+      ? observation.pagesRunId
+      : `${observation.contentWatermark}:${observation.deployedSnapshotGeneratedAt}`;
+  return `publish-health:${transition.kind}:${transition.status}:${marker}`;
+}
+
+export async function persistContentPublishHealthObservation(
+  sql: SqlLike,
+  observation: ContentPublishHealthObservation
+): Promise<ContentPublishHealthEvaluation> {
+  return sql.begin(async (tx: SqlLike) => {
+    const [row] = await tx`
+      select
+        stale_alert_active as "staleAlertActive",
+        build_failed_alert_active as "buildFailedAlertActive",
+        stale_recovered_at::text as "staleRecoveredAt",
+        build_failed_recovered_at::text as "buildFailedRecoveredAt"
+      from content.publish_health
+      where id = 'website'
+      for update
+    `;
+    if (!row) throw new Error('publish_health_state_unavailable');
+
+    const evaluation = evaluateContentPublishHealth(
+      {
+        staleAlertActive: toBoolean(row.staleAlertActive),
+        buildFailedAlertActive: toBoolean(row.buildFailedAlertActive),
+        staleRecoveredAt: toIsoOrEmpty(row.staleRecoveredAt),
+        buildFailedRecoveredAt: toIsoOrEmpty(row.buildFailedRecoveredAt),
+      },
+      observation
+    );
+
+    const details = {
+      contentWatermark: observation.contentWatermark,
+      deployedBuildAt: observation.deployedBuildAt,
+      deployedSnapshotGeneratedAt: observation.deployedSnapshotGeneratedAt,
+      pagesRunId: observation.pagesRunId,
+      pagesRunUrl: observation.pagesRunUrl,
+      pagesConclusion: observation.pagesConclusion,
+      pagesCompletedAt: observation.pagesCompletedAt,
+      checkedAt: observation.checkedAt,
+      staleThresholdMs: observation.staleThresholdMs,
+    };
+
+    for (const transition of evaluation.transitions) {
+      await tx`
+        insert into content.review_notifications (
+          kind,
+          event_key,
+          publish_health_kind,
+          publish_health_status,
+          publish_health_details
+        ) values (
+          'publish_health',
+          ${publishHealthEventKey(transition, observation)},
+          ${transition.kind},
+          ${transition.status},
+          ${tx.json(details)}
+        )
+        on conflict do nothing
+      `;
+    }
+
+    await tx`
+      update content.publish_health
+      set
+        content_watermark = ${observation.contentWatermark}::timestamptz,
+        deployed_build_at = ${observation.deployedBuildAt}::timestamptz,
+        deployed_snapshot_generated_at = ${observation.deployedSnapshotGeneratedAt}::timestamptz,
+        latest_pages_run_id = ${observation.pagesRunId},
+        latest_pages_run_url = ${observation.pagesRunUrl},
+        latest_pages_conclusion = ${observation.pagesConclusion},
+        latest_pages_completed_at = ${observation.pagesCompletedAt}::timestamptz,
+        stale_threshold_ms = ${observation.staleThresholdMs},
+        checked_at = ${observation.checkedAt}::timestamptz,
+        stale_alert_active = ${evaluation.nextState.staleAlertActive},
+        build_failed_alert_active = ${evaluation.nextState.buildFailedAlertActive},
+        stale_recovered_at = ${evaluation.nextState.staleRecoveredAt || null}::timestamptz,
+        build_failed_recovered_at = ${evaluation.nextState.buildFailedRecoveredAt || null}::timestamptz
+      where id = 'website'
+    `;
+
+    return evaluation;
+  });
+}
+
+export async function checkContentPublishHealth(
+  sql: SqlLike,
+  {
+    env = process.env,
+    fetchImpl = globalThis.fetch,
+    now = new Date(),
+  }: {
+    env?: Record<string, string | undefined>;
+    fetchImpl?: FetchLike;
+    now?: Date | string;
+  } = {}
+): Promise<{
+  status: 'disabled' | 'checked' | 'check_failed';
+  health?: ContentPublishHealthEvaluation['status'];
+}> {
+  const config = getContentOperationsConfig(env);
+  if (!config.publishHealthEnabled) return { status: 'disabled' };
+
+  try {
+    const observation = await fetchContentPublishHealthObservation(sql, {
+      env,
+      fetchImpl,
+      now,
+    });
+    const evaluation = await persistContentPublishHealthObservation(sql, observation);
+    console.log('content_publish_health_checked', {
+      health: evaluation.status,
+      transitions: evaluation.transitions.length,
+    });
+    return { status: 'checked', health: evaluation.status };
+  } catch (error) {
+    console.warn('content_publish_health_check_failed', {
+      errorName: error instanceof Error ? error.name : 'UnknownError',
+    });
+    return { status: 'check_failed' };
+  }
+}
+
 // --- Content-review notifications -------------------------------------------
 
 type ReviewNotificationKind =
   | 'update_request_pending'
   | 'update_request_decided'
   | 'initiative_pending'
-  | 'record_quarantined';
+  | 'record_quarantined'
+  | 'publish_health';
 
 interface ReviewNotificationRow {
   id: string;
@@ -190,6 +520,9 @@ interface ReviewNotificationRow {
   reviewerNotes?: string;
   creatorEmail?: string;
   initiativeTitle?: string;
+  publishHealthKind?: ContentPublishHealthTransition['kind'];
+  publishHealthStatus?: ContentPublishHealthTransition['status'];
+  publishHealthDetails?: Partial<ContentPublishHealthObservation>;
 }
 
 export interface QueuedContentReviewDeliveryResult {
@@ -254,6 +587,25 @@ function quarantinedRecordEmailText(row: ReviewNotificationRow, recordUrl: strin
     'returns on the next snapshot automatically.',
     '',
     `Open it in Directus: ${recordUrl}`,
+  ].join('\n');
+}
+
+function publishHealthEmailText(row: ReviewNotificationRow): string {
+  const details = row.publishHealthDetails ?? {};
+  const recovered = row.publishHealthStatus === 'recovered';
+  const heading =
+    row.publishHealthKind === 'stale'
+      ? `Greenpill website publish freshness ${recovered ? 'RECOVERED' : 'is STALE'}.`
+      : `Greenpill GitHub Pages delivery ${recovered ? 'RECOVERED' : 'FAILED'}.`;
+  return [
+    heading,
+    '',
+    `Content watermark: ${toSafeEmailText(details.contentWatermark)}`,
+    `Deployed build: ${toSafeEmailText(details.deployedBuildAt)}`,
+    `Deployed snapshot: ${toSafeEmailText(details.deployedSnapshotGeneratedAt)}`,
+    `Pages conclusion: ${toSafeEmailText(details.pagesConclusion)}`,
+    `Checked at: ${toSafeEmailText(details.checkedAt)}`,
+    ...(details.pagesRunUrl ? ['', `Open the Pages run: ${toSafeEmailText(details.pagesRunUrl)}`] : []),
   ].join('\n');
 }
 
@@ -386,6 +738,21 @@ async function sendReviewEmail({
     to = config.reviewRecipients;
     subject = 'Greenpill public snapshot quarantined a record';
     text = quarantinedRecordEmailText(row, url);
+  } else if (row.kind === 'publish_health') {
+    if (!config.reviewRecipients.length) {
+      return {
+        status: 'send_failed',
+        error: 'no_review_recipients_configured',
+        providerMessageId: '',
+      };
+    }
+    to = config.reviewRecipients;
+    const recovered = row.publishHealthStatus === 'recovered';
+    subject =
+      row.publishHealthKind === 'stale'
+        ? `Greenpill website freshness ${recovered ? 'recovered' : 'alert'}`
+        : `Greenpill Pages delivery ${recovered ? 'recovered' : 'failed'}`;
+    text = publishHealthEmailText(row);
   } else {
     const url = row.requestId ? config.requestUrl(row.requestId) : '';
     if (!url) return { status: 'send_failed', error: 'directus_url_not_configured', providerMessageId: '' };
@@ -455,6 +822,9 @@ export async function deliverQueuedContentReviewNotifications(
       notification.record_slug as "recordSlug",
       notification.quarantine_reason as "quarantineReason",
       notification.request_status as "requestStatus",
+      notification.publish_health_kind as "publishHealthKind",
+      notification.publish_health_status as "publishHealthStatus",
+      notification.publish_health_details as "publishHealthDetails",
       request.title as "requestTitle",
       request.summary as "requestSummary",
       request.reviewer_notes as "reviewerNotes",
@@ -575,6 +945,9 @@ export function createContentOperationsRepository({
   return {
     maybeDispatchContentRebuild() {
       return withSql(createSql, (sql) => maybeDispatchContentRebuild(sql, dispatchState, { env, fetchImpl }));
+    },
+    checkPublishHealth() {
+      return withSql(createSql, (sql) => checkContentPublishHealth(sql, { env, fetchImpl }));
     },
     deliverQueuedReviewNotifications(options?: { limit?: number }) {
       return withSql(createSql, (sql) => deliverQueuedContentReviewNotifications(sql, {

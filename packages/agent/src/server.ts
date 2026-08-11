@@ -131,15 +131,17 @@ export function startContentOperationsSweep({
   env?: Record<string, string | undefined>;
   repository?: {
     maybeDispatchContentRebuild?: () => Promise<unknown>;
+    checkPublishHealth?: () => Promise<unknown>;
     deliverQueuedReviewNotifications?: (options?: { limit?: number }) => Promise<unknown>;
     expireLiveOnboardingIfDue?: () => Promise<unknown>;
   };
 } = {}): (() => void) | null {
   if (!env.DATABASE_URL || env.CONTENT_OPERATIONS_SWEEP_ENABLED === 'false') return null;
   const dispatch = repository.maybeDispatchContentRebuild?.bind(repository);
+  const checkPublishHealth = repository.checkPublishHealth?.bind(repository);
   const deliver = repository.deliverQueuedReviewNotifications?.bind(repository);
   const expire = repository.expireLiveOnboardingIfDue?.bind(repository);
-  if (!dispatch && !deliver && !expire) return null;
+  if (!dispatch && !checkPublishHealth && !deliver && !expire) return null;
 
   const intervalMs = parsePositiveInteger(env.CONTENT_OPERATIONS_SWEEP_INTERVAL_MS, 60 * 1000);
 
@@ -150,6 +152,7 @@ export function startContentOperationsSweep({
     try {
       if (expire) await expire();
       if (dispatch) await dispatch();
+      if (checkPublishHealth) await checkPublishHealth();
       if (deliver) await deliver({ limit: 20 });
     } catch (error) {
       console.warn('content_operations_sweep_failed', {

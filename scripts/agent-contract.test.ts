@@ -8,6 +8,10 @@ import {
   createAgentApp,
 } from '@greenpill-network/agent/app';
 import {
+  deliverQueuedContentReviewNotifications,
+  evaluateContentPublishHealth,
+  fetchContentPublishHealthObservation,
+  persistContentPublishHealthObservation,
   RESEND_WEBHOOK_ROUTE,
   recordResendWebhookEvent,
   signResendWebhookPayload,
@@ -672,8 +676,250 @@ test('agent server starts a durable edit-link delivery sweep without logging pri
   assert.match(source, /startMapLocationCleanupSweep/);
   assert.match(source, /MAP_LOCATION_CLEANUP_SWEEP_INTERVAL_MS/);
   assert.match(source, /cleanupExpired/);
+  assert.match(source, /checkPublishHealth/);
   assert.match(source, /errorName/);
   assert.doesNotMatch(source, /console\.warn\([^;]*(email|token|normalized_email|request_ip)/s);
+});
+
+test('publish-health transitions cover healthy, stale, build-failed, repeated, and recovered sweeps', () => {
+  const inactive = {
+    staleAlertActive: false,
+    buildFailedAlertActive: false,
+    staleRecoveredAt: '',
+    buildFailedRecoveredAt: '',
+  };
+  const baseObservation = {
+    contentWatermark: '2026-08-11T12:10:00.000Z',
+    deployedBuildAt: '2026-08-11T12:05:00.000Z',
+    deployedSnapshotGeneratedAt: '2026-08-11T12:00:00.000Z',
+    pagesRunId: '101',
+    pagesRunUrl: 'https://github.com/greenpill-dev-guild/network/actions/runs/101',
+    pagesConclusion: 'success',
+    pagesCompletedAt: '2026-08-11T12:06:00.000Z',
+    checkedAt: '2026-08-11T12:11:00.000Z',
+    staleThresholdMs: 15 * 60 * 1000,
+  };
+
+  const healthy = evaluateContentPublishHealth(inactive, baseObservation);
+  assert.equal(healthy.status, 'healthy');
+  assert.deepEqual(healthy.transitions, []);
+
+  const stale = evaluateContentPublishHealth(inactive, {
+    ...baseObservation,
+    contentWatermark: '2026-08-11T12:20:00.001Z',
+  });
+  assert.equal(stale.status, 'stale');
+  assert.deepEqual(stale.transitions, [{ kind: 'stale', status: 'active' }]);
+
+  const buildFailed = evaluateContentPublishHealth(inactive, {
+    ...baseObservation,
+    pagesRunId: '102',
+    pagesConclusion: 'failure',
+  });
+  assert.equal(buildFailed.status, 'build_failed');
+  assert.deepEqual(buildFailed.transitions, [{ kind: 'build_failed', status: 'active' }]);
+
+  const repeated = evaluateContentPublishHealth(buildFailed.nextState, {
+    ...baseObservation,
+    pagesRunId: '102',
+    pagesConclusion: 'failure',
+  });
+  assert.equal(repeated.status, 'build_failed');
+  assert.deepEqual(repeated.transitions, []);
+
+  const recovered = evaluateContentPublishHealth(
+    {
+      staleAlertActive: true,
+      buildFailedAlertActive: true,
+      staleRecoveredAt: '',
+      buildFailedRecoveredAt: '',
+    },
+    {
+      ...baseObservation,
+      pagesRunId: '103',
+      checkedAt: '2026-08-11T12:30:00.000Z',
+    }
+  );
+  assert.equal(recovered.status, 'healthy');
+  assert.deepEqual(recovered.transitions, [
+    { kind: 'stale', status: 'recovered' },
+    { kind: 'build_failed', status: 'recovered' },
+  ]);
+  assert.equal(recovered.nextState.staleRecoveredAt, '2026-08-11T12:30:00.000Z');
+  assert.equal(recovered.nextState.buildFailedRecoveredAt, '2026-08-11T12:30:00.000Z');
+});
+
+test('publish-health polling compares the public build artifact with content and Pages state', async () => {
+  const calls = [];
+  const sql = async (strings) => {
+    const source = strings.join(' ');
+    if (source.includes('select greatest')) {
+      return [{ contentWatermark: '2026-08-11T12:20:00.000Z' }];
+    }
+    return [];
+  };
+
+  const observation = await fetchContentPublishHealthObservation(sql, {
+    env: {
+      CONTENT_DISPATCH_GITHUB_TOKEN: 'test-actions-read-token',
+      CONTENT_DISPATCH_GITHUB_REPO: 'greenpill-dev-guild/network',
+      CONTENT_PUBLISH_HEALTH_METADATA_URL: 'https://greenpill.network/build-metadata.json',
+      CONTENT_PUBLISH_HEALTH_STALE_THRESHOLD_MS: String(15 * 60 * 1000),
+    },
+    now: '2026-08-11T12:21:00.000Z',
+    fetchImpl: async (url, options) => {
+      calls.push({ url: String(url), options });
+      if (String(url).includes('build-metadata.json')) {
+        return Response.json({
+          version: 1,
+          builtAt: '2026-08-11T12:05:00.000Z',
+          operationalSnapshot: { generatedAt: '2026-08-11T12:00:00.000Z' },
+        });
+      }
+      return Response.json({
+        workflow_runs: [
+          {
+            id: 104,
+            conclusion: 'failure',
+            updated_at: '2026-08-11T12:06:00.000Z',
+            html_url: 'https://github.com/greenpill-dev-guild/network/actions/runs/104',
+          },
+        ],
+      });
+    },
+  });
+
+  assert.deepEqual(observation, {
+    contentWatermark: '2026-08-11T12:20:00.000Z',
+    deployedBuildAt: '2026-08-11T12:05:00.000Z',
+    deployedSnapshotGeneratedAt: '2026-08-11T12:00:00.000Z',
+    pagesRunId: '104',
+    pagesRunUrl: 'https://github.com/greenpill-dev-guild/network/actions/runs/104',
+    pagesConclusion: 'failure',
+    pagesCompletedAt: '2026-08-11T12:06:00.000Z',
+    checkedAt: '2026-08-11T12:21:00.000Z',
+    staleThresholdMs: 15 * 60 * 1000,
+  });
+  assert.equal(calls.length, 2);
+  assert.match(calls[1].url, /actions\/workflows\/github-pages\.yml\/runs/);
+  assert.equal(new URL(calls[1].url).searchParams.get('branch'), 'main');
+  assert.equal(calls[1].options.headers.authorization, 'Bearer test-actions-read-token');
+});
+
+test('publish-health persistence serializes state and deduplicates repeated alerts', async () => {
+  const notifications = [];
+  const state = {
+    staleAlertActive: false,
+    buildFailedAlertActive: false,
+    staleRecoveredAt: '',
+    buildFailedRecoveredAt: '',
+  };
+  const tx = async (strings, ...values) => {
+    const source = strings.join(' ');
+    if (source.includes('from content.publish_health')) return [{ ...state }];
+    if (source.includes('insert into content.review_notifications')) {
+      notifications.push({ eventKey: values[0], kind: values[1], status: values[2] });
+      return [];
+    }
+    if (source.includes('update content.publish_health')) {
+      state.staleAlertActive = values[9];
+      state.buildFailedAlertActive = values[10];
+      state.staleRecoveredAt = values[11] ?? '';
+      state.buildFailedRecoveredAt = values[12] ?? '';
+    }
+    return [];
+  };
+  tx.json = (value) => value;
+  const sql = async () => [];
+  sql.begin = async (callback) => callback(tx);
+
+  const staleObservation = {
+    contentWatermark: '2026-08-11T12:20:00.001Z',
+    deployedBuildAt: '2026-08-11T12:05:00.000Z',
+    deployedSnapshotGeneratedAt: '2026-08-11T12:00:00.000Z',
+    pagesRunId: '105',
+    pagesRunUrl: 'https://github.com/greenpill-dev-guild/network/actions/runs/105',
+    pagesConclusion: 'success',
+    pagesCompletedAt: '2026-08-11T12:06:00.000Z',
+    checkedAt: '2026-08-11T12:21:00.000Z',
+    staleThresholdMs: 15 * 60 * 1000,
+  };
+
+  await persistContentPublishHealthObservation(sql, staleObservation);
+  await persistContentPublishHealthObservation(sql, staleObservation);
+  assert.deepEqual(notifications, [{
+    eventKey: 'publish-health:stale:active:2026-08-11T12:20:00.001Z:2026-08-11T12:00:00.000Z',
+    kind: 'stale',
+    status: 'active',
+  }]);
+  assert.equal(state.staleAlertActive, true);
+
+  await persistContentPublishHealthObservation(sql, {
+    ...staleObservation,
+    contentWatermark: '2026-08-11T12:10:00.000Z',
+    deployedSnapshotGeneratedAt: '2026-08-11T12:30:00.000Z',
+    pagesRunId: '106',
+    checkedAt: '2026-08-11T12:31:00.000Z',
+  });
+  assert.equal(notifications.length, 2);
+  assert.deepEqual(notifications[1], {
+    eventKey: 'publish-health:stale:recovered:2026-08-11T12:10:00.000Z:2026-08-11T12:30:00.000Z',
+    kind: 'stale',
+    status: 'recovered',
+  });
+  assert.equal(state.staleAlertActive, false);
+  assert.equal(state.staleRecoveredAt, '2026-08-11T12:31:00.000Z');
+});
+
+test('publish-health alerts and recoveries deliver through the durable Resend queue', async () => {
+  const statements = [];
+  let resendRequest;
+  const sql = async (strings) => {
+    const source = strings.join(' ');
+    statements.push(source);
+    if (source.includes('from content.review_notifications notification')) {
+      return [
+        {
+          id: '11111111-1111-4111-8111-111111111111',
+          kind: 'publish_health',
+          publishHealthKind: 'stale',
+          publishHealthStatus: 'active',
+          publishHealthDetails: {
+            contentWatermark: '2026-08-11T12:20:00.000Z',
+            deployedBuildAt: '2026-08-11T12:05:00.000Z',
+            deployedSnapshotGeneratedAt: '2026-08-11T12:00:00.000Z',
+            pagesConclusion: 'success',
+            checkedAt: '2026-08-11T12:21:00.000Z',
+          },
+        },
+      ];
+    }
+    if (source.includes('returning attempts')) return [{ attempts: 1 }];
+    return [];
+  };
+
+  const result = await deliverQueuedContentReviewNotifications(sql, {
+    env: {
+      RESEND_API_KEY: 'test-resend-key',
+      CONTENT_REVIEW_EMAIL_FROM: 'Greenpill <alerts@example.org>',
+      CONTENT_REVIEW_RECIPIENTS: 'operator@example.org',
+    },
+    fetchImpl: async (url, options) => {
+      resendRequest = { url: String(url), options };
+      return Response.json({ id: 'provider-message-1' });
+    },
+  });
+
+  assert.deepEqual(result, { queued: 1, delivered: 1, failed: 0, skipped: 0 });
+  assert.equal(resendRequest.options.headers['Idempotency-Key'], 'content-review-11111111-1111-4111-8111-111111111111');
+  const body = JSON.parse(resendRequest.options.body);
+  assert.deepEqual(body.to, ['operator@example.org']);
+  assert.equal(body.subject, 'Greenpill website freshness alert');
+  assert.match(body.text, /publish freshness is STALE/);
+  assert.equal(
+    statements.some((source) => source.includes("status = 'sent'")),
+    true
+  );
 });
 
 const RESEND_TEST_WEBHOOK_SECRET = `whsec_${Buffer.from('test-resend-webhook-secret').toString('base64')}`;

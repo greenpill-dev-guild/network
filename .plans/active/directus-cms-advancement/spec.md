@@ -108,7 +108,12 @@ pinned version already ships.
 - **`content.people`**: defer - keep as published-read reference data; the
   dual source of truth stays documented debt.
 
-## Remaining implementation contract (Codex reconciliation, 2026-08-11)
+## Platform health implementation contract (PRD-808, 2026-08-11)
+
+Implemented and locally tested on the PRD-808 draft branch. Migration apply,
+token permission changes, agent configuration/deploy, and live alert proof are
+separate release actions; the platform lane remains in progress until those
+authorized steps and merge are complete.
 
 - **Freshness source**: publish a public-safe static build-metadata artifact
   from the website build. The agent must compare that deployed artifact with
