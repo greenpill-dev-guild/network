@@ -2,7 +2,6 @@
 
 import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
-import { ensureScopedContentPolicy } from './directus-content-access.ts';
 import {
   DIRECTUS_CHAPTER_IMAGE_FOLDER_ID,
   createDirectusClient,
@@ -257,8 +256,9 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
     });
     cleanup.guildAssignmentId = guildAssignment?.data?.id;
 
-    await ensureScopedContentPolicy(admin, cleanup.userId, 'chapter', options.chapter);
-    await ensureScopedContentPolicy(admin, cleanup.userId, 'guild', options.guild);
+    // Permissions v2: no per-user policy setup. The assignment rows above are
+    // the entire grant - the role-level "Greenpill Assigned Editor" policy
+    // scopes every steward dynamically via $CURRENT_USER.
 
     const steward = await createDirectusClient({ url: admin.url, token });
     await steward.request('/users/me?fields=id,email');
@@ -336,10 +336,13 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
       }
     ));
 
+    // Permissions v2: there is no per-slug preset, so the steward names their
+    // chapter explicitly and the dynamic validation checks the assignment.
     await steward.request('/items/chapter_initiatives', {
       method: 'POST',
       body: {
         slug: initiativeSlug,
+        chapter_slug: options.chapter,
         title: 'Directus Smoke Initiative',
         summary: 'Temporary scoped access smoke test.',
         publication_status: 'draft',
@@ -354,7 +357,9 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
       },
     });
 
-    await expectForbidden('unassigned chapter initiative create', () => steward.request('/items/chapter_initiatives', {
+    // Under the dynamic model a cross-chapter create fails the $CURRENT_USER
+    // validation (400) rather than a row-filter 403; both are denials.
+    await expectRejected('unassigned chapter initiative create', () => steward.request('/items/chapter_initiatives', {
       method: 'POST',
       body: {
         slug: `${initiativeSlug}-blocked`,
@@ -367,6 +372,7 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
     const updateRequest = await steward.request('/items/chapter_update_requests', {
       method: 'POST',
       body: {
+        chapter_slug: options.chapter,
         title: 'Directus Smoke Chapter Update',
         summary: 'Temporary scoped chapter update request smoke test.',
         requested_changes: {
@@ -413,15 +419,31 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
       throw new Error('Directus did not return an unassigned chapter update request id.');
     }
 
-    await expectRejected('unassigned chapter update request link create', () => steward.request('/items/chapter_update_request_links', {
+    // Cross-chapter child attach: Directus cannot check parent ownership at
+    // create time (relational create validation is unsupported), so the row
+    // inserts - but the migration-027 trigger pins it to the PARENT's chapter,
+    // which puts it outside the steward's dynamic scope: unreadable and
+    // uneditable to them, chapter integrity intact. Assert exactly that.
+    const strayLink = await steward.request('/items/chapter_update_request_links', {
       method: 'POST',
       body: {
         update_request_id: unassignedUpdateRequestId,
-        label: 'Blocked Directus smoke public link',
+        label: 'Stray Directus smoke public link',
         url: 'https://greenpill.network',
         kind: 'website',
       },
-    }));
+    });
+    const strayLinkId = strayLink?.data?.id;
+    if (strayLinkId) {
+      const strayAsAdmin = await admin.request(`/items/chapter_update_request_links/${encodePathSegment(strayLinkId)}?fields=chapter_slug`);
+      if (strayAsAdmin?.data?.chapter_slug !== options.unassignedChapter) {
+        throw new Error('cross-chapter link attach did not inherit the parent request chapter.');
+      }
+      await expectForbidden('stray link read-back', () => steward.request(
+        `/items/chapter_update_request_links/${encodePathSegment(strayLinkId)}?fields=id`
+      ));
+      await deleteIfPresent(admin, `/items/chapter_update_request_links/${encodePathSegment(strayLinkId)}`);
+    }
 
     await steward.request(`/items/chapter_update_requests/${encodePathSegment(updateRequestId)}`, {
       method: 'PATCH',
@@ -439,7 +461,7 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
       },
     }));
 
-    await expectForbidden('unassigned chapter update request create', () => steward.request('/items/chapter_update_requests', {
+    await expectRejected('unassigned chapter update request create', () => steward.request('/items/chapter_update_requests', {
       method: 'POST',
       body: {
         chapter_slug: options.unassignedChapter,
@@ -453,6 +475,7 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
       method: 'POST',
       body: {
         slug: projectSlug,
+        guild_slug: options.guild,
         name: 'Directus Smoke Project',
         summary: 'Temporary scoped access smoke test.',
         publication_status: 'draft',
@@ -460,7 +483,7 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
     });
     cleanup.projectCreated = true;
 
-    await expectForbidden('unassigned guild project create', () => steward.request('/items/projects', {
+    await expectRejected('unassigned guild project create', () => steward.request('/items/projects', {
       method: 'POST',
       body: {
         slug: `${projectSlug}-blocked`,
@@ -469,6 +492,24 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
         publication_status: 'draft',
       },
     }));
+
+    // Revocation is a pure data operation under permissions v2: deleting the
+    // assignment row must remove chapter access immediately, with no policy
+    // cleanup step.
+    if (cleanup.chapterAssignmentId) {
+      await admin.request(
+        `/items/chapter_editor_assignments/${encodePathSegment(cleanup.chapterAssignmentId)}`,
+        { method: 'DELETE', expected: [204] }
+      );
+      cleanup.chapterAssignmentId = null;
+      await expectForbidden('revoked chapter update', () => steward.request(
+        `/items/chapters/${encodePathSegment(options.chapter)}`,
+        {
+          method: 'PATCH',
+          body: { summary: assignedSummary },
+        }
+      ));
+    }
 
     return {
       url: admin.url,

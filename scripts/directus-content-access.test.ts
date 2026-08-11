@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  ASSIGNED_EDITOR_POLICY_NAME,
   assertAssignmentAvailable,
-  buildScopedPolicyPermissions,
+  buildAssignedEditorPermissions,
   parseArgs,
   parseAssignments,
   readAssignmentsFromDirectus,
@@ -74,15 +75,19 @@ test('parseArgs defaults to role sync with dry-run support', () => {
   assert.equal(options.dryRun, true);
 });
 
-test('parseArgs supports sync without a TSV input', () => {
-  const options = parseArgs(['sync']);
+test('parseArgs maps verify/sync/cleanup-legacy commands without TSV input', () => {
+  const verify = parseArgs(['verify']);
+  assert.equal(verify.command, 'verify');
+  assert.equal(verify.input, undefined);
+  assert.equal(verify.role, 'Greenpill Steward Editor');
 
-  assert.equal(options.command, 'sync');
-  assert.equal(options.input, undefined);
-  assert.equal(options.role, 'Greenpill Steward Editor');
+  // Deprecated alias: sync now verifies (the dynamic model has no per-user
+  // policies left to re-sync).
+  assert.equal(parseArgs(['sync']).command, 'verify');
+  assert.equal(parseArgs(['cleanup-legacy', '--dry-run']).command, 'cleanup-legacy');
 
   assert.throws(() => parseArgs(['assign']), /Missing --input/);
-  assert.throws(() => parseArgs(['sync', '--input', '/tmp/access.tsv']), /does not accept --input/);
+  assert.throws(() => parseArgs(['verify', '--input', '/tmp/access.tsv']), /does not accept --input/);
 });
 
 test('readAssignmentsFromDirectus derives assignments from live Directus rows', async () => {
@@ -254,7 +259,7 @@ test('operational permission plan keeps base steward role read-only for operatio
   ]);
 });
 
-test('scoped chapter and guild policies use static parent filters', () => {
+test('assigned editor policy scopes every collection with dynamic $CURRENT_USER filters', () => {
   const collections = {
     chapters: 'chapters',
     chapterInitiatives: 'chapter_initiatives',
@@ -264,10 +269,15 @@ test('scoped chapter and guild policies use static parent filters', () => {
     guilds: 'guilds',
     projects: 'projects',
   };
-  const chapterPermissions = buildScopedPolicyPermissions(collections, 'chapter', 'brasil', 'policy-chapter');
-  const guildPermissions = buildScopedPolicyPermissions(collections, 'guild', 'dev-guild', 'policy-guild');
+  const permissions = buildAssignedEditorPermissions(collections);
+  const assignedChapters = '$CURRENT_USER.chapter_editor_assignments.chapter_slug';
+  const assignedGuilds = '$CURRENT_USER.guild_editor_assignments.guild_slug';
 
-  const chapterUpdate = chapterPermissions.find(
+  assert.equal(permissions.every((permission) => permission.policy === ASSIGNED_EDITOR_POLICY_NAME), true);
+  // Static slug literals are what made scoped policies go stale; none survive.
+  assert.equal(JSON.stringify(permissions).includes('"_eq":"brasil"'), false);
+
+  const chapterUpdate = permissions.find(
     (permission) => permission.collection === 'chapters' && permission.action === 'update'
   );
   assert.deepEqual(chapterUpdate?.permissions, {
@@ -279,7 +289,7 @@ test('scoped chapter and guild policies use static parent filters', () => {
       },
       {
         slug: {
-          _eq: 'brasil',
+          _in: assignedChapters,
         },
       },
     ],
@@ -292,63 +302,44 @@ test('scoped chapter and guild policies use static parent filters', () => {
     },
   });
 
-  const chapterRead = chapterPermissions.find(
-    (permission) => permission.collection === 'chapters' && permission.action === 'read'
-  );
-  assert.equal(
-    ((chapterRead?.permissions as any)._and[0].publication_status._in as string[]).includes('published'),
-    true
-  );
-
-  const initiativeCreate = chapterPermissions.find(
+  const initiativeCreate = permissions.find(
     (permission) => permission.collection === 'chapter_initiatives' && permission.action === 'create'
   );
-  assert.deepEqual((initiativeCreate?.permissions as any)._and[1], {
-    chapter_slug: {
-      _eq: 'brasil',
-    },
-  });
-  assert.equal(initiativeCreate?.fields.includes('chapter_slug'), false);
-  assert.deepEqual(initiativeCreate?.presets, {
-    publication_status: 'draft',
-    chapter_slug: 'brasil',
-  });
+  // No per-slug preset: the steward picks the chapter and the dynamic
+  // validation only accepts assigned chapters.
+  assert.equal(initiativeCreate?.fields.includes('chapter_slug'), true);
+  assert.deepEqual(initiativeCreate?.presets, { publication_status: 'draft' });
   assert.deepEqual(initiativeCreate?.validation, {
-    publication_status: {
-      _in: ['draft', 'pending_review', 'published'],
-    },
+    _and: [
+      { publication_status: { _in: ['draft', 'pending_review', 'published'] } },
+      { chapter_slug: { _in: assignedChapters } },
+    ],
   });
 
-  const initiativeUpdate = chapterPermissions.find(
-    (permission) => permission.collection === 'chapter_initiatives' && permission.action === 'update'
+  const updateRequestRead = permissions.find(
+    (permission) => permission.collection === 'chapter_update_requests' && permission.action === 'read'
   );
-  assert.equal(initiativeUpdate?.fields.includes('chapter_slug'), false);
-  assert.deepEqual(initiativeUpdate?.validation, {
-    publication_status: {
-      _in: ['draft', 'pending_review', 'published'],
+  // Decided requests stay readable so review outcomes are visible to stewards.
+  assert.deepEqual((updateRequestRead?.permissions as any)._and[0], {
+    request_status: {
+      _in: ['draft', 'pending_review', 'needs_changes', 'accepted', 'declined', 'archived'],
     },
   });
+  assert.equal(updateRequestRead?.fields.includes('reviewer_notes'), true);
 
-  const updateRequestCreate = chapterPermissions.find(
+  const updateRequestCreate = permissions.find(
     (permission) => permission.collection === 'chapter_update_requests' && permission.action === 'create'
   );
-  assert.deepEqual((updateRequestCreate?.permissions as any)._and[1], {
-    chapter_slug: {
-      _eq: 'brasil',
-    },
-  });
-  assert.equal(updateRequestCreate?.fields.includes('chapter_slug'), false);
-  assert.deepEqual(updateRequestCreate?.presets, {
-    request_status: 'draft',
-    chapter_slug: 'brasil',
-  });
+  assert.equal(updateRequestCreate?.fields.includes('chapter_slug'), true);
+  assert.deepEqual(updateRequestCreate?.presets, { request_status: 'draft' });
   assert.deepEqual(updateRequestCreate?.validation, {
-    request_status: {
-      _in: ['draft', 'pending_review'],
-    },
+    _and: [
+      { request_status: { _in: ['draft', 'pending_review'] } },
+      { chapter_slug: { _in: assignedChapters } },
+    ],
   });
 
-  const updateRequestUpdate = chapterPermissions.find(
+  const updateRequestUpdate = permissions.find(
     (permission) => permission.collection === 'chapter_update_requests' && permission.action === 'update'
   );
   assert.equal(updateRequestUpdate?.fields.includes('chapter_slug'), false);
@@ -358,14 +349,14 @@ test('scoped chapter and guild policies use static parent filters', () => {
     },
   });
 
-  const updateRequestLinkCreate = chapterPermissions.find(
+  const updateRequestLinkCreate = permissions.find(
     (permission) => permission.collection === 'chapter_update_request_links' && permission.action === 'create'
   );
   assert.deepEqual(updateRequestLinkCreate?.permissions, {
     _and: [
       {
         chapter_slug: {
-          _eq: 'brasil',
+          _in: assignedChapters,
         },
       },
       {
@@ -382,9 +373,8 @@ test('scoped chapter and guild policies use static parent filters', () => {
       _nnull: true,
     },
   });
-  assert.deepEqual(updateRequestLinkCreate?.presets, {
-    chapter_slug: 'brasil',
-  });
+  // chapter_slug is filled by the migration-027 trigger, not a preset.
+  assert.equal(updateRequestLinkCreate?.presets, null);
   assert.deepEqual(updateRequestLinkCreate?.fields, [
     'update_request_id',
     'sort_order',
@@ -397,58 +387,72 @@ test('scoped chapter and guild policies use static parent filters', () => {
     'kind',
   ]);
 
-  const updateRequestProofSignalUpdate = chapterPermissions.find(
+  const proofSignalUpdate = permissions.find(
     (permission) => (
       permission.collection === 'chapter_update_request_proof_signals' &&
       permission.action === 'update'
     )
   );
-  assert.deepEqual(updateRequestProofSignalUpdate?.permissions, {
-    _and: [
-      {
-        chapter_slug: {
-          _eq: 'brasil',
-        },
-      },
-      {
-        update_request_id: {
-          request_status: {
-            _in: ['draft', 'pending_review', 'needs_changes'],
-          },
-        },
-      },
-    ],
-  });
-  assert.equal(updateRequestProofSignalUpdate?.validation, null);
-  assert.equal(updateRequestProofSignalUpdate?.fields.includes('chapter_slug'), false);
-  assert.equal(updateRequestProofSignalUpdate?.fields.includes('update_request_id'), false);
+  assert.equal(proofSignalUpdate?.validation, null);
+  assert.equal(proofSignalUpdate?.fields.includes('chapter_slug'), false);
+  assert.equal(proofSignalUpdate?.fields.includes('update_request_id'), false);
 
-  const projectCreate = guildPermissions.find(
+  const guildUpdate = permissions.find(
+    (permission) => permission.collection === 'guilds' && permission.action === 'update'
+  );
+  assert.deepEqual((guildUpdate?.permissions as any)._and[1], {
+    slug: {
+      _in: assignedGuilds,
+    },
+  });
+
+  const projectCreate = permissions.find(
     (permission) => permission.collection === 'projects' && permission.action === 'create'
   );
-  assert.deepEqual((projectCreate?.permissions as any)._and[1], {
-    guild_slug: {
-      _eq: 'dev-guild',
-    },
-  });
-  assert.equal(projectCreate?.fields.includes('guild_slug'), false);
-  assert.deepEqual(projectCreate?.presets, {
-    publication_status: 'draft',
-    guild_slug: 'dev-guild',
-  });
+  assert.equal(projectCreate?.fields.includes('guild_slug'), true);
+  assert.deepEqual(projectCreate?.presets, { publication_status: 'draft' });
   assert.deepEqual(projectCreate?.validation, {
-    publication_status: {
-      _in: ['draft', 'pending_review', 'published'],
-    },
+    _and: [
+      { publication_status: { _in: ['draft', 'pending_review', 'published'] } },
+      { guild_slug: { _in: assignedGuilds } },
+    ],
   });
+});
 
-  const projectUpdate = guildPermissions.find(
-    (permission) => permission.collection === 'projects' && permission.action === 'update'
+test('operational permission plan carries the assigned editor policy on the steward role', () => {
+  const plan = buildDirectusOperationalPermissionPlan(
+    ['themes', 'people', 'chapters', 'chapter_initiatives', 'guilds', 'projects'],
+    [],
+    ['chapter_editor_assignments', 'guild_editor_assignments'],
+    [
+      'chapter_update_requests',
+      'chapter_update_request_links',
+      'chapter_update_request_proof_signals',
+    ]
   );
-  assert.equal(projectUpdate?.fields.includes('guild_slug'), false);
-  assert.deepEqual(projectUpdate?.validation, {
-    publication_status: {
-      _in: ['draft', 'pending_review', 'published'],
-    },
-  });
+
+  assert.equal(plan.policies.some((policy) => policy.name === ASSIGNED_EDITOR_POLICY_NAME), true);
+  assert.deepEqual(plan.rolePolicyAttachments, [
+    { role: 'Greenpill Steward Editor', policy: ASSIGNED_EDITOR_POLICY_NAME },
+  ]);
+
+  const assignedPermissions = plan.permissions.filter(
+    (permission) => permission.policy === ASSIGNED_EDITOR_POLICY_NAME
+  );
+  assert.equal(assignedPermissions.length, 21);
+  assert.equal(
+    assignedPermissions.some((permission) => permission.collection === 'chapters' && permission.action === 'update'),
+    true
+  );
+  // A missing workflow collection (pending migration) drops only its rows.
+  const planWithoutWorkflow = buildDirectusOperationalPermissionPlan(
+    ['themes', 'people', 'chapters', 'chapter_initiatives', 'guilds', 'projects'],
+    [],
+    ['chapter_editor_assignments', 'guild_editor_assignments'],
+    []
+  );
+  const assignedWithoutWorkflow = planWithoutWorkflow.permissions.filter(
+    (permission) => permission.policy === ASSIGNED_EDITOR_POLICY_NAME
+  );
+  assert.equal(assignedWithoutWorkflow.length, 10);
 });

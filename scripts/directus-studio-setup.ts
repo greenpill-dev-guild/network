@@ -106,6 +106,134 @@ const MAP_NODE_MODERATION_COLLECTIONS = Object.freeze([
   'map_node_moderation_access_links',
 ]);
 
+// Optional collections: configured when the migration has landed, silently
+// skipped otherwise (unlike the core lists, which fail hard).
+const OPTIONAL_CONTENT_COLLECTIONS = Object.freeze(['review_notifications']);
+const OPTIONAL_INTAKE_COLLECTIONS = Object.freeze(['map_node_intake_settings']);
+const OPTIONAL_IMPACT_COLLECTIONS = Object.freeze(['chapter_impact_snapshots']);
+
+const OPTIONAL_COLLECTION_META = Object.freeze({
+  review_notifications: {
+    hidden: false,
+    singleton: false,
+    icon: 'notifications_active',
+    note: 'Delivery audit for content review notifications and public-snapshot quarantine alerts. Failed rows need operator follow-up; quarantined rows mean a record is missing from the public site.',
+    display_template: '{{ kind }} · {{ status }}',
+  },
+  map_node_intake_settings: {
+    hidden: false,
+    singleton: true,
+    icon: 'toggle_on',
+    note: 'Live Onboarding Mode. While enabled, public map submissions auto-approve. Always set the expiry so it turns itself off after a workshop.',
+  },
+  chapter_impact_snapshots: {
+    hidden: false,
+    singleton: false,
+    icon: 'insights',
+    note: 'Read-only cached impact results per chapter. Check status and last error here after editing a chapter\'s impact sources.',
+    display_template: '{{ chapter_slug }}',
+  },
+});
+
+// Purely technical storage that only clutters the admin sidebar.
+const TECHNICAL_COLLECTIONS_TO_HIDE = Object.freeze([
+  'agent_schema_migrations',
+  'email_provider_events',
+  'map_location_confirmations',
+  'map_location_geocode_cache',
+  'map_location_geocode_throttle',
+  'map_location_request_limits',
+  'map_node_location_repairs',
+  'map_node_edit_tokens',
+]);
+
+// Form groups: members get meta.group; the group alias fields are created by
+// ensureGroupField during apply. Field names not listed stay ungrouped.
+const FIELD_GROUPS_BY_COLLECTION = Object.freeze({
+  chapters: {
+    group_identity: {
+      label: 'Identity & Location',
+      sort: 1,
+      fields: ['slug', 'name', 'city', 'country', 'region', 'entity_status', 'founded', 'latitude', 'longitude'],
+    },
+    group_story: {
+      label: 'Story',
+      sort: 2,
+      fields: [
+        'summary', 'intro_quote', 'intro_quote_attribution', 'stewards', 'steward_slugs', 'theme_slugs',
+        'related_chapter_slugs', 'featured_story', 'featured_story_slugs', 'authored_resource_slugs',
+        'featured_weight', 'initiatives',
+      ],
+    },
+    group_links_media: {
+      label: 'Links & Media',
+      sort: 3,
+      fields: ['primary_link', 'links', 'connect_links', 'image_file', 'image', 'media', 'proof_signals', 'seo'],
+    },
+    group_impact: {
+      label: 'Impact',
+      sort: 4,
+      fields: ['impact_sources'],
+    },
+    group_workflow: {
+      label: 'Publishing & Workflow',
+      sort: 5,
+      fields: [
+        'publication_status', 'published_at', 'reviewed_at', 'reviewed_by', 'created_at', 'updated_at', 'data',
+        'editor_assignments', 'update_requests',
+      ],
+    },
+  },
+  guilds: {
+    group_identity: {
+      label: 'Identity',
+      sort: 1,
+      fields: ['slug', 'name', 'type', 'entity_status', 'founded_year', 'oneliner', 'cadence'],
+    },
+    group_story: {
+      label: 'Story & Members',
+      sort: 2,
+      fields: [
+        'summary', 'description', 'mandate_paragraphs', 'outputs', 'principles', 'stewards', 'steward_slugs',
+        'member_slugs', 'public_members', 'theme_slugs', 'featured_weight', 'projects',
+      ],
+    },
+    group_links_media: {
+      label: 'Links & Media',
+      sort: 3,
+      fields: ['links', 'connect_links', 'image', 'media', 'proof_signals', 'seo'],
+    },
+    group_workflow: {
+      label: 'Publishing & Workflow',
+      sort: 4,
+      fields: [
+        'publication_status', 'published_at', 'reviewed_at', 'reviewed_by', 'created_at', 'updated_at', 'data',
+        'editor_assignments',
+      ],
+    },
+  },
+});
+
+// Human labels where the auto-humanized snake_case name misleads stewards
+// (the guide says "Chapter image"; the raw field is image_file).
+const FIELD_LABELS_BY_COLLECTION = Object.freeze({
+  chapters: {
+    image_file: 'Chapter image',
+    image: 'Legacy image URL',
+    proof_signals: 'Proof signals',
+    impact_sources: 'Impact sources',
+  },
+  chapter_update_requests: {
+    proposed_image_alt: 'Proposed image alt text',
+    proposed_image_credit: 'Proposed image credit',
+    chapter_updated_at_snapshot: 'Chapter version snapshot',
+  },
+  map_node_intake_settings: {
+    live_onboarding_enabled: 'Live onboarding enabled',
+    live_onboarding_expires_at: 'Auto-off time',
+  },
+});
+
 const MAP_NODE_MODERATION_COLLECTION_META = Object.freeze({
   map_node_submissions: {
     hidden: false,
@@ -277,7 +405,7 @@ const workflow = (sort = 900) => ({
   publication_status: fieldMeta({
     sort,
     width: 'half',
-    note: 'Draft and pending review are editable by assigned stewards. Publishing is reserved for trusted publishers.',
+    note: 'Assigned stewards manage their own records at any status, including published. Creating new records and archiving stay with trusted publishers.',
     interface: 'select-dropdown',
     options: { choices: PUBLICATION_STATUS_CHOICES },
     display: 'labels',
@@ -614,8 +742,176 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
   },
 });
 
+// Structured repeaters replacing raw JSON code editors for steward-edited
+// arrays. Storage stays the same JSON shape the shared normalizers expect.
+const LINK_LIST_INTERFACE = Object.freeze({
+  interface: 'list',
+  options: {
+    template: '{{ label }}',
+    fields: [
+      { field: 'label', name: 'Label', type: 'string', meta: { interface: 'input', width: 'half', required: true } },
+      { field: 'url', name: 'URL', type: 'string', meta: { interface: 'input', width: 'half', required: true, options: { iconRight: 'link' } } },
+      { field: 'subtext', name: 'Subtext', type: 'string', meta: { interface: 'input', width: 'half' } },
+      { field: 'handle', name: 'Handle', type: 'string', meta: { interface: 'input', width: 'half' } },
+      { field: 'kind', name: 'Kind', type: 'string', meta: { interface: 'select-dropdown', width: 'half', options: { allowOther: true, choices: [
+        { text: 'External', value: 'external' },
+        { text: 'Website', value: 'website' },
+        { text: 'Social', value: 'social' },
+        { text: 'Chat', value: 'chat' },
+        { text: 'Docs', value: 'docs' },
+      ] } } },
+      { field: 'icon', name: 'Icon', type: 'string', meta: { interface: 'input', width: 'half' } },
+      { field: 'action', name: 'Action', type: 'string', meta: { interface: 'input', width: 'half' } },
+    ],
+  },
+  display: 'formatted-json-value',
+  display_options: { format: '{{ label }}' },
+});
+
+const PROOF_SIGNAL_LIST_INTERFACE = Object.freeze({
+  interface: 'list',
+  options: {
+    template: '{{ label }}: {{ value }}',
+    fields: [
+      { field: 'label', name: 'Label', type: 'string', meta: { interface: 'input', width: 'half', required: true } },
+      { field: 'value', name: 'Value', type: 'string', meta: { interface: 'input', width: 'half', required: true } },
+      { field: 'source', name: 'Source', type: 'string', meta: { interface: 'input', width: 'half' } },
+      { field: 'href', name: 'Link', type: 'string', meta: { interface: 'input', width: 'half', options: { iconRight: 'link' } } },
+    ],
+  },
+  display: 'formatted-json-value',
+  display_options: { format: '{{ label }}' },
+});
+
+const urlValidation = (field) => ({
+  validation: {
+    _or: [
+      { [field]: { _null: true } },
+      { [field]: { _eq: '' } },
+      { [field]: { _starts_with: 'http' } },
+    ],
+  },
+  validation_message: 'Must be a full link starting with http:// or https://.',
+});
+
+// Merged on top of FIELD_META_BY_COLLECTION at plan build so existing base
+// metadata stays single-sourced.
+const FIELD_META_OVERRIDES = Object.freeze({
+  chapters: {
+    links: LINK_LIST_INTERFACE,
+    connect_links: LINK_LIST_INTERFACE,
+    proof_signals: PROOF_SIGNAL_LIST_INTERFACE,
+    primary_link: urlValidation('primary_link'),
+  },
+  guilds: {
+    links: LINK_LIST_INTERFACE,
+    connect_links: LINK_LIST_INTERFACE,
+    proof_signals: PROOF_SIGNAL_LIST_INTERFACE,
+  },
+  chapter_initiatives: {
+    links: LINK_LIST_INTERFACE,
+    proof_signals: PROOF_SIGNAL_LIST_INTERFACE,
+  },
+  projects: {
+    proof_signals: PROOF_SIGNAL_LIST_INTERFACE,
+    repo_url: urlValidation('repo_url'),
+    live_url: urlValidation('live_url'),
+  },
+  chapter_update_requests: {
+    proposed_primary_link: urlValidation('proposed_primary_link'),
+    proposed_image: urlValidation('proposed_image'),
+    proposed_image_alt: {
+      conditions: [
+        {
+          name: 'Alt text required with a proposed image',
+          rule: { proposed_image: { _nempty: true } },
+          required: true,
+        },
+      ],
+    },
+  },
+});
+
+// New columns on existing collections (from migrations 024+) whose metadata
+// lives here rather than in the original per-collection maps.
+const FIELD_META_ADDITIONS = Object.freeze({
+  chapter_update_requests: {
+    created_by: {
+      sort: 40,
+      width: 'half',
+      special: ['user-created'],
+      interface: 'select-dropdown-m2o',
+      display: 'user',
+      readonly: true,
+      hidden: true,
+      note: 'Filled automatically with the requesting user; used for decision notifications.',
+    },
+    chapter_updated_at_snapshot: {
+      sort: 41,
+      width: 'half',
+      interface: 'datetime',
+      note: 'Chapter version this request was drafted against. If accepting fails with a stale-chapter error, compare the proposal with the current chapter, set this to the chapter\'s current updated_at, and accept again.',
+    },
+  },
+});
+
+// Field metadata for the optional collections (only applied when present).
+const OPTIONAL_FIELD_META = Object.freeze({
+  review_notifications: {
+    kind: { sort: 1, width: 'half', interface: 'select-dropdown', options: { choices: [
+      { text: 'Update request pending', value: 'update_request_pending' },
+      { text: 'Update request decided', value: 'update_request_decided' },
+      { text: 'Initiative pending', value: 'initiative_pending' },
+      { text: 'Record quarantined', value: 'record_quarantined' },
+    ] }, display: 'labels', readonly: true },
+    status: { sort: 2, width: 'half', interface: 'select-dropdown', options: { choices: [
+      { text: 'Queued', value: 'queued' },
+      { text: 'Claimed', value: 'delivery_claimed' },
+      { text: 'Retry scheduled', value: 'retry_scheduled' },
+      { text: 'Sent', value: 'sent' },
+      { text: 'Failed', value: 'failed' },
+      { text: 'Skipped', value: 'skipped' },
+    ] }, display: 'labels' },
+    chapter_slug: { sort: 3, width: 'half', readonly: true },
+    initiative_slug: { sort: 4, width: 'half', readonly: true },
+    record_collection: { sort: 5, width: 'half', readonly: true },
+    record_slug: { sort: 6, width: 'half', readonly: true },
+    quarantine_reason: { sort: 7, width: 'half', readonly: true, note: 'private_field = a private-looking key or mailto: link; unapproved_media = image without an approved media review.' },
+    request_status: { sort: 8, width: 'half', readonly: true },
+    attempts: { sort: 9, width: 'half', readonly: true },
+    provider_error: { sort: 10, width: 'half', readonly: true },
+    sent_at: { sort: 11, width: 'half', interface: 'datetime', readonly: true },
+    created_at: { sort: 12, width: 'half', interface: 'datetime', readonly: true },
+  },
+  map_node_intake_settings: {
+    live_onboarding_enabled: {
+      sort: 1,
+      width: 'half',
+      interface: 'boolean',
+      note: 'While on, public map submissions auto-approve. Turn on only for a workshop.',
+    },
+    live_onboarding_expires_at: {
+      sort: 2,
+      width: 'half',
+      interface: 'datetime',
+      note: 'Auto-off time. The agent disables live onboarding once this passes - always set it.',
+    },
+    updated_by: { sort: 3, width: 'half', readonly: true },
+    updated_at: { sort: 4, width: 'half', interface: 'datetime', readonly: true },
+  },
+  chapter_impact_snapshots: {
+    chapter_slug: { sort: 1, width: 'half', readonly: true },
+    synced_at: { sort: 2, width: 'half', interface: 'datetime', readonly: true, note: 'Last successful impact sync for this chapter.' },
+    stale_after: { sort: 3, width: 'half', interface: 'datetime', readonly: true },
+    error_count: { sort: 4, width: 'half', readonly: true },
+    last_error: { sort: 5, width: 'full', readonly: true, note: 'Empty means the last sync succeeded. Errors usually mean a wrong garden address or Karma slug in the chapter impact sources.' },
+    source_status: { sort: 6, interface: 'input-code', options: { language: 'json' }, readonly: true },
+    payload: { sort: 7, interface: 'input-code', options: { language: 'json' }, readonly: true, hidden: true },
+  },
+});
+
 function cleanCollectionName(collection) {
-  return collection.replace(/^(content|intake)[._]/, '');
+  return collection.replace(/^(content|intake|impact)[._]/, '');
 }
 
 function resolveSchemaCollectionNames(availableCollectionNames, schema, collectionNames) {
@@ -638,17 +934,41 @@ function encodePathSegment(segment) {
   return encodeURIComponent(segment);
 }
 
+function fieldGroupLookup(base) {
+  const groups = FIELD_GROUPS_BY_COLLECTION[base];
+  if (!groups) return null;
+  const byField = new Map();
+  for (const [groupField, group] of Object.entries(groups)) {
+    for (const field of group.fields) byField.set(field, groupField);
+  }
+  return byField;
+}
+
+function withStudioLayers(base, field, meta) {
+  const override = FIELD_META_OVERRIDES[base]?.[field];
+  const groupField = fieldGroupLookup(base)?.get(field);
+  const label = FIELD_LABELS_BY_COLLECTION[base]?.[field];
+  return {
+    ...meta,
+    ...(override ?? {}),
+    ...(groupField ? { group: groupField } : {}),
+    ...(label ? { translations: [{ language: 'en-US', translation: label }] } : {}),
+  };
+}
+
 export function buildDirectusStudioMetadataPlan(
   operationalCollectionNames = DIRECTUS_OPERATIONAL_COLLECTIONS,
   accessCollectionNames = DIRECTUS_STEWARD_ACCESS_COLLECTIONS,
   workflowCollectionNames = DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS,
-  mapModerationCollectionNames = MAP_NODE_MODERATION_COLLECTIONS
+  mapModerationCollectionNames = MAP_NODE_MODERATION_COLLECTIONS,
+  optionalCollectionNames = []
 ) {
   const collections = [
     ...operationalCollectionNames,
     ...accessCollectionNames,
     ...workflowCollectionNames,
     ...mapModerationCollectionNames,
+    ...optionalCollectionNames,
   ];
 
   return {
@@ -657,7 +977,8 @@ export function buildDirectusStudioMetadataPlan(
       const meta = OPERATIONAL_COLLECTION_META[base] ??
         ACCESS_COLLECTION_META[base] ??
         STEWARD_WORKFLOW_COLLECTION_META[base] ??
-        MAP_NODE_MODERATION_COLLECTION_META[base];
+        MAP_NODE_MODERATION_COLLECTION_META[base] ??
+        OPTIONAL_COLLECTION_META[base];
       if (!meta) throw new Error(`Missing Directus Studio collection metadata for ${base}.`);
       return {
         collection,
@@ -675,24 +996,76 @@ export function buildDirectusStudioMetadataPlan(
         },
       };
     }),
+    groupFields: collections.flatMap((collection) => {
+      const base = cleanCollectionName(collection);
+      const groups = FIELD_GROUPS_BY_COLLECTION[base];
+      if (!groups) return [];
+      return Object.entries(groups).map(([field, group]) => ({
+        collection,
+        field,
+        meta: {
+          collection,
+          field,
+          special: ['alias', 'no-data', 'group'],
+          interface: 'group-detail',
+          options: { start: 'open' },
+          sort: group.sort,
+          width: 'full',
+          hidden: false,
+          translations: [{ language: 'en-US', translation: group.label }],
+        },
+      }));
+    }),
     fields: collections.flatMap((collection) => {
       const base = cleanCollectionName(collection);
-      const fields = FIELD_META_BY_COLLECTION[base];
-      if (!fields) throw new Error(`Missing Directus Studio field metadata for ${base}.`);
+      const baseFields = FIELD_META_BY_COLLECTION[base] ?? OPTIONAL_FIELD_META[base];
+      if (!baseFields) throw new Error(`Missing Directus Studio field metadata for ${base}.`);
+      const fields = { ...baseFields, ...(FIELD_META_ADDITIONS[base] ?? {}) };
       return Object.entries(fields as Record<string, Record<string, unknown>>).map(([field, meta]) => ({
         collection,
         field,
         meta: {
           collection,
           field,
-          ...meta,
+          ...withStudioLayers(base, field, meta),
         },
       }));
+    }),
+    // Alias fields owned by content:setup (initiatives, editor_assignments,
+    // update_requests, projects) still need their group assignment; they get a
+    // meta-merge patch that only sets the group.
+    extraGroupMembers: collections.flatMap((collection) => {
+      const base = cleanCollectionName(collection);
+      const lookup = fieldGroupLookup(base);
+      if (!lookup) return [];
+      const known = new Set(Object.keys(FIELD_META_BY_COLLECTION[base] ?? OPTIONAL_FIELD_META[base] ?? {}));
+      return [...lookup.entries()]
+        .filter(([field]) => !known.has(field))
+        .map(([field, groupField]) => ({
+          collection,
+          field,
+          meta: { collection, field, group: groupField },
+        }));
     }),
   };
 }
 
+const OBSOLETE_BOOKMARKS = Object.freeze([
+  // Renamed to "My chapter initiatives" with assignment scoping; the old name
+  // hid a steward's published initiatives.
+  { role: 'Greenpill Steward Editor', collection: 'chapter_initiatives', bookmark: 'My draft initiatives' },
+]);
+
 const STUDIO_BOOKMARKS = Object.freeze([
+  {
+    role: 'Greenpill Steward Editor',
+    collection: 'chapters',
+    bookmark: 'My chapter',
+    icon: 'home_pin',
+    color: '#2f7d32',
+    filter: { slug: { _in: '$CURRENT_USER.chapter_editor_assignments.chapter_slug' } },
+    fields: ['name', 'city', 'country', 'publication_status', 'updated_at'],
+  },
   {
     role: 'Greenpill Steward Editor',
     collection: 'chapters',
@@ -705,11 +1078,47 @@ const STUDIO_BOOKMARKS = Object.freeze([
   {
     role: 'Greenpill Steward Editor',
     collection: 'chapter_initiatives',
-    bookmark: 'My draft initiatives',
+    bookmark: 'My chapter initiatives',
     icon: 'local_activity',
     color: '#6a6a00',
-    filter: { publication_status: { _in: ['draft', 'pending_review'] } },
+    filter: { chapter_slug: { _in: '$CURRENT_USER.chapter_editor_assignments.chapter_slug' } },
     fields: ['title', 'chapter_slug', 'publication_status', 'updated_at'],
+  },
+  {
+    role: 'Greenpill Steward Editor',
+    collection: 'chapter_update_requests',
+    bookmark: 'My change request outcomes',
+    icon: 'fact_check',
+    color: '#2f7d32',
+    filter: { request_status: { _in: ['accepted', 'declined'] } },
+    fields: ['title', 'chapter_slug', 'request_status', 'updated_at'],
+  },
+  {
+    role: 'Greenpill Trusted Publisher',
+    collection: 'chapter_initiatives',
+    bookmark: 'Pending initiative reviews',
+    icon: 'rate_review',
+    color: '#005c8a',
+    filter: { publication_status: { _eq: 'pending_review' } },
+    fields: ['title', 'chapter_slug', 'publication_status', 'updated_at'],
+  },
+  {
+    role: 'Greenpill Trusted Publisher',
+    collection: 'review_notifications',
+    bookmark: 'Failed content notifications',
+    icon: 'notification_important',
+    color: '#b42318',
+    filter: { status: { _eq: 'failed' } },
+    fields: ['kind', 'chapter_slug', 'attempts', 'provider_error', 'updated_at'],
+  },
+  {
+    role: 'Greenpill Trusted Publisher',
+    collection: 'review_notifications',
+    bookmark: 'Quarantined records',
+    icon: 'report',
+    color: '#b42318',
+    filter: { kind: { _eq: 'record_quarantined' } },
+    fields: ['record_collection', 'record_slug', 'quarantine_reason', 'status', 'created_at'],
   },
   {
     role: 'Greenpill Steward Editor',
@@ -909,8 +1318,29 @@ async function upsertBookmarkPreset(client, bookmarkPlan, roleIds) {
 
 async function applyDirectusStudioBookmarks(client, collectionNames) {
   const bookmarks = buildDirectusStudioBookmarkPlan(collectionNames);
-  const roleIds = await getRoleIdsByName(client, [...new Set(bookmarks.map((bookmark) => bookmark.role))]);
+  const roleIds = await getRoleIdsByName(client, [...new Set([
+    ...bookmarks.map((bookmark) => bookmark.role),
+    ...OBSOLETE_BOOKMARKS.map((bookmark) => bookmark.role),
+  ])]);
   let applied = 0;
+
+  const collectionByBase = new Map(collectionNames.map((collection) => [cleanCollectionName(collection), collection]));
+  for (const obsolete of OBSOLETE_BOOKMARKS) {
+    const roleId = roleIds.get(obsolete.role);
+    const collection = collectionByBase.get(obsolete.collection);
+    if (!roleId || !collection) continue;
+    const params = new URLSearchParams();
+    params.set('filter[role][_eq]', roleId);
+    params.set('filter[collection][_eq]', collection);
+    params.set('filter[bookmark][_eq]', obsolete.bookmark);
+    params.set('limit', '1');
+    const existing = await client.request(`/presets?${params.toString()}`);
+    const item = existing?.data?.[0];
+    if (item?.id) {
+      await client.request(`/presets/${encodePathSegment(item.id)}`, { method: 'DELETE', expected: [204] });
+      console.log(`Removed obsolete bookmark: ${obsolete.role} / ${obsolete.collection} / ${obsolete.bookmark}`);
+    }
+  }
 
   for (const bookmark of bookmarks) {
     const result = await upsertBookmarkPreset(client, bookmark, roleIds);
@@ -923,6 +1353,87 @@ async function applyDirectusStudioBookmarks(client, collectionNames) {
   return applied;
 }
 
+async function ensureGroupField(client, groupPlan) {
+  const params = new URLSearchParams();
+  params.set('fields', 'field');
+  params.set('limit', '-1');
+  const response = await client.request(`/fields/${encodePathSegment(groupPlan.collection)}?${params.toString()}`);
+  const exists = (response?.data ?? []).some((item) => item.field === groupPlan.field);
+
+  if (exists) {
+    await client.request(`/fields/${encodePathSegment(groupPlan.collection)}/${encodePathSegment(groupPlan.field)}`, {
+      method: 'PATCH',
+      body: { meta: groupPlan.meta },
+    });
+    return;
+  }
+
+  await client.request(`/fields/${encodePathSegment(groupPlan.collection)}`, {
+    method: 'POST',
+    body: {
+      field: groupPlan.field,
+      type: 'alias',
+      schema: null,
+      meta: groupPlan.meta,
+    },
+  });
+}
+
+// Branding + platform toggles. Collaborative editing and the built-in MCP
+// server ship with the pinned 11.17.4; MCP stays delete-safe and tokens are
+// minted per-user in the UI, never stored in the repo.
+const STUDIO_SETTINGS = Object.freeze({
+  project_name: 'Greenpill Network Admin',
+  project_descriptor: 'Steward CMS',
+  project_url: 'https://greenpill.network',
+  project_color: '#2F7D32',
+  collaborative_editing_enabled: true,
+  mcp_enabled: true,
+  mcp_allow_deletes: false,
+});
+
+async function applyDirectusStudioSettings(client) {
+  await client.request('/settings', {
+    method: 'PATCH',
+    body: STUDIO_SETTINGS,
+  });
+  return Object.keys(STUDIO_SETTINGS).length;
+}
+
+function resolveOptionalCollectionNames(availableCollectionNames) {
+  const names = new Set(availableCollectionNames);
+  const resolve = (schema, collections) => collections.flatMap((collection) => {
+    const match = [collection, `${schema}.${collection}`, `${schema}_${collection}`]
+      .find((candidate) => names.has(candidate));
+    if (!match) {
+      console.warn(`Skipping optional Directus Studio metadata for ${schema}.${collection}: collection not found.`);
+      return [];
+    }
+    return [match];
+  });
+  return [
+    ...resolve('content', OPTIONAL_CONTENT_COLLECTIONS),
+    ...resolve('intake', OPTIONAL_INTAKE_COLLECTIONS),
+    ...resolve('impact', OPTIONAL_IMPACT_COLLECTIONS),
+  ];
+}
+
+async function hideTechnicalCollections(client, availableCollectionNames) {
+  const names = new Set(availableCollectionNames);
+  let hidden = 0;
+  for (const base of TECHNICAL_COLLECTIONS_TO_HIDE) {
+    const match = [base, `content.${base}`, `content_${base}`, `intake.${base}`, `intake_${base}`, `impact.${base}`, `impact_${base}`, `audit.${base}`, `audit_${base}`]
+      .find((candidate) => names.has(candidate));
+    if (!match) continue;
+    await client.request(`/collections/${encodePathSegment(match)}`, {
+      method: 'PATCH',
+      body: { meta: { hidden: true } },
+    });
+    hidden += 1;
+  }
+  return hidden;
+}
+
 export async function applyDirectusStudioMetadata(options: {
   client?: Awaited<ReturnType<typeof createDirectusClient>>;
   [key: string]: any;
@@ -933,11 +1444,13 @@ export async function applyDirectusStudioMetadata(options: {
   const accessCollections = resolveSchemaCollectionNames(available, 'content', DIRECTUS_STEWARD_ACCESS_COLLECTIONS);
   const workflowCollections = resolveSchemaCollectionNames(available, 'content', DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS);
   const mapModerationCollections = resolveSchemaCollectionNames(available, 'intake', MAP_NODE_MODERATION_COLLECTIONS);
+  const optionalCollections = resolveOptionalCollectionNames(available);
   const plan = buildDirectusStudioMetadataPlan(
     operationalCollections,
     accessCollections,
     workflowCollections,
-    mapModerationCollections
+    mapModerationCollections,
+    optionalCollections
   );
   const relationKeys = await getRelationKeys(client);
 
@@ -946,22 +1459,64 @@ export async function applyDirectusStudioMetadata(options: {
     console.log(`Collection metadata: ${collection.collection}`);
   }
 
-  for (const field of plan.fields) {
-    await patchFieldMeta(client, field, relationKeys);
-    console.log(`Field metadata: ${field.collection}.${field.field}`);
+  for (const group of plan.groupFields) {
+    await ensureGroupField(client, group);
+    console.log(`Group field: ${group.collection}.${group.field}`);
   }
+
+  for (const field of plan.fields) {
+    try {
+      await patchFieldMeta(client, field, relationKeys);
+      console.log(`Field metadata: ${field.collection}.${field.field}`);
+    } catch (error) {
+      // A missing field means its migration has not landed here yet; that must
+      // not block the rest of the studio metadata (mirrors content:setup).
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes('failed with 404') || message.includes('failed with 403')) {
+        console.warn(
+          `Skipped field metadata for ${field.collection}.${field.field}: field not found. ` +
+          'Apply the pending database migration, then re-run this setup.'
+        );
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  for (const member of plan.extraGroupMembers) {
+    try {
+      await client.request(`/fields/${encodePathSegment(member.collection)}/${encodePathSegment(member.field)}`, {
+        method: 'PATCH',
+        body: { meta: member.meta },
+      });
+      console.log(`Group assignment: ${member.collection}.${member.field}`);
+    } catch {
+      console.warn(
+        `Skipped group assignment for ${member.collection}.${member.field}: field not found. ` +
+        'Run directus:content:setup first so relation alias fields exist.'
+      );
+    }
+  }
+
+  const hiddenTechnical = await hideTechnicalCollections(client, available);
 
   const bookmarks = await applyDirectusStudioBookmarks(client, [
     ...operationalCollections,
     ...workflowCollections,
     ...mapModerationCollections,
+    ...optionalCollections,
   ]);
+
+  const settings = await applyDirectusStudioSettings(client);
 
   return {
     url: client.url,
     collections: plan.collections.length,
     fields: plan.fields.length,
+    groups: plan.groupFields.length,
+    hiddenTechnical,
     bookmarks,
+    settings,
   };
 }
 
@@ -970,7 +1525,10 @@ async function main() {
   console.log(`Configured Directus Studio metadata at ${result.url}`);
   console.log(`Collections: ${result.collections}`);
   console.log(`Fields: ${result.fields}`);
+  console.log(`Form groups: ${result.groups}`);
+  console.log(`Hidden technical collections: ${result.hiddenTechnical}`);
   console.log(`Bookmarks: ${result.bookmarks}`);
+  console.log(`Settings applied: ${result.settings} (branding, collaborative editing, MCP)`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {

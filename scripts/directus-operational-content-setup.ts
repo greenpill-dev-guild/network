@@ -1,6 +1,10 @@
 #!/usr/bin/env bun
 
 import { pathToFileURL } from 'node:url';
+import {
+  ASSIGNED_EDITOR_POLICY_NAME,
+  buildAssignedEditorPermissions,
+} from './directus-content-access.ts';
 
 export const DIRECTUS_OPERATIONAL_COLLECTIONS = Object.freeze([
   'themes',
@@ -32,6 +36,19 @@ export const DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS = Object.freeze([
   'chapter_update_request_links',
   'chapter_update_request_proof_signals',
 ]);
+
+// Optional groups: configured when their migration has landed, skipped
+// (with a warning) otherwise. Unlike the core groups, an entirely absent
+// optional group is not a search-path failure.
+export const DIRECTUS_CONTENT_OPS_COLLECTIONS = Object.freeze([
+  'review_notifications',
+]);
+
+export const DIRECTUS_IMPACT_COLLECTIONS = Object.freeze([
+  'chapter_impact_snapshots',
+]);
+
+export const DIRECTUS_CONTENT_AGENT_ROLE_NAME = 'Greenpill Content Agent';
 
 export const DIRECTUS_CHAPTER_IMAGE_FOLDER_ID = 'bd3c5b2d-8b70-4ee1-b8a8-bb78c36c928d';
 export const DIRECTUS_CHAPTER_IMAGE_FOLDER_NAME = 'Chapter Images';
@@ -437,6 +454,8 @@ const CHAPTER_UPDATE_REQUEST_READ_FIELDS = Object.freeze([
   'reviewer_notes',
   'reviewed_by',
   'reviewed_at',
+  'created_by',
+  'chapter_updated_at_snapshot',
   'created_at',
   'updated_at',
 ]);
@@ -459,6 +478,9 @@ const CHAPTER_UPDATE_REQUEST_PUBLISHER_WRITE_FIELDS = Object.freeze([
   'reviewer_notes',
   'reviewed_by',
   'reviewed_at',
+  // Publishers refresh the optimistic-concurrency snapshot when an accept
+  // hits chapter_update_request_stale_chapter (migration 024).
+  'chapter_updated_at_snapshot',
 ]);
 
 const CHAPTER_UPDATE_REQUEST_LINK_FIELDS = Object.freeze([
@@ -773,6 +795,35 @@ function buildChapterImagePermissions() {
       fields: DIRECTUS_FILE_CREATE_FIELDS,
     },
     {
+      // Fixing focal point, title, or alt description on your own upload used
+      // to 403 (the focal-point picker PATCHes the file).
+      role: 'Greenpill Steward Editor',
+      policy: 'Greenpill Steward Editor',
+      collection: 'directus_files',
+      action: 'update',
+      permissions: { _and: [folderFilter, { uploaded_by: { _eq: '$CURRENT_USER' } }] },
+      validation: null,
+      presets: null,
+      fields: ['title', 'description', 'tags', 'focal_point_x', 'focal_point_y'],
+    },
+    {
+      // Remove your own upload while no published chapter references it.
+      role: 'Greenpill Steward Editor',
+      policy: 'Greenpill Steward Editor',
+      collection: 'directus_files',
+      action: 'delete',
+      permissions: {
+        _and: [
+          folderFilter,
+          { uploaded_by: { _eq: '$CURRENT_USER' } },
+          { [DIRECTUS_PUBLISHED_CHAPTER_IMAGE_ALIAS]: { _none: { publication_status: { _eq: 'published' } } } },
+        ],
+      },
+      validation: null,
+      presets: null,
+      fields: DIRECTUS_FILE_READ_FIELDS,
+    },
+    {
       role: 'Greenpill Trusted Publisher',
       policy: 'Greenpill Trusted Publisher',
       collection: 'directus_folders',
@@ -803,6 +854,31 @@ function buildChapterImagePermissions() {
       fields: DIRECTUS_FILE_CREATE_FIELDS,
     },
     {
+      role: 'Greenpill Trusted Publisher',
+      policy: 'Greenpill Trusted Publisher',
+      collection: 'directus_files',
+      action: 'update',
+      permissions: folderFilter,
+      validation: null,
+      presets: null,
+      fields: ['title', 'description', 'tags', 'focal_point_x', 'focal_point_y', 'filename_download'],
+    },
+    {
+      role: 'Greenpill Trusted Publisher',
+      policy: 'Greenpill Trusted Publisher',
+      collection: 'directus_files',
+      action: 'delete',
+      permissions: {
+        _and: [
+          folderFilter,
+          { [DIRECTUS_PUBLISHED_CHAPTER_IMAGE_ALIAS]: { _none: { publication_status: { _eq: 'published' } } } },
+        ],
+      },
+      validation: null,
+      presets: null,
+      fields: DIRECTUS_FILE_READ_FIELDS,
+    },
+    {
       role: 'Public',
       policy: DIRECTUS_PUBLIC_POLICY_NAME,
       collection: 'directus_files',
@@ -813,6 +889,181 @@ function buildChapterImagePermissions() {
       fields: DIRECTUS_PUBLIC_FILE_READ_FIELDS,
     },
   ];
+}
+
+// Read-only operational visibility (applied only when the collection exists):
+// - content.review_notifications: publishers watch failed deliveries and
+//   quarantined records.
+// - impact.chapter_impact_snapshots: stewards and publishers see impact sync
+//   results and errors for the bindings they edit.
+function buildContentOperationsPermissions(contentOpsCollectionNames = [], impactCollectionNames = []) {
+  const contentOps = new Map(contentOpsCollectionNames.map((collection) => [baseCollectionName(collection), collection]));
+  const impact = new Map(impactCollectionNames.map((collection) => [collection.replace(/^impact[._]/, ''), collection]));
+  const reviewNotifications = contentOps.get('review_notifications');
+  const impactSnapshots = impact.get('chapter_impact_snapshots');
+  const permissions = [];
+
+  if (reviewNotifications) {
+    const fields = [
+      'id',
+      'kind',
+      'request_id',
+      'chapter_slug',
+      'initiative_slug',
+      'record_collection',
+      'record_slug',
+      'quarantine_reason',
+      'request_status',
+      'status',
+      'attempts',
+      'provider_error',
+      'sent_at',
+      'created_at',
+      'updated_at',
+    ];
+    permissions.push({
+      role: 'Greenpill Trusted Publisher',
+      policy: 'Greenpill Trusted Publisher',
+      collection: reviewNotifications,
+      action: 'read',
+      permissions: null,
+      validation: null,
+      presets: null,
+      fields,
+    });
+  }
+
+  if (impactSnapshots) {
+    const fields = [
+      'chapter_slug',
+      'source_status',
+      'synced_at',
+      'stale_after',
+      'error_count',
+      'last_error',
+    ];
+    for (const policy of ['Greenpill Steward Editor', 'Greenpill Trusted Publisher']) {
+      permissions.push({
+        role: policy,
+        policy,
+        collection: impactSnapshots,
+        action: 'read',
+        permissions: null,
+        validation: null,
+        presets: null,
+        fields,
+      });
+    }
+  }
+
+  return permissions;
+}
+
+// Machine role for the built-in Directus MCP server (mcp_enabled is turned on
+// by directus:studio:setup). Deliberately narrow: read operational content at
+// any status, and PROPOSE changes through chapter update requests it created -
+// humans accept. No intake, no users, no files, no publishing.
+function buildContentAgentPermissions(operationalCollectionNames = [], stewardWorkflowCollectionNames = []) {
+  const workflow = new Map(stewardWorkflowCollectionNames.map((collection) => [baseCollectionName(collection), collection]));
+  const updateRequests = workflow.get('chapter_update_requests');
+  const updateRequestLinks = workflow.get('chapter_update_request_links');
+  const updateRequestProofSignals = workflow.get('chapter_update_request_proof_signals');
+  const ownRequestFilter = { created_by: { _eq: '$CURRENT_USER' } };
+  const permissions = [];
+
+  for (const collection of operationalCollectionNames) {
+    permissions.push({
+      role: DIRECTUS_CONTENT_AGENT_ROLE_NAME,
+      policy: DIRECTUS_CONTENT_AGENT_ROLE_NAME,
+      collection,
+      action: 'read',
+      permissions: null,
+      validation: null,
+      presets: null,
+      fields: collectionFields(collection, { read: true }),
+    });
+  }
+
+  if (updateRequests) {
+    permissions.push(
+      {
+        role: DIRECTUS_CONTENT_AGENT_ROLE_NAME,
+        policy: DIRECTUS_CONTENT_AGENT_ROLE_NAME,
+        collection: updateRequests,
+        action: 'read',
+        permissions: null,
+        validation: null,
+        presets: null,
+        fields: CHAPTER_UPDATE_REQUEST_READ_FIELDS,
+      },
+      {
+        role: DIRECTUS_CONTENT_AGENT_ROLE_NAME,
+        policy: DIRECTUS_CONTENT_AGENT_ROLE_NAME,
+        collection: updateRequests,
+        action: 'create',
+        permissions: null,
+        validation: chapterUpdateRequestStatusFilter(CHAPTER_UPDATE_REQUEST_CREATE_STATUSES),
+        presets: { request_status: 'draft' },
+        fields: CHAPTER_UPDATE_REQUEST_BASE_WRITE_FIELDS,
+      },
+      {
+        role: DIRECTUS_CONTENT_AGENT_ROLE_NAME,
+        policy: DIRECTUS_CONTENT_AGENT_ROLE_NAME,
+        collection: updateRequests,
+        action: 'update',
+        permissions: {
+          _and: [
+            ownRequestFilter,
+            chapterUpdateRequestStatusFilter(CHAPTER_UPDATE_REQUEST_CREATE_STATUSES),
+          ],
+        },
+        validation: chapterUpdateRequestStatusFilter(CHAPTER_UPDATE_REQUEST_CREATE_STATUSES),
+        presets: null,
+        fields: CHAPTER_UPDATE_REQUEST_BASE_WRITE_FIELDS.filter((field) => field !== 'chapter_slug'),
+      }
+    );
+  }
+
+  for (const collection of [updateRequestLinks, updateRequestProofSignals].filter(Boolean)) {
+    const fields = baseCollectionName(collection) === 'chapter_update_request_proof_signals'
+      ? CHAPTER_UPDATE_REQUEST_PROOF_SIGNAL_FIELDS
+      : CHAPTER_UPDATE_REQUEST_LINK_FIELDS;
+    const writable = fields.filter((field) => !SYSTEM_MANAGED_CHILD_FIELDS.includes(field) && field !== 'chapter_slug');
+    permissions.push(
+      {
+        role: DIRECTUS_CONTENT_AGENT_ROLE_NAME,
+        policy: DIRECTUS_CONTENT_AGENT_ROLE_NAME,
+        collection,
+        action: 'read',
+        permissions: { update_request_id: ownRequestFilter },
+        validation: null,
+        presets: null,
+        fields,
+      },
+      {
+        role: DIRECTUS_CONTENT_AGENT_ROLE_NAME,
+        policy: DIRECTUS_CONTENT_AGENT_ROLE_NAME,
+        collection,
+        action: 'create',
+        permissions: { update_request_id: ownRequestFilter },
+        validation: { update_request_id: { _nnull: true } },
+        presets: null,
+        fields: writable,
+      },
+      {
+        role: DIRECTUS_CONTENT_AGENT_ROLE_NAME,
+        policy: DIRECTUS_CONTENT_AGENT_ROLE_NAME,
+        collection,
+        action: 'update',
+        permissions: { update_request_id: ownRequestFilter },
+        validation: null,
+        presets: null,
+        fields: writable.filter((field) => field !== 'update_request_id'),
+      }
+    );
+  }
+
+  return permissions;
 }
 
 function buildIntakeModerationPermissions(collectionNames = []) {
@@ -1059,10 +1310,11 @@ export function buildDirectusOperationalPermissionPlan(
   collectionNames = DIRECTUS_OPERATIONAL_COLLECTIONS,
   intakeCollectionNames = [],
   stewardAccessCollectionNames = [],
-  stewardWorkflowCollectionNames = []
+  stewardWorkflowCollectionNames = [],
+  contentOpsCollectionNames = [],
+  impactCollectionNames = []
 ) {
   const collections = [...collectionNames];
-  const editorStatuses = ['draft', 'pending_review'];
   const publisherStatuses = ['draft', 'pending_review', 'published', 'archived'];
 
   const permissions = [];
@@ -1116,7 +1368,8 @@ export function buildDirectusOperationalPermissionPlan(
       {
         name: 'Greenpill Steward Editor',
         icon: 'edit_note',
-        description: 'Draft and edit scoped operational content without publish access.',
+        description:
+          'Read published content; scoped assignments add direct editing of the assigned chapter or guild at any status.',
       },
       {
         name: 'Greenpill Steward Moderator',
@@ -1132,6 +1385,12 @@ export function buildDirectusOperationalPermissionPlan(
         name: 'Greenpill Operator',
         icon: 'admin_panel_settings',
         description: 'Emergency operator role for Directus configuration and correction.',
+      },
+      {
+        name: DIRECTUS_CONTENT_AGENT_ROLE_NAME,
+        icon: 'smart_toy',
+        description:
+          'Machine role for the built-in MCP server. Reads operational content and proposes chapter update requests; humans review and accept. Mint per-user static tokens in the Directus UI - never store them in the repo.',
       },
     ],
     policies: [
@@ -1167,6 +1426,28 @@ export function buildDirectusOperationalPermissionPlan(
         admin_access: true,
         enforce_tfa: true,
       },
+      {
+        name: ASSIGNED_EDITOR_POLICY_NAME,
+        icon: 'badge',
+        description:
+          'Dynamic editing access for the chapters and guilds the current user holds editor assignment rows for. Assignment rows grant and revoke access; no per-user policies.',
+        app_access: false,
+        admin_access: false,
+        enforce_tfa: false,
+      },
+      {
+        name: DIRECTUS_CONTENT_AGENT_ROLE_NAME,
+        icon: 'smart_toy',
+        description: 'API-only access for the MCP machine role: read operational content, propose update requests.',
+        app_access: false,
+        admin_access: false,
+        enforce_tfa: false,
+      },
+    ],
+    // Non-name-matched role attachments (the apply loop links role<->policy by
+    // identical names; the dynamic policy rides on the steward editor role).
+    rolePolicyAttachments: [
+      { role: 'Greenpill Steward Editor', policy: ASSIGNED_EDITOR_POLICY_NAME },
     ],
     permissions: [
       ...permissions,
@@ -1175,7 +1456,30 @@ export function buildDirectusOperationalPermissionPlan(
       ...buildStewardAccessAssignmentPermissions(stewardAccessCollectionNames),
       ...buildStewardWorkflowPermissions(stewardWorkflowCollectionNames),
       ...buildStewardUserContextPermissions(),
+      ...buildAssignedEditorPermissions(
+        assignedEditorCollectionMap(collections, stewardWorkflowCollectionNames)
+      ),
+      ...buildContentOperationsPermissions(contentOpsCollectionNames, impactCollectionNames),
+      ...buildContentAgentPermissions(collections, stewardWorkflowCollectionNames),
     ],
+  };
+}
+
+function assignedEditorCollectionMap(operationalCollectionNames, stewardWorkflowCollectionNames) {
+  const operational = new Map(
+    operationalCollectionNames.map((collection) => [baseCollectionName(collection), collection])
+  );
+  const workflow = new Map(
+    stewardWorkflowCollectionNames.map((collection) => [baseCollectionName(collection), collection])
+  );
+  return {
+    chapters: operational.get('chapters'),
+    chapterInitiatives: operational.get('chapter_initiatives'),
+    guilds: operational.get('guilds'),
+    projects: operational.get('projects'),
+    chapterUpdateRequests: workflow.get('chapter_update_requests'),
+    chapterUpdateRequestLinks: workflow.get('chapter_update_request_links'),
+    chapterUpdateRequestProofSignals: workflow.get('chapter_update_request_proof_signals'),
   };
 }
 
@@ -1615,6 +1919,14 @@ async function ensureStewardAccessRelations(client, collectionNames) {
       collection_one: chapters,
       field_one: 'initiatives',
     });
+    await ensureAliasField(client, chapters, 'initiatives', {
+      hidden: false,
+      readonly: false,
+      sort: 30,
+      note: 'Initiatives owned by this chapter. Create and manage them from here.',
+      options: { template: '{{ title }}' },
+      display_options: { template: '{{ title }}' },
+    });
   }
 
   if (chapters && chapterUpdateRequests) {
@@ -1695,6 +2007,14 @@ async function ensureStewardAccessRelations(client, collectionNames) {
         collection_one: guilds,
         field_one: 'projects',
       });
+      await ensureAliasField(client, guilds, 'projects', {
+        hidden: false,
+        readonly: false,
+        sort: 30,
+        note: 'Projects owned by this guild. Create and manage them from here.',
+        options: { template: '{{ name }}' },
+        display_options: { template: '{{ name }}' },
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (!message.includes('doesn\'t have a relationship')) {
@@ -1719,6 +2039,24 @@ async function ensureStewardAccessRelations(client, collectionNames) {
   }
 }
 
+// Optional groups resolve leniently: an entirely absent group means the
+// migration has not landed yet, not a search-path failure.
+function resolveOptionalSchemaCollectionNames(availableCollectionNames, schema, collectionNames) {
+  const names = new Set(availableCollectionNames);
+  return collectionNames.flatMap((collection) => {
+    const match = [collection, `${schema}.${collection}`, `${schema}_${collection}`]
+      .find((candidate) => names.has(candidate));
+    if (!match) {
+      console.warn(
+        `Skipping Directus permissions for optional ${schema}.${collection}: collection not found. ` +
+        'Apply the pending database migration, then re-run this setup to configure it.'
+      );
+      return [];
+    }
+    return [match];
+  });
+}
+
 export async function applyDirectusOperationalContentAccess(options: {
   client?: Awaited<ReturnType<typeof createDirectusClient>>;
   [key: string]: any;
@@ -1730,6 +2068,8 @@ export async function applyDirectusOperationalContentAccess(options: {
   const intakeCollections = resolveIntakeCollectionNames(available);
   const stewardAccessCollections = resolveStewardAccessCollectionNames(available);
   const stewardWorkflowCollections = resolveStewardWorkflowCollectionNames(available);
+  const contentOpsCollections = resolveOptionalSchemaCollectionNames(available, 'content', DIRECTUS_CONTENT_OPS_COLLECTIONS);
+  const impactCollections = resolveOptionalSchemaCollectionNames(available, 'impact', DIRECTUS_IMPACT_COLLECTIONS);
   await ensureStewardAccessRelations(client, [
     ...operationalCollections,
     ...stewardAccessCollections,
@@ -1739,7 +2079,9 @@ export async function applyDirectusOperationalContentAccess(options: {
     operationalCollections,
     intakeCollections,
     stewardAccessCollections,
-    stewardWorkflowCollections
+    stewardWorkflowCollections,
+    contentOpsCollections,
+    impactCollections
   );
 
   const roles = new Map();
@@ -1764,12 +2106,23 @@ export async function applyDirectusOperationalContentAccess(options: {
     }
   }
 
+  for (const attachment of plan.rolePolicyAttachments ?? []) {
+    const role = roles.get(attachment.role);
+    const policy = policies.get(attachment.policy);
+    if (!role?.id || !policy?.id) {
+      throw new Error(`Missing Directus role/policy for attachment ${attachment.role} -> ${attachment.policy}`);
+    }
+    await ensureRolePolicyAccess(client, role.id, policy.id);
+  }
+
   const expectedPermissionKeys = new Set();
   const managedCollections = new Set([
     ...operationalCollections,
     ...intakeCollections,
     ...stewardAccessCollections,
     ...stewardWorkflowCollections,
+    ...contentOpsCollections,
+    ...impactCollections,
     'directus_files',
     'directus_folders',
   ]);

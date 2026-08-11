@@ -16,7 +16,7 @@ type AssignmentInput = {
   slug: string;
 };
 
-type AssignCommand = 'assign' | 'sync';
+type AssignCommand = 'assign' | 'verify' | 'cleanup-legacy';
 
 type AssignOptions = {
   command: AssignCommand;
@@ -36,6 +36,31 @@ const DEFAULT_OPERATOR_ROLE = 'Greenpill Operator';
 const EDITOR_STATUSES = ['draft', 'pending_review', 'published'];
 const CHAPTER_UPDATE_REQUEST_CREATE_STATUSES = ['draft', 'pending_review'];
 const CHAPTER_UPDATE_REQUEST_UPDATE_STATUSES = ['draft', 'pending_review', 'needs_changes'];
+// Stewards keep READ access to decided requests so review outcomes and
+// reviewer notes stay visible; write access stays limited to the lists above.
+const CHAPTER_UPDATE_REQUEST_READ_STATUSES = [
+  'draft',
+  'pending_review',
+  'needs_changes',
+  'accepted',
+  'declined',
+  'archived',
+];
+
+// Permissions v2: one role-level policy with dynamic $CURRENT_USER filters
+// over the assignment junction tables replaces the per-slug snapshot
+// policies. Assignment rows grant access the moment they exist and revoke it
+// the moment they are deleted - no per-user policy sync.
+export const ASSIGNED_EDITOR_POLICY_NAME = 'Greenpill Assigned Editor';
+const ASSIGNED_CHAPTER_SLUGS = '$CURRENT_USER.chapter_editor_assignments.chapter_slug';
+const ASSIGNED_GUILD_SLUGS = '$CURRENT_USER.guild_editor_assignments.guild_slug';
+const LEGACY_SCOPED_POLICY_PATTERN = /^Greenpill (Chapter|Guild) Editor: /;
+// Roles that must never be downgraded by assign/verify role syncing.
+const PROTECTED_ROLE_NAMES = Object.freeze([
+  'Administrator',
+  'Greenpill Trusted Publisher',
+  'Greenpill Steward Moderator',
+]);
 
 const OPERATIONAL_COLLECTION_FIELDS = Object.freeze({
   chapters: [
@@ -254,13 +279,20 @@ function cleanEmail(value: unknown) {
 function usage() {
   return [
     'Usage: bun run directus:content-access -- assign --input assignments.tsv [options]',
-    '       bun run directus:content-access -- sync [options]',
+    '       bun run directus:content-access -- verify [options]',
+    '       bun run directus:content-access -- cleanup-legacy [options]',
     '',
     'Commands:',
-    '  assign   Apply assignments from a TSV file.',
-    '  sync     Re-apply scoped policies for every assignment already in Directus.',
-    '           Use after changing the scoped permission shape so no steward is',
-    '           left on a stale policy. Needs no TSV and is safe to re-run.',
+    '  assign          Apply assignments from a TSV file. The junction row is the',
+    '                  grant: the role-level "Greenpill Assigned Editor" policy',
+    '                  (from directus:content:setup) scopes access dynamically,',
+    '                  and deleting a row revokes access immediately.',
+    '  verify          Read-only report: assignment rows, steward role status,',
+    '                  and any leftover legacy per-slug scoped policies.',
+    '                  ("sync" is accepted as a deprecated alias - the dynamic',
+    '                  model has no per-user policies left to re-sync.)',
+    '  cleanup-legacy  Delete legacy "Greenpill Chapter/Guild Editor: <slug>"',
+    '                  policies after the dynamic model is verified.',
     '',
     'Input TSV columns:',
     '  email<TAB>kind<TAB>slug',
@@ -285,8 +317,13 @@ function takeValue(args: string[], index: number, flag: string) {
 }
 
 export function parseArgs(argv: string[]): AssignOptions {
-  const command: AssignCommand = argv[0] === 'sync' ? 'sync' : 'assign';
-  const args = argv[0] === 'assign' || argv[0] === 'sync' ? argv.slice(1) : argv;
+  const rawCommand = argv[0];
+  const command: AssignCommand = rawCommand === 'sync' || rawCommand === 'verify'
+    ? 'verify'
+    : rawCommand === 'cleanup-legacy'
+      ? 'cleanup-legacy'
+      : 'assign';
+  const args = ['assign', 'sync', 'verify', 'cleanup-legacy'].includes(rawCommand) ? argv.slice(1) : argv;
   const options: AssignOptions = {
     command,
     role: DEFAULT_STEWARD_ROLE,
@@ -330,8 +367,8 @@ export function parseArgs(argv: string[]): AssignOptions {
   if (options.command === 'assign' && !options.input) {
     throw new Error(`Missing --input.\n\n${usage()}`);
   }
-  if (options.command === 'sync' && options.input) {
-    throw new Error(`sync reads assignments from Directus and does not accept --input.\n\n${usage()}`);
+  if (options.command !== 'assign' && options.input) {
+    throw new Error(`${options.command} reads state from Directus and does not accept --input.\n\n${usage()}`);
   }
 
   return options;
@@ -403,7 +440,9 @@ async function getAvailableCollectionNames(client) {
 }
 
 function baseCollectionName(collection: string) {
-  return collection.replace(/^(content|intake)[._]/, '');
+  // Tolerates absent collections (pending migrations): rows built for them
+  // carry an undefined collection and are filtered out of the final plan.
+  return (collection ?? '').replace(/^(content|intake)[._]/, '');
 }
 
 function resolveSchemaCollectionName(availableCollectionNames: string[], schema: string, collection: string) {
@@ -464,11 +503,10 @@ async function getUserByEmail(client, email: string) {
   return user;
 }
 
-async function ensureUserRole(client, user: any, roleId: string, operatorRoleId: string, options: AssignOptions) {
+async function ensureUserRole(client, user: any, roleId: string, protectedRoleIds: Set<string>, options: AssignOptions) {
   const existingRoleId = typeof user.role === 'object' ? user.role?.id : user.role;
-  if (!options.syncRole || existingRoleId === roleId || existingRoleId === operatorRoleId) {
-    return existingRoleId === operatorRoleId ? 'kept operator role' : 'role ok';
-  }
+  if (!options.syncRole || existingRoleId === roleId) return 'role ok';
+  if (existingRoleId && protectedRoleIds.has(existingRoleId)) return 'kept protected role';
 
   if (!options.dryRun) {
     await client.request(`/users/${user.id}`, {
@@ -478,6 +516,18 @@ async function ensureUserRole(client, user: any, roleId: string, operatorRoleId:
   }
 
   return options.dryRun ? 'would update role' : 'updated role';
+}
+
+async function resolveProtectedRoleIds(client, operatorRole: string): Promise<Set<string>> {
+  const ids = new Set<string>();
+  for (const name of new Set([operatorRole, ...PROTECTED_ROLE_NAMES])) {
+    try {
+      ids.add(await getRoleId(client, name));
+    } catch {
+      // A protected role that does not exist cannot be downgraded anyway.
+    }
+  }
+  return ids;
 }
 
 async function ensureContentExists(client, collection: string, slug: string, kind: AssignmentKind) {
@@ -532,340 +582,215 @@ async function ensureAssignment(client, collection: string, userId: string, kind
   return dryRun ? 'would assign' : 'assigned';
 }
 
-function scopedPolicyName(kind: AssignmentKind, slug: string) {
-  return kind === 'chapter'
-    ? `Greenpill Chapter Editor: ${slug}`
-    : `Greenpill Guild Editor: ${slug}`;
-}
-
-function scopedPolicyDescription(kind: AssignmentKind, slug: string) {
-  return kind === 'chapter'
-    ? `Scoped Directus editing access for chapter:${slug}.`
-    : `Scoped Directus editing access for guild:${slug}.`;
-}
-
-async function upsertNamed(client, resource: string, payload: Record<string, unknown>, dryRun: boolean) {
-  const existing = await client.request(`/${resource}?${filterByField('name', String(payload.name))}`);
-  const item = existing?.data?.[0];
-  if (dryRun) return item ?? { id: `dry-run-${payload.name}` };
-
-  if (item?.id) {
-    const updated = await client.request(`/${resource}/${item.id}`, {
-      method: 'PATCH',
-      body: payload,
-    });
-    return updated?.data ?? item;
-  }
-
-  const created = await client.request(`/${resource}`, {
-    method: 'POST',
-    body: payload,
-  });
-  return created?.data;
-}
-
-async function upsertPermission(client, permission, dryRun: boolean) {
+async function listLegacyScopedPolicies(client) {
   const params = new URLSearchParams();
-  params.set('filter[policy][_eq]', permission.policy);
-  params.set('filter[collection][_eq]', permission.collection);
-  params.set('filter[action][_eq]', permission.action);
-  params.set('limit', '1');
+  params.set('fields', 'id,name');
+  params.set('limit', '-1');
+  const response = await client.request(`/policies?${params.toString()}`);
+  return (response?.data ?? []).filter((policy) => LEGACY_SCOPED_POLICY_PATTERN.test(cleanString(policy?.name)));
+}
 
-  const payload = {
-    policy: permission.policy,
-    collection: permission.collection,
-    action: permission.action,
-    permissions: permission.permissions,
-    validation: permission.validation,
-    presets: permission.presets,
-    fields: permission.fields,
+export function buildAssignedEditorPermissions(collections) {
+  const assignedChapterScope = { slug: { _in: ASSIGNED_CHAPTER_SLUGS } };
+  const assignedChapterChildScope = { chapter_slug: { _in: ASSIGNED_CHAPTER_SLUGS } };
+  const assignedGuildScope = { slug: { _in: ASSIGNED_GUILD_SLUGS } };
+  const assignedProjectScope = { guild_slug: { _in: ASSIGNED_GUILD_SLUGS } };
+  const updateRequestChildScope = {
+    _and: [
+      assignedChapterChildScope,
+      {
+        update_request_id: {
+          request_status: {
+            _in: CHAPTER_UPDATE_REQUEST_UPDATE_STATUSES,
+          },
+        },
+      },
+    ],
+  };
+  // Directus cannot evaluate relational filters as create validation (the FK
+  // arrives as a plain UUID), so validation only requires the parent id.
+  // The child chapter_slug is filled server-side by the migration-027 trigger
+  // from the parent request, so cross-chapter rows land outside the steward's
+  // dynamic scope and stay invisible/uneditable to them.
+  const updateRequestChildCreateValidation = {
+    update_request_id: {
+      _nnull: true,
+    },
   };
 
-  const existing = await client.request(`/permissions?${params.toString()}`);
-  const item = existing?.data?.[0];
-  if (dryRun) return item ?? { id: `dry-run-${permission.collection}-${permission.action}` };
-
-  if (item?.id) {
-    const updated = await client.request(`/permissions/${item.id}`, {
-      method: 'PATCH',
-      body: payload,
-    });
-    return updated?.data ?? item;
-  }
-
-  const created = await client.request('/permissions', {
-    method: 'POST',
-    body: payload,
-  });
-  return created?.data;
-}
-
-async function ensureUserPolicyAccess(client, userId: string, policyId: string, dryRun: boolean) {
-  const params = new URLSearchParams();
-  params.set('filter[user][_eq]', userId);
-  params.set('filter[policy][_eq]', policyId);
-  params.set('limit', '1');
-
-  const existing = await client.request(`/access?${params.toString()}`);
-  if (existing?.data?.[0]?.id) return 'policy ok';
-  if (dryRun) return 'would attach policy';
-
-  await client.request('/access', {
-    method: 'POST',
-    body: {
-      user: userId,
-      policy: policyId,
-    },
-  });
-  return 'attached policy';
-}
-
-export function buildScopedPolicyPermissions(collections, kind: AssignmentKind, slug: string, policyId: string) {
-  if (kind === 'chapter') {
-    const chapterScope = { slug: { _eq: slug } };
-    const initiativeScope = { chapter_slug: { _eq: slug } };
-    const updateRequestScope = { chapter_slug: { _eq: slug } };
-    const updateRequestChildScope = {
-      _and: [
-        {
-          chapter_slug: {
-            _eq: slug,
-          },
-        },
-        {
-          update_request_id: {
-            request_status: {
-              _in: CHAPTER_UPDATE_REQUEST_UPDATE_STATUSES,
-            },
-          },
-        },
-      ],
-    };
-    const updateRequestChildCreateScope = {
-      _and: [
-        {
-          chapter_slug: {
-            _eq: slug,
-          },
-        },
-        {
-          update_request_id: {
-            request_status: {
-              _in: CHAPTER_UPDATE_REQUEST_UPDATE_STATUSES,
-            },
-          },
-        },
-      ],
-    };
-    // Directus cannot evaluate relational filters as create validation (the FK
-    // arrives as a plain UUID), so validation only requires the parent id.
-    // Same-chapter integrity is enforced by the chapter_slug preset plus the
-    // composite (update_request_id, chapter_slug) foreign key from migration
-    // 016; a cross-chapter attach fails there with a 400 invalid-foreign-key.
-    const updateRequestChildCreateValidation = {
-      update_request_id: {
-        _nnull: true,
-      },
-    };
-    return [
-      {
-        policy: policyId,
-        collection: collections.chapters,
-        action: 'read',
-        permissions: andFilter(statusFilter(EDITOR_STATUSES), chapterScope),
-        validation: null,
-        presets: null,
-        fields: contentFields(collections.chapters, { read: true }),
-      },
-      {
-        policy: policyId,
-        collection: collections.chapters,
-        action: 'update',
-        permissions: andFilter(statusFilter(EDITOR_STATUSES), chapterScope),
-        validation: statusFilter(EDITOR_STATUSES),
-        presets: null,
-        fields: contentFields(collections.chapters, { update: true }),
-      },
-      {
-        policy: policyId,
-        collection: collections.chapterInitiatives,
-        action: 'read',
-        permissions: andFilter(statusFilter(EDITOR_STATUSES), initiativeScope),
-        validation: null,
-        presets: null,
-        fields: contentFields(collections.chapterInitiatives, { read: true }),
-      },
-      {
-        policy: policyId,
-        collection: collections.chapterInitiatives,
-        action: 'create',
-        permissions: andFilter(statusFilter(EDITOR_STATUSES), initiativeScope),
-        validation: statusFilter(EDITOR_STATUSES),
-        presets: { publication_status: 'draft', chapter_slug: slug },
-        fields: contentCreateFields(collections.chapterInitiatives, ['chapter_slug']),
-      },
-      {
-        policy: policyId,
-        collection: collections.chapterInitiatives,
-        action: 'update',
-        permissions: andFilter(statusFilter(EDITOR_STATUSES), initiativeScope),
-        validation: statusFilter(EDITOR_STATUSES),
-        presets: null,
-        fields: contentFields(collections.chapterInitiatives, { update: true }),
-      },
-      {
-        policy: policyId,
-        collection: collections.chapterUpdateRequests,
-        action: 'read',
-        permissions: andFilter(requestStatusFilter(CHAPTER_UPDATE_REQUEST_UPDATE_STATUSES), updateRequestScope),
-        validation: null,
-        presets: null,
-        fields: chapterUpdateRequestFields({ read: true }),
-      },
-      {
-        policy: policyId,
-        collection: collections.chapterUpdateRequests,
-        action: 'create',
-        permissions: andFilter(requestStatusFilter(CHAPTER_UPDATE_REQUEST_CREATE_STATUSES), updateRequestScope),
-        validation: requestStatusFilter(CHAPTER_UPDATE_REQUEST_CREATE_STATUSES),
-        presets: { request_status: 'draft', chapter_slug: slug },
-        fields: chapterUpdateRequestFields().filter((field) => field !== 'chapter_slug'),
-      },
-      {
-        policy: policyId,
-        collection: collections.chapterUpdateRequests,
-        action: 'update',
-        permissions: andFilter(requestStatusFilter(CHAPTER_UPDATE_REQUEST_UPDATE_STATUSES), updateRequestScope),
-        validation: requestStatusFilter(CHAPTER_UPDATE_REQUEST_UPDATE_STATUSES),
-        presets: null,
-        fields: chapterUpdateRequestFields({ update: true }),
-      },
-      ...[collections.chapterUpdateRequestLinks, collections.chapterUpdateRequestProofSignals].filter(Boolean).flatMap((collection) => {
-        const readFields = chapterUpdateRequestChildFields(collection, { read: true });
-        const createFields = chapterUpdateRequestChildFields(collection);
-        const updateFields = chapterUpdateRequestChildFields(collection, { update: true });
-        return [
-          {
-            policy: policyId,
-            collection,
-            action: 'read',
-            permissions: updateRequestChildScope,
-            validation: null,
-            presets: null,
-            fields: readFields,
-          },
-          {
-            policy: policyId,
-            collection,
-            action: 'create',
-            permissions: updateRequestChildCreateScope,
-            validation: updateRequestChildCreateValidation,
-            presets: { chapter_slug: slug },
-            fields: createFields,
-          },
-          {
-            policy: policyId,
-            collection,
-            action: 'update',
-            permissions: updateRequestChildScope,
-            validation: null,
-            presets: null,
-            fields: updateFields,
-          },
-          {
-            policy: policyId,
-            collection,
-            action: 'delete',
-            permissions: updateRequestChildScope,
-            validation: null,
-            presets: null,
-            fields: readFields,
-          },
-        ];
-      }),
-    ];
-  }
-
-  const guildScope = { slug: { _eq: slug } };
-  const projectScope = { guild_slug: { _eq: slug } };
-  return [
+  const permissions = [
     {
-      policy: policyId,
+      policy: ASSIGNED_EDITOR_POLICY_NAME,
+      collection: collections.chapters,
+      action: 'read',
+      permissions: andFilter(statusFilter(EDITOR_STATUSES), assignedChapterScope),
+      validation: null,
+      presets: null,
+      fields: contentFields(collections.chapters, { read: true }),
+    },
+    {
+      policy: ASSIGNED_EDITOR_POLICY_NAME,
+      collection: collections.chapters,
+      action: 'update',
+      permissions: andFilter(statusFilter(EDITOR_STATUSES), assignedChapterScope),
+      validation: statusFilter(EDITOR_STATUSES),
+      presets: null,
+      fields: contentFields(collections.chapters, { update: true }),
+    },
+    {
+      policy: ASSIGNED_EDITOR_POLICY_NAME,
+      collection: collections.chapterInitiatives,
+      action: 'read',
+      permissions: andFilter(statusFilter(EDITOR_STATUSES), assignedChapterChildScope),
+      validation: null,
+      presets: null,
+      fields: contentFields(collections.chapterInitiatives, { read: true }),
+    },
+    {
+      policy: ASSIGNED_EDITOR_POLICY_NAME,
+      collection: collections.chapterInitiatives,
+      action: 'create',
+      permissions: andFilter(statusFilter(EDITOR_STATUSES), assignedChapterChildScope),
+      // The steward picks the chapter on create; the dynamic validation only
+      // accepts chapters they hold an assignment row for.
+      validation: andFilter(statusFilter(EDITOR_STATUSES), assignedChapterChildScope),
+      presets: { publication_status: 'draft' },
+      fields: contentCreateFields(collections.chapterInitiatives),
+    },
+    {
+      policy: ASSIGNED_EDITOR_POLICY_NAME,
+      collection: collections.chapterInitiatives,
+      action: 'update',
+      permissions: andFilter(statusFilter(EDITOR_STATUSES), assignedChapterChildScope),
+      validation: statusFilter(EDITOR_STATUSES),
+      presets: null,
+      fields: contentFields(collections.chapterInitiatives, { update: true }),
+    },
+    {
+      policy: ASSIGNED_EDITOR_POLICY_NAME,
+      collection: collections.chapterUpdateRequests,
+      action: 'read',
+      permissions: andFilter(requestStatusFilter(CHAPTER_UPDATE_REQUEST_READ_STATUSES), assignedChapterChildScope),
+      validation: null,
+      presets: null,
+      fields: chapterUpdateRequestFields({ read: true }),
+    },
+    {
+      policy: ASSIGNED_EDITOR_POLICY_NAME,
+      collection: collections.chapterUpdateRequests,
+      action: 'create',
+      permissions: andFilter(requestStatusFilter(CHAPTER_UPDATE_REQUEST_CREATE_STATUSES), assignedChapterChildScope),
+      validation: andFilter(requestStatusFilter(CHAPTER_UPDATE_REQUEST_CREATE_STATUSES), assignedChapterChildScope),
+      presets: { request_status: 'draft' },
+      fields: chapterUpdateRequestFields(),
+    },
+    {
+      policy: ASSIGNED_EDITOR_POLICY_NAME,
+      collection: collections.chapterUpdateRequests,
+      action: 'update',
+      permissions: andFilter(requestStatusFilter(CHAPTER_UPDATE_REQUEST_UPDATE_STATUSES), assignedChapterChildScope),
+      validation: requestStatusFilter(CHAPTER_UPDATE_REQUEST_UPDATE_STATUSES),
+      presets: null,
+      fields: chapterUpdateRequestFields({ update: true }),
+    },
+    ...[collections.chapterUpdateRequestLinks, collections.chapterUpdateRequestProofSignals].filter(Boolean).flatMap((collection) => {
+      const readFields = chapterUpdateRequestChildFields(collection, { read: true });
+      const createFields = chapterUpdateRequestChildFields(collection);
+      const updateFields = chapterUpdateRequestChildFields(collection, { update: true });
+      return [
+        {
+          policy: ASSIGNED_EDITOR_POLICY_NAME,
+          collection,
+          action: 'read',
+          permissions: updateRequestChildScope,
+          validation: null,
+          presets: null,
+          fields: readFields,
+        },
+        {
+          policy: ASSIGNED_EDITOR_POLICY_NAME,
+          collection,
+          action: 'create',
+          permissions: updateRequestChildScope,
+          validation: updateRequestChildCreateValidation,
+          presets: null,
+          fields: createFields,
+        },
+        {
+          policy: ASSIGNED_EDITOR_POLICY_NAME,
+          collection,
+          action: 'update',
+          permissions: updateRequestChildScope,
+          validation: null,
+          presets: null,
+          fields: updateFields,
+        },
+        {
+          policy: ASSIGNED_EDITOR_POLICY_NAME,
+          collection,
+          action: 'delete',
+          permissions: updateRequestChildScope,
+          validation: null,
+          presets: null,
+          fields: readFields,
+        },
+      ];
+    }),
+    {
+      policy: ASSIGNED_EDITOR_POLICY_NAME,
       collection: collections.guilds,
       action: 'read',
-      permissions: andFilter(statusFilter(EDITOR_STATUSES), guildScope),
+      permissions: andFilter(statusFilter(EDITOR_STATUSES), assignedGuildScope),
       validation: null,
       presets: null,
       fields: contentFields(collections.guilds, { read: true }),
     },
     {
-      policy: policyId,
+      policy: ASSIGNED_EDITOR_POLICY_NAME,
       collection: collections.guilds,
       action: 'update',
-      permissions: andFilter(statusFilter(EDITOR_STATUSES), guildScope),
+      permissions: andFilter(statusFilter(EDITOR_STATUSES), assignedGuildScope),
       validation: statusFilter(EDITOR_STATUSES),
       presets: null,
       fields: contentFields(collections.guilds, { update: true }),
     },
     {
-      policy: policyId,
+      policy: ASSIGNED_EDITOR_POLICY_NAME,
       collection: collections.projects,
       action: 'read',
-      permissions: andFilter(statusFilter(EDITOR_STATUSES), projectScope),
+      permissions: andFilter(statusFilter(EDITOR_STATUSES), assignedProjectScope),
       validation: null,
       presets: null,
       fields: contentFields(collections.projects, { read: true }),
     },
-      {
-        policy: policyId,
-        collection: collections.projects,
-        action: 'create',
-        permissions: andFilter(statusFilter(EDITOR_STATUSES), projectScope),
-        validation: statusFilter(EDITOR_STATUSES),
-        presets: { publication_status: 'draft', guild_slug: slug },
-        fields: contentCreateFields(collections.projects, ['guild_slug']),
-      },
     {
-      policy: policyId,
+      policy: ASSIGNED_EDITOR_POLICY_NAME,
+      collection: collections.projects,
+      action: 'create',
+      permissions: andFilter(statusFilter(EDITOR_STATUSES), assignedProjectScope),
+      validation: andFilter(statusFilter(EDITOR_STATUSES), assignedProjectScope),
+      presets: { publication_status: 'draft' },
+      fields: contentCreateFields(collections.projects),
+    },
+    {
+      policy: ASSIGNED_EDITOR_POLICY_NAME,
       collection: collections.projects,
       action: 'update',
-      permissions: andFilter(statusFilter(EDITOR_STATUSES), projectScope),
+      permissions: andFilter(statusFilter(EDITOR_STATUSES), assignedProjectScope),
       validation: statusFilter(EDITOR_STATUSES),
       presets: null,
       fields: contentFields(collections.projects, { update: true }),
     },
   ];
-}
 
-async function ensureScopedPolicyAccess(client, collections, userId: string, kind: AssignmentKind, slug: string, dryRun: boolean) {
-  const policy = await upsertNamed(client, 'policies', {
-    name: scopedPolicyName(kind, slug),
-    icon: 'edit_note',
-    description: scopedPolicyDescription(kind, slug),
-    app_access: false,
-    admin_access: false,
-    enforce_tfa: false,
-  }, dryRun);
-  const policyId = policy?.id;
-  if (!policyId) throw new Error(`Directus policy was not created for ${kind}:${slug}`);
-
-  for (const permission of buildScopedPolicyPermissions(collections, kind, slug, policyId)) {
-    await upsertPermission(client, permission, dryRun);
-  }
-
-  return ensureUserPolicyAccess(client, userId, policyId, dryRun);
-}
-
-export async function ensureScopedContentPolicy(client, userId: string, kind: AssignmentKind, slug: string, dryRun = false) {
-  const collections = await resolveCollections(client);
-  return ensureScopedPolicyAccess(client, collections, userId, kind, slug, dryRun);
+  return permissions.filter((permission) => Boolean(permission.collection));
 }
 
 async function assignContentAccess(assignments: AssignmentInput[], options: AssignOptions) {
   const client = await createDirectusClient();
   const collections = await resolveCollections(client);
   const stewardRoleId = await getRoleId(client, options.role);
-  const operatorRoleId = await getRoleId(client, options.operatorRole);
+  const protectedRoleIds = await resolveProtectedRoleIds(client, options.operatorRole);
   const prepared = [];
 
   for (const assignment of assignments) {
@@ -893,18 +818,14 @@ async function assignContentAccess(assignments: AssignmentInput[], options: Assi
 
   const results = [];
   for (const { assignment, user, assignmentCollection } of prepared) {
-    const roleStatus = await ensureUserRole(client, user, stewardRoleId, operatorRoleId, options);
+    const roleStatus = await ensureUserRole(client, user, stewardRoleId, protectedRoleIds, options);
+    // Permissions v2: the assignment row IS the grant. The role-level
+    // "Greenpill Assigned Editor" policy (applied by directus:content:setup)
+    // scopes access dynamically via $CURRENT_USER, so no per-user policy is
+    // created and deleting the row revokes access immediately.
     const assignmentStatus = await ensureAssignment(
       client,
       assignmentCollection,
-      user.id,
-      assignment.kind,
-      assignment.slug,
-      options.dryRun
-    );
-    const policyStatus = await ensureScopedPolicyAccess(
-      client,
-      collections,
       user.id,
       assignment.kind,
       assignment.slug,
@@ -915,7 +836,6 @@ async function assignContentAccess(assignments: AssignmentInput[], options: Assi
       ...assignment,
       roleStatus,
       assignmentStatus,
-      policyStatus,
     });
   }
 
@@ -923,6 +843,66 @@ async function assignContentAccess(assignments: AssignmentInput[], options: Assi
     url: client.url,
     results,
   };
+}
+
+export interface VerifyReport {
+  url: string;
+  assignments: number;
+  usersOnStewardRole: number;
+  usersOnProtectedRole: number;
+  usersOnUnexpectedRole: Array<{ email: string; role: string }>;
+  legacyScopedPolicies: string[];
+}
+
+async function verifyContentAccess(options: AssignOptions): Promise<VerifyReport> {
+  const client = await createDirectusClient();
+  const collections = await resolveCollections(client);
+  const assignments = await readAssignmentsFromDirectus(client, collections);
+  const stewardRoleId = await getRoleId(client, options.role);
+  const protectedRoleIds = await resolveProtectedRoleIds(client, options.operatorRole);
+
+  let usersOnStewardRole = 0;
+  let usersOnProtectedRole = 0;
+  const usersOnUnexpectedRole: Array<{ email: string; role: string }> = [];
+  const checkedEmails = new Set<string>();
+  for (const assignment of assignments) {
+    if (checkedEmails.has(assignment.email)) continue;
+    checkedEmails.add(assignment.email);
+    const user = await getUserByEmail(client, assignment.email);
+    const roleId = typeof user.role === 'object' ? user.role?.id : user.role;
+    if (roleId === stewardRoleId) usersOnStewardRole += 1;
+    else if (roleId && protectedRoleIds.has(roleId)) usersOnProtectedRole += 1;
+    else usersOnUnexpectedRole.push({ email: assignment.email, role: String(roleId ?? 'none') });
+  }
+
+  const legacyScopedPolicies = (await listLegacyScopedPolicies(client)).map((policy) => policy.name);
+
+  return {
+    url: client.url,
+    assignments: assignments.length,
+    usersOnStewardRole,
+    usersOnProtectedRole,
+    usersOnUnexpectedRole,
+    legacyScopedPolicies,
+  };
+}
+
+async function cleanupLegacyScopedPolicies(options: AssignOptions) {
+  const client = await createDirectusClient();
+  const legacy = await listLegacyScopedPolicies(client);
+  const removed: string[] = [];
+
+  for (const policy of legacy) {
+    if (!options.dryRun) {
+      await client.request(`/policies/${policy.id}`, {
+        method: 'DELETE',
+        expected: [204],
+      });
+    }
+    removed.push(policy.name);
+  }
+
+  return { url: client.url, removed, dryRun: options.dryRun };
 }
 
 export async function readAssignmentsFromDirectus(client, collections): Promise<AssignmentInput[]> {
@@ -962,28 +942,49 @@ export async function readAssignmentsFromDirectus(client, collections): Promise<
   return assignments;
 }
 
-async function readSyncAssignments(): Promise<AssignmentInput[]> {
-  const client = await createDirectusClient();
-  const collections = await resolveCollections(client);
-  return readAssignmentsFromDirectus(client, collections);
-}
-
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  const assignments = options.command === 'sync'
-    ? await readSyncAssignments()
-    : parseAssignments(await readFile(options.input!, 'utf8'));
 
-  if (options.command === 'sync') {
-    console.log(`Syncing ${assignments.length} live Directus assignment(s).`);
+  if (options.command === 'verify') {
+    const report = await verifyContentAccess(options);
+    console.log(`Directus target: ${report.url}`);
+    console.log(`Assignment rows: ${report.assignments}`);
+    console.log(`Assigned users on steward role: ${report.usersOnStewardRole}`);
+    console.log(`Assigned users on protected roles: ${report.usersOnProtectedRole}`);
+    for (const user of report.usersOnUnexpectedRole) {
+      console.warn(`Unexpected role for ${user.email}: ${user.role}`);
+    }
+    if (report.legacyScopedPolicies.length > 0) {
+      console.warn(
+        `Legacy scoped policies still present (${report.legacyScopedPolicies.length}): ` +
+        `${report.legacyScopedPolicies.join(', ')}. ` +
+        'Run "cleanup-legacy" after verifying dynamic access with directus:steward:smoke.'
+      );
+    } else {
+      console.log('No legacy scoped policies remain.');
+    }
+    return;
   }
 
+  if (options.command === 'cleanup-legacy') {
+    const result = await cleanupLegacyScopedPolicies(options);
+    console.log(`Directus target: ${result.url}`);
+    if (result.removed.length === 0) {
+      console.log('No legacy scoped policies to remove.');
+    }
+    for (const name of result.removed) {
+      console.log(`${result.dryRun ? 'Would remove' : 'Removed'} legacy policy: ${name}`);
+    }
+    return;
+  }
+
+  const assignments = parseAssignments(await readFile(options.input!, 'utf8'));
   const result = await assignContentAccess(assignments, options);
 
   console.log(`Directus target: ${result.url}`);
   for (const assignment of result.results) {
     console.log(
-      `${assignment.assignmentStatus}: ${assignment.email} -> ${assignment.kind}:${assignment.slug} (${assignment.roleStatus}, ${assignment.policyStatus})`
+      `${assignment.assignmentStatus}: ${assignment.email} -> ${assignment.kind}:${assignment.slug} (${assignment.roleStatus})`
     );
   }
 }
