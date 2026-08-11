@@ -2,6 +2,25 @@
 
 ## Evidence log
 
+### 2026-08-11 PRD-808 publish-health draft
+
+- Added a static `/build-metadata.json` website artifact with only build time
+  and the public operational snapshot `generatedAt`; a 47-page Astro build
+  emitted the expected JSON with no Directus or intake payloads.
+- Added migration 028 with singleton content watermark/deployed build/Pages
+  workflow/check/active-alert/recovery state and deduplicated publish-health
+  events on the existing durable review-notification queue.
+- Added the opt-in content-operations check for the deployed artifact and latest
+  completed `github-pages.yml` run. URL and stale threshold are explicit agent
+  settings; production activation still requires Actions read on the existing
+  fine-grained token.
+- Fresh focused proof: package compilation passed; agent suites passed 82 tests;
+  content suite passed 23 tests; healthy, stale, build-failed, repeated, and
+  recovered transitions plus public safety and Resend delivery are covered.
+- No production migration, Fly deploy, secret/token change, or live alert test
+  was performed. The full root typecheck remains blocked by four unchanged
+  PRD-809 `directus-studio-setup.ts` errors already present on `main`.
+
 ### 2026-08-11 implementation pass
 
 - Local stack (fresh bootstrap): migrations 023-027 applied; dynamic-policy
@@ -30,6 +49,7 @@
 ## Acceptance Checks
 
 ### Phase 0
+
 - No repo doc claims stewards cannot publish their own scoped rows; role
   description, field notes, guide, and READMEs all describe the direct-edit
   model consistently.
@@ -39,6 +59,7 @@
   named proof surface.
 
 ### Phase 1
+
 - A steward edit to a published chapter is visible on greenpill.network in
   under 10 minutes without any human action (dispatch observed in the Pages
   workflow run list with event `repository_dispatch`).
@@ -64,6 +85,7 @@
   or decline the node, the outcome is verified, and the test node is archived.
 
 ### Phase 2
+
 - Creating a `chapter_editor_assignments` row in the Directus UI grants
   editing within one request cycle; deleting it revokes access (proved in
   extended steward smoke).
@@ -74,6 +96,7 @@
   steward at once (no per-user sync step).
 
 ### Phase 3
+
 - Chapters form renders grouped sections; links/proof use structured O2M
   editors, while direct chapter image alt/credit use first-class fields.
 - Existing `media.imageAlt`/`media.imageCredit` values survive migration and
@@ -90,6 +113,7 @@
   payloads or hidden technical fields.
 
 ### Phase 4
+
 - Either: accepted update requests apply to the live chapter row without
   retyping (SQL function tested), or: content versioning pilot documented
   with draft-promote flow and the request-table retirement plan.

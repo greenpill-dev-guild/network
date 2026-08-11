@@ -50,7 +50,17 @@ export interface PublicOperationalContentSnapshot {
   impactSourceBindings: PublicOperationalImpactSourcePayload;
 }
 
+export interface PublicWebsiteBuildMetadata {
+  version: 1;
+  builtAt: string;
+  operationalSnapshot: {
+    generatedAt: string;
+  };
+}
+
 export const PUBLIC_OPERATIONAL_CONTENT_VERSION = 1;
+export const PUBLIC_WEBSITE_BUILD_METADATA_VERSION = 1;
+export const PUBLIC_WEBSITE_BUILD_METADATA_ROUTE = '/build-metadata.json';
 
 export const PUBLIC_OPERATIONAL_CONTENT_COLLECTIONS: readonly PublicOperationalContentCollection[] = Object.freeze([
   'themes',
@@ -107,6 +117,14 @@ const toIso = (value: Date | string | null | undefined): string => {
   if (!value) return new Date().toISOString();
   const date = value instanceof Date ? value : new Date(value);
   return Number.isNaN(date.valueOf()) ? new Date().toISOString() : date.toISOString();
+};
+
+const requireIso = (value: unknown, field: string): string => {
+  const date = value instanceof Date ? value : new Date(cleanString(value));
+  if (Number.isNaN(date.valueOf())) {
+    throw new Error(`Public website build metadata has invalid ${field}`);
+  }
+  return date.toISOString();
 };
 
 const asArray = (value: unknown): any[] => (Array.isArray(value) ? value : []);
@@ -481,4 +499,48 @@ export function assertPublicOperationalContentSnapshot<T>(payload: T): T {
   }
 
   return payload;
+}
+
+export function toPublicWebsiteBuildMetadata({
+  builtAt = new Date(),
+  operationalSnapshotGeneratedAt,
+}: {
+  builtAt?: Date | string;
+  operationalSnapshotGeneratedAt: Date | string;
+}): PublicWebsiteBuildMetadata {
+  return {
+    version: PUBLIC_WEBSITE_BUILD_METADATA_VERSION,
+    builtAt: requireIso(builtAt, 'builtAt'),
+    operationalSnapshot: {
+      generatedAt: requireIso(operationalSnapshotGeneratedAt, 'operationalSnapshot.generatedAt'),
+    },
+  };
+}
+
+export function assertPublicWebsiteBuildMetadata(payload: unknown): PublicWebsiteBuildMetadata {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new Error('Public website build metadata must be an object');
+  }
+  if (containsPrivateOperationalContentField(payload)) {
+    throw new Error('Public website build metadata contains private fields');
+  }
+
+  const record = payload as UnknownRecord;
+  const rootKeys = Object.keys(record).sort();
+  if (
+    record.version !== PUBLIC_WEBSITE_BUILD_METADATA_VERSION ||
+    rootKeys.join(',') !== 'builtAt,operationalSnapshot,version'
+  ) {
+    throw new Error('Public website build metadata has an invalid shape');
+  }
+
+  const operationalSnapshot = normalizeObject(record.operationalSnapshot);
+  if (Object.keys(operationalSnapshot).join(',') !== 'generatedAt') {
+    throw new Error('Public website build metadata has an invalid operational snapshot shape');
+  }
+
+  return toPublicWebsiteBuildMetadata({
+    builtAt: requireIso(record.builtAt, 'builtAt'),
+    operationalSnapshotGeneratedAt: requireIso(operationalSnapshot.generatedAt, 'operationalSnapshot.generatedAt'),
+  });
 }

@@ -3,10 +3,12 @@
 ## 2026-08-11 implementation handoff (Claude -> Afo)
 
 Implementation state after the 2026-08-10/11 push: the main production slice
-shipped, but the platform and UI lanes remain active for the freshness
-watchdog, operator Insights dashboard, direct-edit chapter image metadata, and
-pt-BR/es label metadata. Production has migrations 023-027, the deployed agent
-with content-operations sweeps, and the v2 permission model applied.
+shipped, and the PRD-808 freshness watchdog is implemented and locally tested
+on its draft branch. The platform lane remains active for merge and separately
+authorized production activation; the UI lane remains active for the operator
+Insights dashboard, direct-edit chapter image metadata, and pt-BR/es label
+metadata. Production still has migrations 023-027, the deployed agent with
+content-operations sweeps, and the v2 permission model applied.
 
 ### Operator activations
 
@@ -41,9 +43,13 @@ with content-operations sweeps, and the v2 permission model applied.
 
 ### Remaining implementation sequence (tracked in plan.todo.md)
 
-1. PRD-808: static deployed build metadata, durable publish-health state,
-   GitHub Pages failure detection, and deduplicated Resend alerts/recoveries.
-   Activation requires Actions read on the fine-grained GitHub token.
+1. PRD-808 implementation is ready on branch
+   `afo/prd-808-cms-platform-lane-pipeline-automation-apply-function`: static
+   deployed build metadata, migration 028 durable publish-health state, GitHub
+   Pages failure detection, and deduplicated Resend alerts/recoveries. Release
+   order is merge -> apply migration 028 -> grant Actions read to the
+   fine-grained token -> set the explicit metadata URL/stale threshold and
+   enable flag -> deploy -> run the separately authorized live alert proof.
 2. PRD-809: first-class direct chapter alt/credit columns with backfill and
    projection compatibility, followed by the operator Insights dashboard and
    confirmed pt-BR/es Data Studio locale metadata.

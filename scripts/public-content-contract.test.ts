@@ -5,9 +5,12 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   assertPublicOperationalContentSnapshot,
+  assertPublicWebsiteBuildMetadata,
   containsPrivateOperationalContentField,
   containsUnapprovedChapterMedia,
+  PUBLIC_WEBSITE_BUILD_METADATA_ROUTE,
   toPublicOperationalContentSnapshot,
+  toPublicWebsiteBuildMetadata,
 } from '@greenpill-network/shared/public-content';
 import {
   buildDirectusOperationalPermissionPlan,
@@ -42,6 +45,7 @@ const storiesIndexPagePath = join(rootDir, 'packages/website/src/pages/stories/i
 const chapterPagePath = join(rootDir, 'packages/website/src/pages/chapters/[slug].astro');
 const chapterInitiativesMigrationPath = join(rootDir, 'packages/agent/migrations/010_chapter_initiatives_operational_content.sql');
 const chapterImageUploadsMigrationPath = join(rootDir, 'packages/agent/migrations/022_chapter_image_uploads.sql');
+const contentPublishHealthMigrationPath = join(rootDir, 'packages/agent/migrations/028_content_publish_health.sql');
 const activeChapterEnrichmentSlugs = [
   'brasil',
   'c-te-d-ivoire',
@@ -209,6 +213,46 @@ test('operational content snapshot is public-safe and derived from approved oper
   assert.equal(snapshot.locations.length > 0, true);
   assert.equal(Array.isArray(snapshot.impactSourceBindings.chapters), true);
   assert.equal(containsPrivateOperationalContentField(snapshot), false);
+});
+
+test('website build metadata exposes only static public snapshot freshness timestamps', async () => {
+  const snapshot = JSON.parse(await readFile(snapshotPath, 'utf8'));
+  const metadata = toPublicWebsiteBuildMetadata({
+    builtAt: '2026-08-11T18:30:00.000Z',
+    operationalSnapshotGeneratedAt: snapshot.generatedAt,
+  });
+
+  assert.equal(PUBLIC_WEBSITE_BUILD_METADATA_ROUTE, '/build-metadata.json');
+  assert.deepEqual(metadata, {
+    version: 1,
+    builtAt: '2026-08-11T18:30:00.000Z',
+    operationalSnapshot: {
+      generatedAt: snapshot.generatedAt,
+    },
+  });
+  assert.deepEqual(assertPublicWebsiteBuildMetadata(metadata), metadata);
+  assert.equal(containsPrivateOperationalContentField(metadata), false);
+  assert.throws(
+    () =>
+      assertPublicWebsiteBuildMetadata({
+        ...metadata,
+        stewardEmail: 'private@example.org',
+      }),
+    /private fields/
+  );
+});
+
+test('publish-health migration stores durable state and reuses the deduplicated review queue', async () => {
+  const migration = await readFile(contentPublishHealthMigrationPath, 'utf8');
+
+  assert.match(migration, /create table if not exists content\.publish_health/);
+  assert.match(migration, /deployed_build_at timestamptz/);
+  assert.match(migration, /deployed_snapshot_generated_at timestamptz/);
+  assert.match(migration, /stale_alert_active boolean/);
+  assert.match(migration, /build_failed_alert_active boolean/);
+  assert.match(migration, /publish_health_status in \('active', 'recovered'\)/);
+  assert.match(migration, /content_review_notification_event_key_idx/);
+  assert.doesNotMatch(migration, /email|ip_address|user_agent|steward_notes/);
 });
 
 test('Keystatic and Astro content configs expose editorial collections only', async () => {

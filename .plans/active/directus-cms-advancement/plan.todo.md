@@ -39,17 +39,19 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
       to `greenpill-dev-guild/network`; PAT stays in agent Fly secrets.
       Directus Flow variant explicitly declined to avoid future flow caps and
       keep secrets off the CMS.
-- [ ] Publish-failure + freshness alerting:
-  - [ ] Add a public-safe, static website build-metadata artifact containing
+- [x] Publish-failure + freshness alerting (implemented and tested on the
+      PRD-808 draft branch; production activation remains a separate operator
+      step):
+  - [x] Add a public-safe, static website build-metadata artifact containing
         the operational snapshot `generatedAt`; the agent must poll the
         deployed artifact rather than its live snapshot endpoint.
-  - [ ] Persist the latest content watermark, deployed build timestamp,
+  - [x] Persist the latest content watermark, deployed build timestamp,
         GitHub Pages workflow conclusion, check time, and alert state so
         stale/failing/recovered transitions are durable and deduplicated.
-  - [ ] Compare the deployed timestamp with `max(updated_at)` across the
+  - [x] Compare the deployed timestamp with `max(updated_at)` across the
         operational-content tables on the existing content-operations sweep;
         make the URL and stale threshold explicit agent env settings.
-  - [ ] Query the `github-pages.yml` workflow result and route stale/build
+  - [x] Query the `github-pages.yml` workflow result and route stale/build
         failure alerts through the existing durable Resend queue, including a
         recovery notification. The production fine-grained token must include
         Actions read in addition to Contents read/write before activation.
@@ -88,7 +90,7 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
 ### Phase 2 - Permissions v2 (kill the staleness class)
 
 - [x] Replace per-slug scoped policies with one static `Greenpill Assigned
-      Editor` policy using dynamic relational filters over the existing
+    Editor` policy using dynamic relational filters over the existing
       junction tables, e.g. chapters update:
       `{"editor_assignments":{"directus_user_id":{"_eq":"$CURRENT_USER"}}}`,
       initiatives via `{"chapter":{"editor_assignments":{...}}}` traversal.
@@ -173,10 +175,11 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
 
 ## Remaining implementation sequence
 
-1. **Platform health contract (PRD-808).** Add the build-metadata artifact,
-   persistent publish-health state, GitHub Pages result check, deduplicated
-   Resend alerts/recoveries, and focused agent/content tests. Do not activate
-   production polling until the fine-grained token has Actions read.
+1. **Platform health contract (PRD-808).** Implemented and locally tested on
+   the PRD-808 draft branch: build metadata, migration 028 state, Pages result
+   check, deduplicated Resend alerts/recoveries, and focused tests. Merge and
+   production activation remain separate; do not enable polling until migration
+   028 is applied and the fine-grained token has Actions read.
 2. **Steward/operator UX closure (PRD-809).** Add direct chapter image
    alt/credit columns and compatibility projection first; then implement the
    idempotent Insights dashboard against the persisted health state and add
