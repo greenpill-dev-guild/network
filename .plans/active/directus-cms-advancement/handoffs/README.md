@@ -7,38 +7,24 @@ the two items marked open in `plan.todo.md` (freshness watchdog, operator
 Insights dashboard). Production has migrations 023-027, the deployed agent
 with content-operations sweeps, and the v2 permission model applied.
 
-### Operator actions that need you (secrets/approvals I cannot mint)
+### Operator activations
 
-1. **Dispatch-on-publish activation** - create a fine-grained GitHub PAT
-   (repo `greenpill-dev-guild/network`, permission: Contents read/write is
-   sufficient for `repository_dispatch`), then:
-
-   ```sh
-   fly secrets set -a network-agent CONTENT_DISPATCH_GITHUB_TOKEN="<pat>"
-   ```
-
-   `CONTENT_DISPATCH_ENABLED='true'` and the repo name already sit in
-   `packages/agent/fly.toml`. Until the secret exists the watcher stays
-   silently disabled and the hourly cron remains the publish path.
-2. **Content review notification recipients** (publisher alert emails +
-   quarantine alerts):
-
-   ```sh
-   fly secrets set -a network-agent CONTENT_REVIEW_RECIPIENTS="ops@example.org,other@example.org"
-   ```
-
-   Without it, pending/quarantine notifications mark themselves `skipped`
-   (visible in the `review_notifications` collection); decided-request
-   emails to stewards work regardless.
-3. **Magic-link moderation real-recipient check** - the flag is ON with a
-   fresh 32-byte secret; the next real map submission emails per-recipient
-   links. Confirm one approve/decline round-trip with a real moderator, per
-   the release order in `packages/admin/README.md`.
-4. **MCP token minting** - `mcp_enabled` is on with deletes off, and the
-   API-only `Greenpill Content Agent` role exists. To connect a client,
-   create a user on that role in the Directus UI, mint a static token, and
-   configure the MCP client locally (no `.mcp.json` in the repo - see
-   `docs/agentic-mcp-tooling-runbook.md`).
+1. **Done 2026-08-11 - dispatch-on-publish.** Evidence: receiver HTTP 204;
+   identical-value `brasil` chapter touch produced `content_dispatch_sent`;
+   repository-dispatch Pages run `31457001868` completed successfully.
+2. **Done 2026-08-11 - content review notification recipients.** Evidence:
+   pending and decided notification rows both reached `sent` with provider
+   message IDs, then the labeled test request was deleted with HTTP 204.
+3. **Delivered, awaiting human click - magic-link moderation.** Evidence:
+   pending test node `9933e770-6ddb-4e58-afef-1829e47d4c86` produced sent
+   notification `1d5cc049-f2ad-49c4-8c5a-18981d583aca` and two sent
+   recipient-specific access-link rows. Approve or decline it from the email,
+   then archive the node.
+4. **Done 2026-08-11 - MCP machine token.** Evidence: active API-only user
+   `mcp-agent@greenpill.network`; chapter read HTTP 200, intake read HTTP 403,
+   draft create HTTP 200, machine delete HTTP 403, admin cleanup HTTP 204.
+   The token stays in root `.env.local`; the endpoint is
+   `https://admin.greenpill.network/mcp`, with no repo `.mcp.json`.
 
 ### Permissions v2 decisions of record
 
