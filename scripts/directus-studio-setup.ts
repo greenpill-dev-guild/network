@@ -147,9 +147,15 @@ const TECHNICAL_COLLECTIONS_TO_HIDE = Object.freeze([
   'map_node_edit_tokens',
 ]);
 
+interface FieldGroup {
+  label: string;
+  sort: number;
+  fields: readonly string[];
+}
+
 // Form groups: members get meta.group; the group alias fields are created by
 // ensureGroupField during apply. Field names not listed stay ungrouped.
-const FIELD_GROUPS_BY_COLLECTION = Object.freeze({
+const FIELD_GROUPS_BY_COLLECTION: Readonly<Record<string, Readonly<Record<string, FieldGroup>>>> = Object.freeze({
   chapters: {
     group_identity: {
       label: 'Identity & Location',
@@ -1324,7 +1330,9 @@ async function applyDirectusStudioBookmarks(client, collectionNames) {
   ])]);
   let applied = 0;
 
-  const collectionByBase = new Map(collectionNames.map((collection) => [cleanCollectionName(collection), collection]));
+  const collectionByBase = new Map<string, string>(
+    collectionNames.map((collection) => [cleanCollectionName(collection), collection])
+  );
   for (const obsolete of OBSOLETE_BOOKMARKS) {
     const roleId = roleIds.get(obsolete.role);
     const collection = collectionByBase.get(obsolete.collection);
