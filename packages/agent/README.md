@@ -62,3 +62,48 @@ from the Resend webhook details page before enabling the production endpoint, an
 set `RESEND_WEBHOOK_RECIPIENT_HASH_SECRET` so stored recipient hashes are keyed.
 The route verifies Svix signatures and stores only operational metadata, never
 message bodies, raw recipient addresses, or free-form provider diagnostics.
+
+## Website Publish Health
+
+The content-operations sweep can watch whether published content reaches the
+deployed website. It compares the deployed static build with the latest
+operational-content update and the latest completed GitHub Pages workflow, and
+raises two alerts, each followed by one recovery:
+
+- Stale: content changed after the deployed snapshot was generated, and the
+  newest change has waited longer than the threshold. The alert holds until the
+  deployed snapshot is newer than the content, so a further edit does not read
+  as a recovery.
+- Pages delivery failed: the latest completed Pages run did not succeed. A
+  cancelled run counts. When a deploy hangs, every later run is cancelled by the
+  next one queued behind it, and that is the only trace the workflow API leaves.
+  A queued run that a newer one replaces while a third is still running also
+  reads as cancelled, so a burst of triggers can cause a brief alert and
+  recovery.
+
+It is off unless all of these agent settings are supplied explicitly:
+
+- `CONTENT_PUBLISH_HEALTH_ENABLED=true`
+- `CONTENT_PUBLISH_HEALTH_METADATA_URL=https://greenpill.network/build-metadata.json`
+- `CONTENT_PUBLISH_HEALTH_STALE_THRESHOLD_MS=<positive milliseconds>`
+
+Set the threshold above the normal publish delay. A change can take about 20
+minutes to show in the deployed metadata: up to 5 minutes of dispatch
+coalescing, about 3 minutes to build and deploy, and up to 10 minutes of GitHub
+Pages caching. `1800000` (30 minutes) is a reasonable floor.
+
+The check reuses `CONTENT_DISPATCH_GITHUB_REPO` and
+`CONTENT_DISPATCH_GITHUB_TOKEN`, and defaults the workflow filename to
+`github-pages.yml` and production branch to `main` unless
+`CONTENT_PUBLISH_HEALTH_WORKFLOW` or `CONTENT_PUBLISH_HEALTH_BRANCH` is set. The
+token must have Actions read in addition to the Contents access used for
+dispatch. Alerts and recoveries use `CONTENT_REVIEW_RECIPIENTS` and the existing
+durable Resend queue.
+
+If the check itself cannot run, it logs `content_publish_health_check_failed`
+with a `reason` code, leaves `content.publish_health.checked_at` unchanged, and
+sends no alert.
+
+Apply migration `028_content_publish_health.sql` before enabling this sweep.
+Enabling it, changing the production token, deploying the agent, and proving a
+live alert are separate operator actions, not part of the implementation PR.

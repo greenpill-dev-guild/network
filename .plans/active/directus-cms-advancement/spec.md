@@ -108,7 +108,12 @@ pinned version already ships.
 - **`content.people`**: defer - keep as published-read reference data; the
   dual source of truth stays documented debt.
 
-## Remaining implementation contract (Codex reconciliation, 2026-08-11)
+## Platform health implementation contract (PRD-808, 2026-08-11)
+
+Implemented on the PRD-808 branch and reviewed on 2026-10-04; it lands with
+the PRD-808 pull request. Migration apply, token permission changes, agent
+configuration/deploy, and live alert proof are separate release actions; the
+platform lane remains in progress until those authorized steps are complete.
 
 - **Freshness source**: publish a public-safe static build-metadata artifact
   from the website build. The agent must compare that deployed artifact with
@@ -118,13 +123,17 @@ pinned version already ships.
   Pages workflow conclusion, check time, active alert, and recovery state.
   Route state transitions through the existing durable Resend queue and
   deduplicate repeated sweeps.
+- **Stale rule**: the site is stale when content changed after the deployed
+  snapshot was generated and the newest change has waited past the threshold.
+  The alert holds until the deployed snapshot is newer than the content.
 - **GitHub permission**: production activation requires a fine-grained token
   with Actions read as well as Contents read/write.
 - **Image metadata**: add Greenpill-owned chapter alt/credit columns, backfill
   from `media` JSON, retain a compatibility fallback, and converge direct
   edits with the accepted update-request apply path.
-- **Dashboard dependency**: PRD-809's freshness panels consume PRD-808's
-  persisted health state, so the platform contract lands first.
+- **Dashboard dependency**: the operator dashboard's freshness panels
+  (PRD-1119) consume PRD-808's persisted health state, so the platform
+  contract lands first.
 
 ## Open Questions
 
