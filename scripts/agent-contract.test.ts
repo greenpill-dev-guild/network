@@ -8,6 +8,7 @@ import {
   createAgentApp,
 } from '@greenpill-network/agent/app';
 import {
+  checkContentPublishHealth,
   deliverQueuedContentReviewNotifications,
   evaluateContentPublishHealth,
   fetchContentPublishHealthObservation,
@@ -681,38 +682,100 @@ test('agent server starts a durable edit-link delivery sweep without logging pri
   assert.doesNotMatch(source, /console\.warn\([^;]*(email|token|normalized_email|request_ip)/s);
 });
 
-test('publish-health transitions cover healthy, stale, build-failed, repeated, and recovered sweeps', () => {
+test('publish-health goes stale only when a content change has waited past the threshold', () => {
   const inactive = {
     staleAlertActive: false,
     buildFailedAlertActive: false,
     staleRecoveredAt: '',
     buildFailedRecoveredAt: '',
   };
-  const baseObservation = {
-    contentWatermark: '2026-08-11T12:10:00.000Z',
-    deployedBuildAt: '2026-08-11T12:05:00.000Z',
-    deployedSnapshotGeneratedAt: '2026-08-11T12:00:00.000Z',
+  // The last successful build was at 08:00 and a steward edits at 12:00.
+  const editedAtNoon = {
+    contentWatermark: '2026-08-11T12:00:00.000Z',
+    deployedBuildAt: '2026-08-11T08:00:30.000Z',
+    deployedSnapshotGeneratedAt: '2026-08-11T08:00:00.000Z',
     pagesRunId: '101',
     pagesRunUrl: 'https://github.com/greenpill-dev-guild/network/actions/runs/101',
     pagesConclusion: 'success',
-    pagesCompletedAt: '2026-08-11T12:06:00.000Z',
-    checkedAt: '2026-08-11T12:11:00.000Z',
-    staleThresholdMs: 15 * 60 * 1000,
+    pagesCompletedAt: '2026-08-11T08:03:00.000Z',
+    checkedAt: '2026-08-11T12:01:00.000Z',
+    staleThresholdMs: 30 * 60 * 1000,
   };
 
-  const healthy = evaluateContentPublishHealth(inactive, baseObservation);
-  assert.equal(healthy.status, 'healthy');
-  assert.deepEqual(healthy.transitions, []);
+  // A fresh edit is not stale, however old the previous build is: the rebuild
+  // it triggered is still on its way.
+  const rebuilding = evaluateContentPublishHealth(inactive, editedAtNoon);
+  assert.equal(rebuilding.status, 'healthy');
+  assert.deepEqual(rebuilding.transitions, []);
+
+  const atThreshold = evaluateContentPublishHealth(inactive, {
+    ...editedAtNoon,
+    checkedAt: '2026-08-11T12:30:00.000Z',
+  });
+  assert.equal(atThreshold.status, 'healthy');
 
   const stale = evaluateContentPublishHealth(inactive, {
-    ...baseObservation,
-    contentWatermark: '2026-08-11T12:20:00.001Z',
+    ...editedAtNoon,
+    checkedAt: '2026-08-11T12:30:00.001Z',
   });
   assert.equal(stale.status, 'stale');
   assert.deepEqual(stale.transitions, [{ kind: 'stale', status: 'active' }]);
 
+  // An edit made minutes after a build still goes stale when nothing deploys.
+  const editRightAfterBuild = evaluateContentPublishHealth(inactive, {
+    ...editedAtNoon,
+    deployedSnapshotGeneratedAt: '2026-08-11T11:55:00.000Z',
+    checkedAt: '2026-08-12T12:00:00.000Z',
+  });
+  assert.equal(editRightAfterBuild.status, 'stale');
+
+  // A further edit while the alert is active is not a recovery.
+  const editedAgain = evaluateContentPublishHealth(stale.nextState, {
+    ...editedAtNoon,
+    contentWatermark: '2026-08-11T13:00:00.000Z',
+    checkedAt: '2026-08-11T13:01:00.000Z',
+  });
+  assert.equal(editedAgain.status, 'stale');
+  assert.deepEqual(editedAgain.transitions, []);
+
+  // Recovery is the deployed snapshot catching up with the content.
+  const caughtUp = evaluateContentPublishHealth(editedAgain.nextState, {
+    ...editedAtNoon,
+    contentWatermark: '2026-08-11T13:00:00.000Z',
+    deployedSnapshotGeneratedAt: '2026-08-11T13:05:00.000Z',
+    checkedAt: '2026-08-11T13:20:00.000Z',
+  });
+  assert.equal(caughtUp.status, 'healthy');
+  assert.deepEqual(caughtUp.transitions, [{ kind: 'stale', status: 'recovered' }]);
+  assert.equal(caughtUp.nextState.staleRecoveredAt, '2026-08-11T13:20:00.000Z');
+
+  assert.throws(
+    () => evaluateContentPublishHealth(inactive, { ...editedAtNoon, checkedAt: 'not a date' }),
+    /invalid_publish_health_observation/
+  );
+});
+
+test('publish-health reports a failed or cancelled Pages run once and recovers on the next success', () => {
+  const inactive = {
+    staleAlertActive: false,
+    buildFailedAlertActive: false,
+    staleRecoveredAt: '',
+    buildFailedRecoveredAt: '',
+  };
+  const deployedAndCurrent = {
+    contentWatermark: '2026-08-11T12:00:00.000Z',
+    deployedBuildAt: '2026-08-11T12:05:30.000Z',
+    deployedSnapshotGeneratedAt: '2026-08-11T12:05:00.000Z',
+    pagesRunId: '101',
+    pagesRunUrl: 'https://github.com/greenpill-dev-guild/network/actions/runs/101',
+    pagesConclusion: 'success',
+    pagesCompletedAt: '2026-08-11T12:08:00.000Z',
+    checkedAt: '2026-08-11T12:10:00.000Z',
+    staleThresholdMs: 30 * 60 * 1000,
+  };
+
   const buildFailed = evaluateContentPublishHealth(inactive, {
-    ...baseObservation,
+    ...deployedAndCurrent,
     pagesRunId: '102',
     pagesConclusion: 'failure',
   });
@@ -720,33 +783,93 @@ test('publish-health transitions cover healthy, stale, build-failed, repeated, a
   assert.deepEqual(buildFailed.transitions, [{ kind: 'build_failed', status: 'active' }]);
 
   const repeated = evaluateContentPublishHealth(buildFailed.nextState, {
-    ...baseObservation,
+    ...deployedAndCurrent,
     pagesRunId: '102',
     pagesConclusion: 'failure',
   });
   assert.equal(repeated.status, 'build_failed');
   assert.deepEqual(repeated.transitions, []);
 
-  const recovered = evaluateContentPublishHealth(
-    {
-      staleAlertActive: true,
-      buildFailedAlertActive: true,
-      staleRecoveredAt: '',
-      buildFailedRecoveredAt: '',
+  // A hung deploy leaves no failure: each later run is cancelled by the next
+  // one queued behind it. Cancelled therefore has to count.
+  const cancelled = evaluateContentPublishHealth(inactive, {
+    ...deployedAndCurrent,
+    pagesRunId: '103',
+    pagesConclusion: 'cancelled',
+  });
+  assert.equal(cancelled.status, 'build_failed');
+  assert.deepEqual(cancelled.transitions, [{ kind: 'build_failed', status: 'active' }]);
+
+  const recovered = evaluateContentPublishHealth(buildFailed.nextState, {
+    ...deployedAndCurrent,
+    pagesRunId: '104',
+    checkedAt: '2026-08-11T12:30:00.000Z',
+  });
+  assert.equal(recovered.status, 'healthy');
+  assert.deepEqual(recovered.transitions, [{ kind: 'build_failed', status: 'recovered' }]);
+  assert.equal(recovered.nextState.buildFailedRecoveredAt, '2026-08-11T12:30:00.000Z');
+
+  const staleAndFailed = evaluateContentPublishHealth(inactive, {
+    ...deployedAndCurrent,
+    contentWatermark: '2026-08-11T13:00:00.000Z',
+    pagesRunId: '105',
+    pagesConclusion: 'failure',
+    checkedAt: '2026-08-11T14:00:00.000Z',
+  });
+  assert.equal(staleAndFailed.status, 'stale_and_build_failed');
+  assert.deepEqual(staleAndFailed.transitions, [
+    { kind: 'stale', status: 'active' },
+    { kind: 'build_failed', status: 'active' },
+  ]);
+});
+
+test('publish-health check stays off until enabled and never throws into the sweep', async () => {
+  let touched = false;
+  const disabled = await checkContentPublishHealth(
+    async () => {
+      touched = true;
+      return [];
     },
     {
-      ...baseObservation,
-      pagesRunId: '103',
-      checkedAt: '2026-08-11T12:30:00.000Z',
+      env: {},
+      fetchImpl: async () => {
+        touched = true;
+        return Response.json({});
+      },
     }
   );
-  assert.equal(recovered.status, 'healthy');
-  assert.deepEqual(recovered.transitions, [
-    { kind: 'stale', status: 'recovered' },
-    { kind: 'build_failed', status: 'recovered' },
+  assert.deepEqual(disabled, { status: 'disabled' });
+  assert.equal(touched, false);
+
+  const warnings = [];
+  const originalWarn = console.warn;
+  console.warn = (...args) => {
+    warnings.push(args);
+  };
+  try {
+    const failed = await checkContentPublishHealth(
+      async () => [{ contentWatermark: '2026-08-11T12:00:00.000Z' }],
+      {
+        env: {
+          CONTENT_PUBLISH_HEALTH_ENABLED: 'true',
+          CONTENT_DISPATCH_GITHUB_TOKEN: 'test-actions-read-token',
+          CONTENT_PUBLISH_HEALTH_METADATA_URL: 'https://greenpill.network/build-metadata.json',
+          CONTENT_PUBLISH_HEALTH_STALE_THRESHOLD_MS: String(30 * 60 * 1000),
+        },
+        fetchImpl: async (url) =>
+          String(url).includes('build-metadata.json')
+            ? new Response('not found', { status: 404 })
+            : Response.json({ workflow_runs: [] }),
+      }
+    );
+    assert.deepEqual(failed, { status: 'check_failed' });
+  } finally {
+    console.warn = originalWarn;
+  }
+  // The reason code names which step failed; nothing else from the error is logged.
+  assert.deepEqual(warnings, [
+    ['content_publish_health_check_failed', { errorName: 'Error', reason: 'publish_health_metadata_http_404' }],
   ]);
-  assert.equal(recovered.nextState.staleRecoveredAt, '2026-08-11T12:30:00.000Z');
-  assert.equal(recovered.nextState.buildFailedRecoveredAt, '2026-08-11T12:30:00.000Z');
 });
 
 test('publish-health polling compares the public build artifact with content and Pages state', async () => {
@@ -841,7 +964,7 @@ test('publish-health persistence serializes state and deduplicates repeated aler
     pagesRunUrl: 'https://github.com/greenpill-dev-guild/network/actions/runs/105',
     pagesConclusion: 'success',
     pagesCompletedAt: '2026-08-11T12:06:00.000Z',
-    checkedAt: '2026-08-11T12:21:00.000Z',
+    checkedAt: '2026-08-11T12:36:00.000Z',
     staleThresholdMs: 15 * 60 * 1000,
   };
 
@@ -856,19 +979,18 @@ test('publish-health persistence serializes state and deduplicates repeated aler
 
   await persistContentPublishHealthObservation(sql, {
     ...staleObservation,
-    contentWatermark: '2026-08-11T12:10:00.000Z',
-    deployedSnapshotGeneratedAt: '2026-08-11T12:30:00.000Z',
+    deployedSnapshotGeneratedAt: '2026-08-11T12:40:00.000Z',
     pagesRunId: '106',
-    checkedAt: '2026-08-11T12:31:00.000Z',
+    checkedAt: '2026-08-11T12:46:00.000Z',
   });
   assert.equal(notifications.length, 2);
   assert.deepEqual(notifications[1], {
-    eventKey: 'publish-health:stale:recovered:2026-08-11T12:10:00.000Z:2026-08-11T12:30:00.000Z',
+    eventKey: 'publish-health:stale:recovered:2026-08-11T12:20:00.001Z:2026-08-11T12:40:00.000Z',
     kind: 'stale',
     status: 'recovered',
   });
   assert.equal(state.staleAlertActive, false);
-  assert.equal(state.staleRecoveredAt, '2026-08-11T12:31:00.000Z');
+  assert.equal(state.staleRecoveredAt, '2026-08-11T12:46:00.000Z');
 });
 
 test('publish-health alerts and recoveries deliver through the durable Resend queue', async () => {

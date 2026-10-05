@@ -22,6 +22,7 @@ export const CONTENT_DISPATCH_DEFAULT_REPO = 'greenpill-dev-guild/network';
 export const CONTENT_DISPATCH_MIN_INTERVAL_MS = 5 * 60 * 1000;
 export const CONTENT_PUBLISH_HEALTH_DEFAULT_WORKFLOW = 'github-pages.yml';
 export const CONTENT_PUBLISH_HEALTH_DEFAULT_BRANCH = 'main';
+export const CONTENT_PUBLISH_HEALTH_FETCH_TIMEOUT_MS = 15 * 1000;
 
 const cleanString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
@@ -233,16 +234,28 @@ export function evaluateContentPublishHealth(
 ): ContentPublishHealthEvaluation {
   const contentWatermarkMs = new Date(observation.contentWatermark).valueOf();
   const deployedSnapshotMs = new Date(observation.deployedSnapshotGeneratedAt).valueOf();
+  const checkedAtMs = new Date(observation.checkedAt).valueOf();
   if (
     Number.isNaN(contentWatermarkMs) ||
     Number.isNaN(deployedSnapshotMs) ||
+    Number.isNaN(checkedAtMs) ||
     !Number.isFinite(observation.staleThresholdMs) ||
     observation.staleThresholdMs <= 0
   ) {
     throw new Error('invalid_publish_health_observation');
   }
 
-  const stale = contentWatermarkMs - deployedSnapshotMs > observation.staleThresholdMs;
+  // The site is behind when content changed after the deployed snapshot was
+  // generated. Every publish puts it behind for a few minutes, so that becomes
+  // an alert only once the newest change has waited past the threshold. An
+  // active alert then holds until the site catches up, so a further edit does
+  // not read as a recovery.
+  const behind = deployedSnapshotMs < contentWatermarkMs;
+  const waitedMs = checkedAtMs - contentWatermarkMs;
+  const stale = behind && (previous.staleAlertActive || waitedMs > observation.staleThresholdMs);
+  // Anything but success counts, a cancelled run included. When a deploy hangs,
+  // each later run is cancelled by the next one queued behind it, and that is
+  // the only trace the workflow API leaves.
   const buildFailed = cleanString(observation.pagesConclusion).toLowerCase() !== 'success';
   const transitions: ContentPublishHealthTransition[] = [];
 
@@ -321,10 +334,13 @@ export async function fetchContentPublishHealthObservation(
     throw new Error('publish_health_not_configured');
   }
 
+  // Both requests run inside the shared content-operations sweep, so a slow
+  // host must not hold up review-email delivery behind them.
   const [contentWatermark, metadataResponse, workflowResponse] = await Promise.all([
     computeContentUpdatedAtWatermark(sql),
     fetchImpl(config.publishHealthMetadataUrl, {
       headers: { accept: 'application/json' },
+      signal: AbortSignal.timeout(CONTENT_PUBLISH_HEALTH_FETCH_TIMEOUT_MS),
     }),
     fetchImpl(workflowRunsUrl, {
       headers: {
@@ -332,6 +348,7 @@ export async function fetchContentPublishHealthObservation(
         accept: 'application/vnd.github+json',
         'user-agent': 'greenpill-network-agent',
       },
+      signal: AbortSignal.timeout(CONTENT_PUBLISH_HEALTH_FETCH_TIMEOUT_MS),
     }),
   ]);
 
@@ -458,6 +475,14 @@ export async function persistContentPublishHealthObservation(
   });
 }
 
+// The check throws its own reason codes, which are safe to log. A network or
+// database error may carry text that does not belong there, so it is reduced
+// to one generic code.
+const publishHealthFailureReason = (error: unknown): string => {
+  const message = error instanceof Error ? error.message : '';
+  return /^(?:invalid_)?publish_health_[a-z0-9_]+$/.test(message) ? message : 'unexpected_error';
+};
+
 export async function checkContentPublishHealth(
   sql: SqlLike,
   {
@@ -491,6 +516,7 @@ export async function checkContentPublishHealth(
   } catch (error) {
     console.warn('content_publish_health_check_failed', {
       errorName: error instanceof Error ? error.name : 'UnknownError',
+      reason: publishHealthFailureReason(error),
     });
     return { status: 'check_failed' };
   }
