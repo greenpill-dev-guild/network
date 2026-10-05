@@ -43,7 +43,7 @@ content-operations sweeps, and the v2 permission model applied.
 
 ### Remaining implementation sequence (tracked in plan.todo.md)
 
-1. PRD-808 implementation is ready on branch
+1. PRD-808 implementation is reviewed (2026-10-04) on branch
    `afo/prd-808-cms-platform-lane-pipeline-automation-apply-function`: static
    deployed build metadata, migration 028 durable publish-health state, GitHub
    Pages failure detection, and deduplicated Resend alerts/recoveries. Release
@@ -51,8 +51,9 @@ content-operations sweeps, and the v2 permission model applied.
    fine-grained token -> set the explicit metadata URL/stale threshold and
    enable flag -> deploy -> run the separately authorized live alert proof.
 2. PRD-809: first-class direct chapter alt/credit columns with backfill and
-   projection compatibility, followed by the operator Insights dashboard and
-   confirmed pt-BR/es Data Studio locale metadata.
+   projection compatibility. The operator Insights dashboard (PRD-1119) and
+   the confirmed pt-BR/es Data Studio locale metadata (PRD-1120) moved out of
+   this hub on 2026-10-04 and wait until stewards publish through the CMS.
 3. Human QA: decide the delivered `[TEST] magic link check` node from the
    email and archive it, then complete the second QA pass.
 

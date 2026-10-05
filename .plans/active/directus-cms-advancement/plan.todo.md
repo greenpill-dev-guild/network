@@ -178,11 +178,12 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
 
 ## Remaining implementation sequence
 
-1. **Platform health contract (PRD-808).** Implemented, reviewed on 2026-10-04
-   and merged: build metadata, migration 028 state, Pages result check,
-   deduplicated Resend alerts/recoveries, and focused tests. Production
-   activation remains separate; do not enable polling until migration 028 is
-   applied and the fine-grained token has Actions read.
+1. **Platform health contract (PRD-808).** Implemented and reviewed on
+   2026-10-04; it lands with the PRD-808 pull request: build metadata,
+   migration 028 state, Pages result check, deduplicated Resend
+   alerts/recoveries, and focused tests. Production activation remains
+   separate; do not enable polling until migration 028 is applied and the
+   fine-grained token has Actions read.
 2. **Steward image fields (PRD-809).** Add direct chapter image alt/credit
    columns and the compatibility projection. The operator dashboard and the
    pt-BR/es labels no longer gate this hub; they wait in PRD-1119 and PRD-1120
