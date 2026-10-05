@@ -134,8 +134,10 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
       `guilds.projects` so stewards manage child rows from the parent record.
 - [x] English label pass so UI names match the guide ("Chapter image", not
       "Image File").
-- [ ] Add pt-BR and Spanish Data Studio field/group label metadata after
-      confirming the exact Directus locale keys used by production users.
+- [ ] Moved out of this hub on 2026-10-04 (PRD-1120), to pick up once stewards
+      publish through the CMS: add pt-BR and Spanish Data Studio field/group
+      label metadata after confirming the exact Directus locale keys used by
+      production users.
 - [x] Bookmarks: fix "My draft initiatives" to include published rows or add
       "My published work"; add `$CURRENT_USER`-scoped "My chapter" preset;
       re-check publisher bookmarks.
@@ -144,8 +146,9 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
       uploads; decide per-chapter subfolders.
 - [x] Module bar + branding: curate visible modules per role, set project
       name/logo/colors, help/report URLs.
-- [ ] Dashboards: idempotently create/update an operator Insights dashboard
-      and panels for pending reviews, failed alerts, deployed snapshot
+- [ ] Moved out of this hub on 2026-10-04 (PRD-1119), to pick up once stewards
+      publish through the CMS: idempotently create/update an operator Insights
+      dashboard and panels for pending reviews, failed alerts, deployed snapshot
       freshness, and impact sync health; add the steward landing bookmark set.
       The freshness panels depend on the phase-1 persisted health metrics.
 - [x] Studio metadata for the raw intake collections operators do see
@@ -175,15 +178,15 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
 
 ## Remaining implementation sequence
 
-1. **Platform health contract (PRD-808).** Implemented and locally tested on
-   the PRD-808 draft branch: build metadata, migration 028 state, Pages result
-   check, deduplicated Resend alerts/recoveries, and focused tests. Merge and
-   production activation remain separate; do not enable polling until migration
-   028 is applied and the fine-grained token has Actions read.
-2. **Steward/operator UX closure (PRD-809).** Add direct chapter image
-   alt/credit columns and compatibility projection first; then implement the
-   idempotent Insights dashboard against the persisted health state and add
-   pt-BR/es metadata after locale keys are confirmed.
+1. **Platform health contract (PRD-808).** Implemented, reviewed on 2026-10-04
+   and merged: build metadata, migration 028 state, Pages result check,
+   deduplicated Resend alerts/recoveries, and focused tests. Production
+   activation remains separate; do not enable polling until migration 028 is
+   applied and the fine-grained token has Actions read.
+2. **Steward image fields (PRD-809).** Add direct chapter image alt/credit
+   columns and the compatibility projection. The operator dashboard and the
+   pt-BR/es labels no longer gate this hub; they wait in PRD-1119 and PRD-1120
+   until stewards are publishing through the CMS.
 3. **Release-order QA.** The human decides the delivered magic-link test and
    archives it; then run the full focused validation set and move
    `qa_pass_2` from blocked to completed.

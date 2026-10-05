@@ -2,6 +2,27 @@
 
 ## Evidence log
 
+### 2026-10-04 PRD-808 review pass
+
+- Review found that the stale rule compared the newest content change with the
+  time of the last build. A fresh edit made hours after a build alerted at
+  once, and an edit made minutes after a build never alerted however long it
+  waited. The rule now alerts when content changed after the deployed snapshot
+  and the newest change has waited past the threshold, and it holds until the
+  site catches up.
+- A cancelled Pages run still counts as a failed delivery, now on purpose and
+  under test. It is the only trace a hung deploy leaves: on 2026-09-30 one
+  deploy job hung and every scheduled run after it was cancelled for four days.
+- The two publish-health requests have a 15 second timeout, and a failed check
+  logs a reason code.
+- The four `directus-studio-setup.ts` type errors are fixed with annotations
+  only, so the full root typecheck passes.
+- Fresh proof: `typecheck`, `plans:validate`, `test:agent` (84 tests),
+  `test:content` (23), `test:plans` (7) and `build` (47 pages) pass. The new
+  stale tests fail against the original rule.
+- Still not done: production migration 028, the Fly deploy, the token scope,
+  enabling the check, and a live alert.
+
 ### 2026-08-11 PRD-808 publish-health draft
 
 - Added a static `/build-metadata.json` website artifact with only build time

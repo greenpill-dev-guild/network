@@ -118,6 +118,13 @@
       "lane": "platform",
       "status": "in_progress",
       "note": "Implemented and locally tested the PRD-808 publish-health watchdog on its draft branch: static public build metadata, migration 028 durable state, GitHub Pages checks, and deduplicated alert/recovery delivery. Merge and separately authorized production activation remain; PRD-809 and human QA stay blocked/out of scope."
+    },
+    {
+      "timestamp": "2026-10-05T06:34:07.000Z",
+      "actor": "claude",
+      "lane": "platform",
+      "status": "in_progress",
+      "note": "Reviewed the PRD-808 watchdog before merge: corrected the stale rule to measure how long a content change has waited, kept cancelled Pages runs as failures under test, bounded the two requests, logged check-failure reasons, and cleared the four studio-setup type errors so the root typecheck passes. The operator dashboard and pt-BR/es labels moved out of the UI lane to PRD-1119 and PRD-1120. Production activation remains a separate authorized step."
     }
   ]
 }
