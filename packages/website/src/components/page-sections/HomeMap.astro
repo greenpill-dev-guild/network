@@ -4093,9 +4093,24 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     --gp-map-pop-shadow: 0 18px 48px -18px rgba(0, 0, 0, 0.72);
     --gp-map-control-bg: rgba(7, 24, 15, 0.5);
     --gp-map-edge-fade: linear-gradient(to right, transparent 0, #000 6px, #000 calc(100% - 12px), transparent 100%);
+    /* The world grid shown at rest, as width / height. */
+    --gp-map-aspect: 200 / 88;
     container-type: inline-size;
-    margin: 0;
-    width: 100%;
+    margin: 0 auto;
+    /* Width comes from the container. The viewport only caps the height, and
+       the width follows that cap so the world is never distorted. The cap is
+       the largest of three budgets:
+       - 56.25svh, the share the hero is composed around: heading, map, intro
+         and buttons all fit a 768px-tall first screen;
+       - what a taller screen has left after the hero's other parts, which
+         take about 22.5rem;
+       - 25rem, so a short laptop, where the buttons sit below the fold either
+         way, is not left with a small map. At that height the map is 56.8rem
+         wide, which also keeps a short viewport out of the compact layout
+         below (the 720px container query): only a narrow container may
+         trigger that. */
+    --gp-map-max-block: max(56.25svh, calc(100svh - 22.5rem), 25rem);
+    width: min(100%, calc(var(--gp-map-max-block) * var(--gp-map-aspect)));
     display: flex;
     flex-direction: column;
     gap: var(--gp-space-md);
@@ -4120,7 +4135,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     --gp-map-card-offset: 22px;
     position: relative;
     width: 100%;
-    aspect-ratio: 200 / 88;
+    aspect-ratio: var(--gp-map-aspect);
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-xl);
     background:
@@ -6265,7 +6280,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
   .gp-home-map-addnode-mini-map {
     position: relative;
-    aspect-ratio: 200 / 88;
+    aspect-ratio: var(--gp-map-aspect);
     min-height: 156px;
     border: 1px solid color-mix(in srgb, var(--gp-map-member) 24%, transparent);
     border-radius: var(--gp-radius-md);

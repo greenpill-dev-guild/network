@@ -829,13 +829,18 @@ test('home map intake requires a valid email and stores local pending only after
   assert.match(homepage, /min-block-size: calc\(100dvh - var\(--gp-header-height\)\)/);
   assert.match(homepage, /<Text variant="display" class="gp-home-hero-title">/);
   assert.doesNotMatch(homepage, /font-size:\s*clamp\(40px, calc\(30\.1px \+ 2\.65vw\), 64px\)/);
-  assert.match(homepage, /width:\s*min\(100%, 128dvh\)/);
+  // The map sizes itself from its container. Viewport height only caps it, and
+  // the cap's floor keeps a short viewport out of the compact container query.
+  assert.doesNotMatch(homepage, /128dvh/);
+  assert.match(component, /--gp-map-aspect:\s*200 \/ 88/);
+  assert.match(component, /--gp-map-max-block:\s*max\(56\.25svh, calc\(100svh - 22\.5rem\), 25rem\)/);
+  assert.match(component, /width:\s*min\(100%, calc\(var\(--gp-map-max-block\) \* var\(--gp-map-aspect\)\)\)/);
   assert.doesNotMatch(homepage, /width:\s*min\(100%, clamp\(1100px, 82cqw, 1680px\)\)/);
   assert.match(homepage, /class="gp-home-lib-guild-pair"/);
   assert.match(homepage, /\.gp-home-eco-grid\s*{[\s\S]*?display:\s*flex;[\s\S]*?justify-content:\s*center/);
   assert.match(component, /const MAP_VIEW_H = 88/);
   assert.match(component, /viewBox=\{`0 0 \$\{VIEW_W\} \$\{MAP_VIEW_H\}`\}/);
-  assert.match(component, /aspect-ratio:\s*200 \/ 88/);
+  assert.match(component, /aspect-ratio:\s*var\(--gp-map-aspect\)/);
   assert.doesNotMatch(component, /data-addnode-trigger/);
   assert.match(component, /showModal/);
   assert.match(component, /addDialog\?\.addEventListener\('cancel'/);
