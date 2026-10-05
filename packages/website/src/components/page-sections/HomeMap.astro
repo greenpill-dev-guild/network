@@ -1647,7 +1647,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const minViewRadius = minClientRadius > 0 ? minClientRadius / clientScaleForBox(currentViewBox) : 0;
 
       let nearest: { node: Element; distance: number } | null = null;
-      for (const node of root.querySelectorAll('.gp-home-map-node-link:not(.is-filtered-out)')) {
+      // A pin hidden behind a stack marker is not a target.
+      for (const node of root.querySelectorAll('.gp-home-map-node-link:not(.is-filtered-out):not(.is-clustered)')) {
         const dot = node.querySelector('.gp-home-map-node-dot') as SVGCircleElement | null;
         const cx = Number(dot?.getAttribute('cx'));
         const cy = Number(dot?.getAttribute('cy'));
@@ -1659,6 +1660,66 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         if (!nearest || distance < nearest.distance) nearest = { node, distance };
       }
       return nearest?.node ?? null;
+    };
+
+    // The element under the pointer is not a reliable answer to what the pointer
+    // is on. Hit circles are larger than their pins, a stack marker is drawn
+    // over its neighbours, and while a pointer is captured for panning (every
+    // touch, and a mouse on a zoomed map) the click lands on the map root. So
+    // hover and click both resolve from geometry here: the nearest centre wins,
+    // and a click opens what the hover card named.
+    type MapPoint = { x: number; y: number };
+    type ClusterMember = { el: Element; key: string; center: MapPoint };
+    type OverlapStack = {
+      members: ClusterMember[];
+      marker: SVGGElement;
+      markerCenter: MapPoint;
+      hitRadius: number;
+      expand: (viaKeyboard: boolean) => void;
+    };
+    type FanSatellite = {
+      member: ClusterMember;
+      el: SVGGElement;
+      center: MapPoint;
+      hitRadius: number;
+      pick: (viaKeyboard: boolean) => void;
+    };
+    // The stack markers and open-fan satellites on the map right now. The
+    // overlap stacks further down fill these in.
+    let overlapStacks: OverlapStack[] = [];
+    let fanSatellites: FanSatellite[] = [];
+
+    const targetAtPointer = (
+      event: PointerEvent | MouseEvent
+    ): { pin?: Element; stack?: OverlapStack; satellite?: FanSatellite } => {
+      const point = svgPointForEvent(event);
+      if (!point) return {};
+      const distanceTo = (center: MapPoint | null) => (
+        center ? Math.hypot(point.x - center.x, point.y - center.y) : Number.POSITIVE_INFINITY
+      );
+      // An open fan sits on top of everything else.
+      const satellite = fanSatellites.find((candidate) => distanceTo(candidate.center) <= candidate.hitRadius);
+      if (satellite) return { satellite };
+      const pin = nodeAtPointer(event);
+      let nearest = distanceTo(pin ? nodeCenter(pin) : null);
+      let stack: OverlapStack | undefined;
+      for (const candidate of overlapStacks) {
+        const distance = distanceTo(candidate.markerCenter);
+        if (distance > candidate.hitRadius || distance >= nearest) continue;
+        nearest = distance;
+        stack = candidate;
+      }
+      if (stack) return { stack };
+      return pin ? { pin } : {};
+    };
+
+    // The pin a pointer position stands for. A fan satellite stands for its pin.
+    // A stack marker stands for several, and the legend, the controls and the
+    // cards are not the map, so over those there is none.
+    const pinUnderPointer = (event: PointerEvent | MouseEvent): Element | null => {
+      if (isGestureBlocked(event.target)) return null;
+      const { satellite, pin } = targetAtPointer(event);
+      return satellite ? satellite.member.el : pin ?? null;
     };
 
     const gesturePointers = new Map<number, PointerEvent>();
@@ -1822,9 +1883,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (isTouchMap() && event.pointerType !== 'mouse') return;
       if (gesturePointers.size > 0) return;
       if (selectedFocusTarget) return;
-      // Over the legend, the controls or a card, the node underneath is not
-      // what the pointer is on.
-      const target = isGestureBlocked(event.target) ? null : nodeAtPointer(event);
+      const target = pinUnderPointer(event);
       if (!target) {
         if (pointerFocusTarget) {
           pointerFocusTarget = null;
@@ -2433,7 +2492,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (!selectedEl || selectedEl.hidden) return;
       const target = event.target;
       if (!(target instanceof Element)) return;
-      if (target.closest('.gp-home-map-node-link, .gp-home-map-selected, .gp-home-map-controls, .gp-home-map-legend, .gp-home-map-edge-tooltip, .gp-home-map-list-drawer')) return;
+      if (target.closest('.gp-home-map-node-link, .gp-home-map-clusters, .gp-home-map-selected, .gp-home-map-controls, .gp-home-map-legend, .gp-home-map-edge-tooltip, .gp-home-map-list-drawer')) return;
       if (isTouchMap() && isRecentTouchMapClick() && nodeAtPointer(event as MouseEvent, 44)) return;
       closeSelected();
     });
@@ -2856,42 +2915,67 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       applyMapFilters();
     };
 
-    // ---- Exact-overlap fan-out ----------------------------------------------
-    // Broad proximity clusters hide too much of the live-call map. Only people
-    // sharing the exact same projected coordinate collapse into a stack affordance;
-    // separate nearby pins remain available for zoom/pan exploration.
+    // ---- Overlap stacks and fan-out -----------------------------------------
+    // Pins are drawn in map units, so a pin whose centre sits under another pin
+    // is covered at every zoom level and cannot be told apart or picked. People
+    // in that position, over each other or over a chapter, collapse into one
+    // stack marker that fans out when activated. Pins that are only near each
+    // other stay separate, because broad clusters hid too much of the map;
+    // choosing between near pins is the pointer's job, further down.
     const clustersGroup = root.querySelector('[data-home-map-clusters]') as SVGGElement | null;
+    const chaptersGroup = root.querySelector('.gp-home-map-chapters');
 
-    const OVERLAP_FAN_RADIUS_PX = 34; // fan-out satellite ring radius (screen px)
+    const OVERLAP_STACK_RADIUS = 1.4; // map units: about one pin
+    const ANCHORED_MARKER_OFFSET = 2.6; // map units: a chapter's stack badge sits up and to the side of its pin
+    // A fan is laid out in screen px, so it is the same size at every zoom.
+    const OVERLAP_FAN_RADIUS_PX = 34; // smallest satellite ring
+    const FAN_SATELLITE_SPACING_PX = 44; // room per satellite along the ring: one touch target
+    const FAN_SATELLITE_DOT_PX = 6;
+    const POINTER_TARGET_RADIUS_PX = 22; // half of a 44px touch target
+    const SAME_SPOT_PX = 3; // pins closer than this cannot be told apart by a mouse
 
-    type ClusterMember = { el: Element; key: string; center: { x: number; y: number } };
     let activeFan: ClusterMember[] | null = null;
     let clusterRecomputeTimer = 0;
 
     const reducedMotionPref = () =>
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const pxToViewBox = (px: number) => px / clientScaleForBox(currentViewBox);
-    const overlapKeyFor = (point: { x: number; y: number }) => `${point.x.toFixed(2)}:${point.y.toFixed(2)}`;
+    const isChapterPin = (pin: ClusterMember) => pin.el.classList.contains('is-chapter');
+    const pointsWithin = (a: MapPoint, b: MapPoint, radius: number) => (
+      Math.hypot(a.x - b.x, a.y - b.y) <= radius
+    );
 
-    const visiblePeoplePins = (): ClusterMember[] => {
-      if (!membersGroup) return [];
+    const visiblePins = (layer: Element | null): ClusterMember[] => {
+      if (!layer) return [];
       const out: ClusterMember[] = [];
-      membersGroup.querySelectorAll('.gp-home-map-node-link:not(.is-filtered-out)').forEach((el) => {
+      layer.querySelectorAll('.gp-home-map-node-link:not(.is-filtered-out)').forEach((el) => {
         const center = nodeCenter(el);
         const key = el.getAttribute('data-node-id') || '';
         if (center && key) out.push({ el, key, center });
       });
       return out;
     };
+    const visiblePeoplePins = (): ClusterMember[] => visiblePins(membersGroup);
+    const visibleChapterPins = (): ClusterMember[] => visiblePins(chaptersGroup);
 
-    // Group only exact projected overlaps; no broad distance clustering.
+    // Group pins that sit on top of each other, chaining through neighbours.
     const groupPins = (pins: ClusterMember[]): ClusterMember[][] => {
-      const byCoordinate = new Map<string, ClusterMember[]>();
+      const grouped = new Set<ClusterMember>();
+      const groups: ClusterMember[][] = [];
       pins.forEach((pin) => {
-        const key = overlapKeyFor(pin.center);
-        byCoordinate.set(key, [...(byCoordinate.get(key) ?? []), pin]);
+        if (grouped.has(pin)) return;
+        const group = [pin];
+        grouped.add(pin);
+        for (let i = 0; i < group.length; i += 1) {
+          pins.forEach((other) => {
+            if (grouped.has(other) || !pointsWithin(group[i].center, other.center, OVERLAP_STACK_RADIUS)) return;
+            grouped.add(other);
+            group.push(other);
+          });
+        }
+        groups.push(group);
       });
-      return Array.from(byCoordinate.values());
+      return groups;
     };
 
     const centroidOf = (members: ClusterMember[]) => ({
@@ -2922,34 +3006,71 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       el.setAttribute('tabindex', shouldCluster ? '-1' : '0');
       if (shouldCluster) el.setAttribute('aria-hidden', 'true');
       else el.removeAttribute('aria-hidden');
+      // A chapter is a link: at rest it is in the tab order without a tabindex.
+      if (!shouldCluster && el.classList.contains('is-chapter')) el.removeAttribute('tabindex');
     };
 
     const clearClusters = () => {
       clustersGroup?.replaceChildren();
-      membersGroup?.querySelectorAll('.is-clustered').forEach((el) => setPinClustered(el, false));
+      overlapStacks = [];
+      root.querySelectorAll('.gp-home-map-node-link.is-clustered').forEach((el) => setPinClustered(el, false));
     };
 
     const collapseFan = () => {
       if (!activeFan) return;
       activeFan = null;
+      fanSatellites = [];
       root.classList.remove('is-cluster-fanning');
     };
 
-    const fanOutCluster = (members: ClusterMember[], center: { x: number; y: number }, viaKeyboard: boolean) => {
+    const fanOutCluster = (members: ClusterMember[], center: MapPoint, viaKeyboard: boolean) => {
       if (!clustersGroup) return;
-      clustersGroup.replaceChildren();
+      // One fan at a time: put the last one back before laying out this one.
+      if (activeFan) recomputeClustersNow();
+      // The fan takes these pins over. Their stack markers go, and any of them
+      // still drawn on the map hide behind their satellite.
+      const fanKeys = new Set(members.map((m) => m.key));
+      overlapStacks = overlapStacks.filter((stack) => {
+        if (!stack.members.some((m) => fanKeys.has(m.key))) return true;
+        stack.marker.remove();
+        return false;
+      });
+      members.forEach((m) => setPinClustered(m.el, true));
       activeFan = members;
       root.classList.add('is-cluster-fanning');
-      const radius = Math.max(pxToViewBox(OVERLAP_FAN_RADIUS_PX), 2.4);
+      // Hover belongs to the fan now, not to the pin that was under the pointer.
+      dropPointerFocus();
+
+      const ringPx = Math.max(OVERLAP_FAN_RADIUS_PX, (members.length * FAN_SATELLITE_SPACING_PX) / (2 * Math.PI));
+      const radius = Math.max(pxToViewBox(ringPx), 2.4);
+      const dotRadius = pxToViewBox(FAN_SATELLITE_DOT_PX);
+      // Keep the whole ring on the map, and neighbouring satellites out of each
+      // other's hit area.
+      const targetRadius = pxToViewBox(POINTER_TARGET_RADIUS_PX);
+      const keepInView = (value: number, start: number, size: number) => {
+        const reach = radius + targetRadius;
+        return size < reach * 2 ? start + size / 2 : Math.min(Math.max(value, start + reach), start + size - reach);
+      };
+      const origin = {
+        x: keepInView(center.x, currentViewBox.x, currentViewBox.width),
+        y: keepInView(center.y, currentViewBox.y, currentViewBox.height),
+      };
+      const hitRadius = Math.min(targetRadius, radius * Math.sin(Math.PI / members.length));
+      // Satellites take the order their pins have around the fan, so the leader
+      // lines back to each pin do not cross.
+      const bearing = (m: ClusterMember) => (
+        (Math.atan2(m.center.y - origin.y, m.center.x - origin.x) + Math.PI * 2.5) % (Math.PI * 2)
+      );
+      const ordered = [...members].sort((a, b) => bearing(a) - bearing(b));
       const animate = !reducedMotionPref();
-      members.forEach((m, i) => {
-        const angle = (i / members.length) * Math.PI * 2 - Math.PI / 2;
-        const sx = center.x + Math.cos(angle) * radius;
-        const sy = center.y + Math.sin(angle) * radius;
+      ordered.forEach((m, i) => {
+        const angle = (i / ordered.length) * Math.PI * 2 - Math.PI / 2;
+        const sx = origin.x + Math.cos(angle) * radius;
+        const sy = origin.y + Math.sin(angle) * radius;
         const leader = document.createElementNS(SVG_NS, 'line');
         leader.setAttribute('class', 'gp-home-map-cluster-leader');
-        leader.setAttribute('x1', center.x.toFixed(2));
-        leader.setAttribute('y1', center.y.toFixed(2));
+        leader.setAttribute('x1', m.center.x.toFixed(2));
+        leader.setAttribute('y1', m.center.y.toFixed(2));
         leader.setAttribute('x2', sx.toFixed(2));
         leader.setAttribute('y2', sy.toFixed(2));
         applyScope(leader);
@@ -2960,17 +3081,18 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         sat.setAttribute('class', `gp-home-map-cluster-sat is-${m.el.getAttribute('data-node-type') || 'member'}${isOwned ? ' is-owned' : ''}${animate ? ' is-appearing' : ''}`);
         sat.setAttribute('role', 'button');
         sat.setAttribute('tabindex', '0');
+        sat.setAttribute('data-fan-member', m.key);
         const name = m.el.getAttribute('data-node-name') || 'Map node';
-        sat.setAttribute('aria-label', `${name}. ${isOwned ? 'Your node. ' : ''}Open node.`);
+        sat.setAttribute('aria-label', `${name}${isChapterPin(m) ? ', chapter' : ''}. ${isOwned ? 'Your node. ' : ''}Open node.`);
         const title = document.createElementNS(SVG_NS, 'title');
         title.textContent = isOwned ? `${name} · Your node` : name;
         sat.append(title);
-        sat.append(makeCircle('gp-home-map-cluster-sat-hit', sx, sy, NODE_HIT_RADIUS));
-        if (isOwned) sat.append(makeCircle('gp-home-map-cluster-sat-owner-ring', sx, sy, 3.2));
-        sat.append(makeCircle('gp-home-map-cluster-sat-dot', sx, sy, 1.3));
+        sat.append(makeCircle('gp-home-map-cluster-sat-hit', sx, sy, hitRadius));
+        if (isOwned) sat.append(makeCircle('gp-home-map-cluster-sat-owner-ring', sx, sy, dotRadius * 2.4));
+        sat.append(makeCircle('gp-home-map-cluster-sat-dot', sx, sy, dotRadius));
         const pick = (vk: boolean) => {
           collapseFan();
-          openMemberNode(m.el, m.key, vk);
+          activateMapNode(m.el, vk);
         };
         sat.addEventListener('click', () => pick(sat.matches(':focus-visible')));
         sat.addEventListener('keydown', (event) => {
@@ -2979,40 +3101,78 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
             pick(true);
           }
         });
+        // Keyboard focus gets the card that hover gets.
+        sat.addEventListener('focus', () => {
+          if (!selectedFocusTarget) setFocus(m.el);
+        });
+        sat.addEventListener('blur', clearFocus);
+        fanSatellites.push({ member: m, el: sat, center: { x: sx, y: sy }, hitRadius, pick });
         clustersGroup.append(sat);
       });
-      if (viaKeyboard) (clustersGroup.querySelector('.gp-home-map-cluster-sat') as SVGGElement | null)?.focus?.();
+      if (viaKeyboard) fanSatellites[0]?.el.focus?.();
     };
 
-    const expandCluster = (members: ClusterMember[], center: { x: number; y: number }, viaKeyboard: boolean) => {
+    const expandCluster = (members: ClusterMember[], center: MapPoint, viaKeyboard: boolean) => {
       fanOutCluster(members, center, viaKeyboard);
     };
 
-    const renderOverlapStack = (members: ClusterMember[]) => {
+    // `chapters` are the chapter pins the stacked people sit on, if any.
+    const renderOverlapStack = (members: ClusterMember[], chapters: ClusterMember[]) => {
       if (!clustersGroup) return;
-      const center = centroidOf(members);
-      const place = clusterPlaceLabel(members);
+      const anchor = chapters.length > 0;
       const selectedInStack = members.some((member) => member.el === selectedFocusTarget);
-      const markerOffset = Math.max(pxToViewBox(10), 2);
-      const markerCenter = selectedInStack
-        ? { x: center.x + markerOffset, y: center.y - markerOffset }
-        : center;
+      // On a chapter the marker is a badge up and to the side of the pin, so the
+      // chapter stays visible and clickable. A selected person stays drawn too,
+      // and the marker steps aside for them the same way.
+      const location = anchor
+        ? { x: Math.max(...chapters.map((c) => c.center.x)), y: Math.min(...chapters.map((c) => c.center.y)) }
+        : centroidOf(members);
+      const markerOffset = anchor ? ANCHORED_MARKER_OFFSET : selectedInStack ? Math.max(pxToViewBox(10), 2) : 0;
+      const markerCenter = { x: location.x + markerOffset, y: location.y - markerOffset };
+      const fanCenter = anchor ? centroidOf(chapters) : markerCenter;
+      const alone = members.length === 1;
+      const ownedInStack = members.some((member) => member.el.classList.contains('is-owned'));
+
       const group = document.createElementNS(SVG_NS, 'g');
       applyScope(group);
-      const ownedInStack = members.some((member) => member.el.classList.contains('is-owned'));
-      group.setAttribute('class', `gp-home-map-overlap-stack${ownedInStack ? ' is-owned' : ''}${reducedMotionPref() ? '' : ' is-appearing'}`);
+      group.setAttribute('class', `gp-home-map-overlap-stack${anchor ? ' is-anchored' : ''}${ownedInStack ? ' is-owned' : ''}${reducedMotionPref() ? '' : ' is-appearing'}`);
       group.setAttribute('role', 'button');
       group.setAttribute('tabindex', '0');
       group.setAttribute('data-home-map-cluster', '');
-      group.setAttribute('aria-label', `${ownedInStack ? 'Your node is in this stack. ' : ''}People${place ? ` near ${place}` : ' at this location'}. Activate to fan out.`);
-      const offset = Math.max(pxToViewBox(3), 0.8);
-      group.append(makeCircle('gp-home-map-overlap-hit', markerCenter.x, markerCenter.y, NODE_HIT_RADIUS));
-      group.append(makeCircle('gp-home-map-overlap-halo', markerCenter.x, markerCenter.y, 3.5));
-      if (ownedInStack) group.append(makeCircle('gp-home-map-overlap-owner-ring', markerCenter.x, markerCenter.y, 4.25));
-      group.append(makeCircle('gp-home-map-overlap-dot is-a', markerCenter.x - offset * 0.55, markerCenter.y + offset * 0.34, 1.05));
-      group.append(makeCircle('gp-home-map-overlap-dot is-b', markerCenter.x + offset * 0.55, markerCenter.y + offset * 0.34, 1.05));
-      group.append(makeCircle('gp-home-map-overlap-dot is-c', markerCenter.x, markerCenter.y - offset * 0.56, 1.05));
-      const expand = (viaKeyboard: boolean) => expandCluster(members, markerCenter, viaKeyboard);
+      group.setAttribute('data-cluster-members', members.map((member) => member.key).join(' '));
+
+      const place = clusterPlaceLabel(members);
+      const chapterNames = chapters.map((c) => clean(c.el.getAttribute('data-node-name'))).filter(Boolean).join(' and ');
+      const who = alone ? clean(members[0].el.getAttribute('data-node-name')) || 'One person' : 'People';
+      const where = chapterNames ? `${who} at ${chapterNames}` : `People${place ? ` near ${place}` : ' at this location'}`;
+      group.setAttribute('aria-label', `${ownedInStack ? 'Your node is in this stack. ' : ''}${where}. ${alone ? 'Activate to open.' : 'Activate to fan out.'}`);
+      const title = document.createElementNS(SVG_NS, 'title');
+      title.textContent = where;
+      group.append(title);
+
+      // Beside a chapter the hit area stops at the badge, so it never covers the
+      // chapter's own pin.
+      const haloRadius = anchor ? 2.2 : 3.5;
+      const hitRadius = anchor ? haloRadius : NODE_HIT_RADIUS;
+      group.append(makeCircle('gp-home-map-overlap-hit', markerCenter.x, markerCenter.y, hitRadius));
+      group.append(makeCircle('gp-home-map-overlap-halo', markerCenter.x, markerCenter.y, haloRadius));
+      if (ownedInStack) group.append(makeCircle('gp-home-map-overlap-owner-ring', markerCenter.x, markerCenter.y, haloRadius + 0.75));
+      if (alone) {
+        // One dot for one person, in their own colour.
+        const steward = filterTypeFor(members[0].el.getAttribute('data-node-type')) === 'steward';
+        group.append(makeCircle(`gp-home-map-overlap-dot is-a${steward ? ' is-steward' : ''}`, markerCenter.x, markerCenter.y, 1.05));
+      } else {
+        const offset = anchor ? 0.8 : Math.max(pxToViewBox(3), 0.8);
+        const dotRadius = anchor ? 0.8 : 1.05;
+        group.append(makeCircle('gp-home-map-overlap-dot is-a', markerCenter.x - offset * 0.55, markerCenter.y + offset * 0.34, dotRadius));
+        group.append(makeCircle('gp-home-map-overlap-dot is-b', markerCenter.x + offset * 0.55, markerCenter.y + offset * 0.34, dotRadius));
+        group.append(makeCircle('gp-home-map-overlap-dot is-c', markerCenter.x, markerCenter.y - offset * 0.56, dotRadius));
+      }
+
+      // One person on a chapter needs no fan: open them directly.
+      const expand = (viaKeyboard: boolean) => (
+        alone ? activateMapNode(members[0].el, viaKeyboard) : expandCluster(members, fanCenter, viaKeyboard)
+      );
       group.addEventListener('click', () => expand(group.matches(':focus-visible')));
       group.addEventListener('keydown', (event) => {
         if (event.key === 'Enter' || event.key === ' ') {
@@ -3020,6 +3180,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           expand(true);
         }
       });
+      overlapStacks.push({ members, marker: group, markerCenter, hitRadius, expand });
       clustersGroup.append(group);
     };
 
@@ -3027,12 +3188,84 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (!clustersGroup || !membersGroup) return;
       collapseFan();
       clearClusters();
-      groupPins(visiblePeoplePins()).forEach((group) => {
-        if (group.length < 2) return;
-        group.forEach((m) => setPinClustered(m.el, true));
-        renderOverlapStack(group);
+      groupPins([...visibleChapterPins(), ...visiblePeoplePins()]).forEach((group) => {
+        const people = group.filter((pin) => !isChapterPin(pin));
+        const chapters = group.filter(isChapterPin);
+        // Chapters never hide. People stack when they share the spot with each
+        // other or with a chapter. The selected person stays drawn, so a stack
+        // that would hold only them has nothing to stand for.
+        if (people.length < 2 && !chapters.length) return;
+        if (people.every((pin) => pin.el === selectedFocusTarget)) return;
+        people.forEach((m) => setPinClustered(m.el, true));
+        renderOverlapStack(people, chapters);
       });
     };
+
+    // ---- Pointer disambiguation ---------------------------------------------
+    // A mouse opens what the hover card named, and is asked to choose only
+    // between pins on the same spot. A finger covers a 44px target, so a touch
+    // with more than one pin inside that target is asked to choose. The fan is
+    // how the map asks.
+    const pinsContestingPointer = (event: MouseEvent, viaTouch: boolean): ClusterMember[] => {
+      const point = svgPointForEvent(event);
+      if (!point) return [];
+      const drawn = [...visibleChapterPins(), ...visiblePeoplePins()].filter((pin) => !pin.el.classList.contains('is-clustered'));
+      if (!viaTouch) {
+        const nearest = nodeAtPointer(event);
+        const spot = nearest ? nodeCenter(nearest) : null;
+        return spot ? drawn.filter((pin) => pointsWithin(spot, pin.center, pxToViewBox(SAME_SPOT_PX))) : [];
+      }
+      const reach = pxToViewBox(POINTER_TARGET_RADIUS_PX);
+      const contested = new Map<string, ClusterMember>();
+      drawn.forEach((pin) => {
+        if (pointsWithin(point, pin.center, reach)) contested.set(pin.key, pin);
+      });
+      overlapStacks.forEach((stack) => {
+        if (pointsWithin(point, stack.markerCenter, reach)) stack.members.forEach((member) => contested.set(member.key, member));
+      });
+      return Array.from(contested.values());
+    };
+
+    // Capture on the root so this runs before the node handlers, and still runs
+    // when a captured pointer has moved the click onto the root itself. Where
+    // the element under the pointer already is the resolved target, its own
+    // handler is left to act.
+    root.addEventListener('click', (event) => {
+      // A drag that ends on the map is not a click, and keyboard activation
+      // (detail 0) names its target already.
+      if (suppressNextNodeClick || event.detail === 0) return;
+      const over = event.target instanceof Element ? event.target : null;
+      if (!over || !(over === root || svgEl?.contains(over))) return;
+      const takeOver = () => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      };
+      const resolved = targetAtPointer(event);
+      if (resolved.satellite) {
+        if (over.closest('.gp-home-map-cluster-sat') !== resolved.satellite.el) {
+          takeOver();
+          resolved.satellite.pick(false);
+        }
+        return;
+      }
+      const viaTouch = isRecentTouchMapClick();
+      const contested = pinsContestingPointer(event, viaTouch);
+      if (contested.length > 1) {
+        takeOver();
+        fanOutCluster(contested, centroidOf(contested), false);
+        return;
+      }
+      const { pin, stack } = viaTouch && contested.length
+        ? { pin: contested[0].el, stack: undefined }
+        : resolved;
+      if (stack && over.closest('[data-home-map-cluster]') !== stack.marker) {
+        takeOver();
+        stack.expand(false);
+      } else if (pin && over.closest('.gp-home-map-node-link') !== pin) {
+        takeOver();
+        activateMapNode(pin);
+      }
+    }, true);
 
     const scheduleClusterRecompute = () => {
       window.clearTimeout(clusterRecomputeTimer);
@@ -3048,12 +3281,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       recomputeClustersNow();
     });
     document.addEventListener('keydown', (event) => {
-      if (event.key !== 'Escape') return;
-      if (activeFan) {
-        collapseFan();
-        recomputeClustersNow();
-        (clustersGroup?.querySelector('[data-home-map-cluster]') as SVGGElement | null)?.focus?.();
-      }
+      if (event.key !== 'Escape' || !activeFan) return;
+      // Hand focus back to the stack this fan came from, when there is one.
+      const fanKey = activeFan[0]?.key;
+      collapseFan();
+      recomputeClustersNow();
+      overlapStacks.find((stack) => stack.members.some((member) => member.key === fanKey))?.marker.focus?.();
     });
 
     const toMember = (
@@ -4552,8 +4785,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     }
   }
 
-  /* ---- Exact-overlap fan-out ------------------------------------------- */
-  /* Only exact same-coordinate people hide behind this stack affordance. */
+  /* ---- Overlap stacks and fan-out --------------------------------------- */
+  /* People whose pin sits under another pin hide behind a stack marker. */
   .gp-home-map-node-link.is-clustered {
     opacity: 0;
     pointer-events: none;
@@ -4574,8 +4807,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     stroke: var(--gp-green-950);
     stroke-width: 0.5;
   }
-  .gp-home-map-overlap-dot.is-c {
+  .gp-home-map-overlap-dot.is-c,
+  .gp-home-map-overlap-dot.is-steward {
     fill: var(--gp-map-steward);
+  }
+  /* A stack that sits on a chapter is a small badge beside the chapter pin. */
+  .gp-home-map-overlap-stack.is-anchored .gp-home-map-overlap-halo {
+    fill: var(--gp-green-950);
+    opacity: 0.72;
   }
   .gp-home-map-overlap-stack:hover .gp-home-map-overlap-halo,
   .gp-home-map-overlap-stack:focus-visible .gp-home-map-overlap-halo {
@@ -4616,6 +4855,9 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   }
   .gp-home-map-cluster-sat.is-steward .gp-home-map-cluster-sat-dot {
     fill: var(--gp-map-steward);
+  }
+  .gp-home-map-cluster-sat.is-chapter .gp-home-map-cluster-sat-dot {
+    fill: var(--gp-map-chapter);
   }
   .gp-home-map-cluster-sat:hover .gp-home-map-cluster-sat-dot,
   .gp-home-map-cluster-sat:focus-visible .gp-home-map-cluster-sat-dot {
