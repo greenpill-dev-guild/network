@@ -139,11 +139,17 @@ const bodyClasses = [
     opacity: 0.075;
   }
 
-  body.gp-root .gp-site-header,
   body.gp-root .gp-main-target,
   body.gp-root .gp-site-footer {
     position: relative;
     z-index: 1;
+  }
+
+  /* The header stays in normal flow. Its stacking level comes from
+     SiteHeader's own rule, which sits above the page layer set here, so the
+     open mobile menu paints over the content. */
+  body.gp-root .gp-site-header {
+    position: relative;
   }
 
   body.gp-root a {
