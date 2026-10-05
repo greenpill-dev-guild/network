@@ -11,7 +11,7 @@
     "body": "Start with the map, read the field notes, browse the public library, or enter through the Garden at the pace that fits.",
     "primaryCta": {
       "label": "Find your people",
-      "href": "/garden",
+      "href": "#network-map",
       "kind": "internal"
     },
     "secondaryCta": {

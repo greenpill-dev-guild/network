@@ -640,6 +640,35 @@ async function runSmoke(): Promise<void> {
       true,
       `home hero CTAs should stay inside a 1280x768 first viewport: ${JSON.stringify(heroViewportProof)}`
     );
+    // The map takes its width from its container. A short desktop viewport may
+    // cap its height, but must never narrow it into the compact 4:3 layout that
+    // belongs to narrow containers, and the whole map stays above the fold on a
+    // 1366x641 laptop.
+    const mapLayoutAt = async (width: number, height: number) => {
+      await client.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false }, sessionId);
+      return evaluate(client, sessionId, `
+        (async () => {
+          await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          const canvas = document.querySelector('[data-home-map]').getBoundingClientRect();
+          return {
+            width: Math.round(canvas.width),
+            aspect: Number((canvas.width / canvas.height).toFixed(2)),
+            bottom: Math.round(canvas.bottom),
+            viewportHeight: window.innerHeight,
+          };
+        })()
+      `);
+    };
+    const shortLaptopMap = await mapLayoutAt(1366, 641);
+    assert.equal(shortLaptopMap.aspect > 2, true, `a 1366x641 viewport should keep the wide map: ${JSON.stringify(shortLaptopMap)}`);
+    assert.equal(shortLaptopMap.width >= 900, true, `a 1366x641 viewport should not shrink the map below 900px: ${JSON.stringify(shortLaptopMap)}`);
+    assert.equal(
+      shortLaptopMap.bottom <= shortLaptopMap.viewportHeight,
+      true,
+      `the whole map should sit above the fold at 1366x641: ${JSON.stringify(shortLaptopMap)}`
+    );
+    const veryShortMap = await mapLayoutAt(1366, 480);
+    assert.equal(veryShortMap.aspect > 2, true, `viewport height alone must not trigger the compact map: ${JSON.stringify(veryShortMap)}`);
     // Desktop viewport so the desktop section exercises the desktop popover and
     // its container-query layout (wide map container), not the mobile sheet. The
     // mobile section overrides to 375 later.
@@ -663,6 +692,93 @@ async function runSmoke(): Promise<void> {
     assert.equal(initialLegendCounts.chapter > 0, true, 'chapter count should render from public chapter anchors');
     assert.equal(initialLegendCounts.steward, 0, 'steward count should render as 0 before live steward nodes appear');
     assert.equal(initialLegendCounts.member, 0, 'member count should render as 0 before live member nodes appear');
+
+    // Filtering always offers a way back: a reset chip in the legend, and a note
+    // on the canvas when the result is empty. No stewards exist yet, so
+    // isolating them is the empty case.
+    const filterResetProof = await evaluate(client, sessionId, `
+      (async () => {
+        const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        const visible = () => document.querySelectorAll('[data-home-map] .gp-home-map-node-link:not(.is-filtered-out)').length;
+        const chip = document.querySelector('.gp-home-map-legend-reset');
+        const note = document.querySelector('[data-home-map-filter-note]');
+        const stewards = document.querySelector('[data-legend-filter="steward"]');
+        const before = { visible: visible(), chipHidden: chip.hidden, noteHidden: note.hidden };
+        stewards.click();
+        await wait(60);
+        const filtered = {
+          visible: visible(),
+          chipHidden: chip.hidden,
+          noteHidden: note.hidden,
+          noteText: note.querySelector('[data-home-map-filter-note-text]').textContent.trim(),
+          stewardsLeft: Math.round(stewards.getBoundingClientRect().left),
+        };
+        const stewardsLeftBefore = filtered.stewardsLeft;
+        chip.click();
+        await wait(60);
+        return {
+          before,
+          filtered,
+          after: {
+            visible: visible(),
+            chipHidden: chip.hidden,
+            noteHidden: note.hidden,
+            stewardsPressed: stewards.getAttribute('aria-pressed'),
+            stewardsLeft: Math.round(stewards.getBoundingClientRect().left),
+            focusOnLegend: document.activeElement?.hasAttribute('data-legend-filter') === true,
+          },
+          stewardsLeftBefore,
+        };
+      })()
+    `);
+    assert.deepEqual(
+      { chipHidden: filterResetProof.before.chipHidden, noteHidden: filterResetProof.before.noteHidden },
+      { chipHidden: true, noteHidden: true },
+      'the reset chip and the filter note should be absent while nothing is filtered'
+    );
+    assert.equal(filterResetProof.filtered.visible, 0, 'isolating stewards before any exist should leave no nodes');
+    assert.equal(filterResetProof.filtered.chipHidden, false, 'an active filter should show the reset chip');
+    assert.equal(filterResetProof.filtered.noteHidden, false, 'an empty filter result should explain itself on the canvas');
+    assert.equal(filterResetProof.filtered.noteText, 'No nodes match these filters.');
+    assert.equal(filterResetProof.after.visible, filterResetProof.before.visible, 'Show all should restore every node');
+    assert.equal(filterResetProof.after.stewardsPressed, 'false', 'Show all should release the type filter');
+    assert.equal(filterResetProof.after.chipHidden && filterResetProof.after.noteHidden, true, 'the reset chip and note should leave with the filter');
+    assert.equal(filterResetProof.after.focusOnLegend, true, 'focus should move to the legend when the reset chip hides');
+    assert.equal(
+      filterResetProof.after.stewardsLeft,
+      filterResetProof.stewardsLeftBefore,
+      'the type pills should not move when the reset chip appears or leaves'
+    );
+
+    // The hero's primary action browses the map (opens its node list); joining
+    // starts from the pill on the map.
+    const browseProof = await evaluate(client, sessionId, `
+      (async () => {
+        const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        const browse = document.querySelector('[data-home-map-browse]');
+        const list = document.querySelector('[data-home-map-list]');
+        const join = document.querySelector('.gp-home-map-join');
+        browse.click();
+        await wait(120);
+        const opened = { listHidden: list.hidden, joinDialogOpen: document.querySelector('[data-home-map-addnode-dialog]').open };
+        document.querySelector('[data-home-map-list-close]').click();
+        await wait(60);
+        return {
+          browseHref: browse.getAttribute('href'),
+          browseOpensJoin: browse.hasAttribute('data-home-map-open'),
+          opened,
+          listHiddenAfterClose: list.hidden,
+          joinText: join?.textContent.trim(),
+          joinInsideMap: Boolean(join?.closest('[data-home-map]')),
+        };
+      })()
+    `);
+    assert.equal(browseProof.browseHref, '#network-map', 'the hero primary action should be a real link to the map');
+    assert.equal(browseProof.browseOpensJoin, false, 'the hero primary action should not open the join walkthrough');
+    assert.deepEqual(browseProof.opened, { listHidden: false, joinDialogOpen: false }, 'the hero primary action should open the map list');
+    assert.equal(browseProof.listHiddenAfterClose, true);
+    assert.equal(browseProof.joinText, 'Join the map');
+    assert.equal(browseProof.joinInsideMap, true, 'the join entry should sit on the map');
     await waitForExpression(client, sessionId, `
       (() => {
         const button = document.querySelector('[data-theme-choice="public"]');

@@ -824,8 +824,25 @@ test('home map intake requires a valid email and stores local pending only after
   assert.match(component, /email,\s*contactConsent: true/s);
   assert.doesNotMatch(component, /email:\s*email\s*\|\|\s*undefined/);
   assert.match(component, /<dialog class="gp-home-map-addnode-dialog"/);
-  assert.match(homepage, /<Button type="button" data-home-map-open/);
-  assert.doesNotMatch(component, /<button[^>]*data-home-map-open/);
+  // Entries: the hero's primary action browses the map, and joining it starts
+  // from the "Join the map" pill in the map's own control row.
+  assert.doesNotMatch(homepage, /data-home-map-open/);
+  assert.match(homepage, /data-home-map-browse=\{primaryBrowsesMap \? '' : undefined\}/);
+  assert.match(component, /<figure class="gp-home-map" id="network-map"/);
+  assert.match(
+    component,
+    /<button type="button" class="gp-home-map-join" data-home-map-open aria-haspopup="dialog">Join the map<\/button>/
+  );
+  assert.match(component, /querySelectorAll\('\[data-home-map-browse\]'\)[\s\S]*?addEventListener\('click', openNodeList\)/);
+
+  // Filtering always offers a way back, and hover never outlives the pointer.
+  assert.match(component, /<button type="button" class="gp-home-map-legend-reset" data-home-map-filter-reset hidden>Show all<\/button>/);
+  assert.match(component, /const resetMapFilters = \(\) => \{[\s\S]*?activeTypeFilter = '';[\s\S]*?activeThemes\.add\(theme\)[\s\S]*?applyMapFilters\(\);/);
+  assert.match(component, /syncFilterStatus\(visibleNodeIds\.size, nodeTypeById\.size\)/);
+  assert.match(component, /const dropPointerFocus = \(\) => \{[\s\S]*?pointerFocusTarget = null;[\s\S]*?if \(selectedFocusTarget\) return;/);
+  assert.match(component, /root\.addEventListener\('mouseleave', dropPointerFocus\)/);
+  assert.match(component, /window\.addEventListener\('scroll', \(\) => \{[\s\S]*?dropPointerFocus\(\);[\s\S]*?\{ passive: true \}\)/);
+  assert.match(component, /const target = isGestureBlocked\(event\.target\) \? null : nodeAtPointer\(event\)/);
   assert.match(homepage, /min-block-size: calc\(100dvh - var\(--gp-header-height\)\)/);
   assert.match(homepage, /<Text variant="display" class="gp-home-hero-title">/);
   assert.doesNotMatch(homepage, /font-size:\s*clamp\(40px, calc\(30\.1px \+ 2\.65vw\), 64px\)/);
@@ -1127,7 +1144,7 @@ test('home map selected nodes stay on the map without scroll jumps', async () =>
 
   const styleStart = component.indexOf('<style>');
   const selectedCssStart = component.indexOf('/* Selected-node card', styleStart);
-  const addNodeCssStart = component.indexOf('/* Find-your-people walkthrough', selectedCssStart);
+  const addNodeCssStart = component.indexOf('/* Join-the-map walkthrough', selectedCssStart);
   const selectedCss = component.slice(selectedCssStart, addNodeCssStart);
   assert.ok(selectedCssStart !== -1, 'selected-node floating-card CSS must be present');
   assert.match(selectedCss, /position:\s*absolute/);
