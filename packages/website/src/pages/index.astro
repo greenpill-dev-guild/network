@@ -382,9 +382,9 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
     }
   }
 
+  /* The map sizes itself (see HomeMap); the hero only gives it the full row. */
   .gp-home-hero-map {
-    width: min(100%, 128dvh);
-    margin: 0 auto;
+    width: 100%;
   }
 
   .gp-home-hero-inner :global(.gp-home-hero-dek) {
