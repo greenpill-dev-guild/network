@@ -22,9 +22,9 @@ credit) is implemented; its production release is tracked in `plan.todo.md`.
   `[[files]]` `local_path` from the directory the deploy runs in, not from
   the `fly.toml` directory as the Fly docs say. A path that does not resolve
   fails the deploy before any machine changes.
-- **Take a fresh private database backup.** Migrations 028 and 029 changed the
-  schema after the last recovery archive, and Supabase Free has no automatic
-  backups.
+- **Take a fresh private database backup.** Migration 028 changed the schema
+  after the last recovery archive, migration 029 follows with the PRD-809
+  release, and Supabase Free has no automatic backups.
 - **Replace the dispatch token.** Production still uses the GitHub CLI token
   set on 2026-08-11. It works for dispatch and for the watchdog's Actions
   read, but it has account-wide `repo` scope and rotates when the CLI
@@ -75,9 +75,11 @@ credit) is implemented; its production release is tracked in `plan.todo.md`.
 
 ### Remaining work (tracked in plan.todo.md)
 
-1. PRD-809 production release: apply migration 029, deploy the agent, re-run
-   `directus:content:setup` and `directus:studio:setup`, then run the
-   production steward smoke.
+1. PRD-809 production release, in this order: deploy the agent, apply
+   migration 029, clear the Directus cache, re-run `directus:content:setup`
+   and `directus:studio:setup`, then run the production steward smoke. The
+   agent goes first because the previous agent would copy the two new view
+   keys to the top level of every public chapter.
 2. Second QA pass, which closes with that release.
 
 The operator Insights dashboard (PRD-1119) and the pt-BR/es Data Studio labels

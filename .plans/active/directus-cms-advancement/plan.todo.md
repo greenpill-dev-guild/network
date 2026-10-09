@@ -189,8 +189,8 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
    settings live in `packages/agent/fly.toml`.
 2. **Steward image fields (PRD-809).** Implemented with migration 029, the
    shared image rules, Data Studio fields, and tests. Production release
-   (migration 029, agent deploy, setup re-apply, production steward smoke) is
-   the remaining step. The operator dashboard and the pt-BR/es labels no
+   (agent deploy, then migration 029, setup re-apply, production steward
+   smoke) is the remaining step. The operator dashboard and the pt-BR/es labels no
    longer gate this hub; they wait in PRD-1119 and PRD-1120 until stewards
    are publishing through the CMS.
 3. **Release-order QA.** The magic-link check is closed. The second QA pass
