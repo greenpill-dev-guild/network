@@ -107,3 +107,18 @@ sends no alert.
 Apply migration `028_content_publish_health.sql` before enabling this sweep.
 Enabling it, changing the production token, deploying the agent, and proving a
 live alert are separate operator actions, not part of the implementation PR.
+
+### Hung Deploy Recovery
+
+An alert does not unblock a hung deploy.
+`.github/workflows/pages-deploy-recovery.yml` does. Every Pages run starts a
+watcher that cancels a run once it has held the pipeline for more than 30
+minutes, then lets the queued run through or starts a fresh one. It runs in
+GitHub Actions with its own short-lived token, so it needs no agent setting or
+secret and works whether or not the sweep above is enabled.
+
+With both in place, a hang can still raise a Pages delivery failed alert when
+the hung run is cancelled, followed by its recovery once the next run deploys.
+The watcher itself fails only when it cannot bring the pipeline back to idle,
+and that needs a person. The rules, and the reasoning behind the 30 minutes,
+are in `scripts/pages-deploy-recovery.ts`.

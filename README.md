@@ -140,7 +140,7 @@ used by the local bootstrap path by accident; pass explicit `DIRECTUS_*`
 environment variables from the shell only when you intentionally need an
 override.
 
-The current public site deployment can remain on GitHub Pages. Because this is a monorepo, do not use the branch/folder picker to look for `packages/website/dist`; GitHub Pages branch publishing only supports the repository root or `/docs`. In repository settings, set Pages source to **GitHub Actions**. The `.github/workflows/github-pages.yml` workflow installs from the checked-in Bun lockfile, runs `bun run build:website`, and publishes `packages/website/dist`.
+The current public site deployment can remain on GitHub Pages. Because this is a monorepo, do not use the branch/folder picker to look for `packages/website/dist`; GitHub Pages branch publishing only supports the repository root or `/docs`. In repository settings, set Pages source to **GitHub Actions**. The `.github/workflows/github-pages.yml` workflow installs from the checked-in Bun lockfile, runs `bun run build:website`, and publishes `packages/website/dist`. `.github/workflows/pages-deploy-recovery.yml` watches each run and cancels one that hangs, so a stuck deploy cannot hold up the runs behind it.
 
 If we later migrate the public site to Vercel, use the repo root as the project root, `bun install --frozen-lockfile` as install command, `bun run build:website` as build command, and `packages/website/dist` as output directory.
 
