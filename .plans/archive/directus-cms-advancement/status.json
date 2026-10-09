@@ -4,13 +4,13 @@
     "slug": "directus-cms-advancement",
     "title": "Directus CMS Advancement",
     "kind": "feature",
-    "stage": "active"
+    "stage": "archive"
   },
   "workflow": {
-    "overall_status": "active",
+    "overall_status": "archived",
     "priority": "p1",
     "created_at": "2026-08-10T22:49:27.561Z",
-    "updated_at": "2026-10-09T20:00:00.000Z"
+    "updated_at": "2026-10-09T22:10:00.000Z"
   },
   "links": {
     "brief": "brief.md",
@@ -49,7 +49,7 @@
   "lanes": {
     "ui": {
       "owner": "claude",
-      "status": "in_progress",
+      "status": "completed",
       "depends_on": [],
       "handoff": "handoffs/README.md"
     },
@@ -76,8 +76,8 @@
       "handoff": "handoffs/README.md"
     },
     "qa_pass_2": {
-      "owner": "codex",
-      "status": "blocked",
+      "owner": "claude",
+      "status": "completed",
       "depends_on": [
         "qa_pass_1"
       ],
@@ -154,6 +154,27 @@
       "lane": "platform",
       "status": "completed",
       "note": "Afo asked to complete what was left. Found every agent sweep disabled on the running machine since the Supabase move and re-enabled them; applied migration 028, which also stopped a sweep failure present since the 2026-10-05 deploy; enabled the publish-health watchdog and proved a live stale alert and recovery; archived the declined magic-link test node. PRD-809 is implemented with migration 029 and awaits its production release."
+    },
+    {
+      "timestamp": "2026-10-09T21:44:24.000Z",
+      "actor": "claude",
+      "lane": "ui",
+      "status": "completed",
+      "note": "PRD-809 merged (PR #23) after an independent review and two bot reviews: nullable image_alt and image_credit columns, a trigger that keeps them true to the image a chapter shows, uploads published without a media review, a withheld image that never removes a chapter, and a separate chapter_image_withheld alert. The same PR fixed the certificate path in the agent fly.toml and set blue-green deploys."
+    },
+    {
+      "timestamp": "2026-10-09T22:06:00.000Z",
+      "actor": "claude",
+      "lane": "qa_pass_2",
+      "status": "completed",
+      "note": "Production release verified: agent release v71 deployed blue-green with no failed probe, migration 029 applied with every chapter row unchanged apart from the new columns, the public snapshot identical to the pre-release capture, Directus fields live, and the production steward smoke passed on brasil with nothing left behind."
+    },
+    {
+      "timestamp": "2026-10-09T22:10:00.000Z",
+      "actor": "claude",
+      "lane": "system",
+      "status": "archived",
+      "note": "All lanes complete and Linear mirrors updated; hub moved active -> archive. The operator dashboard (PRD-1119) and pt-BR/es labels (PRD-1120) stay outside this hub."
     }
   ]
 }

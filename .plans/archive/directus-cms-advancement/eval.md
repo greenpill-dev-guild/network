@@ -2,6 +2,49 @@
 
 ## Evidence log
 
+### 2026-10-09 PRD-809 production release and second QA pass
+
+- **Merge and deploy.** PR #23 merged at 21:44:24 UTC (`58a3095`). The Fly.io
+  GitHub app deployed the agent from that push: GitHub deployment
+  `6971643450` went from in progress at 21:44:26 to success at 21:47:20, Fly
+  release v71. It ran blue-green from `fly.toml`: machine `896269c6412dd8`
+  started at 21:46:10 and passed `/ready`, and the old machine stopped at
+  21:47:07. The new machine carries the CA file (same SHA-256 as
+  `config/certificates/supabase-ca.crt`), `NODE_EXTRA_CA_CERTS`, and the
+  watchdog settings, so the certificate path fix holds in Fly's own deploy.
+- **No downtime.** A probe of `/ready` and `/content/public-snapshot` every
+  few seconds from 21:43:09 UTC recorded 200 and 18 chapters on every probe,
+  through the deploy, the migration, the Directus setup, and the smoke.
+- **Migration 029.** Applied at 21:48:20 UTC through the agent machine
+  (SHA-256 `48f70c43f5e8fd7b`, ledger at 30). Inside the same transaction the
+  runner confirmed that all 18 chapter rows were byte-identical apart from the
+  two new columns and that each of the 12 described images was backfilled
+  from `media`. The newest chapter `updated_at` stayed at 19:22:49, so the
+  migration triggered no site rebuild.
+- **Public snapshot unchanged.** The live snapshot matched a capture taken
+  before the release, record for record across all seven collections, after
+  the deploy, after the migration, and after the smoke.
+- **Directus.** Cache cleared, then `directus:content:setup` (114
+  permissions) and `directus:studio:setup` (263 field updates). The first
+  metadata run stopped on a 503 "Under pressure" after 232 updates; the setup
+  client now retries that, and the second run finished. Production shows
+  `image_alt` and `image_credit` as nullable fields under the chapter image
+  with the alt-text condition, and the notification kinds include
+  `chapter_image_withheld`.
+- **Production steward smoke.** Passed at 22:05 UTC on `brasil` with
+  `nigeria` as the forbidden chapter. A temporary steward attached an upload
+  with alt text and credit, the public snapshot showed that image with its
+  own description, and removing the upload brought the sourced image's
+  description back. The chapter's image, alt text, credit, and `media` were
+  the same before and after, and no temporary user, file, initiative, project,
+  or request was left.
+- **Publish loop.** The smoke's edits produced `content_dispatch_sent` at
+  22:05:16 and Pages run `37997257839`, which succeeded at 22:08:12. The site
+  built at 22:07:18 shows `brasil` with its original image, alt text, and
+  credit. The watchdog logged `healthy` every minute throughout, and no
+  snapshot alert was queued.
+
+
 ### 2026-10-09 production activation and release-order check
 
 - **Background jobs were off.** Every agent sweep had been disabled on the

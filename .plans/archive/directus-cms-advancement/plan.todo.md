@@ -129,7 +129,7 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
       `input-code` with typed Directus O2M rows while keeping the public shape
       compatible with `packages/shared` normalizers. Direct chapter `media`
       remains JSON and is tracked separately below.
-- [ ] Add first-class direct chapter image alt/credit fields: migrate and
+- [x] Add first-class direct chapter image alt/credit fields: migrate and
       backfill from the existing `media.imageAlt`/`media.imageCredit` keys,
       retain a safe compatibility fallback, update the public projection and
       accepted update-request apply path, and expose the fields in Data Studio.
@@ -187,14 +187,13 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
 1. **Platform health contract (PRD-808).** Done. Migration 028 is applied in
    production and the watchdog is on with a 30 minute threshold. The agent
    settings live in `packages/agent/fly.toml`.
-2. **Steward image fields (PRD-809).** Implemented with migration 029, the
-   shared image rules, Data Studio fields, and tests. Production release
-   (agent deploy, then migration 029, setup re-apply, production steward
-   smoke) is the remaining step. The operator dashboard and the pt-BR/es labels no
-   longer gate this hub; they wait in PRD-1119 and PRD-1120 until stewards
-   are publishing through the CMS.
-3. **Release-order QA.** The magic-link check is closed. The second QA pass
-   completes with the PRD-809 production release.
+2. **Steward image fields (PRD-809).** Done. Released to production on
+   2026-10-09: agent release v71, migration 029, the Data Studio fields, and
+   a passing production steward smoke. The operator dashboard and the
+   pt-BR/es labels wait in PRD-1119 and PRD-1120 until stewards are
+   publishing through the CMS.
+3. **Release-order QA.** Done. The magic-link check is closed, and the second
+   QA pass completed with the PRD-809 production release.
 
 Implementation validation gate: `bun run typecheck`, `bun run test:agent`,
 `bun run test:content`, the affected Directus setup/steward smoke tests,

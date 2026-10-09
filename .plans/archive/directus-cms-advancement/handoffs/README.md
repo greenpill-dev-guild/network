@@ -2,11 +2,13 @@
 
 ## Current state (2026-10-09)
 
-Everything from the 2026-08-11 push is live, and so is the PRD-808 publish
-health watchdog: migration 028 is applied, the check runs every minute with a
-30 minute stale threshold, and a live stale alert and recovery were proven on
-2026-10-09 (evidence in `eval.md`). PRD-809 (chapter image alt text and
-credit) is implemented; its production release is tracked in `plan.todo.md`.
+This hub is complete and archived. Everything from the 2026-08-11 push is
+live. The PRD-808 publish health watchdog has been on in production since
+2026-10-09: migration 028 is applied, the check runs every minute with a 30
+minute stale threshold, and a live stale alert and recovery were proven.
+PRD-809 (chapter image alt text and credit) was released the same day: agent
+release v71, migration 029, the Data Studio fields, and a passing production
+steward smoke. Evidence for all of it is in `eval.md`.
 
 ### Operator notes
 
@@ -26,9 +28,19 @@ credit) is implemented; its production release is tracked in `plan.todo.md`.
   `[[files]]` `local_path` from the directory the deploy runs in, not from
   the `fly.toml` directory as the Fly docs say. A path that does not resolve
   fails the deploy before any machine changes.
-- **Take a fresh private database backup.** Migration 028 changed the schema
-  after the last recovery archive, migration 029 follows with the PRD-809
-  release, and Supabase Free has no automatic backups.
+- **Take a fresh private database backup.** Migrations 028 and 029 changed the
+  schema after the last recovery archive, and Supabase Free has no automatic
+  backups.
+- **Rolling back migration 029.** `handoffs/rollback-029.sql` restores the
+  view, function, and constraints production had before it, and drops the two
+  columns. It was built from production's own definitions when 029 was
+  applied, and the same procedure was rehearsed on a scratch database, which
+  ended identical to its starting point. Unregister the two Directus fields
+  first. The file stops being valid once a later migration changes the same
+  objects.
+- **Directus sheds load during long setup runs.** `directus:studio:setup`
+  took nine minutes against production, and its first attempt stopped on a
+  503 "Under pressure". The setup client now sends such a request again.
 - **Replace the dispatch token.** Production still uses the GitHub CLI token
   set on 2026-08-11. It works for dispatch and for the watchdog's Actions
   read, but it has account-wide `repo` scope and rotates when the CLI
@@ -77,18 +89,29 @@ credit) is implemented; its production release is tracked in `plan.todo.md`.
 - `content-access -- cleanup-legacy` removes the retired per-slug policies
   once the prod smoke passes.
 
-### Remaining work (tracked in plan.todo.md)
+### Follow-ups outside this hub
 
-1. PRD-809 production release, in this order: deploy the agent, apply
-   migration 029, clear the Directus cache, re-run `directus:content:setup`
-   and `directus:studio:setup`, then run the production steward smoke. The
-   agent goes first because the previous agent would copy the two new view
-   keys to the top level of every public chapter.
-2. Second QA pass, which closes with that release.
+Nothing in this hub remains open. These are separate:
 
-The operator Insights dashboard (PRD-1119) and the pt-BR/es Data Studio labels
-(PRD-1120) moved out of this hub on 2026-10-04 and wait until stewards publish
-through the CMS.
+- The operator Insights dashboard (PRD-1119) and the pt-BR/es Data Studio
+  labels (PRD-1120) moved out on 2026-10-04 and wait until stewards publish
+  through the CMS.
+- Noted on 2026-10-09 and not yet in Linear:
+  - Uploaded chapter images are served from the admin VM, which stops when
+    idle. The first visitor and social-card scrapers can hit a cold start.
+  - A record that is quarantined, fixed, and quarantined again does not alert
+    a second time. The same holds for a withheld chapter image.
+  - "Alt text required with a proposed image" on update requests uses the
+    pattern that blocked nothing on chapters while the column held `''`. It
+    was not re-tested on the request form.
+
+### How the PRD-809 release went (for the next one)
+
+Deploy the agent first, then apply the migration: the previous agent would
+have copied the two new view keys to the top level of every public chapter.
+Merging to `main` is that deploy. After the migration, clear the Directus
+cache, then run `directus:content:setup` and `directus:studio:setup`, then
+the production steward smoke.
 
 Deferred strategy items remain unchanged: `content.people` dual-source
 decision and the Directus 12 licensing/Open Innovation Grant decision date.
