@@ -2,6 +2,69 @@
 
 ## Evidence log
 
+### 2026-10-09 production activation and release-order check
+
+- **Background jobs were off.** Every agent sweep had been disabled on the
+  running machine with machine-level `*_SWEEP_ENABLED=false` settings during
+  that day's database move to Supabase and never re-enabled. `/ready` stayed
+  green throughout. Symptoms: impact data last synced 06:58 UTC and served as
+  stale, and no daily moderation digest by 18:37 UTC. Re-enabled at 19:17 UTC;
+  the digest was created and sent at 19:17:26 and impact sync logged
+  `checked: 4, saved: 4, failed: 0`.
+- **The content-operations sweep had failed every minute since the 2026-10-05
+  deploy.** The merged review-notification query selects columns that
+  migration 028 adds, and 028 had not been applied. Dispatch ran before the
+  failing step, so only review, decision, and quarantine emails were blocked;
+  the queue was empty, so none were lost. Applied 028 at 19:18:56 UTC through
+  the agent machine (ledger at 29); zero sweep failures after.
+- **Watchdog on.** Token precheck from the machine: repository read 200 with
+  push, Actions read 200. First check at 19:22:34 logged `healthy`.
+- **Live alert proof.** Identical-value touch of the published `brasil`
+  chapter at 19:22:49 → `content_dispatch_sent` at 19:23:31 → Pages run
+  `37979909187` (`repository_dispatch`) succeeded, site built at 19:24:35 →
+  stale alert queued and sent at 19:24:32 → recovery queued and sent at
+  19:26:31. Both rows carry provider message ids. The threshold was 60 seconds
+  for the proof and is now 1800000.
+- **A deploy took the agent's database connection down for five minutes.** At
+  19:46:17 UTC a deploy from `main` replaced the machine config, which
+  dropped the Supabase CA file and `NODE_EXTRA_CA_CERTS` that existed only on
+  the machine. `/ready` returned 503 until the settings were restored at
+  19:51:32. Commit `feecca1` moved the certificate and the watchdog settings
+  into `fly.toml`.
+- **Release-order check closed.** The `[TEST] magic link check` node had been
+  declined through a moderation link on 2026-08-11 04:33:44 UTC (review row
+  actor `moderation-link:...`). Archived on 2026-10-09 19:27 UTC; it does not
+  appear in `/map/state`.
+
+### 2026-10-09 PRD-809 implementation and independent review
+
+- **Rules.** Decided in `spec.md`; the write-by-write table is in
+  `packages/admin/README.md`.
+- **Independent review before merge.** It found no blocker and five defects in
+  follow-on flows. All were fixed while migration 029 had only ever run
+  locally: an accepted image lost its description after an upload was added
+  and removed; "alt text required" blocked nothing, because the empty value
+  was stored as `''` and Directus only treats `null` as missing; a sourced
+  image changed outside an update request kept the old description; an
+  accepted credit equal to the stored one was erased; and a withheld-image
+  alert used up the chapter's one quarantine alert.
+- **Database proof.** `bun run test:chapter-images:db` builds a scratch
+  database, applies migrations 001 to 028, seeds rows shaped like production,
+  applies 029, and asserts that the backfill changes nothing but the two new
+  columns (`updated_at` included), that a replay is a no-op, and each write in
+  the README table. Five deliberately broken variants of the migration each
+  fail it.
+- **Data Studio, in Brave on the local stack.** An upload without alt text
+  cannot be saved (`Image alt text: Value can't be null`). With alt text it
+  saves and the public snapshot shows the upload with its own description.
+  Swapping the picture without editing the text empties both fields, and the
+  form then refuses every save until alt text is entered. Emptying the credit
+  saves as `NULL`.
+- **Smokes.** Local `directus:steward:smoke` and
+  `directus:map-moderation:smoke` pass. Interrupting the steward smoke while
+  its test image is attached restores the chapter's file, alt text, credit and
+  `media`, removes the temporary user and file, and exits 130.
+
 ### 2026-10-04 PRD-808 review pass
 
 - Review found that the stale rule compared the newest content change with the
@@ -100,8 +163,9 @@
 - `impact.chapter_impact_snapshots` refreshes on schedule; a steward can see
   sync status + last error for their chapter's bindings in Directus.
 - A chapter with an unapproved image no longer 500s
-  `/content/public-snapshot` or fails the site build; the record is
-  quarantined and an operator alert exists.
+  `/content/public-snapshot` or fails the site build. Since PRD-809 the
+  chapter stays published with the image withheld, and an operator alert
+  exists.
 - The delivered `[TEST] magic link check` email is used by a human to approve
   or decline the node, the outcome is verified, and the test node is archived.
 
