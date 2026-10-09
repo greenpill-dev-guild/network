@@ -1500,31 +1500,37 @@ type DirectusRequestOptions = {
   expected?: number[];
 };
 
+// A small Directus machine sheds load with 503 "Under pressure" while it applies
+// a long run of schema changes. It answers that before it handles the request,
+// so the request can be sent again unchanged.
+const DIRECTUS_BUSY_RETRY_DELAYS_MS = Object.freeze([2000, 5000, 10000, 20000]);
+
 export async function createDirectusClient({
   url = directusUrlFromEnv(),
   token = cleanString(process.env.DIRECTUS_ADMIN_TOKEN),
   email = cleanString(process.env.DIRECTUS_ADMIN_EMAIL) || 'admin@greenpill.network',
   password = cleanString(process.env.DIRECTUS_ADMIN_PASSWORD) || 'directus-local-password',
   timeoutMs = Number(process.env.DIRECTUS_REQUEST_TIMEOUT_MS || 60000),
+  busyRetryDelaysMs = DIRECTUS_BUSY_RETRY_DELAYS_MS,
 }: {
   url?: string;
   token?: string;
   email?: string;
   password?: string;
   timeoutMs?: number;
+  busyRetryDelaysMs?: readonly number[];
   [key: string]: any;
 } = {}) {
   let accessToken = token;
 
-  async function request(path: string, { method = 'GET', body, expected = [200, 201, 204] }: DirectusRequestOptions = {}) {
+  async function send(path: string, method: string, body: unknown) {
     const controller = new AbortController();
     const timeout = timeoutMs > 0
       ? setTimeout(() => controller.abort(), timeoutMs)
       : null;
-    let response;
 
     try {
-      response = await fetch(`${url}${path}`, {
+      return await fetch(`${url}${path}`, {
         method,
         headers: {
           ...(body ? { 'content-type': 'application/json' } : {}),
@@ -1541,17 +1547,31 @@ export async function createDirectusClient({
     } finally {
       if (timeout) clearTimeout(timeout);
     }
+  }
 
-    if (!expected.includes(response.status)) {
-      const text = await response.text().catch(() => '');
-      throw new Error(`${method} ${path} failed with ${response.status}: ${text}`);
+  async function request(path: string, { method = 'GET', body, expected = [200, 201, 204] }: DirectusRequestOptions = {}) {
+    for (let attempt = 0; ; attempt += 1) {
+      const response = await send(path, method, body);
+
+      if (!expected.includes(response.status)) {
+        const text = await response.text().catch(() => '');
+        // Any 503 is safe to repeat for a request that changes nothing or sets
+        // a value. A POST creates something, so it is repeated only when
+        // Directus says it turned the request away unhandled.
+        const turnedAway = response.status === 503 && (method !== 'POST' || /under pressure/i.test(text));
+        if (turnedAway && attempt < busyRetryDelaysMs.length) {
+          await new Promise((resolve) => setTimeout(resolve, busyRetryDelaysMs[attempt]));
+          continue;
+        }
+        throw new Error(`${method} ${path} failed with ${response.status}: ${text}`);
+      }
+
+      if (response.status === 204) return null;
+
+      const text = await response.text();
+      if (!text) return null;
+      return JSON.parse(text);
     }
-
-    if (response.status === 204) return null;
-
-    const text = await response.text();
-    if (!text) return null;
-    return JSON.parse(text);
   }
 
   if (!accessToken) {
