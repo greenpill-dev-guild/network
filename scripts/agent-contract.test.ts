@@ -3294,3 +3294,27 @@ test('agent public impact guard rejects private upstream fields', () => {
     summary: { actionCount: 1 },
   });
 });
+
+// flyctl reads a [[files]] local_path from the directory the deploy runs in,
+// not from the fly.toml directory. A path that does not resolve there fails
+// the deploy, and a deploy without the file takes the database connection down.
+test('Fly configs mount the database certificate from the directory each app deploys from', async () => {
+  const deploys = [
+    // fly deploy --config packages/agent/fly.toml
+    { config: 'packages/agent/fly.toml', deployDir: rootDir },
+    // fly deploy --config fly.toml packages/admin
+    { config: 'packages/admin/fly.toml', deployDir: join(rootDir, 'packages/admin') },
+  ];
+  const certificate = await readFile(join(rootDir, 'config/certificates/supabase-ca.crt'), 'utf8');
+  assert.match(certificate, /^-----BEGIN CERTIFICATE-----/);
+
+  for (const { config, deployDir } of deploys) {
+    const toml = await readFile(join(rootDir, config), 'utf8');
+    const localPath = toml.match(/\[\[files\]\][^[]*?local_path\s*=\s*['"]([^'"]+)['"]/)?.[1];
+    const guestPath = toml.match(/\[\[files\]\][^[]*?guest_path\s*=\s*['"]([^'"]+)['"]/)?.[1];
+    assert.ok(localPath && guestPath, `${config} mounts a certificate`);
+    assert.equal(await readFile(resolve(deployDir, localPath), 'utf8'), certificate, `${config} local_path`);
+    // Node only trusts the mounted file when it is told where it is.
+    assert.match(toml, new RegExp(`NODE_EXTRA_CA_CERTS\\s*=\\s*['"]${guestPath}['"]`), `${config} NODE_EXTRA_CA_CERTS`);
+  }
+});

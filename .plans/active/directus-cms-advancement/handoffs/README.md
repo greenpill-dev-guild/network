@@ -10,14 +10,18 @@ credit) is implemented; its production release is tracked in `plan.todo.md`.
 
 ### Operator notes
 
-- **A plain deploy is safe again.** Production connects to Supabase with
-  `sslmode=verify-full`. The CA certificate (`config/certificates/supabase-ca.crt`),
-  `NODE_EXTRA_CA_CERTS`, and the watchdog settings are in both `fly.toml`
-  files since commit `feecca1`. Before that they existed only on the running
-  machines, and a deploy on 2026-10-09 at 19:46 UTC dropped them: the agent
-  lost its database connection for five minutes. A setting made with
-  `fly machine update` lasts only until the next deploy, so put durable
-  settings in `fly.toml`.
+- **A plain deploy keeps the database certificate.** Production connects to
+  Supabase with `sslmode=verify-full`. The CA certificate
+  (`config/certificates/supabase-ca.crt`), `NODE_EXTRA_CA_CERTS`, and the
+  watchdog settings are in both `fly.toml` files. Before 2026-10-09 they
+  existed only on the running machines, and a deploy at 19:46 UTC dropped
+  them: the agent lost its database connection for five minutes. A setting
+  made with `fly machine update` lasts only until the next deploy, so put
+  durable settings in `fly.toml`.
+- **Run the documented deploy commands from the repo root.** flyctl reads a
+  `[[files]]` `local_path` from the directory the deploy runs in, not from
+  the `fly.toml` directory as the Fly docs say. A path that does not resolve
+  fails the deploy before any machine changes.
 - **Take a fresh private database backup.** Migrations 028 and 029 changed the
   schema after the last recovery archive, and Supabase Free has no automatic
   backups.
