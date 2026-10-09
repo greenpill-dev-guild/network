@@ -6,6 +6,7 @@ primary_region = "iad"
 
 [env]
   NODE_ENV = "production"
+  NODE_EXTRA_CA_CERTS = "/etc/ssl/certs/greenpill-supabase.crt"
   HOST = "0.0.0.0"
   PORT = "8055"
   PUBLIC_URL = "https://admin.greenpill.network"
@@ -50,7 +51,8 @@ primary_region = "iad"
   force_https = true
   auto_stop_machines = "stop"
   auto_start_machines = true
-  min_machines_running = 1
+  # Wake on editor visits and public asset requests; keep no idle admin VM.
+  min_machines_running = 0
   processes = ["app"]
 
 [[http_service.checks]]
@@ -64,3 +66,7 @@ primary_region = "iad"
   cpu_kind = "shared"
   cpus = 1
   memory = "1gb"
+
+[[files]]
+  guest_path = "/etc/ssl/certs/greenpill-supabase.crt"
+  local_path = "../../config/certificates/supabase-ca.crt"

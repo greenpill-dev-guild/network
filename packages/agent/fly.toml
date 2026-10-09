@@ -11,6 +11,7 @@ primary_region = 'iad'
 
 [env]
   NODE_ENV = 'production'
+  NODE_EXTRA_CA_CERTS = '/etc/ssl/certs/greenpill-supabase.crt'
   PORT = '8080'
   DIRECTUS_PUBLIC_URL = 'https://admin.greenpill.network'
   MAP_NODE_MODERATION_DIRECTUS_URL = 'https://admin.greenpill.network'
@@ -25,6 +26,12 @@ primary_region = 'iad'
   CONTENT_DISPATCH_GITHUB_REPO = 'greenpill-dev-guild/network'
   # Content review notifications also need the CONTENT_REVIEW_RECIPIENTS Fly
   # secret (comma-separated emails); deliveries are skipped without it.
+  # Website publish health, enabled 2026-10-09 after migration 028 and a live
+  # stale-alert and recovery proof. It reuses the dispatch token, which needs
+  # Actions read. The threshold is 30 minutes; see packages/agent/README.md.
+  CONTENT_PUBLISH_HEALTH_ENABLED = 'true'
+  CONTENT_PUBLISH_HEALTH_METADATA_URL = 'https://greenpill.network/build-metadata.json'
+  CONTENT_PUBLISH_HEALTH_STALE_THRESHOLD_MS = '1800000'
 
 [http_service]
   internal_port = 8080
@@ -46,3 +53,7 @@ primary_region = 'iad'
   cpu_kind = 'shared'
   cpus = 1
   memory_mb = 1024
+
+[[files]]
+  guest_path = '/etc/ssl/certs/greenpill-supabase.crt'
+  local_path = '../../config/certificates/supabase-ca.crt'
