@@ -321,6 +321,18 @@ try {
   // With no sourced image there is nothing in media to describe.
   assert.deepEqual(row.media, {});
 
+  // A sourced image kept only as media.ogImage is still the chapter's image:
+  // its description is recorded with it, and an upload replaces it.
+  await insertChapter('social-only', { media: { ogImage: '/images/chapters/social-only.jpg', imageAlt: 'Social-only alt.', reviewStatus: 'approved' } });
+  row = await chapterRow('social-only');
+  assert.equal(row.image_alt, 'Social-only alt.');
+  await editChapter('social-only', { image_credit: 'Social-only credit' });
+  assert.equal((await chapterRow('social-only')).media.imageCredit, 'Social-only credit');
+  await editChapter('social-only', { image_file: await uploadFile() });
+  row = await chapterRow('social-only');
+  assert.deepEqual([row.image_alt, row.image_credit], [null, null]);
+  assert.equal(Object.hasOwn((await publicChapter('social-only'))?.media ?? {}, 'imageAlt'), false);
+
   // --- Accepted update requests ---------------------------------------------
   // Without an image the request describes the image the chapter shows.
   await acceptRequest(slug, { alt: 'Reviewed alt.' });

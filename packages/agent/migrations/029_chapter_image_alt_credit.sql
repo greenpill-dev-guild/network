@@ -59,6 +59,9 @@ alter table content.chapters enable trigger chapters_touch_updated_at;
 --
 -- "Arrived with it" means the value changed in the same write. A write that
 -- repeats the old text is indistinguishable from one that did not mention it.
+--
+-- A sourced image is any of image, media.image, or media.ogImage: the same
+-- three the public projection shows as the chapter image.
 create or replace function content.keep_chapter_image_description()
 returns trigger
 language plpgsql
@@ -87,7 +90,8 @@ begin
     when jsonb_typeof(new_media->'imageCredit') = 'string' then nullif(btrim(new_media->>'imageCredit'), '')
   end;
   has_sourced_image := btrim(coalesce(new.image, '')) <> ''
-    or btrim(coalesce(new_media->>'image', '')) <> '';
+    or btrim(coalesce(new_media->>'image', '')) <> ''
+    or btrim(coalesce(new_media->>'ogImage', '')) <> '';
 
   if tg_op = 'INSERT' then
     if new.image_file is null then
@@ -114,7 +118,8 @@ begin
     if new.image_file is not null then
       had_image := old.image_file is not null
         or btrim(coalesce(old.image, '')) <> ''
-        or btrim(coalesce(old_media->>'image', '')) <> '';
+        or btrim(coalesce(old_media->>'image', '')) <> ''
+        or btrim(coalesce(old_media->>'ogImage', '')) <> '';
       if had_image and new.image_file is distinct from old.image_file then
         if new.image_alt is not distinct from old.image_alt then
           new.image_alt := null;
