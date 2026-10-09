@@ -55,6 +55,11 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
         failure alerts through the existing durable Resend queue, including a
         recovery notification. The production fine-grained token must include
         Actions read in addition to Contents read/write before activation.
+  - [x] Recover a hung deploy without an operator. A watcher workflow started
+        by every Pages run cancels a run that holds the `pages` concurrency
+        group for more than 30 minutes and makes sure a run follows it. It
+        needs no agent setting and takes effect once it is on `main`. The
+        2026-10-06 hang froze the site for 88 hours before anyone saw it.
 - [x] Content-review notifications: `pending_review` update requests and
       initiative submissions alert publishers; accept/decline alerts the
       submitting steward. Reuse the durable notification queue + templates.

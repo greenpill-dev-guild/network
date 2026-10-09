@@ -1,0 +1,59 @@
+name: Recover Hung Pages Deploys
+
+# A Pages run can hang after a successful build: the deploy job sits in
+# `waiting` on the `github-pages` environment indefinitely, although that
+# environment has nothing to wait for. It froze the site for days on 2026-09-30
+# and again on 2026-10-06. The hung run keeps the `pages` concurrency group,
+# every later run is cancelled behind it, and no run ever fails. GitHub applies
+# no timeout to that state, so this workflow is the timeout.
+#
+# Every Pages run starts one watcher. It cancels a run that has held the
+# pipeline for more than 30 minutes, then lets the queued run through or starts
+# a fresh one. It fails only when it cannot bring the pipeline back to idle,
+# which needs a person. The rules live in scripts/pages-deploy-recovery.ts.
+
+on:
+  workflow_run:
+    # Must match `name:` in github-pages.yml, or the watcher never starts.
+    # scripts/pages-deploy-recovery.test.ts checks that it does.
+    workflows: ["Deploy Website to GitHub Pages"]
+    types: [requested]
+  workflow_dispatch:
+
+permissions:
+  actions: write # cancel a hung run and start the run that replaces it
+  contents: read
+
+concurrency:
+  # Deliberately not `pages`: a watcher in that group would queue behind the
+  # run it exists to cancel. The newest watcher sees every unfinished run, so
+  # it replaces any older one.
+  group: pages-deploy-recovery
+  cancel-in-progress: true
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    # The script gives up after 50 minutes; this is the backstop behind it.
+    timeout-minutes: 60
+    steps:
+      - name: Checkout scripts
+        uses: actions/checkout@v6
+        with:
+          # The watcher needs one self-contained script, not the site's assets.
+          sparse-checkout: scripts
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.10"
+
+      - name: Watch the Pages pipeline
+        run: bun --no-env-file scripts/pages-deploy-recovery.ts
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PAGES_WORKFLOW_FILE: github-pages.yml
+          PAGES_DEPLOY_BRANCH: ${{ github.event.repository.default_branch }}
+          # The run this watcher was started for. Empty on a manual start.
+          PAGES_RUN_ID: ${{ github.event.workflow_run.id }}

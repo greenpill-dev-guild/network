@@ -125,6 +125,13 @@
       "lane": "platform",
       "status": "in_progress",
       "note": "Reviewed the PRD-808 watchdog before merge: corrected the stale rule to measure how long a content change has waited, kept cancelled Pages runs as failures under test, bounded the two requests, logged check-failure reasons, and cleared the four studio-setup type errors so the root typecheck passes. The operator dashboard and pt-BR/es labels moved out of the UI lane to PRD-1119 and PRD-1120. Production activation remains a separate authorized step."
+    },
+    {
+      "timestamp": "2026-10-09T19:03:35.000Z",
+      "actor": "claude",
+      "lane": "platform",
+      "status": "in_progress",
+      "note": "Added hung-deploy recovery after a second Pages hang froze the site from 2026-10-06 to 2026-10-09: a watcher workflow cancels a run that holds the pages concurrency group past 30 minutes and makes sure a run follows it. The PRD-808 alerts were still not activated in production at that point (migration 028 unapplied, no publish-health settings on the agent), so nothing reported the freeze."
     }
   ]
 }
