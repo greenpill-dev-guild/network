@@ -18,6 +18,10 @@ credit) is implemented; its production release is tracked in `plan.todo.md`.
   them: the agent lost its database connection for five minutes. A setting
   made with `fly machine update` lasts only until the next deploy, so put
   durable settings in `fly.toml`.
+- **A merge to `main` is a production deploy of the agent.** The Fly.io GitHub
+  app deploys `network-agent` on every push, with no workflow file. The agent
+  deploys blue-green (`[deploy]` in `packages/agent/fly.toml`), so a build or
+  config that fails `/ready` never replaces the running machine.
 - **Run the documented deploy commands from the repo root.** flyctl reads a
   `[[files]]` `local_path` from the directory the deploy runs in, not from
   the `fly.toml` directory as the Fly docs say. A path that does not resolve

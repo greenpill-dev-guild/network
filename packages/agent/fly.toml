@@ -9,6 +9,13 @@ primary_region = 'iad'
 [build]
   dockerfile = 'Dockerfile'
 
+# Every push to main deploys this app through the Fly.io GitHub app, so the
+# strategy is set here and not on a command line. Blue-green boots the new
+# machine next to the old one and moves traffic only after /ready passes, so a
+# broken build or config cannot replace the healthy machine.
+[deploy]
+  strategy = 'bluegreen'
+
 [env]
   NODE_ENV = 'production'
   NODE_EXTRA_CA_CERTS = '/etc/ssl/certs/greenpill-supabase.crt'

@@ -3318,3 +3318,12 @@ test('Fly configs mount the database certificate from the directory each app dep
     assert.match(toml, new RegExp(`NODE_EXTRA_CA_CERTS\\s*=\\s*['"]${guestPath}['"]`), `${config} NODE_EXTRA_CA_CERTS`);
   }
 });
+
+// A push to main deploys the agent with no command line to carry a strategy.
+// Blue-green needs a health check, and /ready is the one that needs the database.
+test('the agent deploys blue-green behind its readiness check', async () => {
+  const toml = await readFile(join(rootDir, 'packages/agent/fly.toml'), 'utf8');
+  assert.match(toml, /\[deploy\]\s*\n\s*strategy\s*=\s*['"]bluegreen['"]/);
+  assert.match(toml, /\[\[http_service\.checks\]\][^[]*path\s*=\s*['"]\/ready['"]/);
+  assert.doesNotMatch(toml, /\[\[?mounts\]?\]/, 'blue-green cannot be used with volumes');
+});

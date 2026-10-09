@@ -294,6 +294,17 @@ and socket.
 
 Run Fly commands from the repo root so the workspace lockfile and package manifests are in Docker context.
 
+Every push to `main` deploys the agent on its own, through the Fly.io GitHub
+app. There is no workflow file for it. Treat a merge as a production deploy of
+the agent, whatever the change touches. The agent deploys blue-green
+(`[deploy]` in `packages/agent/fly.toml`), so a build or config that fails
+`/ready` never replaces the running machine.
+
+Keep durable settings in `fly.toml`. A setting made with
+`fly machine update` lasts only until the next deploy. flyctl reads a
+`[[files]]` `local_path` from the directory the deploy runs in, which is why
+the commands below must run from the repo root.
+
 ```sh
 fly config validate --config packages/agent/fly.toml
 fly deploy --config packages/agent/fly.toml
