@@ -56,19 +56,46 @@ test('runs that do not hold the pipeline, or cannot be dated, are never hung', (
   assert.deepEqual(findHungRuns([{ ...HUNG_RUN, executingSince: 'not a date' }], longAfter), []);
 });
 
-test('a run began executing when its first job started', () => {
+test('a run began executing when the first job of its current attempt started', () => {
+  // Run 37955711395: created at 15:58:43, queued behind the hang until 18:35.
   assert.equal(
-    earliestJobStart([
-      { started_at: '2026-10-09T18:37:22Z' },
-      { started_at: '2026-10-09T18:35:49Z' },
-      { started_at: null },
-      { started_at: 'not a date' },
-      {},
-    ]),
+    earliestJobStart(
+      [
+        { started_at: '2026-10-09T18:37:22Z' },
+        { started_at: '2026-10-09T18:35:49Z' },
+        { started_at: null },
+        { started_at: 'not a date' },
+        {},
+      ],
+      '2026-10-09T15:58:43Z'
+    ),
     '2026-10-09T18:35:49.000Z'
   );
-  assert.equal(earliestJobStart([]), null);
-  assert.equal(earliestJobStart([{ started_at: null }]), null);
+  assert.equal(earliestJobStart([], '2026-10-09T15:58:43Z'), null);
+  assert.equal(earliestJobStart([{ started_at: null }], '2026-10-09T15:58:43Z'), null);
+});
+
+test('a re-run is not dated by a job it kept from the earlier attempt', () => {
+  // Re-running only the failed deploy of the hung run keeps its build job,
+  // which started three days earlier.
+  const rerunStartedAt = '2026-10-09T19:00:00Z';
+  const jobs = [
+    { name: 'build', started_at: '2026-10-06T09:56:33Z' },
+    { name: 'deploy', started_at: '2026-10-09T19:00:04Z' },
+  ];
+
+  const executingSince = earliestJobStart(jobs, rerunStartedAt);
+
+  assert.equal(executingSince, '2026-10-09T19:00:04.000Z');
+  const rerun = { ...HUNG_RUN, status: 'in_progress', executingSince };
+  assert.deepEqual(findHungRuns([rerun], Date.parse('2026-10-09T19:01:00Z')), []);
+  assert.deepEqual(findHungRuns([rerun], Date.parse('2026-10-09T19:31:00Z')), [rerun]);
+
+  // A job from this attempt may start in the same second the attempt did.
+  assert.equal(earliestJobStart([{ started_at: rerunStartedAt }], rerunStartedAt), '2026-10-09T19:00:00.000Z');
+  // Before a job of this attempt starts, or without the attempt's start, the run cannot be dated.
+  assert.equal(earliestJobStart([jobs[0]], rerunStartedAt), null);
+  assert.equal(earliestJobStart(jobs, ''), null);
 });
 
 // --- Watching -----------------------------------------------------------------
@@ -369,6 +396,45 @@ test('unfinished runs are dated by their first job, not by when the run was crea
   assert.ok(requests.every((request) => request.authorization === 'Bearer test-token'));
 });
 
+test('a re-run read from the API is dated by its own attempt', async () => {
+  const { pipeline } = fakeGitHub((_method, path) => {
+    if (path === runsPath('in_progress')) {
+      return {
+        body: {
+          workflow_runs: [
+            {
+              id: HUNG_RUN.id,
+              status: 'in_progress',
+              run_attempt: 2,
+              created_at: '2026-10-06T09:56:31Z',
+              run_started_at: '2026-10-09T19:00:00Z',
+              html_url: HUNG_RUN.url,
+            },
+          ],
+        },
+      };
+    }
+    if (path === `/actions/runs/${HUNG_RUN.id}/jobs?per_page=100`) {
+      return {
+        body: {
+          jobs: [
+            { name: 'build', started_at: '2026-10-06T09:56:33Z' },
+            { name: 'deploy', started_at: '2026-10-09T19:00:04Z' },
+          ],
+        },
+      };
+    }
+    return { body: { workflow_runs: [] } };
+  });
+
+  const runs = await pipeline.listUnfinishedRuns();
+
+  assert.deepEqual(runs, [
+    { id: HUNG_RUN.id, status: 'in_progress', executingSince: '2026-10-09T19:00:04.000Z', url: HUNG_RUN.url },
+  ]);
+  assert.deepEqual(findHungRuns(runs, Date.parse('2026-10-09T19:01:00Z')), []);
+});
+
 test('the run a watcher was started for stays unfinished until it completes', async () => {
   // The run listing can lag behind the trigger. Without this the watcher would
   // see an empty pipeline and leave before its own run had appeared.
@@ -471,6 +537,11 @@ test('the recovery workflow is wired to the Pages workflow it watches', () => {
   // silently stop every watcher from starting.
   assert.ok(pagesName, 'github-pages.yml has a name');
   assert.ok(recovery.includes(`workflows: ["${pagesName}"]`), `recovery workflow watches "${pagesName}"`);
+
+  // `requested` covers a run queued behind a hung one. GitHub does not send it
+  // for a re-run, which only `in_progress` reaches.
+  const events = /^\s+types:\s*\[(.+)\]\s*$/m.exec(recovery)?.[1].split(',').map((event) => event.trim());
+  assert.deepEqual(events, ['requested', 'in_progress']);
 
   assert.equal(watchedFile, 'github-pages.yml');
   assert.ok(existsSync(new URL(watchedFile!, workflows)));

@@ -12,12 +12,20 @@ name: Recover Hung Pages Deploys
 # a fresh one. It fails only when it cannot bring the pipeline back to idle,
 # which needs a person. The rules live in scripts/pages-deploy-recovery.ts.
 
+# `workflow_run` runs with write access on the default branch, so this workflow
+# must never check out or execute anything from the run that triggered it. It
+# checks out the default branch only, and takes a single value from the event,
+# the numeric run id, through the environment.
+
 on:
   workflow_run:
     # Must match `name:` in github-pages.yml, or the watcher never starts.
     # scripts/pages-deploy-recovery.test.ts checks that it does.
     workflows: ["Deploy Website to GitHub Pages"]
-    types: [requested]
+    # `requested` starts a watcher when a run is created, including one that
+    # queues behind a hung run. GitHub does not send it for a re-run, so
+    # `in_progress` covers a re-run when it starts executing.
+    types: [requested, in_progress]
   workflow_dispatch:
 
 permissions:
@@ -26,10 +34,11 @@ permissions:
 
 concurrency:
   # Deliberately not `pages`: a watcher in that group would queue behind the
-  # run it exists to cancel. The newest watcher sees every unfinished run, so
-  # it replaces any older one.
+  # run it exists to cancel. One watcher at a time is enough, because each poll
+  # reads every unfinished run. A run usually sends both events, so its second
+  # watcher queues here and takes over when the first one ends.
   group: pages-deploy-recovery
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   watch:

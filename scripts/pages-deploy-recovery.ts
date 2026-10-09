@@ -13,8 +13,8 @@ import { pathToFileURL } from 'node:url';
 //
 // GitHub has no timeout for that state: `timeout-minutes` only counts a job
 // that is running. This watcher is that timeout. It is started for every Pages
-// run by .github/workflows/pages-deploy-recovery.yml, cancels a run that has
-// held the pipeline too long, and makes sure a run follows it.
+// run and re-run by .github/workflows/pages-deploy-recovery.yml, cancels a run
+// that has held the pipeline too long, and makes sure a run follows it.
 //
 // Keep this file self-contained. The workflow checks out `scripts/` only.
 //
@@ -44,9 +44,10 @@ export interface PagesRun {
   id: number;
   status: string;
   /**
-   * When the run's first job started, or null before any job has. The run's own
-   * `run_started_at` cannot be used: it includes the time spent queued behind
-   * another run, so the run a recovery releases would itself look hung.
+   * When the first job of the run's current attempt started, or null before any
+   * has. The run's own `run_started_at` cannot be used: it includes the time
+   * spent queued behind another run, so the run a recovery releases would
+   * itself look hung.
    */
   executingSince: string | null;
   url: string;
@@ -102,12 +103,26 @@ export function findHungRuns(runs: PagesRun[], nowMs: number, hungAfterMs: numbe
   });
 }
 
-/** The earliest start among a run's jobs, which is when the run began executing. */
-export function earliestJobStart(jobs: Array<{ started_at?: string | null }>): string | null {
+/**
+ * When the run's current attempt began executing: the earliest start among the
+ * jobs that started in it. `attemptStartedAt` is the run's `run_started_at`,
+ * which resets on a re-run. A re-run of only the failed jobs can still carry
+ * the jobs it kept from the earlier attempt, with their original start times,
+ * and dating the re-run by one of those would cancel it on arrival.
+ */
+export function earliestJobStart(
+  jobs: Array<{ started_at?: string | null }>,
+  attemptStartedAt: string
+): string | null {
+  const attemptStartedAtMs = Date.parse(attemptStartedAt);
+  // Without the attempt's start there is no telling which jobs belong to it.
+  if (!Number.isFinite(attemptStartedAtMs)) return null;
   let earliestMs = Number.POSITIVE_INFINITY;
   for (const job of jobs) {
     const startedAtMs = Date.parse(job?.started_at ?? '');
-    if (Number.isFinite(startedAtMs) && startedAtMs < earliestMs) earliestMs = startedAtMs;
+    if (Number.isFinite(startedAtMs) && startedAtMs >= attemptStartedAtMs && startedAtMs < earliestMs) {
+      earliestMs = startedAtMs;
+    }
   }
   return Number.isFinite(earliestMs) ? new Date(earliestMs).toISOString() : null;
 }
@@ -246,16 +261,11 @@ export function createGitHubPagesPipeline(config: GitHubPagesPipelineConfig): Pa
     await request('POST', `/actions/runs/${run.id}/${action}`, { alsoAccept: [409] });
   };
 
-  const toPagesRun = (run: { id: number; status?: unknown; html_url?: unknown }): PagesRun => ({
-    id: run.id,
-    status: String(run.status ?? ''),
-    executingSince: null,
-    url: String(run.html_url ?? ''),
-  });
+  type ApiRun = { id: number; status?: unknown; html_url?: unknown; run_started_at?: unknown; created_at?: unknown };
 
   return {
     async listUnfinishedRuns() {
-      const runs = new Map<number, PagesRun>();
+      const unfinished = new Map<number, ApiRun>();
       // The API filters on one status per request. Asking for each unfinished
       // status finds a hung run however many cancelled runs have piled up since.
       for (const status of UNFINISHED_STATUSES) {
@@ -265,20 +275,28 @@ export function createGitHubPagesPipeline(config: GitHubPagesPipelineConfig): Pa
         }
         for (const run of page.workflow_runs) {
           if (typeof run?.id !== 'number' || run.status === 'completed') continue;
-          runs.set(run.id, toPagesRun(run));
+          unfinished.set(run.id, run);
         }
       }
-      if (config.watchedRunId !== undefined && !runs.has(config.watchedRunId)) {
+      if (config.watchedRunId !== undefined && !unfinished.has(config.watchedRunId)) {
         const run = await request('GET', `/actions/runs/${config.watchedRunId}`);
         if (typeof run?.id !== 'number') throw new Error(`Unexpected response reading Pages run ${config.watchedRunId}`);
-        if (run.status !== 'completed') runs.set(run.id, toPagesRun(run));
+        if (run.status !== 'completed') unfinished.set(run.id, run);
       }
-      for (const run of runs.values()) {
-        if (!HOLDING_STATUSES.has(run.status)) continue;
-        const page = await request('GET', `/actions/runs/${run.id}/jobs?per_page=100`);
-        run.executingSince = earliestJobStart(Array.isArray(page?.jobs) ? page.jobs : []);
+      const runs: PagesRun[] = [];
+      for (const run of unfinished.values()) {
+        const status = String(run.status ?? '');
+        let executingSince: string | null = null;
+        if (HOLDING_STATUSES.has(status)) {
+          const page = await request('GET', `/actions/runs/${run.id}/jobs?per_page=100`);
+          executingSince = earliestJobStart(
+            Array.isArray(page?.jobs) ? page.jobs : [],
+            String(run.run_started_at ?? run.created_at ?? '')
+          );
+        }
+        runs.push({ id: run.id, status, executingSince, url: String(run.html_url ?? '') });
       }
-      return [...runs.values()];
+      return runs;
     },
     cancelRun: cancelWith('cancel'),
     forceCancelRun: cancelWith('force-cancel'),
