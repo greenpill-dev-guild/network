@@ -167,6 +167,12 @@ async function deleteIfPresent(client, path: string) {
   });
 }
 
+const RAW_FETCH_TIMEOUT_MS = 30_000;
+
+function fetchWithDeadline(url: string, init: RequestInit = {}) {
+  return fetch(url, { ...init, signal: AbortSignal.timeout(RAW_FETCH_TIMEOUT_MS) });
+}
+
 const ONE_PIXEL_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
   'base64'
@@ -178,7 +184,7 @@ async function uploadChapterImage(url: string, token: string, fileName: string) 
   body.append('title', 'Directus steward upload smoke');
   body.append('file', new File([ONE_PIXEL_PNG], fileName, { type: 'image/png' }));
 
-  const response = await fetch(`${url}/files`, {
+  const response = await fetchWithDeadline(`${url}/files`, {
     method: 'POST',
     headers: { authorization: `Bearer ${token}` },
     body,
@@ -194,7 +200,32 @@ async function uploadChapterImage(url: string, token: string, fileName: string) 
 }
 
 export async function runDirectusStewardSmoke(options: SmokeOptions) {
-  const admin = await createDirectusClient();
+  // Ctrl-C stops the run at its next step, never in the middle of one. The
+  // request in flight finishes and records what it created; only then does the
+  // cleanup put the chapter back, so a late write cannot land after the restore.
+  let interruptedBy: NodeJS.Signals | null = null;
+  const onInterrupt = (signal: NodeJS.Signals) => {
+    if (interruptedBy) return;
+    interruptedBy = signal;
+    console.error('Interrupted. Finishing the current request, then restoring the chapter and removing temporary records.');
+  };
+  const stopIfInterrupted = () => {
+    if (interruptedBy) throw new Error(`Directus steward smoke interrupted by ${interruptedBy}.`);
+  };
+  const asStep = <Client extends { request: (...args: any[]) => Promise<any> }>(client: Client): Client => ({
+    ...client,
+    request: (...args: any[]) => {
+      stopIfInterrupted();
+      return client.request(...args);
+    },
+  });
+  const fetchStep = (url: string) => {
+    stopIfInterrupted();
+    return fetchWithDeadline(url);
+  };
+  // The cleanup must keep working after an interrupt, so it uses this client directly.
+  const cleanupAdmin = await createDirectusClient();
+  const admin = asStep(cleanupAdmin);
   const roleId = await getRoleId(admin, 'Greenpill Steward Editor');
   const id = randomUUID().slice(0, 8);
   const email = `directus-smoke-${id}@${options.emailDomain}`;
@@ -205,7 +236,40 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
   let unassignedUpdateRequestId: string | null = null;
   let uploadedFileId: string | null = null;
   let originalImageFile: string | null = null;
+  let originalImageAlt: string | null = null;
+  let originalImageCredit: string | null = null;
   let chapterImageChanged = false;
+  const chapterImageFields = async () => {
+    const chapter = await cleanupAdmin.request(
+      `/items/chapters/${encodePathSegment(options.chapter)}?fields=image_file,image_alt,image_credit`
+    );
+    return {
+      file: chapter?.data?.image_file ?? null,
+      alt: chapter?.data?.image_alt ?? null,
+      credit: chapter?.data?.image_credit ?? null,
+    };
+  };
+  const restoreChapterImage = async () => {
+    await cleanupAdmin.request(`/items/chapters/${encodePathSegment(options.chapter)}`, {
+      method: 'PATCH',
+      body: {
+        image_file: originalImageFile,
+        image_alt: originalImageAlt,
+        image_credit: originalImageCredit,
+      },
+    });
+    const restored = await chapterImageFields();
+    if (
+      restored.file !== originalImageFile ||
+      restored.alt !== originalImageAlt ||
+      restored.credit !== originalImageCredit
+    ) {
+      throw new Error(
+        `Chapter ${options.chapter} did not return to its original image, alt text, and credit. Check it in Directus.`
+      );
+    }
+    chapterImageChanged = false;
+  };
   const cleanup = {
     userId: null,
     chapterAssignmentId: null,
@@ -214,6 +278,46 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
     projectCreated: false,
     updateRequestCreated: false,
   };
+
+  const restoreAndRemoveTemporaryRecords = async () => {
+    // A failed restore must not stop the temporary user, file, and rows from
+    // being removed; it is reported once they are gone.
+    let restoreError: unknown = null;
+    if (chapterImageChanged) {
+      try {
+        await restoreChapterImage();
+      } catch (error) {
+        restoreError = error;
+      }
+    }
+    if (!options.keep) {
+      if (uploadedFileId) {
+        await deleteIfPresent(cleanupAdmin, `/files/${encodePathSegment(uploadedFileId)}`);
+      }
+      if (unassignedUpdateRequestId) {
+        await deleteIfPresent(cleanupAdmin, `/items/chapter_update_requests/${encodePathSegment(unassignedUpdateRequestId)}`);
+      }
+      if (updateRequestId) {
+        await deleteIfPresent(cleanupAdmin, `/items/chapter_update_requests/${encodePathSegment(updateRequestId)}`);
+      }
+      await deleteIfPresent(cleanupAdmin, `/items/chapter_initiatives/${encodePathSegment(initiativeSlug)}`);
+      await deleteIfPresent(cleanupAdmin, `/items/projects/${encodePathSegment(projectSlug)}`);
+      if (cleanup.chapterAssignmentId) {
+        await deleteIfPresent(cleanupAdmin, `/items/chapter_editor_assignments/${encodePathSegment(cleanup.chapterAssignmentId)}`);
+      }
+      if (cleanup.guildAssignmentId) {
+        await deleteIfPresent(cleanupAdmin, `/items/guild_editor_assignments/${encodePathSegment(cleanup.guildAssignmentId)}`);
+      }
+      if (cleanup.userId) {
+        await deleteIfPresent(cleanupAdmin, `/users/${encodePathSegment(cleanup.userId)}`);
+      }
+    }
+    if (restoreError) throw restoreError;
+  };
+  // Stays installed until the cleanup is done, so a second Ctrl-C cannot cut
+  // the restore short.
+  process.on('SIGINT', onInterrupt);
+  process.on('SIGTERM', onInterrupt);
 
   await assertContentExists(admin, 'chapters', options.chapter);
   await assertContentExists(admin, 'chapters', options.unassignedChapter);
@@ -260,7 +364,7 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
     // the entire grant - the role-level "Greenpill Assigned Editor" policy
     // scopes every steward dynamically via $CURRENT_USER.
 
-    const steward = await createDirectusClient({ url: admin.url, token });
+    const steward = asStep(await createDirectusClient({ url: admin.url, token }));
     await steward.request('/users/me?fields=id,email');
 
     const assignmentRead = await steward.request('/items/chapter_editor_assignments?fields=chapter_slug&limit=-1');
@@ -282,31 +386,41 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
     // including published. Re-writing the current summary proves the write is
     // permitted without changing live content.
     const assignedChapter = await admin.request(
-      `/items/chapters/${encodePathSegment(options.chapter)}?fields=slug,summary,image_file,publication_status`
+      `/items/chapters/${encodePathSegment(options.chapter)}?fields=slug,summary,image_file,image_alt,image_credit,publication_status`
     );
     const assignedSummary = assignedChapter?.data?.summary ?? null;
     originalImageFile = assignedChapter?.data?.image_file ?? null;
+    originalImageAlt = assignedChapter?.data?.image_alt ?? null;
+    originalImageCredit = assignedChapter?.data?.image_credit ?? null;
     await steward.request(`/items/chapters/${encodePathSegment(options.chapter)}`, {
       method: 'PATCH',
       body: { summary: assignedSummary },
     });
 
+    stopIfInterrupted();
     uploadedFileId = await uploadChapterImage(
       admin.url,
       token,
       `directus-steward-smoke-${id}.png`
     );
-    const privateUnattachedAsset = await fetch(`${admin.url}/assets/${encodePathSegment(uploadedFileId)}`);
+    const privateUnattachedAsset = await fetchStep(`${admin.url}/assets/${encodePathSegment(uploadedFileId)}`);
     if (![403, 404].includes(privateUnattachedAsset.status)) {
       throw new Error(`unattached chapter image was unexpectedly public with ${privateUnattachedAsset.status}`);
     }
+    // A steward attaches the upload together with its alt text and credit.
+    const smokeImageAlt = `Directus steward smoke image ${id}`;
+    const smokeImageCredit = 'Directus steward smoke';
     chapterImageChanged = true;
     await steward.request(`/items/chapters/${encodePathSegment(options.chapter)}`, {
       method: 'PATCH',
-      body: { image_file: uploadedFileId },
+      body: {
+        image_file: uploadedFileId,
+        image_alt: smokeImageAlt,
+        image_credit: smokeImageCredit,
+      },
     });
 
-    const publicAsset = await fetch(`${admin.url}/assets/${encodePathSegment(uploadedFileId)}`);
+    const publicAsset = await fetchStep(`${admin.url}/assets/${encodePathSegment(uploadedFileId)}`);
     if (!publicAsset.ok || !String(publicAsset.headers.get('content-type')).startsWith('image/png')) {
       throw new Error(
         `public chapter image asset failed with ${publicAsset.status} and ${publicAsset.headers.get('content-type')}`
@@ -314,7 +428,7 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
     }
     await publicAsset.arrayBuffer();
 
-    const snapshotResponse = await fetch(`${options.agentUrl}/content/public-snapshot`);
+    const snapshotResponse = await fetchStep(`${options.agentUrl}/content/public-snapshot`);
     if (!snapshotResponse.ok) {
       throw new Error(`agent chapter image snapshot failed with ${snapshotResponse.status}`);
     }
@@ -327,6 +441,32 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
     if (snapshotImagePath !== expectedImagePath || Object.hasOwn(snapshotChapter ?? {}, 'imageFileId')) {
       throw new Error('agent snapshot did not project the uploaded chapter image as a public Directus asset URL.');
     }
+    if (
+      snapshotChapter?.media?.imageAlt !== smokeImageAlt ||
+      snapshotChapter?.media?.imageCredit !== smokeImageCredit ||
+      snapshotChapter?.media?.imageSourceUrl
+    ) {
+      throw new Error('agent snapshot did not pair the uploaded chapter image with its own alt text and credit.');
+    }
+
+    // Taking the upload off without sending any text must not leave its
+    // description behind. A chapter that showed a sourced image gets that
+    // image's own description back; one that had another upload shows that
+    // file with nothing describing it yet.
+    await steward.request(`/items/chapters/${encodePathSegment(options.chapter)}`, {
+      method: 'PATCH',
+      body: { image_file: originalImageFile },
+    });
+    const reverted = await chapterImageFields();
+    const expectedAlt = originalImageFile ? null : originalImageAlt;
+    const expectedCredit = originalImageFile ? null : originalImageCredit;
+    if (reverted.alt !== expectedAlt || reverted.credit !== expectedCredit) {
+      throw new Error('removing the uploaded chapter image left the wrong alt text or credit behind.');
+    }
+
+    // Put the real image and its metadata back before the slower checks below:
+    // a publish-triggered site build must not capture the smoke image.
+    await restoreChapterImage();
 
     await expectForbidden('unassigned chapter update', () => steward.request(
       `/items/chapters/${encodePathSegment(options.unassignedChapter)}`,
@@ -523,35 +663,13 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
       agentUrl: options.agentUrl,
     };
   } finally {
-    if (chapterImageChanged) {
-      await admin.request(`/items/chapters/${encodePathSegment(options.chapter)}`, {
-        method: 'PATCH',
-        body: { image_file: originalImageFile },
-      });
-      chapterImageChanged = false;
+    try {
+      await restoreAndRemoveTemporaryRecords();
+    } finally {
+      process.off('SIGINT', onInterrupt);
+      process.off('SIGTERM', onInterrupt);
     }
-    if (!options.keep) {
-      if (uploadedFileId) {
-        await deleteIfPresent(admin, `/files/${encodePathSegment(uploadedFileId)}`);
-      }
-      if (unassignedUpdateRequestId) {
-        await deleteIfPresent(admin, `/items/chapter_update_requests/${encodePathSegment(unassignedUpdateRequestId)}`);
-      }
-      if (updateRequestId) {
-        await deleteIfPresent(admin, `/items/chapter_update_requests/${encodePathSegment(updateRequestId)}`);
-      }
-      await deleteIfPresent(admin, `/items/chapter_initiatives/${encodePathSegment(initiativeSlug)}`);
-      await deleteIfPresent(admin, `/items/projects/${encodePathSegment(projectSlug)}`);
-      if (cleanup.chapterAssignmentId) {
-        await deleteIfPresent(admin, `/items/chapter_editor_assignments/${encodePathSegment(cleanup.chapterAssignmentId)}`);
-      }
-      if (cleanup.guildAssignmentId) {
-        await deleteIfPresent(admin, `/items/guild_editor_assignments/${encodePathSegment(cleanup.guildAssignmentId)}`);
-      }
-      if (cleanup.userId) {
-        await deleteIfPresent(admin, `/users/${encodePathSegment(cleanup.userId)}`);
-      }
-    }
+    if (interruptedBy) process.exit(interruptedBy === 'SIGINT' ? 130 : 143);
   }
 }
 

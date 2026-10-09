@@ -75,6 +75,8 @@ const OPERATIONAL_COLLECTION_FIELDS = Object.freeze({
     'intro_quote_attribution',
     'image',
     'image_file',
+    'image_alt',
+    'image_credit',
     'founded',
     'latitude',
     'longitude',

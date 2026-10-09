@@ -296,6 +296,9 @@ test('assigned editor policy scopes every collection with dynamic $CURRENT_USER 
   });
   assert.equal(chapterUpdate?.fields.includes('slug'), false);
   assert.equal(chapterUpdate?.fields.includes('image_file'), true);
+  // Alt text and credit are edited next to the upload, not in the media JSON.
+  assert.equal(chapterUpdate?.fields.includes('image_alt'), true);
+  assert.equal(chapterUpdate?.fields.includes('image_credit'), true);
   assert.deepEqual(chapterUpdate?.validation, {
     publication_status: {
       _in: ['draft', 'pending_review', 'published'],

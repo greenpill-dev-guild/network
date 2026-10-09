@@ -174,7 +174,10 @@ const FIELD_GROUPS_BY_COLLECTION: Readonly<Record<string, Readonly<Record<string
     group_links_media: {
       label: 'Links & Media',
       sort: 3,
-      fields: ['primary_link', 'links', 'connect_links', 'image_file', 'image', 'media', 'proof_signals', 'seo'],
+      fields: [
+        'primary_link', 'links', 'connect_links', 'image_file', 'image_alt', 'image_credit', 'image', 'media',
+        'proof_signals', 'seo',
+      ],
     },
     group_impact: {
       label: 'Impact',
@@ -225,6 +228,8 @@ const FIELD_GROUPS_BY_COLLECTION: Readonly<Record<string, Readonly<Record<string
 const FIELD_LABELS_BY_COLLECTION = Object.freeze({
   chapters: {
     image_file: 'Chapter image',
+    image_alt: 'Image alt text',
+    image_credit: 'Image credit',
     image: 'Legacy image URL',
     proof_signals: 'Proof signals',
     impact_sources: 'Impact sources',
@@ -472,6 +477,17 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
     intro_quote: textarea(8, 'Optional quote shown on the chapter detail page.'),
     intro_quote_attribution: input(9, 'Attribution for the intro quote.', 'half'),
     image_file: imageFile(10, 'Upload the primary public chapter image. JPEG, PNG, WebP, GIF, and AVIF are supported.', 'full'),
+    // Sorted within the Links & Media group, directly under the image.
+    image_alt: fieldMeta({
+      sort: 11,
+      note: 'Describe the image for people who cannot see it. Needed while an image is uploaded. Changing the uploaded image empties this, so describe the new one.',
+      options: { softLength: 250, placeholder: 'Stewards planting trees at the spring cleanup' },
+    }),
+    image_credit: fieldMeta({
+      sort: 12,
+      note: 'Photographer or source to credit, if any. Changing the uploaded image empties this. If the same credit applies, enter it again.',
+      options: { placeholder: 'Photo by Ada Example' },
+    }),
     image: fieldMeta({
       sort: 1000,
       note: 'Legacy external image URL retained for existing records. Use the chapter image upload instead.',
@@ -495,7 +511,7 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
     impact_sources: json(24, 'Public impact source configuration.'),
     featured_weight: number(25, 'Higher numbers appear earlier in featured placements.', 'half'),
     proof_signals: json(26, 'Array of public proof signals.'),
-    media: json(27, 'Optional public media metadata.'),
+    media: json(27, 'Details of the reviewed sourced image: its URL, alt text, credit, source link, and review status. Edit alt text and credit in the fields under the chapter image instead.'),
     seo: json(28, 'Optional SEO controls.'),
     ...workflow(),
   },
@@ -808,6 +824,15 @@ const FIELD_META_OVERRIDES = Object.freeze({
     connect_links: LINK_LIST_INTERFACE,
     proof_signals: PROOF_SIGNAL_LIST_INTERFACE,
     primary_link: urlValidation('primary_link'),
+    image_alt: {
+      conditions: [
+        {
+          name: 'Alt text required with an uploaded image',
+          rule: { image_file: { _nnull: true } },
+          required: true,
+        },
+      ],
+    },
   },
   guilds: {
     links: LINK_LIST_INTERFACE,
@@ -869,6 +894,8 @@ const OPTIONAL_FIELD_META = Object.freeze({
       { text: 'Update request decided', value: 'update_request_decided' },
       { text: 'Initiative pending', value: 'initiative_pending' },
       { text: 'Record quarantined', value: 'record_quarantined' },
+      { text: 'Chapter image withheld', value: 'chapter_image_withheld' },
+      { text: 'Publish health', value: 'publish_health' },
     ] }, display: 'labels', readonly: true },
     status: { sort: 2, width: 'half', interface: 'select-dropdown', options: { choices: [
       { text: 'Queued', value: 'queued' },
@@ -882,7 +909,7 @@ const OPTIONAL_FIELD_META = Object.freeze({
     initiative_slug: { sort: 4, width: 'half', readonly: true },
     record_collection: { sort: 5, width: 'half', readonly: true },
     record_slug: { sort: 6, width: 'half', readonly: true },
-    quarantine_reason: { sort: 7, width: 'half', readonly: true, note: 'private_field = a private-looking key or mailto: link; unapproved_media = image without an approved media review.' },
+    quarantine_reason: { sort: 7, width: 'half', readonly: true, note: 'Why a record was dropped from the public site. private_field = a private-looking key or mailto: link.' },
     request_status: { sort: 8, width: 'half', readonly: true },
     attempts: { sort: 9, width: 'half', readonly: true },
     provider_error: { sort: 10, width: 'half', readonly: true },

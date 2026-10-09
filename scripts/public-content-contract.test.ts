@@ -46,6 +46,7 @@ const chapterPagePath = join(rootDir, 'packages/website/src/pages/chapters/[slug
 const chapterInitiativesMigrationPath = join(rootDir, 'packages/agent/migrations/010_chapter_initiatives_operational_content.sql');
 const chapterImageUploadsMigrationPath = join(rootDir, 'packages/agent/migrations/022_chapter_image_uploads.sql');
 const contentPublishHealthMigrationPath = join(rootDir, 'packages/agent/migrations/028_content_publish_health.sql');
+const chapterImageAltCreditMigrationPath = join(rootDir, 'packages/agent/migrations/029_chapter_image_alt_credit.sql');
 const activeChapterEnrichmentSlugs = [
   'brasil',
   'c-te-d-ivoire',
@@ -485,12 +486,6 @@ test('operational content snapshot generation quarantines unsafe records and rej
         privateEmail: 'private@example.com',
       },
       {
-        slug: 'unreviewed-media',
-        name: 'Unreviewed Media',
-        image: 'https://example.com/image.jpg',
-        media: { image: 'https://example.com/image.jpg' },
-      },
-      {
         slug: 'safe-chapter',
         name: 'Safe Chapter',
         summary: 'A public-safe chapter.',
@@ -505,7 +500,6 @@ test('operational content snapshot generation quarantines unsafe records and rej
   assert.deepEqual(snapshot.chapters.map((chapter) => chapter.slug), ['safe-chapter']);
   assert.deepEqual(quarantined, [
     { collection: 'chapters', slug: 'private-node', reason: 'private_field' },
-    { collection: 'chapters', slug: 'unreviewed-media', reason: 'unapproved_media' },
   ]);
 
   assert.equal(containsPrivateOperationalContentField({ ip: '127.0.0.1' }), true);
@@ -593,6 +587,272 @@ test('public operational chapter media requires approved provenance', () => {
       }],
     })
   );
+});
+
+const uploadedChapterImageUrl = 'https://admin.example.org/assets/1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed';
+
+// uploads: chapter slugs that have an uploaded image, as the agent reports them.
+function projectChapters(chapters, uploads = []) {
+  const quarantined = [];
+  const withheld = [];
+  const snapshot = toPublicOperationalContentSnapshot({ chapters }, {
+    onQuarantine: (records) => quarantined.push(...records),
+    onChapterImagesWithheld: (records) => withheld.push(...records),
+    uploadedChapterImageUrls: new Map(uploads.map((slug) => [slug, uploadedChapterImageUrl])),
+  });
+  return { snapshot, quarantined, withheld };
+}
+
+test('a chapter with an unapproved sourced image stays published without the image', () => {
+  const { snapshot, quarantined, withheld } = projectChapters([{
+    slug: 'unreviewed-media',
+    name: 'Unreviewed Media',
+    image: 'https://example.com/image.jpg',
+    imageAlt: 'A description typed before the review finished.',
+    media: {
+      image: 'https://example.com/image.jpg',
+      ogImage: 'https://example.com/image.jpg',
+      imageAlt: 'Sourced alt text.',
+      imageCredit: 'Sourced credit',
+      imageSourceUrl: 'https://example.com/source',
+      reviewStatus: 'pending',
+    },
+    seo: { title: 'Unreviewed Media', ogImage: 'https://example.com/image.jpg' },
+  }]);
+
+  const [chapter] = snapshot.chapters;
+  assert.equal(chapter.slug, 'unreviewed-media');
+  assert.equal(chapter.image, '');
+  assert.deepEqual(chapter.media, {});
+  assert.deepEqual(chapter.seo, { title: 'Unreviewed Media' });
+  assert.equal(JSON.stringify(snapshot).includes('example.com/image.jpg'), false);
+  assert.deepEqual(withheld, [{ slug: 'unreviewed-media', reason: 'unapproved_media' }]);
+  assert.deepEqual(quarantined, []);
+});
+
+test('an uploaded chapter image is published without a media review and keeps the chapter on the site', () => {
+  const { snapshot, quarantined, withheld } = projectChapters([{
+    slug: 'forming-chapter',
+    name: 'Forming Chapter',
+    image: '',
+    imageFileId: '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed',
+    imageAlt: 'Stewards planting trees at the first chapter meetup.',
+    imageCredit: 'Forming Chapter stewards',
+    media: { reviewStatus: 'needs-steward-photo' },
+  }], ['forming-chapter']);
+
+  const [chapter] = snapshot.chapters;
+  assert.equal(chapter.slug, 'forming-chapter');
+  assert.equal(chapter.image, uploadedChapterImageUrl);
+  assert.deepEqual(chapter.media, {
+    image: uploadedChapterImageUrl,
+    ogImage: uploadedChapterImageUrl,
+    imageAlt: 'Stewards planting trees at the first chapter meetup.',
+    imageCredit: 'Forming Chapter stewards',
+    reviewStatus: 'approved',
+  });
+  for (const inputOnlyField of ['uploadedImageUrl', 'imageFileId', 'imageAlt', 'imageCredit']) {
+    assert.equal(Object.hasOwn(chapter, inputOnlyField), false);
+  }
+  assert.deepEqual(withheld, []);
+  assert.deepEqual(quarantined, []);
+});
+
+test('an uploaded chapter image replaces the sourced image and never inherits its metadata', () => {
+  const sourced = {
+    image: '/images/chapters/sourced.jpg',
+    media: {
+      image: '/images/chapters/sourced.jpg',
+      ogImage: '/images/chapters/sourced.jpg',
+      imageAlt: 'The sourced venue photo.',
+      imageCredit: 'Sourced Photographer',
+      imageSourceUrl: 'https://example.com/sourced-event',
+      reviewStatus: 'approved',
+    },
+  };
+
+  const { snapshot } = projectChapters([
+    {
+      ...sourced,
+      slug: 'copied-social-image',
+      name: 'Copied Social Image',
+      seo: { title: 'Copied', ogImage: '/images/chapters/sourced.jpg' },
+    },
+    {
+      ...sourced,
+      slug: 'own-social-image',
+      name: 'Own Social Image',
+      imageAlt: 'The steward photo.',
+      seo: { title: 'Own', ogImage: '/images/chapters/social-card.jpg' },
+    },
+    {
+      ...sourced,
+      media: { ...sourced.media, reviewStatus: 'pending' },
+      slug: 'unreviewed-social-image',
+      name: 'Unreviewed Social Image',
+      seo: { title: 'Unreviewed', ogImage: '/images/chapters/social-card.jpg' },
+    },
+  ], ['copied-social-image', 'own-social-image', 'unreviewed-social-image']);
+  const bySlug = Object.fromEntries(snapshot.chapters.map((chapter) => [chapter.slug, chapter]));
+
+  // No alt text or credit was supplied for the upload, so none is shown: the
+  // sourced photo's description, credit, and source link belong to that photo.
+  assert.equal(bySlug['copied-social-image'].image, uploadedChapterImageUrl);
+  assert.deepEqual(bySlug['copied-social-image'].media, {
+    image: uploadedChapterImageUrl,
+    ogImage: uploadedChapterImageUrl,
+    reviewStatus: 'approved',
+  });
+  assert.equal(bySlug['copied-social-image'].seo.ogImage, uploadedChapterImageUrl);
+
+  // A separate, approved social card is an editorial choice and stays.
+  assert.equal(bySlug['own-social-image'].media.imageAlt, 'The steward photo.');
+  assert.equal(bySlug['own-social-image'].seo.ogImage, '/images/chapters/social-card.jpg');
+
+  // An unreviewed sourced social card must not ride along with the upload.
+  assert.equal(bySlug['unreviewed-social-image'].seo.ogImage, uploadedChapterImageUrl);
+  assert.equal(JSON.stringify(snapshot).includes('Sourced Photographer'), false);
+  assert.equal(JSON.stringify(snapshot).includes('sourced-event'), false);
+});
+
+test('chapter alt text and credit columns describe the approved sourced image, with the original as fallback', () => {
+  const { snapshot, withheld } = projectChapters([{
+    slug: 'sourced-chapter',
+    name: 'Sourced Chapter',
+    image: '/images/chapters/sourced.jpg',
+    imageAlt: 'Corrected alt text from the steward.',
+    imageCredit: '',
+    media: {
+      image: '/images/chapters/sourced.jpg',
+      ogImage: '/images/chapters/sourced.jpg',
+      imageAlt: 'Original alt text.',
+      imageCredit: 'Original Photographer',
+      imageSourceUrl: 'https://example.com/sourced-event',
+      reviewStatus: 'approved',
+    },
+  }]);
+
+  const [chapter] = snapshot.chapters;
+  assert.equal(chapter.image, '/images/chapters/sourced.jpg');
+  assert.equal(chapter.media.imageAlt, 'Corrected alt text from the steward.');
+  assert.equal(chapter.media.imageCredit, 'Original Photographer');
+  assert.equal(chapter.media.imageSourceUrl, 'https://example.com/sourced-event');
+  assert.equal(Object.hasOwn(chapter, 'imageAlt'), false);
+  assert.deepEqual(withheld, []);
+});
+
+test('a chapter record cannot declare its own uploaded image', () => {
+  // An upload is published without a media review, so only the caller that
+  // owns the upload store may say one exists.
+  const selfDeclared = 'https://elsewhere.example/unreviewed.jpg';
+  const { snapshot, withheld } = projectChapters([
+    { slug: 'no-image', name: 'No Image', uploadedImageUrl: selfDeclared },
+    {
+      slug: 'unreviewed',
+      name: 'Unreviewed',
+      uploadedImageUrl: selfDeclared,
+      image: 'https://example.com/image.jpg',
+      media: { image: 'https://example.com/image.jpg', reviewStatus: 'pending' },
+    },
+  ]);
+
+  assert.equal(JSON.stringify(snapshot).includes('elsewhere.example'), false);
+  assert.equal(JSON.stringify(snapshot).includes('uploadedImageUrl'), false);
+  assert.deepEqual(snapshot.chapters.map((chapter) => chapter.image ?? ''), ['', '']);
+  assert.deepEqual(withheld, [{ slug: 'unreviewed', reason: 'unapproved_media' }]);
+});
+
+test('an upload address that is not a web URL is not published', () => {
+  for (const address of ['javascript:alert(1)', '/assets/relative', 'data:image/png;base64,AAAA', '']) {
+    const snapshot = toPublicOperationalContentSnapshot(
+      { chapters: [{ slug: 'odd-upload', name: 'Odd Upload' }] },
+      { uploadedChapterImageUrls: new Map([['odd-upload', address]]) }
+    );
+    assert.equal(snapshot.chapters[0].image ?? '', '', address);
+    assert.deepEqual(snapshot.chapters[0].media, {}, address);
+  }
+});
+
+test('the committed fallback snapshot projects to itself', async () => {
+  // Every live chapter predates the alt text and credit columns. Projecting the
+  // snapshot the site already ships must not change a single public record.
+  const committed = JSON.parse(await readFile(snapshotPath, 'utf8'));
+  const projected = toPublicOperationalContentSnapshot({
+    themes: committed.themes,
+    people: committed.people,
+    chapters: committed.chapters,
+    chapterInitiatives: committed.chapterInitiatives,
+    guilds: committed.guilds,
+    projects: committed.projects,
+    generatedAt: committed.generatedAt,
+  }, {
+    onQuarantine: (records) => assert.fail(`quarantined ${JSON.stringify(records)}`),
+    onChapterImagesWithheld: (records) => assert.fail(`withheld ${JSON.stringify(records)}`),
+  });
+
+  assert.ok(committed.chapters.some((chapter) => chapter.media?.imageAlt), 'the snapshot has described images');
+  for (const collection of ['themes', 'people', 'chapters', 'chapterInitiatives', 'guilds', 'projects', 'locations']) {
+    assert.deepEqual(projected[collection], committed[collection], collection);
+  }
+});
+
+test('chapter image projection is stable when a published snapshot is projected again', () => {
+  const first = projectChapters([
+    {
+      slug: 'uploaded',
+      name: 'Uploaded',
+      imageAlt: 'An uploaded photo.',
+      media: { reviewStatus: 'needs-steward-photo' },
+    },
+    {
+      slug: 'withheld',
+      name: 'Withheld',
+      image: 'https://example.com/image.jpg',
+      media: { image: 'https://example.com/image.jpg', reviewStatus: 'pending' },
+    },
+    {
+      slug: 'sourced',
+      name: 'Sourced',
+      image: '/images/chapters/sourced.jpg',
+      imageAlt: 'Column alt text.',
+      media: { image: '/images/chapters/sourced.jpg', imageAlt: 'Original.', reviewStatus: 'approved' },
+    },
+  ], ['uploaded']);
+  assert.equal(first.snapshot.chapters.find((chapter) => chapter.slug === 'uploaded').image, uploadedChapterImageUrl);
+  const second = projectChapters(first.snapshot.chapters);
+
+  assert.deepEqual(second.snapshot.chapters, first.snapshot.chapters);
+  assert.deepEqual(second.withheld, []);
+  assert.deepEqual(second.quarantined, []);
+});
+
+// What the migration does to real rows is proven against a database by
+// scripts/chapter-image-fields.integration.ts. This only pins its shape.
+test('chapter image migration adds alt text and credit without disturbing live chapters', async () => {
+  const migration = await readFile(chapterImageAltCreditMigrationPath, 'utf8');
+
+  // Nullable on purpose: Directus sends null for an emptied input, and its
+  // required check only treats null as missing.
+  assert.match(migration, /add column if not exists image_alt text,/);
+  assert.match(migration, /add column if not exists image_credit text;/);
+  assert.doesNotMatch(migration, /image_(alt|credit) text not null/);
+  assert.match(migration, /'imageAlt', nullif\(btrim\(image_alt\), ''\)/);
+  assert.match(migration, /'imageCredit', nullif\(btrim\(image_credit\), ''\)/);
+  // The view still exposes the file id and the stored media for the agent.
+  assert.match(migration, /'imageFileId', image_file/);
+  assert.match(migration, /'media', media,/);
+  // Backfill copies sourced metadata only, and is not a content edit.
+  assert.match(migration, /where image_file is null/);
+  assert.match(
+    migration,
+    /disable trigger chapters_touch_updated_at;[\s\S]*update content\.chapters[\s\S]*enable trigger chapters_touch_updated_at;/
+  );
+  // An accepted image becomes the chapter's one image.
+  assert.match(migration, /image_file = case\s+when proposed_image <> '' then null/);
+  // A withheld image has its own alert and leaves the quarantine alert free.
+  assert.match(migration, /'chapter_image_withheld'/);
+  assert.match(migration, /content_review_notification_image_withheld_idx[\s\S]*where kind = 'chapter_image_withheld'/);
+  assert.doesNotMatch(migration, /STORAGE_TIGRIS_SECRET|DATABASE_URL/);
 });
 
 test('chapter upload migration preserves legacy URLs and projects only a Directus file id', async () => {

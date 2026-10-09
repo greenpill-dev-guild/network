@@ -67,6 +67,9 @@ primary_region = "iad"
   cpus = 1
   memory = "1gb"
 
+# flyctl reads local_path from the directory the deploy runs in. This app
+# deploys with packages/admin as its working directory, so the path starts
+# there. See packages/agent/fly.toml.
 [[files]]
   guest_path = "/etc/ssl/certs/greenpill-supabase.crt"
   local_path = "../../config/certificates/supabase-ca.crt"

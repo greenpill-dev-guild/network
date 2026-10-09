@@ -220,6 +220,69 @@ Directus Flows may send notifications or trigger rebuilds, but privacy
 projection logic stays in SQL, `@greenpill-network/shared/public-content`, and
 the agent route.
 
+#### Chapter Images
+
+A chapter shows one public image. `resolvePublicChapterImage` in
+`packages/shared/src/public-content.ts` decides which:
+
+- **Uploaded image** (`image_file`). The steward or publisher who attaches it
+  publishes it, the same way they publish any other direct edit. No media
+  review applies. An upload wins over the sourced image. Only the agent can
+  tell the shared contract that an upload exists; a record cannot declare one
+  for itself.
+- **Sourced image** (`image`, `media.image`). An external or site-hosted URL
+  placed by research, enrichment, or an accepted update request. It is public
+  only while `media.reviewStatus` is `approved`. Accepting an update request
+  that carries an image is that approval.
+- **Anything else is withheld.** The chapter stays published without the image
+  and without anything from its `media` object, and the agent queues one
+  `chapter_image_withheld` alert for operators.
+
+A withheld image never removes a chapter. `record_quarantined` is a different
+alert: it means a record was dropped from the site because a field holds a
+private-looking key or a `mailto:` link. Alt text and credit are fields like
+any other there.
+
+`image_alt` and `image_credit` describe the image the chapter shows now and
+are edited under the image in Data Studio. Both are nullable, and `NULL` is
+the only empty value: Directus sends `null` for an emptied input, and its
+required check treats only `null` as missing. `media.imageAlt` and
+`media.imageCredit` describe the sourced image, including while an upload
+hides it. An uploaded image never inherits the sourced image's alt text,
+credit, source link, or social image.
+
+The trigger `chapters_keep_image_description` (migration `029`) keeps the
+columns and `media` in step for every writer:
+
+| Write | Result |
+| --- | --- |
+| A different upload arrives without new text | Alt text and credit are emptied. A first image on a chapter that had none keeps what was typed. |
+| The upload is removed, or its file is deleted | Both columns return to the sourced image's description from `media`. |
+| Alt text or credit is edited while the sourced image shows | The new text is also written to `media`. |
+| `media.imageAlt` or `media.imageCredit` changes while the sourced image shows (an import, enrichment) | The columns follow. |
+| An update request is accepted with `proposed_image` | That image becomes the chapter's one image: `image_file` is cleared, alt text and credit are exactly what the request proposed (blank included), the previous source link goes, and a social image that only copied the old chapter image follows. |
+| An update request is accepted without an image | Its alt text and credit update the image the chapter shows. |
+
+Two limits:
+
+- The trigger sees values, not which fields a client sent. When an upload is
+  swapped, text repeated unchanged counts as not sent and is emptied. Data
+  Studio only sends changed fields, so a steward who keeps the same credit for
+  a new picture has to enter it again.
+- `Replace File` in the file library swaps a file's contents and keeps its
+  id. The chapter row does not change, so its alt text and credit stay as they
+  are.
+
+Data Studio requires alt text while an upload is attached (a field condition
+on `image_alt`). The API does not enforce it. An uploaded image without alt
+text is still published, and the public page falls back to a generic
+description.
+
+Prove the database rules with `bun run test:chapter-images:db`. It needs
+`bun run db:local:up`, builds and drops its own scratch database, and refuses
+any server that is not local. Prove the Directus path with
+`bun run directus:steward:smoke`.
+
 ### Steward Onboarding
 
 Use [`STEWARD_GUIDE.md`](./STEWARD_GUIDE.md) as the steward-facing walkthrough

@@ -10,7 +10,7 @@
     "overall_status": "active",
     "priority": "p1",
     "created_at": "2026-08-10T22:49:27.561Z",
-    "updated_at": "2026-08-11T18:20:20.000Z"
+    "updated_at": "2026-10-09T20:00:00.000Z"
   },
   "links": {
     "brief": "brief.md",
@@ -25,8 +25,15 @@
   ],
   "taxonomy": {
     "initiative": "steward-experience",
-    "tracks": ["admin-cms", "content-pipeline", "permissions"],
-    "work_types": ["audit", "implementation"],
+    "tracks": [
+      "admin-cms",
+      "content-pipeline",
+      "permissions"
+    ],
+    "work_types": [
+      "audit",
+      "implementation"
+    ],
     "surfaces": [
       "packages/admin",
       "packages/agent",
@@ -35,11 +42,13 @@
       "scripts",
       "docs"
     ],
-    "depends_on_features": ["content-private-node-scaffold"]
+    "depends_on_features": [
+      "content-private-node-scaffold"
+    ]
   },
   "lanes": {
     "ui": {
-      "owner": "codex",
+      "owner": "claude",
       "status": "in_progress",
       "depends_on": [],
       "handoff": "handoffs/README.md"
@@ -51,21 +60,27 @@
       "handoff": "handoffs/README.md"
     },
     "platform": {
-      "owner": "codex",
-      "status": "in_progress",
+      "owner": "claude",
+      "status": "completed",
       "depends_on": [],
       "handoff": "handoffs/README.md"
     },
     "qa_pass_1": {
       "owner": "claude",
       "status": "completed",
-      "depends_on": ["ui", "content", "platform"],
+      "depends_on": [
+        "ui",
+        "content",
+        "platform"
+      ],
       "handoff": "handoffs/README.md"
     },
     "qa_pass_2": {
       "owner": "codex",
       "status": "blocked",
-      "depends_on": ["qa_pass_1"],
+      "depends_on": [
+        "qa_pass_1"
+      ],
       "handoff": "handoffs/README.md"
     }
   },
@@ -132,6 +147,13 @@
       "lane": "platform",
       "status": "in_progress",
       "note": "Added hung-deploy recovery after a second Pages hang froze the site from 2026-10-06 to 2026-10-09: a watcher workflow cancels a run that holds the pages concurrency group past 30 minutes and makes sure a run follows it. The PRD-808 alerts were still not activated in production at that point (migration 028 unapplied, no publish-health settings on the agent), so nothing reported the freeze."
+    },
+    {
+      "timestamp": "2026-10-09T20:00:00.000Z",
+      "actor": "claude",
+      "lane": "platform",
+      "status": "completed",
+      "note": "Afo asked to complete what was left. Found every agent sweep disabled on the running machine since the Supabase move and re-enabled them; applied migration 028, which also stopped a sweep failure present since the 2026-10-05 deploy; enabled the publish-health watchdog and proved a live stale alert and recovery; archived the declined magic-link test node. PRD-809 is implemented with migration 029 and awaits its production release."
     }
   ]
 }

@@ -5,8 +5,9 @@ import {
 import type {
   PublicOperationalContentSnapshot,
   QuarantinedOperationalRecord,
+  WithheldChapterImage,
 } from '@greenpill-network/shared/public-content';
-import { enqueueQuarantineAlerts } from './content-operations.js';
+import { enqueueChapterImageWithheldAlerts, enqueueQuarantineAlerts } from './content-operations.js';
 import { createDatabaseClient } from './db.js';
 import { AgentDataError } from './map-nodes.js';
 
@@ -56,11 +57,23 @@ export function buildDirectusAssetUrl(fileId: unknown, directusPublicUrl = direc
   return `${baseUrl}/assets/${encodeURIComponent(normalizedFileId)}`;
 }
 
-function toPublicChapterRecord(row: UnknownRecord, directusPublicUrl: string): UnknownRecord {
-  const record = rowsToRecords([row])[0] ?? {};
-  const assetUrl = buildDirectusAssetUrl(record.imageFileId, directusPublicUrl);
-  const { imageFileId: _imageFileId, ...publicRecord } = record;
-  return assetUrl ? { ...publicRecord, image: assetUrl } : publicRecord;
+// The shared contract decides which chapter image is public. It only needs to
+// know which chapters have an uploaded file and where Directus serves it, so
+// the file id never leaves the agent.
+function toChapterProjectionInput(rows: UnknownRecord[], directusPublicUrl: string): {
+  chapters: UnknownRecord[];
+  uploadedChapterImageUrls: Map<string, string>;
+} {
+  const uploadedChapterImageUrls = new Map<string, string>();
+  const chapters = rowsToRecords(rows).map((record) => {
+    const { imageFileId, ...chapter } = record;
+    const uploadedImageUrl = buildDirectusAssetUrl(imageFileId, directusPublicUrl);
+    if (uploadedImageUrl && typeof chapter.slug === 'string') {
+      uploadedChapterImageUrls.set(chapter.slug, uploadedImageUrl);
+    }
+    return chapter;
+  });
+  return { chapters, uploadedChapterImageUrls };
 }
 
 export async function getPublicOperationalContentSnapshot(
@@ -100,11 +113,13 @@ export async function getPublicOperationalContentSnapshot(
   `;
 
   const quarantined: QuarantinedOperationalRecord[] = [];
+  const withheldChapterImages: WithheldChapterImage[] = [];
+  const chapterInput = toChapterProjectionInput(chapters, directusPublicUrl);
   const snapshot = assertPublicOperationalContentSnapshot(toPublicOperationalContentSnapshot({
     generatedAt: now,
     themes: rowsToRecords(themes),
     people: rowsToRecords(people),
-    chapters: chapters.map((chapter) => toPublicChapterRecord(chapter, directusPublicUrl)),
+    chapters: chapterInput.chapters,
     chapterInitiatives: rowsToRecords(chapterInitiatives),
     guilds: rowsToRecords(guilds),
     projects: rowsToRecords(projects),
@@ -112,11 +127,20 @@ export async function getPublicOperationalContentSnapshot(
     onQuarantine: (records) => {
       quarantined.push(...records);
     },
+    onChapterImagesWithheld: (withheld) => {
+      withheldChapterImages.push(...withheld);
+    },
+    uploadedChapterImageUrls: chapterInput.uploadedChapterImageUrls,
   }));
 
   if (quarantined.length > 0) {
     console.warn('public_operational_content_records_quarantined', quarantined);
     await enqueueQuarantineAlerts(sql, quarantined);
+  }
+
+  if (withheldChapterImages.length > 0) {
+    console.warn('public_operational_content_chapter_images_withheld', withheldChapterImages);
+    await enqueueChapterImageWithheldAlerts(sql, withheldChapterImages);
   }
 
   return snapshot;

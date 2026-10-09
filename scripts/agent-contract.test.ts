@@ -47,6 +47,7 @@ import {
 } from '@greenpill-network/agent/newsletter';
 import {
   buildDirectusAssetUrl,
+  getPublicOperationalContentSnapshot,
   PUBLIC_OPERATIONAL_CONTENT_ROUTE,
 } from '@greenpill-network/agent/public-content';
 import {
@@ -1042,6 +1043,116 @@ test('publish-health alerts and recoveries deliver through the durable Resend qu
     statements.some((source) => source.includes("status = 'sent'")),
     true
   );
+});
+
+test('public snapshot keeps chapters whose image is uploaded or unreviewed, and alerts separately for a withheld image and a dropped record', async () => {
+  const uploadedFileId = '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed';
+  const alerts = [];
+  const sql = async (strings, ...values) => {
+    const source = strings.join(' ');
+    if (source.includes('from content.public_chapters')) {
+      return [
+        {
+          slug: 'forming-chapter',
+          data: {
+            slug: 'forming-chapter',
+            name: 'Forming Chapter',
+            image: '',
+            imageFileId: uploadedFileId,
+            imageAlt: 'Stewards planting trees at the first chapter meetup.',
+            imageCredit: 'Forming Chapter stewards',
+            media: { reviewStatus: 'needs-steward-photo' },
+            seo: {},
+          },
+        },
+        {
+          slug: 'unreviewed-media',
+          data: {
+            slug: 'unreviewed-media',
+            name: 'Unreviewed Media',
+            image: 'https://example.com/image.jpg',
+            media: { image: 'https://example.com/image.jpg', reviewStatus: 'pending' },
+            seo: {},
+          },
+        },
+        {
+          slug: 'private-chapter',
+          data: {
+            slug: 'private-chapter',
+            name: 'Private Chapter',
+            links: [{ label: 'Email', url: 'mailto:someone@example.com' }],
+          },
+        },
+      ];
+    }
+    if (source.includes('insert into content.review_notifications')) {
+      const kind = source.match(/values \('([a-z_]+)'/)?.[1];
+      alerts.push({ kind, values });
+    }
+    return [];
+  };
+
+  const snapshot = await getPublicOperationalContentSnapshot(
+    sql,
+    '2026-10-09T00:00:00.000Z',
+    'https://admin.example.org'
+  );
+  const bySlug = Object.fromEntries(snapshot.chapters.map((chapter) => [chapter.slug, chapter]));
+
+  assert.deepEqual(Object.keys(bySlug).sort(), ['forming-chapter', 'unreviewed-media']);
+  assert.equal(bySlug['forming-chapter'].image, `https://admin.example.org/assets/${uploadedFileId}`);
+  assert.equal(bySlug['forming-chapter'].media.imageAlt, 'Stewards planting trees at the first chapter meetup.');
+  assert.equal(bySlug['forming-chapter'].media.imageCredit, 'Forming Chapter stewards');
+  assert.equal(bySlug['unreviewed-media'].image, '');
+  assert.deepEqual(bySlug['unreviewed-media'].media, {});
+  assert.equal(JSON.stringify(snapshot).includes('imageFileId'), false);
+  assert.equal(JSON.stringify(snapshot).includes('uploadedImageUrl'), false);
+  assert.equal(JSON.stringify(snapshot).includes('example.com/image.jpg'), false);
+  // Two events, two alert kinds: a withheld image must not use up the alert
+  // for a chapter that is dropped from the site.
+  assert.deepEqual(alerts, [
+    { kind: 'record_quarantined', values: ['chapters', 'private-chapter', 'private_field'] },
+    { kind: 'chapter_image_withheld', values: ['unreviewed-media'] },
+  ]);
+});
+
+test('a withheld chapter image alert says the chapter is still published', async () => {
+  let resendRequest;
+  const sql = async (strings) => {
+    const source = strings.join(' ');
+    if (source.includes('from content.review_notifications notification')) {
+      return [
+        {
+          id: '22222222-2222-4222-8222-222222222222',
+          kind: 'chapter_image_withheld',
+          recordCollection: 'chapters',
+          recordSlug: 'unreviewed-media',
+        },
+      ];
+    }
+    if (source.includes('returning attempts')) return [{ attempts: 1 }];
+    return [];
+  };
+
+  const result = await deliverQueuedContentReviewNotifications(sql, {
+    env: {
+      RESEND_API_KEY: 'test-resend-key',
+      CONTENT_REVIEW_EMAIL_FROM: 'Greenpill <alerts@example.org>',
+      CONTENT_REVIEW_RECIPIENTS: 'operator@example.org',
+      CONTENT_REVIEW_DIRECTUS_URL: 'https://admin.example.org',
+    },
+    fetchImpl: async (url, options) => {
+      resendRequest = { url: String(url), options };
+      return Response.json({ id: 'provider-message-2' });
+    },
+  });
+
+  assert.deepEqual(result, { queued: 1, delivered: 1, failed: 0, skipped: 0 });
+  const body = JSON.parse(resendRequest.options.body);
+  assert.equal(body.subject, 'Greenpill chapter image withheld from the public site');
+  assert.match(body.text, /The chapter itself is still published/);
+  assert.match(body.text, /admin\.example\.org\/admin\/content\/chapters\/unreviewed-media/);
+  assert.doesNotMatch(body.text, /QUARANTINED|missing from the public website/);
 });
 
 const RESEND_TEST_WEBHOOK_SECRET = `whsec_${Buffer.from('test-resend-webhook-secret').toString('base64')}`;
@@ -3182,4 +3293,37 @@ test('agent public impact guard rejects private upstream fields', () => {
   assert.deepEqual(assertPublicImpactPayload({ summary: { actionCount: 1 } }), {
     summary: { actionCount: 1 },
   });
+});
+
+// flyctl reads a [[files]] local_path from the directory the deploy runs in,
+// not from the fly.toml directory. A path that does not resolve there fails
+// the deploy, and a deploy without the file takes the database connection down.
+test('Fly configs mount the database certificate from the directory each app deploys from', async () => {
+  const deploys = [
+    // fly deploy --config packages/agent/fly.toml
+    { config: 'packages/agent/fly.toml', deployDir: rootDir },
+    // fly deploy --config fly.toml packages/admin
+    { config: 'packages/admin/fly.toml', deployDir: join(rootDir, 'packages/admin') },
+  ];
+  const certificate = await readFile(join(rootDir, 'config/certificates/supabase-ca.crt'), 'utf8');
+  assert.match(certificate, /^-----BEGIN CERTIFICATE-----/);
+
+  for (const { config, deployDir } of deploys) {
+    const toml = await readFile(join(rootDir, config), 'utf8');
+    const localPath = toml.match(/\[\[files\]\][^[]*?local_path\s*=\s*['"]([^'"]+)['"]/)?.[1];
+    const guestPath = toml.match(/\[\[files\]\][^[]*?guest_path\s*=\s*['"]([^'"]+)['"]/)?.[1];
+    assert.ok(localPath && guestPath, `${config} mounts a certificate`);
+    assert.equal(await readFile(resolve(deployDir, localPath), 'utf8'), certificate, `${config} local_path`);
+    // Node only trusts the mounted file when it is told where it is.
+    assert.match(toml, new RegExp(`NODE_EXTRA_CA_CERTS\\s*=\\s*['"]${guestPath}['"]`), `${config} NODE_EXTRA_CA_CERTS`);
+  }
+});
+
+// A push to main deploys the agent with no command line to carry a strategy.
+// Blue-green needs a health check, and /ready is the one that needs the database.
+test('the agent deploys blue-green behind its readiness check', async () => {
+  const toml = await readFile(join(rootDir, 'packages/agent/fly.toml'), 'utf8');
+  assert.match(toml, /\[deploy\]\s*\n\s*strategy\s*=\s*['"]bluegreen['"]/);
+  assert.match(toml, /\[\[http_service\.checks\]\][^[]*path\s*=\s*['"]\/ready['"]/);
+  assert.doesNotMatch(toml, /\[\[?mounts\]?\]/, 'blue-green cannot be used with volumes');
 });

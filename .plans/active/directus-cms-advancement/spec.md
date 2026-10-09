@@ -108,12 +108,53 @@ pinned version already ships.
 - **`content.people`**: defer - keep as published-read reference data; the
   dual source of truth stays documented debt.
 
+## Chapter image rules (PRD-809, decided during implementation 2026-10-09)
+
+PRD-809 left one decision open: what happens to a chapter while its uploaded
+image is not approved. These rules were chosen during implementation to match
+decisions already on record, and are Afo's to overrule:
+
+- **An uploaded chapter image needs no separate media review.** The steward or
+  publisher who attaches it publishes it. This follows the 2026-07-31 decision
+  that assigned stewards edit their own live records without approval, and it
+  is what already happens for every chapter that has a steward: all twelve
+  carry an approved media review, so their uploads go live today. The review
+  gate keeps its original job, which is clearing images that research or
+  enrichment sourced on a chapter's behalf.
+- **An image that is not cleared is withheld; the chapter stays published.**
+  A withheld image never removes a chapter from the site. The operator gets
+  one `chapter_image_withheld` alert, separate from the `record_quarantined`
+  alert that means a record was dropped.
+- **Alt text and credit are columns and describe the image the chapter shows
+  now**, so the form shows what the public page shows. `media` keeps the
+  sourced image's description, also while an upload hides it. A different
+  upload empties text that did not arrive with it; removing the upload brings
+  the sourced image's description back; an accepted update request with an
+  image makes that the chapter's one image and replaces an upload. The full
+  table is in `packages/admin/README.md`.
+- **Alt text is asked for, not enforced.** Data Studio requires it while an
+  upload is attached. The API does not, and an uploaded image without alt text
+  is still published with the page's generic description. Withholding such an
+  image was rejected: a steward who swaps a photo would see the photo vanish
+  from the site with no message addressed to them.
+- **Swapping an upload empties an unchanged credit too.** Data Studio only
+  sends changed fields, so the database cannot tell a kept credit from a stale
+  one. A missing credit is visible and easy to fix; a wrong one credits the
+  previous photographer for a new picture.
+
+The alternative, holding steward uploads for publisher approval, would need a
+publisher image queue and notifications, and would reverse the direct-edit
+model for one field. To switch, change the upload branch of
+`resolvePublicChapterImage` in `packages/shared/src/public-content.ts`.
+
 ## Platform health implementation contract (PRD-808, 2026-08-11)
 
-Implemented on the PRD-808 branch and reviewed on 2026-10-04; it lands with
-the PRD-808 pull request. Migration apply, token permission changes, agent
-configuration/deploy, and live alert proof are separate release actions; the
-platform lane remains in progress until those authorized steps are complete.
+Merged on 2026-10-05 and live in production since 2026-10-09: migration 028
+applied, the check enabled with a 30 minute threshold, and a stale alert and
+recovery proven end to end. The dispatch token in production is still the
+GitHub CLI token set on 2026-08-11. Its `repo` scope covers Actions read, so
+the check works, but a repository-scoped fine-grained token remains the
+better replacement.
 
 - **Freshness source**: publish a public-safe static build-metadata artifact
   from the website build. The agent must compare that deployed artifact with

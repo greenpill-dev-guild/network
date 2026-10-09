@@ -1,14 +1,50 @@
 # Handoffs - Directus CMS Advancement
 
-## 2026-08-11 implementation handoff (Claude -> Afo)
+## Current state (2026-10-09)
 
-Implementation state after the 2026-08-10/11 push: the main production slice
-shipped, and the PRD-808 freshness watchdog is implemented and locally tested
-on its draft branch. The platform lane remains active for merge and separately
-authorized production activation; the UI lane remains active for the operator
-Insights dashboard, direct-edit chapter image metadata, and pt-BR/es label
-metadata. Production still has migrations 023-027, the deployed agent with
-content-operations sweeps, and the v2 permission model applied.
+Everything from the 2026-08-11 push is live, and so is the PRD-808 publish
+health watchdog: migration 028 is applied, the check runs every minute with a
+30 minute stale threshold, and a live stale alert and recovery were proven on
+2026-10-09 (evidence in `eval.md`). PRD-809 (chapter image alt text and
+credit) is implemented; its production release is tracked in `plan.todo.md`.
+
+### Operator notes
+
+- **A plain deploy keeps the database certificate.** Production connects to
+  Supabase with `sslmode=verify-full`. The CA certificate
+  (`config/certificates/supabase-ca.crt`), `NODE_EXTRA_CA_CERTS`, and the
+  watchdog settings are in both `fly.toml` files. Before 2026-10-09 they
+  existed only on the running machines, and a deploy at 19:46 UTC dropped
+  them: the agent lost its database connection for five minutes. A setting
+  made with `fly machine update` lasts only until the next deploy, so put
+  durable settings in `fly.toml`.
+- **A merge to `main` is a production deploy of the agent.** The Fly.io GitHub
+  app deploys `network-agent` on every push, with no workflow file. The agent
+  deploys blue-green (`[deploy]` in `packages/agent/fly.toml`), so a build or
+  config that fails `/ready` never replaces the running machine.
+- **Run the documented deploy commands from the repo root.** flyctl reads a
+  `[[files]]` `local_path` from the directory the deploy runs in, not from
+  the `fly.toml` directory as the Fly docs say. A path that does not resolve
+  fails the deploy before any machine changes.
+- **Take a fresh private database backup.** Migration 028 changed the schema
+  after the last recovery archive, migration 029 follows with the PRD-809
+  release, and Supabase Free has no automatic backups.
+- **Replace the dispatch token.** Production still uses the GitHub CLI token
+  set on 2026-08-11. It works for dispatch and for the watchdog's Actions
+  read, but it has account-wide `repo` scope and rotates when the CLI
+  re-authenticates. A fine-grained token on this repository needs Contents
+  read/write and Actions read.
+- **`/ready` does not cover background jobs.** It checks request-path database
+  access only. To confirm the sweeps run, check that
+  `/impact/chapters/<slug>` reports `cache.status: "fresh"`, that today's
+  `daily_digest` row exists after 16:03 UTC while a submission is pending,
+  and that `fly machine status <id> -a network-agent --display-config` shows
+  no `*_SWEEP_ENABLED=false`. `fly config show` does not list machine-level
+  settings.
+- **One alert per record, per kind.** `record_quarantined` (a record dropped
+  from the site) and `chapter_image_withheld` (a chapter published without
+  its image) each keep one row per record. A record that is fixed and later
+  breaks the same way again does not alert twice.
 
 ### Operator activations
 
@@ -18,11 +54,11 @@ content-operations sweeps, and the v2 permission model applied.
 2. **Done 2026-08-11 - content review notification recipients.** Evidence:
    pending and decided notification rows both reached `sent` with provider
    message IDs, then the labeled test request was deleted with HTTP 204.
-3. **Delivered, awaiting human click - magic-link moderation.** Evidence:
-   pending test node `9933e770-6ddb-4e58-afef-1829e47d4c86` produced sent
-   notification `1d5cc049-f2ad-49c4-8c5a-18981d583aca` and two sent
-   recipient-specific access-link rows. Approve or decline it from the email,
-   then archive the node.
+3. **Done - magic-link moderation.** Test node
+   `9933e770-6ddb-4e58-afef-1829e47d4c86` produced sent notification
+   `1d5cc049-f2ad-49c4-8c5a-18981d583aca` and two sent recipient-specific
+   access-link rows on 2026-08-11. It was declined through one of those links
+   at 04:33 UTC the same day and archived on 2026-10-09.
 4. **Done 2026-08-11 - MCP machine token.** Evidence: active API-only user
    `mcp-agent@greenpill.network`; chapter read HTTP 200, intake read HTTP 403,
    draft create HTTP 200, machine delete HTTP 403, admin cleanup HTTP 204.
@@ -41,21 +77,18 @@ content-operations sweeps, and the v2 permission model applied.
 - `content-access -- cleanup-legacy` removes the retired per-slug policies
   once the prod smoke passes.
 
-### Remaining implementation sequence (tracked in plan.todo.md)
+### Remaining work (tracked in plan.todo.md)
 
-1. PRD-808 implementation is reviewed (2026-10-04) on branch
-   `afo/prd-808-cms-platform-lane-pipeline-automation-apply-function`: static
-   deployed build metadata, migration 028 durable publish-health state, GitHub
-   Pages failure detection, and deduplicated Resend alerts/recoveries. Release
-   order is merge -> apply migration 028 -> grant Actions read to the
-   fine-grained token -> set the explicit metadata URL/stale threshold and
-   enable flag -> deploy -> run the separately authorized live alert proof.
-2. PRD-809: first-class direct chapter alt/credit columns with backfill and
-   projection compatibility. The operator Insights dashboard (PRD-1119) and
-   the confirmed pt-BR/es Data Studio locale metadata (PRD-1120) moved out of
-   this hub on 2026-10-04 and wait until stewards publish through the CMS.
-3. Human QA: decide the delivered `[TEST] magic link check` node from the
-   email and archive it, then complete the second QA pass.
+1. PRD-809 production release, in this order: deploy the agent, apply
+   migration 029, clear the Directus cache, re-run `directus:content:setup`
+   and `directus:studio:setup`, then run the production steward smoke. The
+   agent goes first because the previous agent would copy the two new view
+   keys to the top level of every public chapter.
+2. Second QA pass, which closes with that release.
+
+The operator Insights dashboard (PRD-1119) and the pt-BR/es Data Studio labels
+(PRD-1120) moved out of this hub on 2026-10-04 and wait until stewards publish
+through the CMS.
 
 Deferred strategy items remain unchanged: `content.people` dual-source
 decision and the Directus 12 licensing/Open Innovation Grant decision date.

@@ -39,9 +39,9 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
       to `greenpill-dev-guild/network`; PAT stays in agent Fly secrets.
       Directus Flow variant explicitly declined to avoid future flow caps and
       keep secrets off the CMS.
-- [x] Publish-failure + freshness alerting (implemented and tested on the
-      PRD-808 draft branch; production activation remains a separate operator
-      step):
+- [x] Publish-failure + freshness alerting (merged 2026-10-05, live in
+      production since 2026-10-09 with a stale-alert and recovery proof; see
+      `eval.md`):
   - [x] Add a public-safe, static website build-metadata artifact containing
         the operational snapshot `generatedAt`; the agent must poll the
         deployed artifact rather than its live snapshot endpoint.
@@ -88,9 +88,10 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
       applied, fresh 32+ byte `MAP_NODE_MODERATION_LINK_SECRET` Fly secret,
       flip `MAP_NODE_MODERATION_MAGIC_LINK_ENABLED`, and prove generation +
       delivery with an authorized real-recipient smoke.
-- [ ] Complete the human release-order check: approve or decline the pending
-      `[TEST] magic link check` node from the delivered email, verify the
-      moderation outcome, then archive the node.
+- [x] Complete the human release-order check: the `[TEST] magic link check`
+      node was declined through a moderation link on 2026-08-11 04:33 UTC
+      (review row actor `moderation-link:...`); verified and archived on
+      2026-10-09.
 
 ### Phase 2 - Permissions v2 (kill the staleness class)
 
@@ -183,19 +184,17 @@ Full evidence for every item: `reports/cms-review-2026-08-10.md`.
 
 ## Remaining implementation sequence
 
-1. **Platform health contract (PRD-808).** Implemented and reviewed on
-   2026-10-04; it lands with the PRD-808 pull request: build metadata,
-   migration 028 state, Pages result check, deduplicated Resend
-   alerts/recoveries, and focused tests. Production activation remains
-   separate; do not enable polling until migration 028 is applied and the
-   fine-grained token has Actions read.
-2. **Steward image fields (PRD-809).** Add direct chapter image alt/credit
-   columns and the compatibility projection. The operator dashboard and the
-   pt-BR/es labels no longer gate this hub; they wait in PRD-1119 and PRD-1120
-   until stewards are publishing through the CMS.
-3. **Release-order QA.** The human decides the delivered magic-link test and
-   archives it; then run the full focused validation set and move
-   `qa_pass_2` from blocked to completed.
+1. **Platform health contract (PRD-808).** Done. Migration 028 is applied in
+   production and the watchdog is on with a 30 minute threshold. The agent
+   settings live in `packages/agent/fly.toml`.
+2. **Steward image fields (PRD-809).** Implemented with migration 029, the
+   shared image rules, Data Studio fields, and tests. Production release
+   (agent deploy, then migration 029, setup re-apply, production steward
+   smoke) is the remaining step. The operator dashboard and the pt-BR/es labels no
+   longer gate this hub; they wait in PRD-1119 and PRD-1120 until stewards
+   are publishing through the CMS.
+3. **Release-order QA.** The magic-link check is closed. The second QA pass
+   completes with the PRD-809 production release.
 
 Implementation validation gate: `bun run typecheck`, `bun run test:agent`,
 `bun run test:content`, the affected Directus setup/steward smoke tests,

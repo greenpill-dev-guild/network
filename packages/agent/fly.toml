@@ -9,6 +9,13 @@ primary_region = 'iad'
 [build]
   dockerfile = 'Dockerfile'
 
+# Every push to main deploys this app through the Fly.io GitHub app, so the
+# strategy is set here and not on a command line. Blue-green boots the new
+# machine next to the old one and moves traffic only after /ready passes, so a
+# broken build or config cannot replace the healthy machine.
+[deploy]
+  strategy = 'bluegreen'
+
 [env]
   NODE_ENV = 'production'
   NODE_EXTRA_CA_CERTS = '/etc/ssl/certs/greenpill-supabase.crt'
@@ -54,6 +61,10 @@ primary_region = 'iad'
   cpus = 1
   memory_mb = 1024
 
+# flyctl reads local_path from the directory the deploy runs in, not from this
+# file's directory (checked against flyctl v0.4.115; the Fly docs say
+# otherwise). This app deploys from the repo root, so the path starts there.
+# A path that does not resolve fails the deploy before any machine changes.
 [[files]]
   guest_path = '/etc/ssl/certs/greenpill-supabase.crt'
-  local_path = '../../config/certificates/supabase-ca.crt'
+  local_path = 'config/certificates/supabase-ca.crt'
