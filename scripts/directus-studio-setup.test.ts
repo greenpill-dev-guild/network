@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
+import { readdir, readFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { buildDirectusStudioBookmarkPlan, buildDirectusStudioMetadataPlan } from './directus-studio-setup.ts';
 
 test('Directus Studio metadata plan hides assignment collections and labels content collections', () => {
@@ -151,4 +154,48 @@ test('Directus Studio bookmark plan adds steward and publisher working views', (
   });
   assert.equal(failedAlerts.length, 2);
   assert.equal(failedAlerts.every((bookmark) => bookmark.collection === 'map_node_moderation_notifications'), true);
+});
+
+test('chapter image alt text and credit sit under the upload and alt text is required with it', () => {
+  const plan = buildDirectusStudioMetadataPlan();
+  const chapterField = (name: string) => plan.fields.find((field) => (
+    field.collection === 'chapters' && field.field === name
+  ));
+  const imageFile = chapterField('image_file');
+  const imageAlt = chapterField('image_alt');
+  const imageCredit = chapterField('image_credit');
+
+  for (const field of [imageFile, imageAlt, imageCredit]) {
+    assert.equal(field?.meta.group, 'group_links_media');
+    assert.equal(field?.meta.hidden, false);
+  }
+  assert.equal(Number(imageFile?.meta.sort) < Number(imageAlt?.meta.sort), true);
+  assert.equal(Number(imageAlt?.meta.sort) < Number(imageCredit?.meta.sort), true);
+  assert.deepEqual(imageAlt?.meta.translations, [{ language: 'en-US', translation: 'Image alt text' }]);
+  assert.deepEqual(imageCredit?.meta.translations, [{ language: 'en-US', translation: 'Image credit' }]);
+  assert.deepEqual(imageAlt?.meta.conditions, [
+    {
+      name: 'Alt text required with an uploaded image',
+      rule: { image_file: { _nnull: true } },
+      required: true,
+    },
+  ]);
+});
+
+test('every content notification kind has a Data Studio label', async () => {
+  // The newest migration that defines the kind constraint is the authority.
+  const migrationsDir = resolve(dirname(fileURLToPath(import.meta.url)), '../packages/agent/migrations');
+  let allowedKinds: string[] = [];
+  for (const file of (await readdir(migrationsDir)).filter((name) => name.endsWith('.sql')).sort()) {
+    const migration = await readFile(resolve(migrationsDir, file), 'utf8');
+    const constraint = [...migration.matchAll(/content_review_notification_kind_check\s+check \(kind in \(([^)]*)\)\)/g)].at(-1);
+    if (constraint) allowedKinds = [...constraint[1].matchAll(/'([a-z_]+)'/g)].map((match) => match[1]);
+  }
+  assert.ok(allowedKinds.includes('chapter_image_withheld'));
+
+  const plan = buildDirectusStudioMetadataPlan(['review_notifications'], [], [], []);
+  const kind = plan.fields.find((field) => field.collection === 'review_notifications' && field.field === 'kind');
+  const labelled = (kind?.meta.options as { choices: Array<{ value: string }> }).choices.map((choice) => choice.value);
+
+  assert.deepEqual([...labelled].sort(), [...allowedKinds].sort());
 });

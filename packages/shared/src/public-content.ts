@@ -336,14 +336,18 @@ export function toPublicOperationalImpactSourceBindings(
 export interface QuarantinedOperationalRecord {
   collection: string;
   slug: string;
-  reason: 'private_field' | 'unapproved_media';
+  reason: 'private_field';
+}
+
+export interface WithheldChapterImage {
+  slug: string;
+  reason: 'unapproved_media';
 }
 
 function quarantineUnsafeRecords(
   records: ReturnType<typeof normalizeCollection>,
   collection: string,
-  quarantined: QuarantinedOperationalRecord[],
-  extraReason?: (record: UnknownRecord) => QuarantinedOperationalRecord['reason'] | null
+  quarantined: QuarantinedOperationalRecord[]
 ) {
   return records.filter((record) => {
     const slug = cleanString((record as UnknownRecord).slug) || 'unknown';
@@ -351,13 +355,119 @@ function quarantineUnsafeRecords(
       quarantined.push({ collection, slug, reason: 'private_field' });
       return false;
     }
-    const extra = extraReason?.(record as UnknownRecord) ?? null;
-    if (extra) {
-      quarantined.push({ collection, slug, reason: extra });
-      return false;
-    }
     return true;
   });
+}
+
+// Decides which chapter image is public and which metadata travels with it.
+//
+// A chapter shows one image. An uploaded file wins over the sourced image URL.
+// The editor who attaches an upload publishes it, like any other direct edit.
+// A sourced image URL is public only while media.reviewStatus is approved.
+// An image that is not cleared is withheld; the chapter itself always stays.
+//
+// uploadedImageUrl is the public URL of the chapter's uploaded file. It comes
+// from the caller that owns the upload store, never from the record: an upload
+// is published without a media review, so a record must not be able to declare
+// one for itself.
+//
+// Input-only record fields, consumed here and never published:
+// - imageAlt, imageCredit: the chapter's first-class alt text and credit. They
+//   describe the image the chapter shows. For a sourced image, media.imageAlt
+//   and media.imageCredit remain the fallback.
+// - imageFileId: the upload's file id, which stays private.
+function resolvePublicChapterImage(chapter: PublicOperationalRecord, uploadedImageUrl: string): {
+  chapter: PublicOperationalRecord;
+  imageWithheld: boolean;
+} {
+  const {
+    imageFileId: _imageFileId,
+    imageAlt: rawImageAlt,
+    imageCredit: rawImageCredit,
+    ...publicFields
+  } = chapter;
+  const media = normalizeObject(chapter.media);
+  const seo = normalizeObject(chapter.seo);
+  const imageAlt = cleanString(rawImageAlt);
+  const imageCredit = cleanString(rawImageCredit);
+  const sourcedImages = [chapter.image, media.image, media.ogImage].map(cleanString).filter(Boolean);
+  const socialImage = cleanString(seo.ogImage);
+  const sourcedImageApproved = cleanString(media.reviewStatus).toLowerCase() === 'approved';
+
+  if (uploadedImageUrl) {
+    const {
+      image: _sourcedImage,
+      ogImage: _sourcedSocialImage,
+      imageAlt: _sourcedAlt,
+      imageCredit: _sourcedCredit,
+      imageSourceUrl: _sourcedPage,
+      reviewStatus: _sourcedReviewStatus,
+      ...otherMedia
+    } = media;
+    // A social image that only repeated the sourced chapter image follows the
+    // upload. An independent one is itself a sourced image, so it stays only
+    // if the sourced media was approved.
+    const keepsOwnSocialImage =
+      socialImage !== '' && !sourcedImages.includes(socialImage) && sourcedImageApproved;
+    return {
+      chapter: {
+        ...publicFields,
+        image: uploadedImageUrl,
+        media: {
+          ...otherMedia,
+          image: uploadedImageUrl,
+          ogImage: uploadedImageUrl,
+          ...(imageAlt ? { imageAlt } : {}),
+          ...(imageCredit ? { imageCredit } : {}),
+          // The website shows a chapter image only when this says approved.
+          // For an upload, attaching it is that approval.
+          reviewStatus: 'approved',
+        },
+        ...(socialImage === ''
+          ? {}
+          : { seo: { ...seo, ogImage: keepsOwnSocialImage ? socialImage : uploadedImageUrl } }),
+      },
+      imageWithheld: false,
+    };
+  }
+
+  if (sourcedImages.length === 0 && socialImage === '') {
+    return { chapter: publicFields as PublicOperationalRecord, imageWithheld: false };
+  }
+
+  if (sourcedImageApproved) {
+    const alt = imageAlt || cleanString(media.imageAlt);
+    const credit = imageCredit || cleanString(media.imageCredit);
+    return {
+      chapter: {
+        ...publicFields,
+        media: {
+          ...media,
+          ...(alt ? { imageAlt: alt } : {}),
+          ...(credit ? { imageCredit: credit } : {}),
+        },
+      },
+      imageWithheld: false,
+    };
+  }
+
+  // The media object describes the unreviewed image, so none of it is published.
+  const { ogImage: _withheldSocialImage, ...otherSeo } = seo;
+  return {
+    chapter: {
+      ...publicFields,
+      image: '',
+      media: {},
+      seo: otherSeo,
+    },
+    imageWithheld: true,
+  };
+}
+
+// An upload's public address must be an absolute web URL.
+function toUploadedImageUrl(value: unknown): string {
+  const url = cleanString(value);
+  return /^https?:\/\/\S+$/i.test(url) ? url : '';
 }
 
 export function toPublicOperationalContentSnapshot({
@@ -379,23 +489,38 @@ export function toPublicOperationalContentSnapshot({
 } = {},
   options: {
     onQuarantine?: (records: QuarantinedOperationalRecord[]) => void;
+    onChapterImagesWithheld?: (chapters: WithheldChapterImage[]) => void;
+    // Public URL of each chapter's uploaded image, by chapter slug.
+    uploadedChapterImageUrls?: ReadonlyMap<string, string>;
   } = {}
 ): PublicOperationalContentSnapshot {
   assertPublishedOperationalInput({ themes, people, chapters, chapterInitiatives, guilds, projects });
 
-  // Records that would violate the privacy boundary or media-review gate are
-  // quarantined (dropped from the projection) instead of failing the whole
-  // snapshot: one bad record must not take down the agent route and every
-  // site deploy. Privacy still fails closed per record, and the final assert
-  // below stays absolute for the surviving snapshot.
+  // Records that would violate the privacy boundary are quarantined (dropped
+  // from the projection) instead of failing the whole snapshot: one bad record
+  // must not take down the agent route and every site deploy. Privacy still
+  // fails closed per record, and the final assert below stays absolute for the
+  // surviving snapshot.
   const quarantined: QuarantinedOperationalRecord[] = [];
 
-  const publicChapters = quarantineUnsafeRecords(
-    normalizeCollection(chapters, 'chapters'),
-    'chapters',
-    quarantined,
-    (chapter) => (containsUnapprovedChapterMedia({ chapters: [chapter] }) ? 'unapproved_media' : null)
-  );
+  // An image that is not cleared for publication costs the chapter its image,
+  // never its place on the site.
+  const chaptersWithWithheldImages = new Set<string>();
+  const chaptersWithPublicImages = normalizeCollection(chapters, 'chapters').map((chapter) => {
+    // A record cannot name its own upload; see resolvePublicChapterImage.
+    const { uploadedImageUrl: _selfDeclaredUpload, ...record } = chapter;
+    const resolved = resolvePublicChapterImage(
+      record as PublicOperationalRecord,
+      toUploadedImageUrl(options.uploadedChapterImageUrls?.get(chapter.slug))
+    );
+    if (resolved.imageWithheld) chaptersWithWithheldImages.add(chapter.slug);
+    return resolved.chapter;
+  });
+
+  const publicChapters = quarantineUnsafeRecords(chaptersWithPublicImages, 'chapters', quarantined);
+  const withheldChapterImages: WithheldChapterImage[] = publicChapters
+    .filter((chapter) => chaptersWithWithheldImages.has(chapter.slug))
+    .map((chapter) => ({ slug: chapter.slug, reason: 'unapproved_media' }));
   const publicGuilds = quarantineUnsafeRecords(normalizeCollection(guilds, 'guilds'), 'guilds', quarantined);
   const publicGuildSlugs = new Set(publicGuilds.map((guild) => guild.slug).filter(Boolean));
   const publicProjects = quarantineUnsafeRecords(
@@ -425,6 +550,14 @@ export function toPublicOperationalContentSnapshot({
       options.onQuarantine(quarantined);
     } else {
       console.warn('public_operational_content_records_quarantined', quarantined);
+    }
+  }
+
+  if (withheldChapterImages.length > 0) {
+    if (options.onChapterImagesWithheld) {
+      options.onChapterImagesWithheld(withheldChapterImages);
+    } else {
+      console.warn('public_operational_content_chapter_images_withheld', withheldChapterImages);
     }
   }
 

@@ -529,7 +529,8 @@ type ReviewNotificationKind =
   | 'update_request_decided'
   | 'initiative_pending'
   | 'record_quarantined'
-  | 'publish_health';
+  | 'publish_health'
+  | 'chapter_image_withheld';
 
 interface ReviewNotificationRow {
   id: string;
@@ -600,6 +601,21 @@ function pendingInitiativeEmailText(row: ReviewNotificationRow, initiativeUrl: s
   ].join('\n');
 }
 
+function withheldChapterImageEmailText(row: ReviewNotificationRow, recordUrl: string): string {
+  return [
+    'A chapter image is being withheld from the Greenpill public website.',
+    '',
+    `Chapter: ${toSafeEmailText(row.recordSlug)}`,
+    '',
+    'The chapter itself is still published. Its sourced image is hidden because',
+    'the media review is not approved. Approve the media review, replace the',
+    'image with an uploaded one, or remove it. The page updates on the next',
+    'snapshot automatically.',
+    '',
+    `Open it in Directus: ${recordUrl}`,
+  ].join('\n');
+}
+
 function quarantinedRecordEmailText(row: ReviewNotificationRow, recordUrl: string): string {
   return [
     'A published record was QUARANTINED out of the Greenpill public snapshot.',
@@ -608,9 +624,9 @@ function quarantinedRecordEmailText(row: ReviewNotificationRow, recordUrl: strin
     `Record: ${toSafeEmailText(row.recordSlug)}`,
     `Reason: ${toSafeEmailText(row.quarantineReason)}`,
     '',
-    'The record is currently missing from the public website. Fix the flagged',
-    'issue (approve the media review or remove the private field), and it',
-    'returns on the next snapshot automatically.',
+    'The record is currently missing from the public website. Remove the',
+    'private field or mailto: link, and it returns on the next snapshot',
+    'automatically.',
     '',
     `Open it in Directus: ${recordUrl}`,
   ].join('\n');
@@ -764,6 +780,15 @@ async function sendReviewEmail({
     to = config.reviewRecipients;
     subject = 'Greenpill public snapshot quarantined a record';
     text = quarantinedRecordEmailText(row, url);
+  } else if (row.kind === 'chapter_image_withheld') {
+    const url = row.recordSlug ? config.recordUrl('chapters', row.recordSlug) : '';
+    if (!url) return { status: 'send_failed', error: 'directus_url_not_configured', providerMessageId: '' };
+    if (!config.reviewRecipients.length) {
+      return { status: 'skipped', error: 'no_review_recipients_configured', providerMessageId: '' };
+    }
+    to = config.reviewRecipients;
+    subject = 'Greenpill chapter image withheld from the public site';
+    text = withheldChapterImageEmailText(row, url);
   } else if (row.kind === 'publish_health') {
     if (!config.reviewRecipients.length) {
       return {
@@ -896,7 +921,13 @@ export async function deliverQueuedContentReviewNotifications(
   return result;
 }
 
-// --- Quarantine alerts --------------------------------------------------------
+// --- Snapshot alerts ----------------------------------------------------------
+//
+// Two different events, each with its own one-per-record alert:
+// - record_quarantined: a record was dropped from the public snapshot.
+// - chapter_image_withheld: a chapter stays published without its image.
+// They must not share a row, or a withheld image would use up the alert for
+// the day the chapter itself is dropped.
 
 const QUARANTINE_COLLECTION_TO_DIRECTUS: Record<string, string> = {
   themes: 'themes',
@@ -924,6 +955,26 @@ export async function enqueueQuarantineAlerts(
     } catch {
       // Pre-migration database: the console.warn from the snapshot builder
       // already surfaced the quarantine; alerting starts once 026 is applied.
+    }
+  }
+}
+
+export async function enqueueChapterImageWithheldAlerts(
+  sql: SqlLike,
+  chapters: Array<{ slug: string }>
+): Promise<void> {
+  for (const chapter of chapters) {
+    const slug = cleanString(chapter.slug);
+    if (!slug) continue;
+    try {
+      await sql`
+        insert into content.review_notifications (kind, record_collection, record_slug)
+        values ('chapter_image_withheld', 'chapters', ${slug})
+        on conflict do nothing
+      `;
+    } catch {
+      // Pre-migration database: the console.warn from the snapshot builder
+      // already surfaced the withheld image; alerting starts once 029 is applied.
     }
   }
 }

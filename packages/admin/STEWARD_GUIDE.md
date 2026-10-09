@@ -85,8 +85,25 @@ with your chapter name and the email address used for your invite.
 3. Select a JPEG, PNG, WebP, GIF, or AVIF file no larger than 25 MB.
 4. Confirm the image is safe to publish. Do not upload private screenshots,
    contact details, private chat content, or location-sensitive metadata.
-5. Keep the public alt text and credit in the chapter's `media` details current.
+5. Fill in `Image alt text` right under the image: one sentence describing
+   what the picture shows, for people who cannot see it. The form does not save
+   an uploaded image without it. Add `Image credit` if someone should be
+   credited.
 6. Save the chapter.
+
+Your uploaded image replaces the chapter's earlier image on the public page.
+`Image alt text` and `Image credit` always describe the image the chapter
+shows right now:
+
+- **Swapping your upload for another picture.** Type the new alt text, and the
+  credit if there is one, before you save. Text you leave untouched described
+  the old picture, so it is emptied when you save, even though the form still
+  showed it. If the same credit applies to the new picture, type it again
+  after saving.
+- **Removing your upload.** The page goes back to the chapter's earlier
+  reviewed image, and both fields show that image's description again.
+- **An uploaded image with no alt text.** The form asks for it the next time
+  you edit the chapter. Until then the public page uses a generic description.
 
 You can fix the focal point, title, and description of images you uploaded
 yourself, and delete your own uploads while no published chapter is using
