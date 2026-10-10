@@ -77,6 +77,12 @@ tools, products, and workstreams. The website consumes the approved public snaps
 `packages/website/src/data/operational-content-snapshot.json` by default, or
 from `OPERATIONAL_CONTENT_SNAPSHOT_URL` during production builds.
 
+The public site never loads a chapter image from another host. The website
+build copies every remote chapter image, whether a Directus upload or an
+approved external URL, into the site through
+`packages/website/src/lib/chapter-image-copies.ts`, and pages read only the
+site-hosted path. Do not hotlink Directus `/assets/` URLs from website markup.
+
 Website source and config live under `packages/website`:
 
 - `packages/website/src/pages/index.astro` - homepage.
