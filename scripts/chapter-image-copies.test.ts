@@ -24,8 +24,11 @@ const sharp = createRequire(resolve(rootDir, 'packages/website/package.json'))('
 const DIRECTUS = 'https://admin.example.test';
 const UPLOAD = `${DIRECTUS}/assets/1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed`;
 const ELSEWHERE = 'https://images.example.org';
+const LOCAL_DIRECTUS = 'http://localhost:3302';
 const quickRetry: ChapterImageRetry = { deadlineMs: 1000, attemptTimeoutMs: 500, retryDelayMs: 5 };
 const briefRetry: ChapterImageRetry = { deadlineMs: 60, attemptTimeoutMs: 500, retryDelayMs: 5 };
+const quickRetries = { ownOrigin: quickRetry, otherHost: quickRetry };
+const briefRetries = { ownOrigin: briefRetry, otherHost: briefRetry };
 
 let photo: Buffer;
 let logo: Buffer;
@@ -49,7 +52,9 @@ type Reply = (init?: RequestInit) => Response | Promise<Response>;
 const serves = (bytes: () => Buffer, type: string): Reply => () =>
   new Response(new Uint8Array(bytes()), { headers: { 'content-type': type, 'content-length': String(bytes().length) } });
 const servesPhoto = serves(() => photo, 'image/jpeg');
+const servesLogo = serves(() => logo, 'image/png');
 const answers = (status: number): Reply => () => new Response('', { status });
+const redirectsTo = (location: string): Reply => () => new Response('', { status: 302, headers: { location } });
 const servesPage: Reply = () =>
   new Response('<html><body>Sign in to view this file</body></html>', { headers: { 'content-type': 'text/html' } });
 // No content-length: the size is only known as the body arrives.
@@ -85,16 +90,25 @@ function imageSources(routes: Record<string, Reply | Reply[]>) {
   return { fetch: fetchImage, requests };
 }
 
-async function expectCopy(address: string, source: { fetch: typeof fetch }): Promise<ChapterImageCopy> {
-  const outcome = await copyRemoteChapterImage(address, { retry: quickRetry, fetch: source.fetch });
+type CopyOptions = Partial<Parameters<typeof copyRemoteChapterImage>[1]>;
+
+async function expectCopy(address: string, source: { fetch: typeof fetch }, options: CopyOptions = {}): Promise<ChapterImageCopy> {
+  const outcome = await copyRemoteChapterImage(address, { retry: quickRetry, fetch: source.fetch, ...options });
   assert.equal(outcome.kind, 'copy', `expected a copy of ${address}, got ${JSON.stringify(outcome)}`);
   return outcome as ChapterImageCopy;
 }
 
-async function unusableReason(address: string, source: { fetch: typeof fetch }, options = {}) {
+async function unusableReason(address: string, source: { fetch: typeof fetch }, options: CopyOptions = {}) {
   const outcome = await copyRemoteChapterImage(address, { retry: quickRetry, fetch: source.fetch, ...options });
   assert.equal(outcome.kind, 'unusable', `expected ${address} to be unusable`);
   return outcome.kind === 'unusable' ? outcome.reason : '';
+}
+
+function stringValues(value: unknown): string[] {
+  if (typeof value === 'string') return [value];
+  if (Array.isArray(value)) return value.flatMap(stringValues);
+  if (value && typeof value === 'object') return Object.values(value).flatMap(stringValues);
+  return [];
 }
 
 test('a remote image is copied as a resized page file and a social file', async () => {
@@ -134,7 +148,7 @@ test('a copy carries none of the camera data from the original', async () => {
 
 test('a small image is not enlarged for the page', async () => {
   const address = `${ELSEWHERE}/logo.png`;
-  const copy = await expectCopy(address, imageSources({ [address]: serves(() => logo, 'image/png') }));
+  const copy = await expectCopy(address, imageSources({ [address]: servesLogo }));
   assert.deepEqual([copy.display.width, copy.display.height], [400, 300]);
   // The social file always has the card shape; transparency lands on white.
   assert.deepEqual([copy.social.width, copy.social.height], [1200, 630]);
@@ -194,16 +208,62 @@ test('an address the build must not fetch is unusable without a request', async 
     '//cdn.example.org/image.jpg',
     'http://example.org/image.jpg',
     'ftp://example.org/image.jpg',
+    // This machine and its network, by name, by address, and by address in disguise.
+    'http://localhost:8080/admin',
+    'https://localhost/image.jpg',
+    'https://printer.localhost/image.jpg',
+    'https://127.0.0.1/image.jpg',
+    'https://2130706433/image.jpg',
+    'https://[::1]/image.jpg',
+    'https://192.168.1.10/image.jpg',
+    'https://169.254.169.254/latest/meta-data',
+    `${LOCAL_DIRECTUS}/assets/1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed`,
   ]) {
     assert.equal(await unusableReason(address, source), 'unsupported_address', address);
   }
   assert.equal(source.requests.size, 0);
 });
 
-test('a local Directus is fetched over plain http', async () => {
-  const local = 'http://localhost:3302/assets/1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed';
-  const copy = await expectCopy(local, imageSources({ [local]: servesPhoto }));
+test('the Directus this project runs is fetched as configured, plain http on a local stack included', async () => {
+  const local = `${LOCAL_DIRECTUS}/assets/1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed`;
+  const source = imageSources({ [local]: servesPhoto });
+  const copy = await expectCopy(local, source, { ownOrigins: [LOCAL_DIRECTUS] });
   assert.equal(copy.display.contentType, 'image/webp');
+  // Naming one origin does not open the rest of the machine.
+  assert.equal(
+    await unusableReason('http://localhost:8080/admin', source, { ownOrigins: [LOCAL_DIRECTUS] }),
+    'unsupported_address'
+  );
+});
+
+test('a redirect is followed only to an address the build may fetch', async () => {
+  const cdn = 'https://cdn.example.net/photo.jpg';
+  const metadata = 'http://169.254.169.254/latest/meta-data';
+  const admin = 'http://localhost:8080/admin';
+  const source = imageSources({
+    [`${ELSEWHERE}/moved.jpg`]: redirectsTo('/photo.jpg'),
+    [`${ELSEWHERE}/photo.jpg`]: servesPhoto,
+    [`${ELSEWHERE}/on-a-cdn.jpg`]: redirectsTo(cdn),
+    [cdn]: servesPhoto,
+    [`${ELSEWHERE}/to-metadata.jpg`]: redirectsTo(metadata),
+    [`${ELSEWHERE}/to-this-machine.jpg`]: redirectsTo(admin),
+    [`${ELSEWHERE}/nowhere.jpg`]: answers(302),
+    [`${ELSEWHERE}/loop.jpg`]: redirectsTo('/loop.jpg'),
+    [metadata]: servesPhoto,
+    [admin]: servesPhoto,
+  });
+
+  await expectCopy(`${ELSEWHERE}/moved.jpg`, source);
+  await expectCopy(`${ELSEWHERE}/on-a-cdn.jpg`, source);
+  assert.equal(await unusableReason(`${ELSEWHERE}/to-metadata.jpg`, source), 'disallowed_redirect');
+  assert.equal(await unusableReason(`${ELSEWHERE}/to-this-machine.jpg`, source), 'disallowed_redirect');
+  assert.equal(await unusableReason(`${ELSEWHERE}/nowhere.jpg`, source), 'disallowed_redirect');
+  assert.equal(await unusableReason(`${ELSEWHERE}/loop.jpg`, source), 'disallowed_redirect');
+
+  // The request never leaves for an address the build may not fetch.
+  assert.equal(source.requests.get(metadata), undefined);
+  assert.equal(source.requests.get(admin), undefined);
+  assert.equal(source.requests.get(`${ELSEWHERE}/loop.jpg`), 6);
 });
 
 test('a source that never answers is reported as unreachable', async () => {
@@ -233,8 +293,28 @@ test('a source that never answers is reported as unreachable', async () => {
   );
 });
 
-// The agent stamps the upload address; the website decides which origin it waits for.
-test('the website waits for the same Directus origin the agent publishes', () => {
+test('no request runs past the deadline', async () => {
+  const hung = imageSources({ [UPLOAD]: neverAnswers });
+  const started = Date.now();
+  await assert.rejects(
+    // One request would be allowed ten seconds; the deadline leaves it a fraction of one.
+    copyRemoteChapterImage(UPLOAD, { retry: { deadlineMs: 100, attemptTimeoutMs: 10_000, retryDelayMs: 5 }, fetch: hung.fetch }),
+    ChapterImageSourceUnreachableError
+  );
+  assert.ok(Date.now() - started < 2000, `gave up at the deadline (${Date.now() - started} ms)`);
+});
+
+test('a retry that allows one request asks once', async () => {
+  const source = imageSources({ [UPLOAD]: [answers(503), servesPhoto] });
+  await assert.rejects(
+    copyRemoteChapterImage(UPLOAD, { retry: { ...quickRetry, maxAttempts: 1 }, fetch: source.fetch }),
+    ChapterImageSourceUnreachableError
+  );
+  assert.equal(source.requests.get(UPLOAD), 1);
+});
+
+// The agent stamps the upload address; the website decides which origin it trusts.
+test('the website trusts the same Directus origin the agent publishes', () => {
   assert.equal(DEFAULT_DIRECTUS_PUBLIC_URL, AGENT_DIRECTUS_PUBLIC_URL);
 });
 
@@ -256,9 +336,15 @@ test('a chapter with an uploaded image names only site-hosted files afterwards',
     media: { image: '/images/chapters/forming-old.jpg', ogImage: '/images/chapters/forming-old.jpg', reviewStatus: 'approved' },
   }], { 'forming-chapter': UPLOAD });
   assert.deepEqual(remoteChapterImageAddresses(published), [UPLOAD]);
+  assert.ok(stringValues(published).some((value) => value === UPLOAD), 'the published chapter names the upload');
 
   const source = imageSources({ [UPLOAD]: servesPhoto });
-  const copier = createChapterImageCopier({ mustReach: [DIRECTUS], mustReachRetry: quickRetry, fetch: source.fetch });
+  const copier = createChapterImageCopier({
+    ownOrigins: [DIRECTUS],
+    publishBuild: true,
+    retry: quickRetries,
+    fetch: source.fetch,
+  });
   const { chapters: [chapter], dropped } = await copier.siteHostedChapters([published]);
   const copy = await expectCopy(UPLOAD, source);
 
@@ -269,7 +355,7 @@ test('a chapter with an uploaded image names only site-hosted files afterwards',
   assert.equal(chapter.seo.ogImage, copy.social.path);
   assert.equal(chapter.media.imageAlt, 'Stewards planting trees at the first chapter meetup.');
   // If the shared contract ever puts the upload address in another field, this fails.
-  assert.equal(JSON.stringify(chapter).includes(DIRECTUS), false, 'no remote image address is left in the chapter');
+  assert.deepEqual(stringValues(chapter).filter((value) => value === UPLOAD), [], 'no field still names the upload');
   assert.deepEqual(remoteChapterImageAddresses(chapter), []);
   assert.deepEqual(copier.files().map((file) => file.path).sort(), [copy.display.path, copy.social.path].sort());
 });
@@ -284,7 +370,7 @@ test('a chapter whose images are already on the site is left as it is', async ()
   }]);
 
   const source = imageSources({});
-  const copier = createChapterImageCopier({ mustReach: [DIRECTUS], fetch: source.fetch });
+  const copier = createChapterImageCopier({ ownOrigins: [DIRECTUS], publishBuild: true, fetch: source.fetch });
   const { chapters: [chapter], dropped } = await copier.siteHostedChapters([published]);
   assert.equal(chapter, published);
   assert.deepEqual(dropped, []);
@@ -303,8 +389,9 @@ test('an address that is not an image costs the chapter that field and nothing e
   }]);
 
   const copier = createChapterImageCopier({
-    mustReach: [DIRECTUS],
-    otherRetry: quickRetry,
+    ownOrigins: [DIRECTUS],
+    publishBuild: true,
+    retry: quickRetries,
     fetch: imageSources({ [page]: servesPage }).fetch,
   });
   const { chapters: [chapter], dropped } = await copier.siteHostedChapters([published]);
@@ -314,6 +401,26 @@ test('an address that is not an image costs the chapter that field and nothing e
   assert.deepEqual(dropped, [{ slug: 'shared-link-chapter', field: 'image', address: page, reason: 'not_an_image' }]);
 });
 
+test('an address a browser would take to another host is never left in place', async () => {
+  // Each of these starts with a slash, and a browser still leaves the site for evil.example.
+  const chapter = {
+    slug: 'disguised-chapter',
+    image: '/\\evil.example/image.jpg',
+    media: { image: '//evil.example/image.jpg', ogImage: '/\t/evil.example/image.jpg', reviewStatus: 'approved' },
+    seo: { ogImage: '/images/chapters/disguised.jpg' },
+  };
+  assert.equal(remoteChapterImageAddresses(chapter).length, 3);
+
+  const source = imageSources({});
+  const copier = createChapterImageCopier({ ownOrigins: [DIRECTUS], publishBuild: true, fetch: source.fetch });
+  const { chapters: [published], dropped } = await copier.siteHostedChapters([chapter]);
+  assert.equal(published.image, '');
+  assert.deepEqual(published.media, { image: '', ogImage: '', reviewStatus: 'approved' });
+  assert.equal(published.seo.ogImage, '/images/chapters/disguised.jpg');
+  assert.deepEqual(dropped.map((image) => image.reason), ['unsupported_address', 'unsupported_address', 'unsupported_address']);
+  assert.equal(source.requests.size, 0);
+});
+
 test('an unreachable source fails the copy only when the project runs that source', async () => {
   const external = `${ELSEWHERE}/retired-host.jpg`;
   const chapters = [
@@ -321,22 +428,38 @@ test('an unreachable source fails the copy only when the project runs that sourc
     { slug: 'sourced-chapter', image: external, media: { reviewStatus: 'approved' } },
   ];
   const source = imageSources({ [UPLOAD]: answers(503), [external]: answers(503) });
-  const retries = { mustReachRetry: briefRetry, otherRetry: briefRetry, fetch: source.fetch };
 
   // The publish build runs Directus, so a missing upload must stop it.
-  const publishBuild = createChapterImageCopier({ mustReach: [`${DIRECTUS}/`], ...retries });
+  const publishBuild = createChapterImageCopier({
+    ownOrigins: [`${DIRECTUS}/`],
+    publishBuild: true,
+    retry: briefRetries,
+    fetch: source.fetch,
+  });
   await assert.rejects(publishBuild.siteHostedChapters(chapters), ChapterImageSourceUnreachableError);
 
   // Nobody here can bring someone else's host back, so that chapter loses its image.
   const { chapters: [sourced], dropped } = await publishBuild.siteHostedChapters([chapters[1]]);
   assert.equal(sourced.image, '');
   assert.deepEqual(dropped, [{ slug: 'sourced-chapter', field: 'image', address: external, reason: 'unreachable' }]);
+  assert.ok((source.requests.get(external) ?? 0) >= 2, 'another host is asked again before it is given up on');
+});
 
-  // The dev server and fallback builds wait for nothing.
-  const devServer = createChapterImageCopier({ mustReach: [], ...retries });
-  const lenient = await devServer.siteHostedChapters(chapters);
-  assert.deepEqual(lenient.chapters.map((chapter) => chapter.image), ['', '']);
-  assert.deepEqual(lenient.dropped.map((image) => image.reason), ['unreachable', 'unreachable']);
+test('the dev server and fallback builds ask each source once and never fail', async () => {
+  const external = `${ELSEWHERE}/slow-host.jpg`;
+  const chapters = [
+    { slug: 'uploaded-chapter', image: UPLOAD, media: { reviewStatus: 'approved' } },
+    { slug: 'sourced-chapter', image: external, media: { reviewStatus: 'approved' } },
+  ];
+  // Both would serve the file on a second request.
+  const source = imageSources({ [UPLOAD]: [answers(503), servesPhoto], [external]: [dropsConnection, servesPhoto] });
+
+  const devServer = createChapterImageCopier({ ownOrigins: [DIRECTUS], publishBuild: false, fetch: source.fetch });
+  const { chapters: published, dropped } = await devServer.siteHostedChapters(chapters);
+  assert.deepEqual(published.map((chapter) => chapter.image), ['', '']);
+  assert.deepEqual(dropped.map((image) => image.reason), ['unreachable', 'unreachable']);
+  assert.equal(source.requests.get(UPLOAD), 1);
+  assert.equal(source.requests.get(external), 1);
 });
 
 test('one address is fetched once, however many chapters and calls name it', async () => {
@@ -346,13 +469,42 @@ test('one address is fetched once, however many chapters and calls name it', asy
   ];
   const source = imageSources({ [UPLOAD]: servesPhoto });
 
-  const copier = createChapterImageCopier({ mustReach: [DIRECTUS], mustReachRetry: quickRetry, fetch: source.fetch });
+  const copier = createChapterImageCopier({
+    ownOrigins: [DIRECTUS],
+    publishBuild: true,
+    retry: quickRetries,
+    fetch: source.fetch,
+  });
   const first = await copier.siteHostedChapters(chapters);
   const again = await copier.siteHostedChapters(chapters);
   assert.equal(source.requests.get(UPLOAD), 1);
   assert.deepEqual(again.chapters, first.chapters);
   assert.equal(first.chapters[0].image, first.chapters[1].image);
   assert.equal(copier.files().length, 2);
+});
+
+test('a copy is fetched again once its reuse time has passed', async () => {
+  // Replace File in Directus swaps the pixels and keeps the address.
+  const chapters = [{ slug: 'replaced', image: UPLOAD, media: { reviewStatus: 'approved' } }];
+  const source = imageSources({ [UPLOAD]: [servesPhoto, servesLogo] });
+
+  const devServer = createChapterImageCopier({
+    ownOrigins: [DIRECTUS],
+    publishBuild: false,
+    reuseForMs: 200,
+    fetch: source.fetch,
+  });
+  const first = await devServer.siteHostedChapters(chapters);
+  const soonAfter = await devServer.siteHostedChapters(chapters);
+  assert.equal(source.requests.get(UPLOAD), 1);
+  assert.equal(soonAfter.chapters[0].image, first.chapters[0].image);
+
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const later = await devServer.siteHostedChapters(chapters);
+  assert.equal(source.requests.get(UPLOAD), 2);
+  assert.notEqual(later.chapters[0].image, first.chapters[0].image);
+  // The earlier file stays served, for a page that was rendered before the swap.
+  assert.equal(devServer.files().length, 4);
 });
 
 test('a chapter is never rewritten without knowing what became of its image', () => {

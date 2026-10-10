@@ -288,17 +288,25 @@ The snapshot still carries the original address; only the website rewrites it.
 This is why the admin machine can sleep when idle: a visitor never waits for
 it to wake.
 
+The build fetches from this Directus as configured (`DIRECTUS_PUBLIC_URL`,
+default `https://admin.greenpill.network`). Any other address has to be
+`https` and name a host. An IP address or `localhost` is refused, and a
+redirect is followed only to an address that passes the same check, so a
+chapter record cannot point the build at the machine it runs on.
+
 | At build time | Result |
 | --- | --- |
-| The source answers 5xx or 429, or gives no answer | The build asks again. It keeps asking this Directus for five minutes, which covers the machine waking from idle. |
+| The source answers 5xx or 429, or gives no answer | The build asks again. It keeps asking this Directus for five minutes, which covers the machine waking from idle, and any other host for 45 seconds. |
 | This Directus still does not answer | The publish build fails and the deployed site stays as it is. |
 | Another host still does not answer | The chapter is published without that image. |
-| The address is refused (403, 404), is over 30 MB, or is not an image | The chapter is published without that image. |
+| The address is refused (403, 404), is over 30 MB, is not an image, or is one the build will not fetch | The chapter is published without that image. |
 
 A chapter published without an image is named in the build log with the
 reason, and as a warning on the workflow run. No operator alert is sent for it
-yet. The dev server and builds from the checked-in fallback snapshot wait for
-nothing and never fail on an image.
+yet. The dev server and builds from the checked-in fallback snapshot ask each
+source once, for at most 15 seconds, and never fail on an image. The dev
+server fetches an address again a minute after its last copy, so a file
+replaced in Directus shows up without a restart.
 
 The copy is re-encoded from the pixels, so it carries no EXIF data. The
 original stays readable at its Directus address while it is attached to a

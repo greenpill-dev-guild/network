@@ -9,6 +9,7 @@
 //
 // Nothing here imports Astro or Vite, so tests can load the module directly.
 import { createHash } from 'node:crypto';
+import { isIP } from 'node:net';
 import sharp from 'sharp';
 
 export const CHAPTER_IMAGE_COPY_DIR = '/images/chapters/copied';
@@ -25,6 +26,10 @@ const SOCIAL_WIDTH_PX = 1200;
 const SOCIAL_HEIGHT_PX = 630;
 const SOCIAL_BACKGROUND = { r: 255, g: 255, b: 255 };
 const COPIES_AT_ONCE = 3;
+const MAX_REDIRECTS = 5;
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+// Stands in for the site when asking where a browser would take an address.
+const SITE_STAND_IN = 'https://site.invalid';
 
 export interface SiteImageFile {
   /** Path the site serves the file from. */
@@ -48,6 +53,7 @@ export interface ChapterImageCopy {
 
 export type UnusableChapterImageReason =
   | 'unsupported_address'
+  | 'disallowed_redirect'
   | 'not_an_image'
   | 'too_large'
   | 'unreachable'
@@ -71,11 +77,13 @@ export interface DroppedChapterImage {
 }
 
 export interface ChapterImageRetry {
-  /** How long to keep trying one image. */
+  /** How long to keep asking one source. No request runs past it. */
   deadlineMs: number;
   /** Time allowed for one request, body included. */
   attemptTimeoutMs: number;
   retryDelayMs: number;
+  /** Stops asking after this many requests, whatever time is left. */
+  maxAttempts?: number;
 }
 
 // Measured on 2026-10-09: the sleeping admin machine answered 503 after 46 s
@@ -90,6 +98,13 @@ export const OTHER_SOURCE_RETRY: ChapterImageRetry = Object.freeze({
   deadlineMs: 45_000,
   attemptTimeoutMs: 20_000,
   retryDelayMs: 2_000,
+});
+
+export const ASK_ONCE: ChapterImageRetry = Object.freeze({
+  deadlineMs: 15_000,
+  attemptTimeoutMs: 15_000,
+  retryDelayMs: 0,
+  maxAttempts: 1,
 });
 
 export class ChapterImageSourceUnreachableError extends Error {
@@ -120,10 +135,37 @@ const CHAPTER_IMAGE_FIELDS: ReadonlyArray<{
   { field: 'seo.ogImage', holder: 'seo', key: 'ogImage', use: 'social' },
 ];
 
-const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+function parseAddress(address: string, base?: URL | string): URL | null {
+  try {
+    return new URL(address, base);
+  } catch {
+    return null;
+  }
+}
 
+// Asked the way a browser would resolve it, not matched as text: a browser
+// reads "//host/x" and "/\host/x" as another host.
 function isSitePath(address: string): boolean {
-  return address.startsWith('/') && !address.startsWith('//');
+  return address.startsWith('/') && parseAddress(address, SITE_STAND_IN)?.origin === SITE_STAND_IN;
+}
+
+function toOrigins(addresses: readonly string[]): Set<string> {
+  return new Set(addresses.map((address) => parseAddress(address)?.origin ?? address));
+}
+
+// Every address here was typed by somebody, and the request leaves from a CI
+// runner or a developer's machine, so it must not be steerable at that machine
+// or its network.
+// - An origin this project runs is fetched as configured, plain http on a
+//   local stack included.
+// - Anything else has to be https and name a host. An IP address and
+//   localhost are refused. A name that points at a private address still has
+//   to present a certificate valid for that name before a request is sent.
+function mayFetch(url: URL, ownOrigins: ReadonlySet<string>): boolean {
+  if (ownOrigins.has(url.origin)) return true;
+  if (url.protocol !== 'https:') return false;
+  const host = url.hostname.replace(/^\[|\]$/g, '').replace(/\.$/, '');
+  return isIP(host) === 0 && host !== 'localhost' && !host.endsWith('.localhost');
 }
 
 function asRecord(value: unknown): ChapterRecord | null {
@@ -143,22 +185,6 @@ function writeImageAddress(
 ): ChapterRecord {
   if (!holder) return { ...chapter, [key]: address };
   return { ...chapter, [holder]: { ...asRecord(chapter[holder]), [key]: address } };
-}
-
-function parseAddress(address: string): URL | null {
-  try {
-    return new URL(address);
-  } catch {
-    return null;
-  }
-}
-
-// https from anywhere. Plain http only from this machine, for local stacks.
-function canFetch(address: string): boolean {
-  const url = parseAddress(address);
-  if (!url) return false;
-  if (url.protocol === 'https:') return true;
-  return url.protocol === 'http:' && LOOPBACK_HOSTS.has(url.hostname);
 }
 
 /** The remote image addresses a chapter names, without repeats. */
@@ -244,33 +270,54 @@ type DownloadAttempt =
   | { kind: 'try_again'; failure: string }
   | UnusableChapterImage;
 
+interface DownloadOptions {
+  fetchImage: typeof fetch;
+  ownOrigins: ReadonlySet<string>;
+  maxBytes: number;
+}
+
+async function readImageResponse(response: Response, maxBytes: number): Promise<DownloadAttempt> {
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => {});
+    return saysTryAgain(response.status)
+      ? { kind: 'try_again', failure: `HTTP ${response.status}` }
+      : unusable(`http_${response.status}`);
+  }
+
+  if (Number(response.headers.get('content-length')) > maxBytes) {
+    await response.body?.cancel().catch(() => {});
+    return unusable('too_large');
+  }
+
+  const bytes = await readBody(response, maxBytes);
+  return bytes === 'too_large' ? unusable('too_large') : { kind: 'downloaded', bytes };
+}
+
+// Redirects are followed by hand so that every hop passes mayFetch. Left to
+// fetch, an approved address could send the request anywhere.
 async function attemptDownload(
-  address: string,
-  fetchImage: typeof fetch,
-  attemptTimeoutMs: number,
-  maxBytes: number
+  address: URL,
+  timeoutMs: number,
+  { fetchImage, ownOrigins, maxBytes }: DownloadOptions
 ): Promise<DownloadAttempt> {
+  const signal = AbortSignal.timeout(timeoutMs);
   try {
-    const response = await fetchImage(address, {
-      headers: { accept: 'image/*' },
-      redirect: 'follow',
-      signal: AbortSignal.timeout(attemptTimeoutMs),
-    });
+    let hop = address;
+    for (let redirects = 0; ; redirects += 1) {
+      const response = await fetchImage(hop.href, {
+        headers: { accept: 'image/*' },
+        redirect: 'manual',
+        signal,
+      });
+      if (!REDIRECT_STATUSES.has(response.status)) return await readImageResponse(response, maxBytes);
 
-    if (!response.ok) {
       await response.body?.cancel().catch(() => {});
-      return saysTryAgain(response.status)
-        ? { kind: 'try_again', failure: `HTTP ${response.status}` }
-        : unusable(`http_${response.status}`);
+      const next = parseAddress(response.headers.get('location') ?? '', hop);
+      if (!next || redirects === MAX_REDIRECTS || !mayFetch(next, ownOrigins)) {
+        return unusable('disallowed_redirect');
+      }
+      hop = next;
     }
-
-    if (Number(response.headers.get('content-length')) > maxBytes) {
-      await response.body?.cancel().catch(() => {});
-      return unusable('too_large');
-    }
-
-    const bytes = await readBody(response, maxBytes);
-    return bytes === 'too_large' ? unusable('too_large') : { kind: 'downloaded', bytes };
   } catch (error) {
     // No answer, a dropped connection or a timeout says nothing about the image.
     return { kind: 'try_again', failure: describeFailure(error) };
@@ -323,25 +370,29 @@ async function renderCopy(source: Uint8Array): Promise<ChapterImageOutcome> {
 /**
  * Fetches one remote image and renders its site-hosted files. Throws
  * ChapterImageSourceUnreachableError when the source keeps saying try again,
- * or gives no answer, for the whole retry deadline.
+ * or gives no answer, for as long as the retry allows.
  */
 export async function copyRemoteChapterImage(
   address: string,
   {
     retry,
+    ownOrigins = [],
     maxSourceBytes = DEFAULT_MAX_SOURCE_BYTES,
     fetch: fetchImage = fetch,
-  }: { retry: ChapterImageRetry; maxSourceBytes?: number; fetch?: typeof fetch }
+  }: { retry: ChapterImageRetry; ownOrigins?: readonly string[]; maxSourceBytes?: number; fetch?: typeof fetch }
 ): Promise<ChapterImageOutcome> {
-  if (!canFetch(address)) return unusable('unsupported_address');
+  const download: DownloadOptions = { fetchImage, ownOrigins: toOrigins(ownOrigins), maxBytes: maxSourceBytes };
+  const url = parseAddress(address);
+  if (!url || !mayFetch(url, download.ownOrigins)) return unusable('unsupported_address');
 
   const deadline = Date.now() + retry.deadlineMs;
   for (let attempts = 1; ; attempts += 1) {
-    const attempt = await attemptDownload(address, fetchImage, retry.attemptTimeoutMs, maxSourceBytes);
+    const timeLeftMs = Math.max(deadline - Date.now(), 1);
+    const attempt = await attemptDownload(url, Math.min(retry.attemptTimeoutMs, timeLeftMs), download);
     if (attempt.kind === 'downloaded') return renderCopy(attempt.bytes);
     if (attempt.kind === 'unusable') return attempt;
 
-    if (Date.now() + retry.retryDelayMs >= deadline) {
+    if (attempts >= (retry.maxAttempts ?? Infinity) || Date.now() + retry.retryDelayMs >= deadline) {
       throw new ChapterImageSourceUnreachableError(address, attempts, attempt.failure);
     }
     await new Promise((resolve) => setTimeout(resolve, retry.retryDelayMs));
@@ -350,14 +401,28 @@ export async function copyRemoteChapterImage(
 
 export interface ChapterImageCopierOptions {
   /**
-   * Origins this project runs, such as the Directus that serves uploads. An
-   * image there exists, so the copier waits the source out and fails if it
-   * never answers. Any other source that stays unreachable costs the chapter
-   * its image, because nobody here can bring that host back.
+   * Origins this project runs, such as the Directus that serves uploads. They
+   * are fetched as configured; every other address has to pass mayFetch.
    */
-  mustReach: readonly string[];
-  mustReachRetry?: ChapterImageRetry;
-  otherRetry?: ChapterImageRetry;
+  ownOrigins: readonly string[];
+  /**
+   * True for the build that publishes the site. It keeps asking a source that
+   * is slow to answer, and fails if one of the project's own origins never
+   * does: that image exists, and the site must not go out without it. Any
+   * other host that stays unreachable costs the chapter its image, because
+   * nobody here can bring that host back.
+   *
+   * Everything else, the dev server and builds from the checked-in fallback,
+   * asks each source once and never fails.
+   */
+  publishBuild: boolean;
+  /**
+   * How long an outcome is reused before the address is fetched again. Forever
+   * by default, which suits a build. The dev server outlives the files it
+   * shows, so it sets a limit.
+   */
+  reuseForMs?: number;
+  retry?: { ownOrigin?: ChapterImageRetry; otherHost?: ChapterImageRetry; once?: ChapterImageRetry };
   maxSourceBytes?: number;
   fetch?: typeof fetch;
 }
@@ -385,21 +450,28 @@ async function forEachLimited<T>(items: readonly T[], limit: number, run: (item:
 
 /** Copies each remote address once, however many chapters or calls name it. */
 export function createChapterImageCopier({
-  mustReach,
-  mustReachRetry = WAKING_SOURCE_RETRY,
-  otherRetry = OTHER_SOURCE_RETRY,
+  ownOrigins,
+  publishBuild,
+  reuseForMs = Infinity,
+  retry = {},
   maxSourceBytes,
   fetch: fetchImage,
 }: ChapterImageCopierOptions): ChapterImageCopier {
-  const mustReachOrigins = new Set(mustReach.map((origin) => parseAddress(origin)?.origin ?? origin));
-  const outcomes = new Map<string, Promise<ChapterImageOutcome>>();
+  const ownOriginSet = toOrigins(ownOrigins);
+  const outcomes = new Map<string, { outcome: Promise<ChapterImageOutcome>; settledAt: number | null }>();
   const files = new Map<string, SiteImageFile>();
 
   async function copy(address: string): Promise<ChapterImageOutcome> {
-    const required = mustReachOrigins.has(parseAddress(address)?.origin ?? '');
+    const isOwn = ownOriginSet.has(parseAddress(address)?.origin ?? '');
+    const patience = !publishBuild
+      ? retry.once ?? ASK_ONCE
+      : isOwn
+        ? retry.ownOrigin ?? WAKING_SOURCE_RETRY
+        : retry.otherHost ?? OTHER_SOURCE_RETRY;
     try {
       const outcome = await copyRemoteChapterImage(address, {
-        retry: required ? mustReachRetry : otherRetry,
+        retry: patience,
+        ownOrigins,
         maxSourceBytes,
         fetch: fetchImage,
       });
@@ -409,18 +481,27 @@ export function createChapterImageCopier({
       }
       return outcome;
     } catch (error) {
-      if (error instanceof ChapterImageSourceUnreachableError && !required) return unusable('unreachable');
+      const mustHave = publishBuild && isOwn;
+      if (error instanceof ChapterImageSourceUnreachableError && !mustHave) return unusable('unreachable');
       throw error;
     }
   }
 
   function outcomeFor(address: string): Promise<ChapterImageOutcome> {
-    let outcome = outcomes.get(address);
-    if (!outcome) {
-      outcome = copy(address);
-      outcomes.set(address, outcome);
-    }
-    return outcome;
+    // A copy still in flight is always shared; the reuse time starts when it settles.
+    const known = outcomes.get(address);
+    if (known && (known.settledAt === null || Date.now() - known.settledAt <= reuseForMs)) return known.outcome;
+
+    const entry: { outcome: Promise<ChapterImageOutcome>; settledAt: number | null } = {
+      outcome: copy(address),
+      settledAt: null,
+    };
+    const settle = () => {
+      entry.settledAt = Date.now();
+    };
+    entry.outcome.then(settle, settle);
+    outcomes.set(address, entry);
+    return entry.outcome;
   }
 
   return {

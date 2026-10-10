@@ -2,9 +2,10 @@
 //
 // Runs a real `astro build` against a snapshot served from this machine. In
 // it one chapter has an uploaded image and another names a web page as its
-// image. The image source answers 503 once before it serves the file, the way
-// the admin machine does while it wakes. Nothing outside this machine is
-// contacted, and the build goes to a temporary directory, not to dist.
+// image. The image source answers 503 once, the way the admin machine does
+// while it wakes, and then redirects to the file. Nothing outside this
+// machine is contacted, and the build goes to a temporary directory, not to
+// dist.
 //
 //   bun run test:chapter-image-copies:build
 //
@@ -30,6 +31,7 @@ const sharp = createRequire(join(websiteDir, 'package.json'))('sharp');
 
 const SNAPSHOT_PATH = '/content/public-snapshot';
 const UPLOAD_PATH = '/assets/1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed';
+const UPLOAD_FILE_PATH = '/files/1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed.jpg';
 const SHARED_FILE_PATH = '/file/d/abc/view';
 const SITE_URL = 'https://greenpill.network';
 const COPIED_IMAGE = /^\/images\/chapters\/copied\/[0-9a-f]{20}\.(webp|jpg)$/;
@@ -52,8 +54,11 @@ const server = createServer((request, response) => {
     return response.writeHead(200, { 'content-type': 'application/json' }).end(snapshotBody);
   }
   if (path === UPLOAD_PATH) {
-    // The first request finds the source still waking.
+    // The first request finds the source still waking. After that it points at the file.
     if (count === 1) return response.writeHead(503).end('Service unavailable');
+    return response.writeHead(302, { location: UPLOAD_FILE_PATH }).end();
+  }
+  if (path === UPLOAD_FILE_PATH) {
     return response.writeHead(200, { 'content-type': 'image/jpeg', 'content-length': photo.length }).end(photo);
   }
   if (path === SHARED_FILE_PATH) {
@@ -97,7 +102,7 @@ function runBuild(): Promise<{ exitCode: number; output: string }> {
       cwd: websiteDir,
       env: {
         ...process.env,
-        // The two settings that make this a publish build that waits for Directus.
+        // The two settings that make this a publish build that trusts and waits for this source.
         OPERATIONAL_CONTENT_SNAPSHOT_URL: `${origin}${SNAPSHOT_PATH}`,
         DIRECTUS_PUBLIC_URL: origin,
       },
@@ -170,8 +175,10 @@ try {
     assert.equal((await readFile(file, 'utf8')).includes(origin), false, `${file} names the image source`);
   }
 
-  // One refused request while the source woke, then one download for every page that uses it.
+  // One refused request while the source woke, then one redirect and one
+  // download for every page that uses the image.
   assert.equal(requests.get(UPLOAD_PATH), 2);
+  assert.equal(requests.get(UPLOAD_FILE_PATH), 1);
   assert.equal(requests.get(SHARED_FILE_PATH), 1);
 
   console.log('Chapter image build proof passed.');

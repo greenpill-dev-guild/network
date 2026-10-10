@@ -25,12 +25,14 @@ let snapshotPromise: Promise<PublicOperationalContentSnapshot> | null = null;
 // The publish build runs against the live snapshot. It must not go out
 // without an uploaded image it could have had, so it waits for the Directus
 // that serves uploads and fails if that never answers. The dev server and
-// builds from the checked-in fallback make do without.
+// builds from the checked-in fallback ask each source once and make do.
 const isPublishBuild = snapshotUrl !== '' && !import.meta.env.DEV;
 const chapterImageCopier = createChapterImageCopier({
-  mustReach: isPublishBuild
-    ? [process.env.DIRECTUS_PUBLIC_URL?.trim() || DEFAULT_DIRECTUS_PUBLIC_URL]
-    : [],
+  ownOrigins: [process.env.DIRECTUS_PUBLIC_URL?.trim() || DEFAULT_DIRECTUS_PUBLIC_URL],
+  publishBuild: isPublishBuild,
+  // The dev server reloads the snapshot on every call so edits show up. A
+  // file replaced in Directus keeps its address, so let that show up too.
+  reuseForMs: import.meta.env.DEV ? 60_000 : undefined,
 });
 const reportedDroppedImages = new Set<string>();
 
