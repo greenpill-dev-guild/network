@@ -34,6 +34,10 @@ const agentEnv = {
   PORT: "3303",
 };
 
+// `db:local:up` and `admin:down` in package.json name the same two files.
+const postgresComposeFile = "packages/agent/docker-compose.yml";
+const directusComposeFile = "packages/admin/docker-compose.yml";
+
 const longRunningTargets = [
   {
     label: "website",
@@ -44,7 +48,7 @@ const longRunningTargets = [
   },
   {
     label: "directus",
-    command: ["bun", "--no-env-file", "scripts/docker-compose.ts", "-f", "packages/admin/docker-compose.yml", "up", "admin-directus"],
+    command: ["bun", "--no-env-file", "scripts/docker-compose.ts", "-f", directusComposeFile, "up", "admin-directus"],
     env: directusEnv,
     url: "http://localhost:3302/",
     readyUrl: "http://localhost:3302/server/ping",
@@ -58,9 +62,10 @@ const longRunningTargets = [
   },
 ];
 
-// A service that already answers is used as it is and left running at exit. That covers a stack you started
-// yourself, and the isolated dev machine, where Docker stays on the Mac: Postgres and Directus are started there
-// with `docker compose`, `dm-ports` relays their ports in, and this coordinator runs everything else against them.
+// A service that is already running is used as it is and left running at exit; this run stops only what it
+// started. That covers a stack you started yourself, and the isolated dev machine, where Docker stays on the Mac:
+// Postgres and Directus are started there with `docker compose`, `dm-ports` relays their ports in, and this
+// coordinator runs everything else against them.
 let startedPostgres = false;
 let startedDirectus = false;
 
@@ -142,27 +147,6 @@ async function runCommand(label, command, env = {}) {
   }
 }
 
-async function waitForTcp(host, port, timeoutMs) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const connected = await new Promise((resolve) => {
-      const socket = net.connect({ host, port });
-      socket.once("connect", () => {
-        socket.destroy();
-        resolve(true);
-      });
-      socket.once("error", () => resolve(false));
-      socket.setTimeout(2000, () => {
-        socket.destroy();
-        resolve(false);
-      });
-    });
-    if (connected) return;
-    await sleep(750);
-  }
-  throw new Error(`Timed out waiting for ${host}:${port}`);
-}
-
 // True when Postgres itself answers on the port. A bare TCP connect is not enough: inside the isolated dev
 // machine the port is relayed from the Mac, and the relay accepts a connection even when nothing listens behind
 // it. Postgres answers an SSLRequest with a single byte, "S" or "N".
@@ -179,6 +163,43 @@ function postgresAnswers(host, port, timeoutMs = 2000) {
     socket.once("connect", () => socket.write(Buffer.from([0, 0, 0, 8, 4, 210, 22, 47])));
     socket.once("data", (data) => finish(data[0] === 0x53 || data[0] === 0x4e));
   });
+}
+
+async function waitForPostgres(host, port, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await postgresAnswers(host, port)) return;
+    await sleep(750);
+  }
+  throw new Error(`Timed out waiting for Postgres on ${host}:${port}`);
+}
+
+// What Docker says about a Compose service: "running", "stopped", or "unavailable" when there is no Docker to ask
+// (inside the isolated dev machine) or the question itself fails.
+function composeServiceState(composeFile, service) {
+  return new Promise((resolve) => {
+    const child = spawn(
+      "bun",
+      ["--no-env-file", "scripts/docker-compose.ts", "-f", composeFile, "ps", "--status", "running", "-q", service],
+      { cwd: repoRoot, stdio: ["ignore", "pipe", "ignore"] },
+    );
+    let output = "";
+    child.stdout.on("data", (chunk) => {
+      output += chunk;
+    });
+    child.once("error", () => resolve("unavailable"));
+    child.once("exit", (code) => {
+      if (code !== 0) resolve("unavailable");
+      else resolve(output.trim() ? "running" : "stopped");
+    });
+  });
+}
+
+// "running" when the service answers, or when Docker has its container up although it did not answer just now:
+// one slow reply must not make this run take over, and later stop, a service it did not start.
+async function serviceState(answers, composeFile, service) {
+  if (await answers()) return "running";
+  return composeServiceState(composeFile, service);
 }
 
 async function httpAnswers(url) {
@@ -231,13 +252,14 @@ process.on("SIGTERM", () => {
 
 try {
   console.log("[dev] Greenpill Network local environment starting.");
-  if (await postgresAnswers("localhost", 3304)) {
-    console.log("[dev] Postgres already answers on localhost:3304; using it and leaving it running at exit.");
+  const postgres = await serviceState(() => postgresAnswers("localhost", 3304), postgresComposeFile, "agent-postgres");
+  if (postgres === "running") {
+    console.log("[dev] Postgres is already running on localhost:3304; using it and leaving it running at exit.");
   } else {
     await runCommand("postgres up", ["bun", "run", "db:local:up"]);
-    startedPostgres = true;
-    await waitForTcp("localhost", 3304, 60_000);
+    startedPostgres = postgres === "stopped";
   }
+  await waitForPostgres("localhost", 3304, 60_000);
   await runCommand("build packages", ["bun", "run", "build:packages"], dbEnv);
   await runCommand("database migrations", ["bun", "--no-env-file", "scripts/agent-db.migrate.ts"], dbEnv);
   await runCommand(
@@ -251,13 +273,14 @@ try {
   const agent = longRunningTargets.find((target) => target.label === "agent");
 
   spawnTarget(website);
-  if (await httpAnswers(directus.readyUrl)) {
-    console.log("[dev] Directus already answers on localhost:3302; using it and leaving it running at exit.");
+  const directusState = await serviceState(() => httpAnswers(directus.readyUrl), directusComposeFile, "admin-directus");
+  if (directusState === "running") {
+    console.log("[dev] Directus is already running on localhost:3302; using it and leaving it running at exit.");
   } else {
     spawnTarget(directus);
-    await waitForHttp(directus.readyUrl, 120_000);
-    startedDirectus = true;
+    startedDirectus = directusState === "stopped";
   }
+  await waitForHttp(directus.readyUrl, 120_000);
   await runCommand("directus bootstrap", ["bun", "run", "directus:local:bootstrap"], directusEnv);
   spawnTarget(agent);
 

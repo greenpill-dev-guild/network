@@ -92,7 +92,8 @@ if ((result.error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT') {
   const inDevMachine = existsSync('/etc/devbox/repo.env');
   // The machine sees the repo under /mnt/mac at the path it has on the Mac.
   const directory = inDevMachine ? process.cwd().replace(/^\/mnt\/mac(?=\/)/, '') : process.cwd();
-  const command = `cd ${directory} && docker compose ${args.join(' ')}`;
+  const quote = (value: string) => (/^[\w@%+=:,./-]+$/.test(value) ? value : `'${value.replace(/'/g, `'\\''`)}'`);
+  const command = `cd ${quote(directory)} && docker compose ${args.map(quote).join(' ')}`;
   if (inDevMachine) {
     console.error('[docker] There is no Docker inside the dev machine. Run this on the Mac instead, with Docker');
     console.error('[docker] itself rather than a package script, and keep `dm-ports` running so the machine can reach it:');
