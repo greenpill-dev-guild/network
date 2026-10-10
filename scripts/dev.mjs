@@ -58,6 +58,12 @@ const longRunningTargets = [
   },
 ];
 
+// A service that already answers is used as it is and left running at exit. That covers a stack you started
+// yourself, and the isolated dev machine, where Docker stays on the Mac: Postgres and Directus are started there
+// with `docker compose`, `dm-ports` relays their ports in, and this coordinator runs everything else against them.
+let startedPostgres = false;
+let startedDirectus = false;
+
 let shuttingDown = false;
 const children = [];
 
@@ -157,16 +163,38 @@ async function waitForTcp(host, port, timeoutMs) {
   throw new Error(`Timed out waiting for ${host}:${port}`);
 }
 
+// True when Postgres itself answers on the port. A bare TCP connect is not enough: inside the isolated dev
+// machine the port is relayed from the Mac, and the relay accepts a connection even when nothing listens behind
+// it. Postgres answers an SSLRequest with a single byte, "S" or "N".
+function postgresAnswers(host, port, timeoutMs = 2000) {
+  return new Promise((resolve) => {
+    const socket = net.connect({ host, port });
+    const finish = (answer) => {
+      socket.destroy();
+      resolve(answer);
+    };
+    socket.setTimeout(timeoutMs, () => finish(false));
+    socket.once("error", () => finish(false));
+    socket.once("close", () => resolve(false));
+    socket.once("connect", () => socket.write(Buffer.from([0, 0, 0, 8, 4, 210, 22, 47])));
+    socket.once("data", (data) => finish(data[0] === 0x53 || data[0] === 0x4e));
+  });
+}
+
+async function httpAnswers(url) {
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(3000) });
+    await response.arrayBuffer().catch(() => undefined);
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 async function waitForHttp(url, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    try {
-      const response = await fetch(url, { signal: AbortSignal.timeout(3000) });
-      await response.arrayBuffer().catch(() => undefined);
-      if (response.ok) return;
-    } catch {
-      // Service is still booting.
-    }
+    if (await httpAnswers(url)) return;
     await sleep(1000);
   }
   throw new Error(`Timed out waiting for ${url}`);
@@ -180,12 +208,16 @@ async function cleanup(exitCode = 0) {
   await sleep(1500);
   for (const child of children) killChild(child, "SIGKILL");
 
-  await runCommand("directus down", ["bun", "run", "admin:down"]).catch((error) => {
-    console.error(`[dev] ${error instanceof Error ? error.message : String(error)}`);
-  });
-  await runCommand("postgres down", ["bun", "run", "db:local:down"]).catch((error) => {
-    console.error(`[dev] ${error instanceof Error ? error.message : String(error)}`);
-  });
+  if (startedDirectus) {
+    await runCommand("directus down", ["bun", "run", "admin:down"]).catch((error) => {
+      console.error(`[dev] ${error instanceof Error ? error.message : String(error)}`);
+    });
+  }
+  if (startedPostgres) {
+    await runCommand("postgres down", ["bun", "run", "db:local:down"]).catch((error) => {
+      console.error(`[dev] ${error instanceof Error ? error.message : String(error)}`);
+    });
+  }
 
   process.exit(exitCode);
 }
@@ -199,8 +231,13 @@ process.on("SIGTERM", () => {
 
 try {
   console.log("[dev] Greenpill Network local environment starting.");
-  await runCommand("postgres up", ["bun", "run", "db:local:up"]);
-  await waitForTcp("localhost", 3304, 60_000);
+  if (await postgresAnswers("localhost", 3304)) {
+    console.log("[dev] Postgres already answers on localhost:3304; using it and leaving it running at exit.");
+  } else {
+    await runCommand("postgres up", ["bun", "run", "db:local:up"]);
+    startedPostgres = true;
+    await waitForTcp("localhost", 3304, 60_000);
+  }
   await runCommand("build packages", ["bun", "run", "build:packages"], dbEnv);
   await runCommand("database migrations", ["bun", "--no-env-file", "scripts/agent-db.migrate.ts"], dbEnv);
   await runCommand(
@@ -214,8 +251,13 @@ try {
   const agent = longRunningTargets.find((target) => target.label === "agent");
 
   spawnTarget(website);
-  spawnTarget(directus);
-  await waitForHttp(directus.readyUrl, 120_000);
+  if (await httpAnswers(directus.readyUrl)) {
+    console.log("[dev] Directus already answers on localhost:3302; using it and leaving it running at exit.");
+  } else {
+    spawnTarget(directus);
+    await waitForHttp(directus.readyUrl, 120_000);
+    startedDirectus = true;
+  }
   await runCommand("directus bootstrap", ["bun", "run", "directus:local:bootstrap"], directusEnv);
   spawnTarget(agent);
 

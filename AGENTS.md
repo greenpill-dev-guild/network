@@ -30,6 +30,7 @@ Canonical package boundaries:
 Run installs and validation from the repo root.
 
 - `bun run dev` - preferred repo-native full local stack: website `3301`, Directus `3302`, agent/API `3303`, and Postgres `3304`.
+- In the isolated dev machine there is no Docker: start Postgres and Directus on the Mac with `docker compose` and keep `dm-ports` running, then `bun run dev` uses them (README, "In The Isolated Dev Machine").
 - `bun install --frozen-lockfile` - install the checked-in workspace dependency graph.
 - `bun run dev:website` - run only the Astro dev server and local Keystatic authoring UI.
 - `bun run build` or `bun run build:website` - build the static website into `packages/website/dist/`.
