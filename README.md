@@ -57,7 +57,32 @@ Directus-owned records, then waits for Directus and applies the local roles,
 permissions, and Data Studio metadata.
 
 Stop the stack with Ctrl-C in the foreground terminal. The coordinator cleans
-up Directus and Postgres with the repo's native Docker commands.
+up the Directus and Postgres it started with the repo's native Docker commands.
+A service that already answers when `bun run dev` starts (Postgres on
+`localhost:3304`, Directus on `localhost:3302`) is used as it is and left
+running at exit.
+
+### In The Isolated Dev Machine
+
+On a Mac where this repo is registered to an isolated dev machine, every `bun`
+and `node` command runs inside that machine, and there is no Docker there.
+Postgres and Directus stay in Docker on the Mac. Start them with Docker itself,
+relay their ports into the machine, then run the stack as usual:
+
+```sh
+docker compose -f packages/agent/docker-compose.yml up -d agent-postgres
+docker compose -f packages/admin/docker-compose.yml up -d admin-directus
+dm-ports       # leave it running: it relays 3302 and 3304 into the machine
+bun run dev    # in another terminal
+```
+
+`bun run dev` finds both services through the relay and uses them. Stop them on
+the Mac with the same two commands and `down` when you are done. The package
+scripts that call Docker (`bun run db:local:up`, `bun run dev:admin`,
+`bun run admin:down` and the like) print the command to run on the Mac instead.
+The compose defaults match what `bun run dev` passes, so Directus started this
+way is the same local instance. Without `dm-ports`, connections to
+`localhost:3302` and `localhost:3304` inside the machine are refused.
 
 Useful local checks:
 

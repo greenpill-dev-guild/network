@@ -86,4 +86,21 @@ const result = spawnSync(compose.command, [...compose.argsPrefix, ...args], {
   stdio: 'inherit',
 });
 
+// No Docker here. Inside the isolated dev machine that is by design: the containers stay in Docker on the Mac
+// and `dm-ports` relays their ports in. Say what to run there instead of failing with nothing but an exit code.
+if ((result.error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT') {
+  const inDevMachine = existsSync('/etc/devbox/repo.env');
+  // The machine sees the repo under /mnt/mac at the path it has on the Mac.
+  const directory = inDevMachine ? process.cwd().replace(/^\/mnt\/mac(?=\/)/, '') : process.cwd();
+  const quote = (value: string) => (/^[\w@%+=:,./-]+$/.test(value) ? value : `'${value.replace(/'/g, `'\\''`)}'`);
+  const command = `cd ${quote(directory)} && docker compose ${args.map(quote).join(' ')}`;
+  if (inDevMachine) {
+    console.error('[docker] There is no Docker inside the dev machine. Run this on the Mac instead, with Docker');
+    console.error('[docker] itself rather than a package script, and keep `dm-ports` running so the machine can reach it:');
+  } else {
+    console.error('[docker] Docker was not found. Install Docker Desktop or OrbStack, then run:');
+  }
+  console.error(`[docker]   ${command}`);
+}
+
 process.exit(result.status ?? 1);
