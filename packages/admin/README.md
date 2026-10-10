@@ -278,10 +278,50 @@ on `image_alt`). The API does not enforce it. An uploaded image without alt
 text is still published, and the public page falls back to a generic
 description.
 
+The public site never loads a chapter image from another host. Its build
+copies every remote image into the site, whether that is an upload served from
+`/assets/<file-id>` or an approved external URL
+(`packages/website/src/lib/chapter-image-copies.ts`). Each one becomes a WebP
+at most 1600 px on its long side for the chapter page and the directory card,
+and a 1200×630 JPEG for link previews, both under `/images/chapters/copied/`.
+The snapshot still carries the original address; only the website rewrites it.
+This is why the admin machine can sleep when idle: a visitor never waits for
+it to wake.
+
+The build fetches from this Directus as configured (`DIRECTUS_PUBLIC_URL`,
+default `https://admin.greenpill.network`). Any other address has to be
+`https` and name a host. An IP address or `localhost` is refused, and a
+redirect is followed only to an address that passes the same check, so a
+chapter record cannot point the build at the machine it runs on. On a local
+stack, give the website the agent's `DIRECTUS_PUBLIC_URL`
+(`http://localhost:3302`), or it refuses the local Directus address.
+
+| At build time | Result |
+| --- | --- |
+| The source answers 5xx or 429, or gives no answer | The build asks again. It keeps asking this Directus for five minutes, which covers the machine waking from idle, and any other host for 45 seconds. |
+| This Directus still does not answer | The publish build fails and the deployed site stays as it is. |
+| Another host still does not answer | The chapter is published without that image. |
+| The address is refused (403, 404), is over 30 MB, is not an image, or is one the build will not fetch | The chapter is published without that image. |
+
+A chapter published without an image is named in the build log with the
+reason, and as a warning on the workflow run. No operator alert is sent for it
+yet. The dev server and builds from the checked-in fallback snapshot ask each
+source once, for at most 15 seconds, and never fail on an image. The dev
+server fetches an address again a minute after its last copy, so a file
+replaced in Directus shows up without a restart.
+
+The copy is re-encoded from the pixels, so it carries no EXIF data. The
+original stays readable at its Directus address while it is attached to a
+published chapter. Every build downloads the file again, so `Replace File`
+reaches the site on the next build. The link-preview crop is centred and does
+not use the Directus focal point.
+
 Prove the database rules with `bun run test:chapter-images:db`. It needs
 `bun run db:local:up`, builds and drops its own scratch database, and refuses
 any server that is not local. Prove the Directus path with
-`bun run directus:steward:smoke`.
+`bun run directus:steward:smoke`. Prove the copy step with
+`bun run test:chapter-image-copies`, and with a real website build through
+`bun run test:chapter-image-copies:build`.
 
 ### Steward Onboarding
 

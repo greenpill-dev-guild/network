@@ -51,7 +51,8 @@ primary_region = "iad"
   force_https = true
   auto_stop_machines = "stop"
   auto_start_machines = true
-  # Wake on editor visits and public asset requests; keep no idle admin VM.
+  # Wake on editor visits and on website builds that copy uploaded images; keep
+  # no idle admin VM. The public site never loads an image from this machine.
   min_machines_running = 0
   processes = ["app"]
 

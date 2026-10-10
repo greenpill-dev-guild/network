@@ -7,6 +7,11 @@ import {
   type PublicOperationalContentSnapshot,
   type PublicOperationalRecord,
 } from '@greenpill-network/shared/public-content';
+import {
+  createChapterImageCopier,
+  DEFAULT_DIRECTUS_PUBLIC_URL,
+  type DroppedChapterImage,
+} from './chapter-image-copies.js';
 
 const snapshotUrl = (
   process.env.OPERATIONAL_CONTENT_SNAPSHOT_URL ||
@@ -16,6 +21,41 @@ const snapshotUrl = (
 
 const shouldCacheRemoteSnapshot = !import.meta.env.DEV;
 let snapshotPromise: Promise<PublicOperationalContentSnapshot> | null = null;
+
+// The publish build runs against the live snapshot. It must not go out
+// without an uploaded image it could have had, so it waits for the Directus
+// that serves uploads and fails if that never answers. The dev server and
+// builds from the checked-in fallback ask each source once and make do.
+const isPublishBuild = snapshotUrl !== '' && !import.meta.env.DEV;
+const chapterImageCopier = createChapterImageCopier({
+  ownOrigins: [process.env.DIRECTUS_PUBLIC_URL?.trim() || DEFAULT_DIRECTUS_PUBLIC_URL],
+  publishBuild: isPublishBuild,
+  // The dev server reloads the snapshot on every call so edits show up. A
+  // file replaced in Directus keeps its address, so let that show up too.
+  reuseForMs: import.meta.env.DEV ? 60_000 : undefined,
+});
+const reportedDroppedImages = new Set<string>();
+
+function reportDroppedChapterImage({ slug, field, address, reason }: DroppedChapterImage) {
+  const key = `${slug} ${field} ${address}`;
+  if (reportedDroppedImages.has(key)) return;
+  reportedDroppedImages.add(key);
+
+  const message = `Chapter "${slug}" is published without the image at ${field} (${reason}): ${address}`;
+  console.warn(`[chapter-images] ${message}`);
+  // Puts the warning on the workflow run summary; the build log is rarely read.
+  // The command has to start a line, and Astro may be mid-line reporting a route.
+  if (process.env.GITHUB_ACTIONS) console.log(`\n::warning title=Chapter image not published::${message}`);
+}
+
+// Pages only ever see site-hosted chapter images; see chapter-image-copies.ts.
+async function siteHostedSnapshot(
+  snapshot: PublicOperationalContentSnapshot
+): Promise<PublicOperationalContentSnapshot> {
+  const { chapters, dropped } = await chapterImageCopier.siteHostedChapters(snapshot.chapters);
+  dropped.forEach(reportDroppedChapterImage);
+  return { ...snapshot, chapters };
+}
 
 async function loadRemoteSnapshot(url: string) {
   const response = await fetch(url, {
@@ -32,17 +72,23 @@ async function loadRemoteSnapshot(url: string) {
 
 export async function getOperationalContentSnapshot() {
   if (!snapshotUrl) {
-    return assertPublicOperationalContentSnapshot(
-      localSnapshot
-    ) as PublicOperationalContentSnapshot;
+    return siteHostedSnapshot(
+      assertPublicOperationalContentSnapshot(localSnapshot) as PublicOperationalContentSnapshot
+    );
   }
 
   if (!shouldCacheRemoteSnapshot) {
-    return loadRemoteSnapshot(snapshotUrl);
+    return siteHostedSnapshot(await loadRemoteSnapshot(snapshotUrl));
   }
 
-  snapshotPromise ??= loadRemoteSnapshot(snapshotUrl);
+  snapshotPromise ??= loadRemoteSnapshot(snapshotUrl).then(siteHostedSnapshot);
   return snapshotPromise;
+}
+
+/** The files behind every site-hosted chapter image copy, for the route that serves them. */
+export async function getChapterImageCopyFiles() {
+  await getOperationalContentSnapshot();
+  return chapterImageCopier.files();
 }
 
 export function asContentEntry(record: PublicOperationalRecord) {

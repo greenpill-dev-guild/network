@@ -110,9 +110,13 @@ yourself, and delete your own uploads while no published chapter is using
 them. Files uploaded by other stewards are read-only for you.
 
 The original upload bucket remains private. New uploads stay private until they
-are attached to a published chapter. Published images are then delivered
-through Directus' permission-checked `/assets/<file-id>` route and reach the
-public website on the next automatic build.
+are attached to a published chapter. The next automatic website build then
+copies a resized version of the image into the public website, so visitors
+load it from greenpill.network. A large photo straight from a phone is fine.
+
+The website's copy carries no embedded camera or location data. The original
+file stays readable at its Directus address while it is attached to a
+published chapter, so step 4 still applies to the file you upload.
 
 ## Updating A Published Chapter
 
