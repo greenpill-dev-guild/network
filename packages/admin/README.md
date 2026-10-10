@@ -292,7 +292,9 @@ The build fetches from this Directus as configured (`DIRECTUS_PUBLIC_URL`,
 default `https://admin.greenpill.network`). Any other address has to be
 `https` and name a host. An IP address or `localhost` is refused, and a
 redirect is followed only to an address that passes the same check, so a
-chapter record cannot point the build at the machine it runs on.
+chapter record cannot point the build at the machine it runs on. On a local
+stack, give the website the agent's `DIRECTUS_PUBLIC_URL`
+(`http://localhost:3302`), or it refuses the local Directus address.
 
 | At build time | Result |
 | --- | --- |
