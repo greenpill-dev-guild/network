@@ -920,6 +920,7 @@ function buildContentOperationsPermissions(contentOpsCollectionNames = [], impac
       'attempts',
       'provider_error',
       'sent_at',
+      'resolved_at',
       'created_at',
       'updated_at',
     ];

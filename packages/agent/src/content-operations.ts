@@ -923,11 +923,17 @@ export async function deliverQueuedContentReviewNotifications(
 
 // --- Snapshot alerts ----------------------------------------------------------
 //
-// Two different events, each with its own one-per-record alert:
-// - record_quarantined: a record was dropped from the public snapshot.
+// Two different conditions, each with its own alert:
+// - record_quarantined: a record is dropped from the public snapshot.
 // - chapter_image_withheld: a chapter stays published without its image.
 // They must not share a row, or a withheld image would use up the alert for
 // the day the chapter itself is dropped.
+//
+// An alert covers one episode: the stretch during which a record stays
+// affected. The first snapshot render that finds the condition opens a row,
+// and that row is what gets emailed. The first render that no longer finds it
+// resolves the row, so the record alerts again if it breaks again. Resolved
+// rows are kept as the alert history.
 
 const QUARANTINE_COLLECTION_TO_DIRECTUS: Record<string, string> = {
   themes: 'themes',
@@ -938,44 +944,130 @@ const QUARANTINE_COLLECTION_TO_DIRECTUS: Record<string, string> = {
   projects: 'projects',
 };
 
-export async function enqueueQuarantineAlerts(
+// How long an alert stays open before a render may resolve it.
+//
+// A render that read the content just before a record broke can finish after
+// the render that opened the record's alert. If it could resolve that alert,
+// the next render would open and send a second one for the same episode. No
+// render takes this long, so one that finishes later read the content as it
+// was after the break.
+export const SNAPSHOT_ALERT_MIN_OPEN_SECONDS = 60;
+
+type SnapshotAlertKind = 'record_quarantined' | 'chapter_image_withheld';
+
+interface SnapshotAlert {
+  kind: SnapshotAlertKind;
+  record_collection: string;
+  record_slug: string;
+  quarantine_reason: string;
+}
+
+// Alert bookkeeping must not fail the public snapshot it runs behind, and it
+// must not fail silently either. A Postgres error code is safe to log; the
+// error text may quote row values.
+function warnSnapshotAlertFailure(
+  failure: { step: 'open'; kind: SnapshotAlertKind } | { step: 'resolve' },
+  error: unknown
+): void {
+  console.warn('public_snapshot_alerts_failed', {
+    ...failure,
+    errorName: error instanceof Error ? error.name : 'UnknownError',
+    code: cleanString((error as { code?: unknown } | null)?.code),
+  });
+}
+
+// Brings the open alerts in line with what one snapshot render found.
+//
+// It runs on every render of a public read path, so a render that changes
+// nothing must write nothing: an alert that is already open makes the insert
+// skip its row, and the update matches no row.
+export async function reconcileSnapshotAlerts(
   sql: SqlLike,
-  records: Array<{ collection: string; slug: string; reason: string }>
+  {
+    quarantined,
+    withheldChapterImages,
+  }: {
+    quarantined: Array<{ collection: string; slug: string; reason: string }>;
+    withheldChapterImages: Array<{ slug: string }>;
+  }
 ): Promise<void> {
-  for (const record of records) {
+  const quarantineAlerts: SnapshotAlert[] = [];
+  for (const record of quarantined) {
     const collection = QUARANTINE_COLLECTION_TO_DIRECTUS[record.collection] ?? cleanString(record.collection);
     const slug = cleanString(record.slug);
     if (!collection || !slug) continue;
-    try {
-      await sql`
-        insert into content.review_notifications (kind, record_collection, record_slug, quarantine_reason)
-        values ('record_quarantined', ${collection}, ${slug}, ${cleanString(record.reason)})
-        on conflict do nothing
-      `;
-    } catch {
-      // Pre-migration database: the console.warn from the snapshot builder
-      // already surfaced the quarantine; alerting starts once 026 is applied.
-    }
+    quarantineAlerts.push({
+      kind: 'record_quarantined',
+      record_collection: collection,
+      record_slug: slug,
+      quarantine_reason: cleanString(record.reason),
+    });
   }
-}
-
-export async function enqueueChapterImageWithheldAlerts(
-  sql: SqlLike,
-  chapters: Array<{ slug: string }>
-): Promise<void> {
-  for (const chapter of chapters) {
+  const imageAlerts: SnapshotAlert[] = [];
+  for (const chapter of withheldChapterImages) {
     const slug = cleanString(chapter.slug);
     if (!slug) continue;
+    imageAlerts.push({
+      kind: 'chapter_image_withheld',
+      record_collection: 'chapters',
+      record_slug: slug,
+      quarantine_reason: '',
+    });
+  }
+
+  // Each kind is written on its own, so a database that rejects one still
+  // records the other. A database rolled back to before migration 029 rejects
+  // every withheld-image alert, and must keep alerting for dropped records.
+  for (const alerts of [quarantineAlerts, imageAlerts]) {
+    if (alerts.length === 0) continue;
     try {
+      // A record can have one open alert per kind: a unique index says so,
+      // and renders that race each other still open a single row.
       await sql`
-        insert into content.review_notifications (kind, record_collection, record_slug)
-        values ('chapter_image_withheld', 'chapters', ${slug})
+        insert into content.review_notifications (kind, record_collection, record_slug, quarantine_reason)
+        select affected.kind, affected.record_collection, affected.record_slug, affected.quarantine_reason
+        from jsonb_to_recordset(${sql.json(alerts)}::jsonb)
+          as affected(kind text, record_collection text, record_slug text, quarantine_reason text)
         on conflict do nothing
       `;
-    } catch {
-      // Pre-migration database: the console.warn from the snapshot builder
-      // already surfaced the withheld image; alerting starts once 029 is applied.
+    } catch (error) {
+      warnSnapshotAlertFailure({ step: 'open', kind: alerts[0].kind }, error);
     }
+  }
+
+  // A quarantined chapter is missing from the snapshot, so this render learned
+  // nothing about its image. Its image alert stays as it is.
+  const stillAffected = [
+    ...quarantineAlerts,
+    ...imageAlerts,
+    ...quarantineAlerts
+      .filter((alert) => alert.record_collection === 'chapters')
+      .map((alert): SnapshotAlert => ({ ...alert, kind: 'chapter_image_withheld' })),
+  ].map(({ kind, record_collection, record_slug }) => ({ kind, record_collection, record_slug }));
+
+  try {
+    // The two kinds are spelled as OR, not IN, so that Postgres can find the
+    // open alerts through their two partial unique indexes.
+    await sql`
+      update content.review_notifications alert
+      set resolved_at = now()
+      where (alert.kind = 'record_quarantined' or alert.kind = 'chapter_image_withheld')
+        and alert.resolved_at is null
+        and alert.created_at < now() - ${SNAPSHOT_ALERT_MIN_OPEN_SECONDS} * interval '1 second'
+        and not exists (
+          select 1
+          from jsonb_to_recordset(${sql.json(stillAffected)}::jsonb)
+            as affected(kind text, record_collection text, record_slug text)
+          where affected.kind = alert.kind
+            and affected.record_collection = alert.record_collection
+            and affected.record_slug = alert.record_slug
+        )
+    `;
+  } catch (error) {
+    // A database without migration 030 has no resolved_at and ends up here
+    // (code 42703). Alerts are still opened above and never resolved, which
+    // is how every database behaved before 030.
+    warnSnapshotAlertFailure({ step: 'resolve' }, error);
   }
 }
 

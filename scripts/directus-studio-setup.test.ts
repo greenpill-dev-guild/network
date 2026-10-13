@@ -3,6 +3,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { buildDirectusOperationalPermissionPlan } from './directus-operational-content-setup.ts';
 import { buildDirectusStudioBookmarkPlan, buildDirectusStudioMetadataPlan } from './directus-studio-setup.ts';
 
 test('Directus Studio metadata plan hides assignment collections and labels content collections', () => {
@@ -198,4 +199,31 @@ test('every content notification kind has a Data Studio label', async () => {
   const labelled = (kind?.meta.options as { choices: Array<{ value: string }> }).choices.map((choice) => choice.value);
 
   assert.deepEqual([...labelled].sort(), [...allowedKinds].sort());
+});
+
+test('the quarantine bookmark lists records still missing from the site, through fields publishers can read', () => {
+  const plan = buildDirectusStudioMetadataPlan(['review_notifications'], [], [], []);
+  const resolvedAt = plan.fields.find((field) => field.collection === 'review_notifications' && field.field === 'resolved_at');
+  assert.equal(resolvedAt?.meta.interface, 'datetime');
+  assert.equal(resolvedAt?.meta.readonly, true);
+
+  const quarantined = buildDirectusStudioBookmarkPlan(['review_notifications'])
+    .find((bookmark) => bookmark.bookmark === 'Quarantined records');
+  // A resolved alert is history. The working list is what is missing right now.
+  assert.deepEqual(quarantined?.filter, {
+    _and: [{ kind: { _eq: 'record_quarantined' } }, { resolved_at: { _null: true } }],
+  });
+
+  // Directus refuses a filter or a column on a field the role cannot read.
+  const publisherRead = buildDirectusOperationalPermissionPlan(undefined, [], [], [], ['review_notifications'])
+    .permissions.find((permission) => (
+      permission.role === quarantined?.role &&
+      permission.collection === 'review_notifications' &&
+      permission.action === 'read'
+    ));
+  const filteredFields = (quarantined?.filter as { _and: Array<Record<string, unknown>> })._and
+    .flatMap((rule) => Object.keys(rule));
+  for (const field of [...filteredFields, ...(quarantined?.layout_query.tabular.fields ?? [])]) {
+    assert.ok(publisherRead?.fields.includes(field), `publishers cannot read review_notifications.${field}`);
+  }
 });

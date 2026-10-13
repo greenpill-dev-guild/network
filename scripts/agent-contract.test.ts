@@ -16,6 +16,7 @@ import {
   RESEND_WEBHOOK_ROUTE,
   recordResendWebhookEvent,
   signResendWebhookPayload,
+  SNAPSHOT_ALERT_MIN_OPEN_SECONDS,
 } from '@greenpill-network/agent';
 import {
   assertPublicImpactPayload,
@@ -1045,52 +1046,59 @@ test('publish-health alerts and recoveries deliver through the durable Resend qu
   );
 });
 
-test('public snapshot keeps chapters whose image is uploaded or unreviewed, and alerts separately for a withheld image and a dropped record', async () => {
-  const uploadedFileId = '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed';
-  const alerts = [];
+// A database stand-in for snapshot renders: it serves the given published
+// chapters and records every statement that touches the alert queue.
+// `rejects` may return an error for a statement, the way the database would.
+function createSnapshotRenderSql(chapters, { rejects = (_statement) => null } = {}) {
+  const alertStatements = [];
   const sql = async (strings, ...values) => {
     const source = strings.join(' ');
     if (source.includes('from content.public_chapters')) {
-      return [
-        {
-          slug: 'forming-chapter',
-          data: {
-            slug: 'forming-chapter',
-            name: 'Forming Chapter',
-            image: '',
-            imageFileId: uploadedFileId,
-            imageAlt: 'Stewards planting trees at the first chapter meetup.',
-            imageCredit: 'Forming Chapter stewards',
-            media: { reviewStatus: 'needs-steward-photo' },
-            seo: {},
-          },
-        },
-        {
-          slug: 'unreviewed-media',
-          data: {
-            slug: 'unreviewed-media',
-            name: 'Unreviewed Media',
-            image: 'https://example.com/image.jpg',
-            media: { image: 'https://example.com/image.jpg', reviewStatus: 'pending' },
-            seo: {},
-          },
-        },
-        {
-          slug: 'private-chapter',
-          data: {
-            slug: 'private-chapter',
-            name: 'Private Chapter',
-            links: [{ label: 'Email', url: 'mailto:someone@example.com' }],
-          },
-        },
-      ];
+      return chapters.map((chapter) => ({ slug: chapter.slug, data: chapter }));
     }
-    if (source.includes('insert into content.review_notifications')) {
-      const kind = source.match(/values \('([a-z_]+)'/)?.[1];
-      alerts.push({ kind, values });
+    if (source.includes('content.review_notifications')) {
+      const statement = { source, values };
+      alertStatements.push(statement);
+      const error = rejects(statement);
+      if (error) throw error;
     }
     return [];
   };
+  sql.json = (value) => value;
+  return {
+    sql,
+    alertStatements,
+    opened: () => alertStatements.filter(({ source }) => source.includes('insert into content.review_notifications')),
+    resolved: () => alertStatements.filter(({ source }) => source.includes('update content.review_notifications')),
+  };
+}
+
+test('public snapshot keeps chapters whose image is uploaded or unreviewed, and alerts separately for a withheld image and a dropped record', async () => {
+  const uploadedFileId = '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed';
+  const { sql, opened, resolved } = createSnapshotRenderSql([
+    {
+      slug: 'forming-chapter',
+      name: 'Forming Chapter',
+      image: '',
+      imageFileId: uploadedFileId,
+      imageAlt: 'Stewards planting trees at the first chapter meetup.',
+      imageCredit: 'Forming Chapter stewards',
+      media: { reviewStatus: 'needs-steward-photo' },
+      seo: {},
+    },
+    {
+      slug: 'unreviewed-media',
+      name: 'Unreviewed Media',
+      image: 'https://example.com/image.jpg',
+      media: { image: 'https://example.com/image.jpg', reviewStatus: 'pending' },
+      seo: {},
+    },
+    {
+      slug: 'private-chapter',
+      name: 'Private Chapter',
+      links: [{ label: 'Email', url: 'mailto:someone@example.com' }],
+    },
+  ]);
 
   const snapshot = await getPublicOperationalContentSnapshot(
     sql,
@@ -1108,12 +1116,134 @@ test('public snapshot keeps chapters whose image is uploaded or unreviewed, and 
   assert.equal(JSON.stringify(snapshot).includes('imageFileId'), false);
   assert.equal(JSON.stringify(snapshot).includes('uploadedImageUrl'), false);
   assert.equal(JSON.stringify(snapshot).includes('example.com/image.jpg'), false);
-  // Two events, two alert kinds: a withheld image must not use up the alert
-  // for a chapter that is dropped from the site.
-  assert.deepEqual(alerts, [
-    { kind: 'record_quarantined', values: ['chapters', 'private-chapter', 'private_field'] },
-    { kind: 'chapter_image_withheld', values: ['unreviewed-media'] },
+  // Two conditions, two alert kinds: a withheld image must not use up the
+  // alert for a chapter that is dropped from the site.
+  assert.deepEqual(opened().map(({ values }) => values), [
+    [[{
+      kind: 'record_quarantined',
+      record_collection: 'chapters',
+      record_slug: 'private-chapter',
+      quarantine_reason: 'private_field',
+    }]],
+    [[{
+      kind: 'chapter_image_withheld',
+      record_collection: 'chapters',
+      record_slug: 'unreviewed-media',
+      quarantine_reason: '',
+    }]],
   ]);
+
+  // The same render ends the episode of every open alert it does not name.
+  // The dropped chapter is not in the snapshot, so nothing was learned about
+  // its image and an image alert it may have stays open.
+  assert.equal(resolved().length, 1);
+  const [minOpenSeconds, stillAffected] = resolved()[0].values;
+  assert.equal(minOpenSeconds, SNAPSHOT_ALERT_MIN_OPEN_SECONDS);
+  assert.deepEqual(stillAffected, [
+    { kind: 'record_quarantined', record_collection: 'chapters', record_slug: 'private-chapter' },
+    { kind: 'chapter_image_withheld', record_collection: 'chapters', record_slug: 'unreviewed-media' },
+    { kind: 'chapter_image_withheld', record_collection: 'chapters', record_slug: 'private-chapter' },
+  ]);
+});
+
+test('a snapshot render with nothing to alert on sends one statement, which ends the episodes that are over', async () => {
+  const { sql, alertStatements, opened, resolved } = createSnapshotRenderSql([
+    { slug: 'healthy-chapter', name: 'Healthy Chapter' },
+  ]);
+
+  const snapshot = await getPublicOperationalContentSnapshot(sql, '2026-10-09T00:00:00.000Z');
+
+  assert.deepEqual(snapshot.chapters.map((chapter) => chapter.slug), ['healthy-chapter']);
+  // The public route pays for this on every render, so it stays at one
+  // statement that opens nothing and only closes what is open.
+  assert.equal(alertStatements.length, 1);
+  assert.equal(opened().length, 0);
+  assert.match(resolved()[0].source, /set resolved_at = now\(\)/);
+  assert.match(resolved()[0].source, /alert\.resolved_at is null/);
+  assert.deepEqual(resolved()[0].values, [SNAPSHOT_ALERT_MIN_OPEN_SECONDS, []]);
+});
+
+test('the public snapshot is served when the alert queue cannot be written, and the failure is logged without row text', async () => {
+  // What a database without migration 030 answers, quoting a private value the
+  // way a constraint error can.
+  const alertError = Object.assign(new Error('column "resolved_at" does not exist near mailto:someone@example.com'), {
+    code: '42703',
+  });
+  const { sql, opened, resolved } = createSnapshotRenderSql([
+    { slug: 'healthy-chapter', name: 'Healthy Chapter' },
+    {
+      slug: 'private-chapter',
+      name: 'Private Chapter',
+      links: [{ label: 'Email', url: 'mailto:someone@example.com' }],
+    },
+  ], { rejects: () => alertError });
+
+  const warnings = [];
+  const originalWarn = console.warn;
+  console.warn = (...args) => warnings.push(args);
+  let snapshot;
+  try {
+    snapshot = await getPublicOperationalContentSnapshot(sql, '2026-10-09T00:00:00.000Z');
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  assert.deepEqual(snapshot.chapters.map((chapter) => chapter.slug), ['healthy-chapter']);
+  // Opening and resolving fail independently: one must not stop the other.
+  assert.equal(opened().length, 1);
+  assert.equal(resolved().length, 1);
+  assert.deepEqual(
+    warnings.filter(([event]) => event === 'public_snapshot_alerts_failed').map(([, detail]) => detail),
+    [
+      { step: 'open', kind: 'record_quarantined', errorName: 'Error', code: '42703' },
+      { step: 'resolve', errorName: 'Error', code: '42703' },
+    ]
+  );
+});
+
+test('a database that rejects withheld-image alerts still records a dropped record', async () => {
+  // A database rolled back to before migration 029 does not know the kind.
+  const kindRejected = Object.assign(new Error('violates check constraint'), { code: '23514' });
+  const { sql, opened, resolved } = createSnapshotRenderSql([
+    {
+      slug: 'unreviewed-media',
+      name: 'Unreviewed Media',
+      image: 'https://example.com/image.jpg',
+      media: { image: 'https://example.com/image.jpg', reviewStatus: 'pending' },
+      seo: {},
+    },
+    {
+      slug: 'private-chapter',
+      name: 'Private Chapter',
+      links: [{ label: 'Email', url: 'mailto:someone@example.com' }],
+    },
+  ], {
+    rejects: ({ source, values }) => (
+      source.includes('insert into') && values[0].some((alert) => alert.kind === 'chapter_image_withheld')
+        ? kindRejected
+        : null
+    ),
+  });
+
+  const warnings = [];
+  const originalWarn = console.warn;
+  console.warn = (...args) => warnings.push(args);
+  try {
+    await getPublicOperationalContentSnapshot(sql, '2026-10-09T00:00:00.000Z');
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  // The kinds travel in separate statements, so only the rejected one is lost.
+  assert.deepEqual(
+    opened().map(({ values }) => values[0].map((alert) => `${alert.kind} ${alert.record_slug}`)),
+    [['record_quarantined private-chapter'], ['chapter_image_withheld unreviewed-media']]
+  );
+  assert.equal(resolved().length, 1);
+  assert.deepEqual(
+    warnings.filter(([event]) => event === 'public_snapshot_alerts_failed').map(([, detail]) => detail),
+    [{ step: 'open', kind: 'chapter_image_withheld', errorName: 'Error', code: '23514' }]
+  );
 });
 
 test('a withheld chapter image alert says the chapter is still published', async () => {
