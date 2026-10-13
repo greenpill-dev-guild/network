@@ -7,7 +7,7 @@ import type {
   QuarantinedOperationalRecord,
   WithheldChapterImage,
 } from '@greenpill-network/shared/public-content';
-import { enqueueChapterImageWithheldAlerts, enqueueQuarantineAlerts } from './content-operations.js';
+import { reconcileSnapshotAlerts } from './content-operations.js';
 import { createDatabaseClient } from './db.js';
 import { AgentDataError } from './map-nodes.js';
 
@@ -76,7 +76,25 @@ function toChapterProjectionInput(rows: UnknownRecord[], directusPublicUrl: stri
   return { chapters, uploadedChapterImageUrls };
 }
 
+// Serialize the observation and its alert changes across requests and replicas.
+// A lock taken after the content reads would still let an old observation reopen
+// an episode that a newer render already resolved. Advisory locks write no rows.
 export async function getPublicOperationalContentSnapshot(
+  sql: SqlLike,
+  now: Date | string = new Date(),
+  directusPublicUrl = directusPublicUrlFromEnv()
+): Promise<PublicOperationalContentSnapshot> {
+  const render = async (tx: SqlLike) => {
+    await tx`select pg_advisory_xact_lock(713026030)`;
+    return readPublicOperationalContentSnapshot(tx, now, directusPublicUrl);
+  };
+  // Database proofs and other callers may already own a transaction.
+  return typeof sql.savepoint === 'function'
+    ? sql.savepoint(render)
+    : sql.begin(render);
+}
+
+async function readPublicOperationalContentSnapshot(
   sql: SqlLike,
   now: Date | string = new Date(),
   directusPublicUrl = directusPublicUrlFromEnv()
@@ -135,13 +153,15 @@ export async function getPublicOperationalContentSnapshot(
 
   if (quarantined.length > 0) {
     console.warn('public_operational_content_records_quarantined', quarantined);
-    await enqueueQuarantineAlerts(sql, quarantined);
   }
 
   if (withheldChapterImages.length > 0) {
     console.warn('public_operational_content_chapter_images_withheld', withheldChapterImages);
-    await enqueueChapterImageWithheldAlerts(sql, withheldChapterImages);
   }
+
+  // Also runs when nothing is quarantined or withheld: only a render that no
+  // longer finds a record affected can end that record's alert episode.
+  await reconcileSnapshotAlerts(sql, { quarantined, withheldChapterImages });
 
   return snapshot;
 }

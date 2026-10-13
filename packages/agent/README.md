@@ -122,3 +122,57 @@ the hung run is cancelled, followed by its recovery once the next run deploys.
 The watcher itself fails only when it cannot bring the pipeline back to idle,
 and that needs a person. The rules, and the reasoning behind the 30 minutes,
 are in `scripts/pages-deploy-recovery.ts`.
+
+## Snapshot Alerts
+
+Every render of `/content/public-snapshot` looks for two conditions and
+queues an email to `CONTENT_REVIEW_RECIPIENTS` in the durable Resend queue:
+
+- `record_quarantined`: a published record is dropped from the snapshot
+  because a field holds a private-looking key or a `mailto:` link.
+- `chapter_image_withheld`: a chapter stays published without its sourced
+  image because the media review is not approved.
+
+An alert covers one episode, the stretch during which a record stays affected:
+
+- The first render that finds the condition opens a row in
+  `content.review_notifications`. That row is emailed once. Later renders find
+  it open and add nothing.
+- The first render that no longer finds the condition sets `resolved_at`.
+  Fixing, unpublishing, and deleting the record all end the episode.
+- A record that is affected again after that gets a new row and a new email.
+  Resolved rows stay as the alert history, and an alert is delivered even if
+  its episode ends before the email goes out.
+
+Snapshot renders take a transaction-scoped advisory lock before reading content
+and keep it until their alert changes commit. This orders observations across
+requests and agent replicas: an old render cannot reopen an episode a newer
+render resolved, or resolve an episode a newer render opened. A recovery is
+recorded immediately, so even a brief fix followed by a recurrence alerts again.
+The lock stores no rows and assigns no transaction id on its own.
+
+A quarantined chapter is not in the snapshot, so a render learns nothing
+about its image. Its withheld-image alert is left as it is until the chapter
+is back.
+
+Alert statements use savepoints so a failed write does not abort the snapshot
+transaction or prevent the other kind's alert from being recorded.
+
+A render that changes nothing writes nothing. A render that cannot record its
+alerts still serves the snapshot, and logs `public_snapshot_alerts_failed`
+with the failed step and the Postgres error code.
+
+Episodes need migration `030_snapshot_alert_episodes.sql`. On a database
+without it the agent still opens alerts, logs a `resolve` failure with code
+`42703` on every render, and never ends an episode, so a record alerts once
+and never again. The migration can be applied while an older agent is running.
+
+Applying the migration, deploying the agent, and re-running
+`bun run directus:content:setup` and `bun run directus:studio:setup` are
+separate operator actions. The first two are safe in either order. Clear the
+Directus cache after the migration and run the two setup scripts only then:
+the Quarantined records bookmark filters on `resolved_at`.
+
+Prove the rules with `bun run test:snapshot-alerts:db`. It needs
+`bun run db:local:up`, builds and drops its own scratch database, and refuses
+any server that is not local.

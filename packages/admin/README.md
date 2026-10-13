@@ -235,13 +235,19 @@ A chapter shows one public image. `resolvePublicChapterImage` in
   only while `media.reviewStatus` is `approved`. Accepting an update request
   that carries an image is that approval.
 - **Anything else is withheld.** The chapter stays published without the image
-  and without anything from its `media` object, and the agent queues one
+  and without anything from its `media` object, and the agent queues a
   `chapter_image_withheld` alert for operators.
 
 A withheld image never removes a chapter. `record_quarantined` is a different
 alert: it means a record was dropped from the site because a field holds a
 private-looking key or a `mailto:` link. Alt text and credit are fields like
 any other there.
+
+Both alerts are sent once per episode, so a record that is fixed and later
+breaks the same way alerts again. In Data Studio, **Resolved At** on a
+notification shows when its episode ended, and the **Quarantined records**
+bookmark lists only the records that are still missing. The rules are under
+[Snapshot Alerts](../agent/README.md#snapshot-alerts) in the agent README.
 
 `image_alt` and `image_credit` describe the image the chapter shows now and
 are edited under the image in Data Studio. Both are nullable, and `NULL` is
