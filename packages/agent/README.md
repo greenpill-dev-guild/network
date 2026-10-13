@@ -144,22 +144,19 @@ An alert covers one episode, the stretch during which a record stays affected:
   Resolved rows stay as the alert history, and an alert is delivered even if
   its episode ends before the email goes out.
 
-Two rules keep one episode at one email:
+Snapshot renders take a transaction-scoped advisory lock before reading content
+and keep it until their alert changes commit. This orders observations across
+requests and agent replicas: an old render cannot reopen an episode a newer
+render resolved, or resolve an episode a newer render opened. A recovery is
+recorded immediately, so even a brief fix followed by a recurrence alerts again.
+The lock stores no rows and assigns no transaction id on its own.
 
-- An alert stays open for at least a minute
-  (`SNAPSHOT_ALERT_MIN_OPEN_SECONDS`). A render that read the content just
-  before a record broke can finish after the render that opened the alert.
-  Without the minute it would resolve that alert, and the next render would
-  send a second one.
-- A quarantined chapter is not in the snapshot, so a render learns nothing
-  about its image. Its withheld-image alert is left as it is until the chapter
-  is back.
+A quarantined chapter is not in the snapshot, so a render learns nothing
+about its image. Its withheld-image alert is left as it is until the chapter
+is back.
 
-One gap remains. A render that read the content just before a fix can finish
-after a newer render resolved the alert, and opens it again. That sends one
-extra email for a record that is already fixed, and the next render after a
-minute resolves it. Holding back a new alert would close the gap, but it
-could also delay the alert for a record that really broke again.
+Alert statements use savepoints so a failed write does not abort the snapshot
+transaction or prevent the other kind's alert from being recorded.
 
 A render that changes nothing writes nothing. A render that cannot record its
 alerts still serves the snapshot, and logs `public_snapshot_alerts_failed`

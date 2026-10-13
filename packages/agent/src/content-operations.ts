@@ -944,15 +944,6 @@ const QUARANTINE_COLLECTION_TO_DIRECTUS: Record<string, string> = {
   projects: 'projects',
 };
 
-// How long an alert stays open before a render may resolve it.
-//
-// A render that read the content just before a record broke can finish after
-// the render that opened the record's alert. If it could resolve that alert,
-// the next render would open and send a second one for the same episode. No
-// render takes this long, so one that finishes later read the content as it
-// was after the break.
-export const SNAPSHOT_ALERT_MIN_OPEN_SECONDS = 60;
-
 type SnapshotAlertKind = 'record_quarantined' | 'chapter_image_withheld';
 
 interface SnapshotAlert {
@@ -980,7 +971,8 @@ function warnSnapshotAlertFailure(
 //
 // It runs on every render of a public read path, so a render that changes
 // nothing must write nothing: an alert that is already open makes the insert
-// skip its row, and the update matches no row.
+// skip its row, and the update matches no row. The caller owns the transaction
+// and takes the snapshot advisory lock before reading content.
 export async function reconcileSnapshotAlerts(
   sql: SqlLike,
   {
@@ -1015,7 +1007,8 @@ export async function reconcileSnapshotAlerts(
     });
   }
 
-  // Each kind is written on its own, so a database that rejects one still
+  // Savepoints keep a failed alert statement from aborting the snapshot's
+  // transaction. Each kind is written on its own, so rejecting one still
   // records the other. A database rolled back to before migration 029 rejects
   // every withheld-image alert, and must keep alerting for dropped records.
   for (const alerts of [quarantineAlerts, imageAlerts]) {
@@ -1023,13 +1016,13 @@ export async function reconcileSnapshotAlerts(
     try {
       // A record can have one open alert per kind: a unique index says so,
       // and renders that race each other still open a single row.
-      await sql`
+      await sql.savepoint((tx: SqlLike) => tx`
         insert into content.review_notifications (kind, record_collection, record_slug, quarantine_reason)
         select affected.kind, affected.record_collection, affected.record_slug, affected.quarantine_reason
-        from jsonb_to_recordset(${sql.json(alerts)}::jsonb)
+        from jsonb_to_recordset(${tx.json(alerts)}::jsonb)
           as affected(kind text, record_collection text, record_slug text, quarantine_reason text)
         on conflict do nothing
-      `;
+      `);
     } catch (error) {
       warnSnapshotAlertFailure({ step: 'open', kind: alerts[0].kind }, error);
     }
@@ -1048,21 +1041,20 @@ export async function reconcileSnapshotAlerts(
   try {
     // The two kinds are spelled as OR, not IN, so that Postgres can find the
     // open alerts through their two partial unique indexes.
-    await sql`
+    await sql.savepoint((tx: SqlLike) => tx`
       update content.review_notifications alert
       set resolved_at = now()
       where (alert.kind = 'record_quarantined' or alert.kind = 'chapter_image_withheld')
         and alert.resolved_at is null
-        and alert.created_at < now() - ${SNAPSHOT_ALERT_MIN_OPEN_SECONDS} * interval '1 second'
         and not exists (
           select 1
-          from jsonb_to_recordset(${sql.json(stillAffected)}::jsonb)
+          from jsonb_to_recordset(${tx.json(stillAffected)}::jsonb)
             as affected(kind text, record_collection text, record_slug text)
           where affected.kind = alert.kind
             and affected.record_collection = alert.record_collection
             and affected.record_slug = alert.record_slug
         )
-    `;
+    `);
   } catch (error) {
     // A database without migration 030 has no resolved_at and ends up here
     // (code 42703). Alerts are still opened above and never resolved, which

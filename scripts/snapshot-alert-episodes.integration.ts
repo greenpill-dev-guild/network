@@ -330,19 +330,21 @@ try {
   ]);
   assert.deepEqual(await deliver(), []);
 
-  // --- A render that read the content before the record broke ------------------
-  // It can finish after the render that opened the alert, and it does not find
-  // the record affected. An alert that young stays open, or the next render
-  // would send a second email for the same episode.
+  // A brief observed recovery ends the episode immediately. A recurrence
+  // within the same minute must send one new alert rather than be suppressed.
   await insertChapter('just-broken', { links: mailto });
   await render();
+  assert.deepEqual(await deliver(), ['quarantined chapters/just-broken']);
   await editChapter('just-broken', { links: [] });
-  // The alert was opened a moment ago, however slowly this proof is running.
-  await sql`update content.review_notifications set created_at = now() where record_slug = 'just-broken'`;
   await render();
+  assert.deepEqual(await alerts('just-broken'), ['record_quarantined resolved sent']);
   await editChapter('just-broken', { links: mailto });
   await render();
-  assert.deepEqual(await alerts('just-broken'), ['record_quarantined open queued']);
+  await render();
+  assert.deepEqual(await alerts('just-broken'), [
+    'record_quarantined resolved sent',
+    'record_quarantined open queued',
+  ]);
   assert.deepEqual(await deliver(), ['quarantined chapters/just-broken']);
 
   // --- A collection the contract and Directus name differently -----------------
@@ -378,6 +380,65 @@ try {
   await anHourLater();
   await Promise.all(Array.from({ length: 8 }, () => render(pool)));
   assert.deepEqual(await alerts('raced'), ['record_quarantined resolved sent']);
+
+  // Deliberately overlap observations across the break and the fix. The
+  // second renderer must wait before reading, not merely before updating alerts.
+  await insertChapter('overlap', { links: mailto });
+  await render();
+  assert.deepEqual(await deliver(), ['quarantined chapters/overlap']);
+  for (const transition of ['fix', 'break']) {
+    let markRead!: () => void;
+    let resume!: () => void;
+    const read = new Promise<void>((resolve) => { markRead = resolve; });
+    const resumed = new Promise<void>((resolve) => { resume = resolve; });
+    let paused = false;
+    const pausedClient = new Proxy(pool!, {
+      get(target, key, receiver) {
+        if (key !== 'begin') return Reflect.get(target, key, receiver);
+        return (callback: (tx: any) => Promise<unknown>) => target.begin((tx) => callback(new Proxy(tx, {
+          async apply(fn, self, args) {
+            const rows = await Reflect.apply(fn, self, args);
+            if (!paused && Array.isArray(args[0]) && args[0].join(' ').includes('from content.public_chapters')) {
+              paused = true;
+              markRead();
+              await resumed;
+            }
+            return rows;
+          },
+        })));
+      },
+    });
+    const older = render(pausedClient);
+    let newer: Promise<string[]> | undefined;
+    try {
+      await read;
+      await editChapter('overlap', { links: transition === 'fix' ? [] : mailto });
+      newer = render(pool);
+      const waiting = (async () => {
+        const deadline = Date.now() + 5000;
+        while (Date.now() < deadline) {
+          const [row] = await sql!`
+            select exists (
+              select 1 from pg_stat_activity
+              where datname = current_database() and wait_event = 'advisory'
+            ) as waiting
+          `;
+          if (row.waiting) return 'waiting';
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        return 'timeout';
+      })();
+      assert.equal(await Promise.race([waiting, newer.then(() => 'completed')]), 'waiting');
+    } finally { resume(); }
+    await Promise.all([older, newer]);
+    assert.deepEqual(await alerts('overlap'), transition === 'fix'
+      ? ['record_quarantined resolved sent']
+      : ['record_quarantined resolved sent', 'record_quarantined open queued']);
+  }
+  assert.deepEqual(await deliver(), ['quarantined chapters/overlap']);
+  // Leave the later steady-state probe with its original three open alerts.
+  await editChapter('overlap', { links: [] });
+  await render();
 
   // The database itself refuses a second open alert for a record. That is what
   // keeps renders that race each other at one row.
