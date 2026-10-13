@@ -19,6 +19,7 @@ Canonical package boundaries:
 Run installs and validation from the repo root.
 
 - `bun run dev` - preferred repo-native full local stack: website `3301`, Directus `3302`, agent/API `3303`, and Postgres `3304`.
+- In the isolated dev machine there is no Docker: start Postgres and Directus on the Mac with `docker compose` and keep `dm-ports` running, then `bun run dev` uses them (README, "In The Isolated Dev Machine").
 - `bun install --frozen-lockfile` - install the checked-in workspace dependency graph.
 - `bun run dev:website` - run only the Astro dev server and local Keystatic authoring UI.
 - `bun run build` or `bun run build:website` - build the static website into `packages/website/dist/`.
@@ -57,6 +58,12 @@ series, cleanups, and Water Cup-style work; `projects` remain guild-owned
 tools, products, and workstreams. The website consumes the approved public snapshot from
 `packages/website/src/data/operational-content-snapshot.json` by default, or
 from `OPERATIONAL_CONTENT_SNAPSHOT_URL` during production builds.
+
+The public site never loads a chapter image from another host. The website
+build copies every remote chapter image, whether a Directus upload or an
+approved external URL, into the site through
+`packages/website/src/lib/chapter-image-copies.ts`, and pages read only the
+site-hosted path. Do not hotlink Directus `/assets/` URLs from website markup.
 
 Website source and config live under `packages/website`:
 
