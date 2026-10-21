@@ -117,7 +117,7 @@ const OPTIONAL_COLLECTION_META = Object.freeze({
     hidden: false,
     singleton: false,
     icon: 'notifications_active',
-    note: 'Delivery audit for content review notifications and public-snapshot quarantine alerts. Failed rows need operator follow-up; quarantined rows mean a record is missing from the public site.',
+    note: 'Delivery audit for content review notifications and public-snapshot quarantine alerts. Failed rows need operator follow-up; a quarantined row with no Resolved At time means the record is still missing from the public site.',
     display_template: '{{ kind }} · {{ status }}',
   },
   map_node_intake_settings: {
@@ -915,6 +915,7 @@ const OPTIONAL_FIELD_META = Object.freeze({
     provider_error: { sort: 10, width: 'half', readonly: true },
     sent_at: { sort: 11, width: 'half', interface: 'datetime', readonly: true },
     created_at: { sort: 12, width: 'half', interface: 'datetime', readonly: true },
+    resolved_at: { sort: 13, width: 'half', interface: 'datetime', readonly: true, note: 'Quarantine and withheld-image alerts only. Set when a later public snapshot no longer drops the record or withholds the image. Empty means the record is still affected; it alerts again only after this is set.' },
   },
   map_node_intake_settings: {
     live_onboarding_enabled: {
@@ -1150,7 +1151,9 @@ const STUDIO_BOOKMARKS = Object.freeze([
     bookmark: 'Quarantined records',
     icon: 'report',
     color: '#b42318',
-    filter: { kind: { _eq: 'record_quarantined' } },
+    // Records missing from the public site right now. Resolved alerts stay in
+    // the collection as history and are left out of this list.
+    filter: { _and: [{ kind: { _eq: 'record_quarantined' } }, { resolved_at: { _null: true } }] },
     fields: ['record_collection', 'record_slug', 'quarantine_reason', 'status', 'created_at'],
   },
   {

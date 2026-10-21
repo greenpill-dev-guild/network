@@ -194,6 +194,11 @@ try {
   const replayed = new Map((await sql`select slug, md5(to_jsonb(c)::text) as hash from content.chapters c`).map((row) => [row.slug, row.hash]));
   for (const row of settled) assert.equal(replayed.get(row.slug), row.hash, `replay changed ${row.slug}`);
 
+  // The migrations after it, so the rest of the proof runs on the current schema.
+  for (const file of migrations.filter((name) => name > IMAGE_MIGRATION)) {
+    await sql.unsafe(await readFile(resolve(migrationsDir, file), 'utf8'));
+  }
+
   // Existing images keep their description on the public page.
   let published = await publicChapter('legacy-approved');
   assert.equal(published?.media.imageAlt, 'Original alt text.');

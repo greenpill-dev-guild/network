@@ -37,7 +37,10 @@ steward smoke. Evidence for all of it is in `eval.md`.
   applied, and the same procedure was rehearsed on a scratch database, which
   ended identical to its starting point. Unregister the two Directus fields
   first. The file stops being valid once a later migration changes the same
-  objects.
+  objects. Migration 030 (PRD-1201) rebuilds the withheld-image index that
+  029 created. The rollback was run again on a scratch database with 030
+  applied: it still completes, and leaves 030's `resolved_at` column and
+  quarantine index in place.
 - **Directus sheds load during long setup runs.** `directus:studio:setup`
   took nine minutes against production, and its first attempt stopped on a
   503 "Under pressure". The setup client now sends such a request again.
@@ -53,10 +56,14 @@ steward smoke. Evidence for all of it is in `eval.md`.
   and that `fly machine status <id> -a network-agent --display-config` shows
   no `*_SWEEP_ENABLED=false`. `fly config show` does not list machine-level
   settings.
-- **One alert per record, per kind.** `record_quarantined` (a record dropped
-  from the site) and `chapter_image_withheld` (a chapter published without
-  its image) each keep one row per record. A record that is fixed and later
-  breaks the same way again does not alert twice.
+- **One alert per record, per kind, until migration 030 is released.**
+  `record_quarantined` (a record dropped from the site) and
+  `chapter_image_withheld` (a chapter published without its image) each keep
+  one row per record, so a record that is fixed and later breaks the same way
+  again does not alert twice. PRD-1201 changes that to one alert per episode:
+  the agent sets `resolved_at` when a snapshot no longer finds the record
+  affected, and the next break alerts again. The rules and the release steps
+  are under Snapshot Alerts in `packages/agent/README.md`.
 
 ### Operator activations
 
@@ -100,7 +107,8 @@ Nothing in this hub remains open. These are separate:
   - Uploaded chapter images are served from the admin VM, which stops when
     idle. The first visitor and social-card scrapers can hit a cold start.
   - A record that is quarantined, fixed, and quarantined again does not alert
-    a second time. The same holds for a withheld chapter image.
+    a second time. The same holds for a withheld chapter image. Now PRD-1201,
+    fixed with migration 030 and waiting for its production release.
   - "Alt text required with a proposed image" on update requests uses the
     pattern that blocked nothing on chapters while the column held `''`. It
     was not re-tested on the request form.
