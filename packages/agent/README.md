@@ -151,6 +151,11 @@ render resolved, or resolve an episode a newer render opened. A recovery is
 recorded immediately, so even a brief fix followed by a recurrence alerts again.
 The lock stores no rows and assigns no transaction id on its own.
 
+A render waits at most two seconds for the lock. One that waits longer serves
+the same snapshot without touching alerts, logs
+`public_snapshot_alerts_skipped`, and leaves the alerts to the next render, so
+a stuck render cannot hold up the others or the website build.
+
 A quarantined chapter is not in the snapshot, so a render learns nothing
 about its image. Its withheld-image alert is left as it is until the chapter
 is back.

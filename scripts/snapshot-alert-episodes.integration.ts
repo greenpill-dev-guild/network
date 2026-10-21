@@ -479,6 +479,28 @@ try {
     assert.equal(state.wrote, true);
   });
 
+  // --- A render that cannot get the lock in time ------------------------------
+  // A stuck render must not hold up the others, the website build's included.
+  // The one that waits too long serves the snapshot and leaves alerts alone,
+  // and the next render that gets the lock records them.
+  const lockSkips = () => warnings.filter(([event]) => event === 'public_snapshot_alerts_skipped').length;
+  const skipsBefore = lockSkips();
+  const stuck = connect(scratchUrl);
+  try {
+    await stuck`select pg_advisory_lock(713026030)`;
+    await insertChapter('behind-the-lock', { links: mailto });
+    const startedAt = Date.now();
+    assert.equal((await render()).includes('behind-the-lock'), false, 'the snapshot is served, without the dropped record');
+    assert.ok(Date.now() - startedAt < 15_000, 'the render stops waiting for the lock');
+    assert.deepEqual(await alerts('behind-the-lock'), [], 'alerts wait for a render that gets the lock');
+    assert.equal(lockSkips(), skipsBefore + 1);
+  } finally {
+    await stuck`select pg_advisory_unlock(713026030)`.catch(() => {});
+    await stuck.end({ timeout: 3 }).catch(() => {});
+  }
+  await render();
+  assert.deepEqual(await alerts('behind-the-lock'), ['record_quarantined open queued']);
+
   assert.deepEqual(alertFailures(), [], 'no render after 030 failed to record its alerts');
   console.log('Snapshot alert episode database proof passed.');
 } finally {

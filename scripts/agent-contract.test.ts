@@ -1048,12 +1048,16 @@ test('publish-health alerts and recoveries deliver through the durable Resend qu
 // A database stand-in for snapshot renders: it serves the given published
 // chapters and records every statement that touches the alert queue.
 // `rejects` may return an error for a statement, the way the database would.
-function createSnapshotRenderSql(chapters, { rejects = (_statement) => null } = {}) {
+function createSnapshotRenderSql(chapters, { rejects = (_statement) => null, lockError = null } = {}) {
   const alertStatements = [];
   let aborted = false;
   const sql: any = async (strings, ...values) => {
     if (aborted) throw Object.assign(new Error('transaction aborted'), { code: '25P02' });
     const source = strings.join(' ');
+    if (source.includes('pg_advisory_xact_lock') && lockError) {
+      aborted = true;
+      throw lockError;
+    }
     if (source.includes('from content.public_chapters')) {
       return chapters.map((chapter) => ({ slug: chapter.slug, data: chapter }));
     }
@@ -1073,7 +1077,13 @@ function createSnapshotRenderSql(chapters, { rejects = (_statement) => null } = 
       try { return await callback(tx); }
       catch (error) { aborted = false; throw error; }
     };
-    const result = await callback(tx);
+    let result;
+    try {
+      result = await callback(tx);
+    } catch (error) {
+      aborted = false; // the transaction is rolled back
+      throw error;
+    }
     assert.equal(aborted, false, 'the snapshot transaction must remain committable');
     return result;
   };
@@ -1210,6 +1220,44 @@ test('the public snapshot is served when the alert queue cannot be written, and 
       { step: 'resolve', errorName: 'Error', code: '42703' },
     ]
   );
+});
+
+test('a render that waits too long for the snapshot lock serves the snapshot and leaves alerts to the next render', async () => {
+  const lockTimeout = Object.assign(new Error('canceling statement due to lock timeout'), { code: '55P03' });
+  const { sql, alertStatements } = createSnapshotRenderSql([
+    { slug: 'healthy-chapter', name: 'Healthy Chapter' },
+    {
+      slug: 'private-chapter',
+      name: 'Private Chapter',
+      links: [{ label: 'Email', url: 'mailto:someone@example.com' }],
+    },
+  ], { lockError: lockTimeout });
+
+  const warnings = [];
+  const originalWarn = console.warn;
+  console.warn = (...args) => warnings.push(args);
+  let snapshot;
+  try {
+    snapshot = await getPublicOperationalContentSnapshot(sql, '2026-10-09T00:00:00.000Z');
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  // The public route and the website build still get the same snapshot.
+  assert.deepEqual(snapshot.chapters.map((chapter) => chapter.slug), ['healthy-chapter']);
+  assert.equal(alertStatements.length, 0);
+  assert.deepEqual(
+    warnings.filter(([event]) => event === 'public_snapshot_alerts_skipped').map(([, detail]) => detail),
+    [{ reason: 'lock_timeout' }]
+  );
+});
+
+test('any other failure to take the snapshot lock still fails the render', async () => {
+  const connectionLost = Object.assign(new Error('connection lost'), { code: '08006' });
+  const { sql } = createSnapshotRenderSql([{ slug: 'healthy-chapter', name: 'Healthy Chapter' }], {
+    lockError: connectionLost,
+  });
+  await assert.rejects(getPublicOperationalContentSnapshot(sql, '2026-10-09T00:00:00.000Z'), { code: '08006' });
 });
 
 test('a database that rejects withheld-image alerts still records a dropped record', async () => {
