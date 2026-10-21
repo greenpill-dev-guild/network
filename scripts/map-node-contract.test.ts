@@ -1495,7 +1495,9 @@ test('home map location picker searches, confirms, then reverse-confirms a dragg
   assert.match(component, /searchVersion !== locationSearchVersion/);
   assert.match(component, /locationQuery\?\.addEventListener\('input',[\s\S]*?invalidateLocationRequests\(\)[\s\S]*?clearLocationSelection\(\)/);
   assert.match(component, /const clearLocationConfirmation[\s\S]*?locationConfirmationInput\.value = ''/);
-  assert.match(component, /const clearLocationSelection[\s\S]*?clearLocationConfirmation\(\)[\s\S]*?locationPin\.hidden = true/);
+  // Keep the ordering check inside this function so later pin resets cannot satisfy it.
+  const clearLocationSelection = component.match(/const clearLocationSelection = \(\) => \{([\s\S]*?)\n    \};/)?.[1] ?? '';
+  assert.match(clearLocationSelection, /clearLocationConfirmation\(\)[\s\S]*?locationPin(?:\.setAttribute\(['"]hidden['"],\s*['"][^'"]*['"]\)|\.hidden\s*=\s*true\b)/);
   assert.match(component, /resetWalkthrough[\s\S]*?invalidateLocationRequests\(\)/);
   assert.match(component, /pointerdown[\s\S]*?invalidateLocationRequests\(\)/);
   assert.match(component, /pointercancel[\s\S]*?Pin adjustment canceled/);
