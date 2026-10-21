@@ -18,6 +18,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createDatabaseClient } from '@greenpill-network/agent/db';
 import { getPublicOperationalContentSnapshot } from '@greenpill-network/agent/public-content';
+import { buildChapterUpdateRequestDraft } from './directus-steward-sync-prep.ts';
 
 const DEFAULT_DATABASE_URL = 'postgres://greenpill:greenpill@localhost:3304/greenpill_network';
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
@@ -397,6 +398,60 @@ try {
   assert.equal(row.image, acceptedAgain);
   assert.deepEqual([row.image_alt, row.image_credit], ['Second accepted alt.', 'Second Photographer']);
   assert.equal(row.seo.ogImage, social);
+
+  // --- Prepared steward sync drafts -------------------------------------------
+  // The prep script starts a draft from the chapter's current values. Until a
+  // steward edits it, it proposes nothing: accepting it as prepared leaves the
+  // chapter as it was, whether it shows a sourced image or an uploaded one.
+  const chapterFacts = async (chapterSlug: string): Promise<Row> => (await sql!`
+    select to_jsonb(c) - 'updated_at' as facts from content.chapters c where c.slug = ${chapterSlug}
+  `)[0].facts;
+  const prepareDraft = async (chapterSlug: string): Promise<string> => {
+    const [chapter] = await sql!`select * from content.chapters where slug = ${chapterSlug}`;
+    const { requested_changes, ...columns } = buildChapterUpdateRequestDraft(
+      chapter as Parameters<typeof buildChapterUpdateRequestDraft>[0],
+      { titlePrefix: 'Refresh' }
+    );
+    const [request] = await sql!`
+      insert into content.chapter_update_requests ${sql!({
+        ...columns,
+        requested_changes: sql!.json(requested_changes),
+      })}
+      returning id
+    `;
+    return request.id;
+  };
+  const describedChapter = {
+    summary: 'Prepared summary.',
+    primary_link: 'https://example.test/prepared',
+    image: '/images/chapters/prepared.jpg',
+    media: sourced('prepared', {
+      imageAlt: 'Sourced alt.',
+      imageCredit: 'Sourced credit',
+      imageSourceUrl: 'https://example.test/prepared-source',
+    }),
+    seo: { title: 'Prepared', ogImage: '/images/chapters/prepared.jpg' },
+  };
+  await insertChapter('prepared-sourced', describedChapter);
+  await insertChapter('prepared-upload', {
+    ...describedChapter,
+    image_file: await uploadFile(),
+    image_alt: 'Upload alt.',
+    image_credit: 'Upload credit',
+  });
+  for (const prepared of ['prepared-sourced', 'prepared-upload']) {
+    const asItWas = await chapterFacts(prepared);
+    const draftId = await prepareDraft(prepared);
+    await sql!`update content.chapter_update_requests set request_status = 'accepted' where id = ${draftId}::uuid`;
+    assert.deepEqual(await chapterFacts(prepared), asItWas, `accepting the prepared draft changed ${prepared}`);
+  }
+
+  // What the steward does change still applies, and nothing else does.
+  const rewritten = await prepareDraft('prepared-upload');
+  await sql!`update content.chapter_update_requests set proposed_summary = 'A summary the steward rewrote.' where id = ${rewritten}::uuid`;
+  const beforeRewrite = await chapterFacts('prepared-upload');
+  await sql!`update content.chapter_update_requests set request_status = 'accepted' where id = ${rewritten}::uuid`;
+  assert.deepEqual(await chapterFacts('prepared-upload'), { ...beforeRewrite, summary: 'A summary the steward rewrote.' });
 
   // --- Alerts ---------------------------------------------------------------
   // An unreviewed sourced image is withheld; the chapter stays, with one alert.
