@@ -19,7 +19,6 @@ import { spawn } from 'node:child_process';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
-import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -85,6 +84,13 @@ const sharedLinkSiteImage: string = sharedLink.media.image;
 uploaded.image = uploadAddress;
 uploaded.media = { ...uploaded.media, image: uploadAddress, ogImage: uploadAddress };
 uploaded.seo = { ...uploaded.seo, ogImage: uploadAddress };
+// CMS text must stay text when the static build renders it. Unknown keys
+// must never become attributes through the UI primitives' rest props.
+const templatePayload = 'audit"><img data-dependabot-xss-probe src=x onerror=alert(1)></Script >';
+const attributePayload = 'x" onmouseover="dependabotProbe()" y';
+uploaded.name = templatePayload;
+uploaded[attributePayload] = '';
+uploaded.links = [{ url: 'https://example.org/', label: templatePayload, [attributePayload]: '' }];
 sharedLink.image = `${origin}${SHARED_FILE_PATH}`;
 for (const chapter of snapshot.chapters as Chapter[]) {
   // Any other remote image would send the build out to the network.
@@ -94,7 +100,9 @@ for (const chapter of snapshot.chapters as Chapter[]) {
 }
 snapshotBody = JSON.stringify(snapshot);
 
-const outDir = await mkdtemp(join(tmpdir(), 'chapter-image-build-'));
+// Keep output inside the website root. Astro 5 stages external output in
+// .astro and removes that directory, which is a bind mount in the dev machine.
+const outDir = await mkdtemp(join(websiteDir, 'node_modules', '.chapter-image-build-'));
 
 function runBuild(): Promise<{ exitCode: number; output: string }> {
   return new Promise((resolveRun, rejectRun) => {
@@ -151,6 +159,12 @@ try {
   // The directory card uses the same copy.
   const directoryHtml = await readFile(join(outDir, 'chapters/index.html'), 'utf8');
   assert.ok(directoryHtml.includes(`src="${displayPath}"`), 'the directory card shows the copy');
+
+  for (const html of [uploadedHtml, directoryHtml]) {
+    assert.ok(html.includes('&lt;img data-dependabot-xss-probe'), 'CMS text is HTML-escaped');
+    assert.equal(html.includes('<img data-dependabot-xss-probe'), false, 'CMS text cannot inject an element');
+    assert.equal(html.includes(' onmouseover="dependabotProbe()"'), false, 'CMS object keys cannot inject attributes');
+  }
 
   // Both files are in the build output, at the sizes the site expects.
   const display = await sharp(await readFile(join(outDir, displayPath))).metadata();
