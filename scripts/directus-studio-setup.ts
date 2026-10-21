@@ -385,12 +385,12 @@ const number = (sort, note = null, width = 'half') => fieldMeta({
   interface: 'input',
   options: { type: 'number' },
 });
-const url = (sort, note = null, width = 'half') => fieldMeta({
+const url = (sort, note = null, width = 'half', options = null) => fieldMeta({
   sort,
   note,
   width,
   interface: 'input',
-  options: { iconRight: 'link' },
+  options: { iconRight: 'link', ...(options ?? {}) },
 });
 const imageFile = (sort, note = null, width = 'half') => fieldMeta({
   sort,
@@ -593,7 +593,10 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
     summary: requiredTextarea(5, 'Plain-language summary of what should change and why.'),
     proposed_summary: textarea(6, 'Optional replacement text for the public chapter summary. Leave blank if the current summary should stay.'),
     proposed_primary_link: url(7, 'Optional replacement main public link for the chapter.', 'half'),
-    proposed_image: url(8, 'Optional replacement public image URL.', 'half'),
+    // The column is `not null default ''`. Data Studio saves null for an
+    // emptied input unless told otherwise, and Directus refuses null here, so
+    // without `clear` a proposed image could never be taken off a request.
+    proposed_image: url(8, 'Optional replacement public image URL.', 'half', { clear: true }),
     proposed_image_alt: textarea(9, 'Required if proposing a new image. Describe the image for screen readers.'),
     proposed_image_credit: input(10, 'Optional public credit for the proposed image.', 'half'),
     links: fieldMeta({
@@ -851,11 +854,24 @@ const FIELD_META_OVERRIDES = Object.freeze({
   chapter_update_requests: {
     proposed_primary_link: urlValidation('proposed_primary_link'),
     proposed_image: urlValidation('proposed_image'),
+    // Data Studio only treats null as missing, so this works because
+    // proposed_image_alt is nullable with no default (migration 031).
     proposed_image_alt: {
       conditions: [
         {
           name: 'Alt text required with a proposed image',
-          rule: { proposed_image: { _nempty: true } },
+          // One top-level key: Directus skips a condition whose rule has more.
+          rule: {
+            _and: [
+              // `_nempty` alone counts null as a value, and null is what an
+              // emptied input holds unless it saves an empty string.
+              { proposed_image: { _nnull: true } },
+              { proposed_image: { _nempty: true } },
+              // A reviewer can still send back, decline, or archive a request
+              // that lacks alt text. Drafting, submitting, and accepting need it.
+              { request_status: { _nin: ['needs_changes', 'declined', 'archived'] } },
+            ],
+          },
           required: true,
         },
       ],

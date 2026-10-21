@@ -322,12 +322,42 @@ published chapter. Every build downloads the file again, so `Replace File`
 reaches the site on the next build. The link-preview crop is centred and does
 not use the Directus focal point.
 
+Update requests use the same shape (migration `031`). `proposed_image_alt`
+and `proposed_image_credit` are nullable, `NULL` is the only empty value, and
+a trigger stores blank text from any writer as `NULL`. Data Studio requires
+`proposed_image_alt` while a request proposes an image and is being drafted,
+sent for review, or accepted:
+
+- A steward cannot save a draft or submit a request with an image and no alt
+  text.
+- A reviewer cannot accept one. They can add the alt text themselves, or set
+  `needs_changes`, `declined`, or `archived`, which do not ask for it.
+- A request saved before migration `031` with an image and no alt text asks
+  for it the next time it is saved in one of those three states.
+
+The API does not enforce this either. A request created by a script or the
+content agent can carry an image with no alt text until someone saves it in
+Data Studio.
+
+`proposed_image` stays `not null default ''`. Its input saves an empty string
+when emptied (the `clear` option), because Directus refuses `null` for the
+column. That is how a steward takes a proposed image off a request.
+
 Prove the database rules with `bun run test:chapter-images:db`. It needs
 `bun run db:local:up`, builds and drops its own scratch database, and refuses
 any server that is not local. Prove the Directus path with
-`bun run directus:steward:smoke`. Prove the copy step with
-`bun run test:chapter-image-copies`, and with a real website build through
-`bun run test:chapter-image-copies:build`.
+`bun run directus:steward:smoke`. The smoke stops at once if Directus sees
+either alt text field as not nullable or with a default.
+
+Prove the copy step with `bun run test:chapter-image-copies`, and with a real
+website build through `bun run test:chapter-image-copies:build`.
+
+Directus caches the column shape. After a migration changes it, Directus
+keeps serving the old one, and Data Studio keeps saving a required field left
+untouched, until one of these happens: `directus:studio:setup` is re-applied,
+the system cache is cleared (`POST /utils/cache/clear?system` as an
+administrator; without `?system` the schema is not refreshed), or Directus
+restarts.
 
 ### Steward Onboarding
 

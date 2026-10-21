@@ -138,6 +138,28 @@ async function assertContentExists(client, collection: string, slug: string) {
   }
 }
 
+// Data Studio's required check only counts null as missing. An alt text field
+// it requires has to reach it nullable and with no default, or a field left
+// untouched passes the check. Directus caches the column shape, so after a
+// migration it serves the old one, and this fails, until the Studio setup is
+// re-applied, the system cache is cleared, or Directus restarts.
+const REQUIRED_ALT_TEXT_FIELDS = Object.freeze([
+  ['chapters', 'image_alt'],
+  ['chapter_update_requests', 'proposed_image_alt'],
+]);
+
+export async function assertAltTextCanBeRequired(client) {
+  for (const [collection, field] of REQUIRED_ALT_TEXT_FIELDS) {
+    const response = await client.request(`/fields/${encodePathSegment(collection)}/${encodePathSegment(field)}`);
+    const schema = response?.data?.schema;
+    if (schema?.is_nullable !== true || (schema?.default_value ?? null) !== null) {
+      throw new Error(
+        `Directus sees ${collection}.${field} as not nullable or with a default, so Data Studio cannot require it. Apply the database migrations, then re-run directus:studio:setup or clear the Directus system cache (POST /utils/cache/clear?system).`
+      );
+    }
+  }
+}
+
 async function expectForbidden(label: string, action: () => Promise<unknown>) {
   try {
     await action();
@@ -323,6 +345,7 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
   await assertContentExists(admin, 'chapters', options.unassignedChapter);
   await assertContentExists(admin, 'guilds', options.guild);
   await assertContentExists(admin, 'guilds', options.unassignedGuild);
+  await assertAltTextCanBeRequired(admin);
 
   try {
     const user = await admin.request('/users', {
