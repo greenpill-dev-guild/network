@@ -220,10 +220,18 @@ const SYSTEM_MANAGED_CHILD_FIELDS = ['id', 'created_at', 'updated_at'];
 const CHILD_CREATE_PRESET_FIELDS = ['chapter_slug'];
 const CHILD_IMMUTABLE_UPDATE_FIELDS = ['chapter_slug', 'update_request_id'];
 
+// Directus needs the inverse relation to expose the selector, and the identity
+// group alias to include slug/name in its picker. Neither grants nested writes;
+// the request collection's own row/field permissions still govern expansion.
+export function chapterSelectorReadFields(collection: string) {
+  return baseCollectionName(collection) === 'chapters' ? ['update_requests', 'group_identity'] : [];
+}
+
 function contentFields(collection: string, { read = false, update = false } = {}) {
   const fields = OPERATIONAL_COLLECTION_FIELDS[baseCollectionName(collection)] ?? [];
   const workflow = read ? WORKFLOW_READ_FIELDS : ['publication_status'];
-  const all = [...new Set([...fields, ...workflow])];
+  const relations = read ? chapterSelectorReadFields(collection) : [];
+  const all = [...new Set([...fields, ...workflow, ...relations])];
   return update
     ? all.filter((field) => !SCOPED_EDITOR_IMMUTABLE_UPDATE_FIELDS.includes(field))
     : all;

@@ -176,6 +176,11 @@ Use structured proof signal rows for source-backed public claims:
 }
 ```
 
+A proposed image needs alt text: one sentence describing what the picture
+shows, for people who cannot see it. The form does not save a draft or send a
+request for review with an image and no alt text. If you decide not to propose
+an image after all, empty `proposed_image` and save.
+
 Use `requested_changes` only as an advanced fallback for unusual edits that do
 not fit the structured fields above.
 

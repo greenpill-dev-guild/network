@@ -1,4 +1,4 @@
-// Database proof for the chapter image rules from migration 029.
+// Database proof for the chapter image rules from migrations 029 and 031.
 //
 // It builds a scratch database on the local Postgres server, applies every
 // migration to it, and drops it again. The dev database is never written to.
@@ -7,8 +7,9 @@
 //   bun run test:chapter-images:db
 //
 // Covered here because only a real database can show it:
-// - the backfill, run against rows shaped like production before 029;
+// - the backfills, run against rows shaped like production before 029 and 031;
 // - the trigger that keeps alt text and credit true to the image a chapter shows;
+// - an update request holding NULL, never '', for alt text or credit nobody entered;
 // - an accepted update request landing on the same columns as a direct edit;
 // - a withheld image alert leaving the chapter's quarantine alert free.
 import assert from 'node:assert/strict';
@@ -23,6 +24,7 @@ import { buildChapterUpdateRequestDraft } from './directus-steward-sync-prep.ts'
 const DEFAULT_DATABASE_URL = 'postgres://greenpill:greenpill@localhost:3304/greenpill_network';
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
 const IMAGE_MIGRATION = '029_chapter_image_alt_credit.sql';
+const REQUEST_MIGRATION = '031_chapter_update_request_alt_credit.sql';
 
 const migrationsDir = resolve(dirname(fileURLToPath(import.meta.url)), '../packages/agent/migrations');
 const serverUrl = new URL(process.env.DATABASE_URL?.trim() || DEFAULT_DATABASE_URL);
@@ -91,17 +93,42 @@ async function publicChapter(slug: string): Promise<Row | undefined> {
   return snapshot.chapters.find((chapter) => chapter.slug === slug);
 }
 
-async function acceptRequest(slug: string, proposal: { image?: string; alt?: string; credit?: string }) {
+// Sets only the named columns, the way Directus creates a request: a field
+// the steward left untouched is not sent at all.
+async function insertRequest(slug: string, fields: Row = {}): Promise<string> {
   const [request] = await sql!`
-    insert into content.chapter_update_requests (
-      chapter_slug, title, summary, proposed_image, proposed_image_alt, proposed_image_credit, request_status
-    ) values (
-      ${slug}, ${`Proof request for ${slug}`}, 'Chapter image proof request.',
-      ${proposal.image ?? ''}, ${proposal.alt ?? ''}, ${proposal.credit ?? ''}, 'pending_review'
-    )
+    insert into content.chapter_update_requests ${sql!({
+      chapter_slug: slug,
+      title: `Proof request for ${slug}`,
+      summary: 'Chapter image proof request.',
+      ...fields,
+    })}
     returning id
   `;
-  await sql!`update content.chapter_update_requests set request_status = 'accepted' where id = ${request.id}`;
+  return request.id;
+}
+
+async function editRequest(id: string, fields: Row) {
+  await sql!`update content.chapter_update_requests set ${sql!(fields)} where id = ${id}::uuid`;
+}
+
+async function requestDescription(id: string): Promise<[string | null, string | null]> {
+  const [row] = await sql!`
+    select proposed_image_alt, proposed_image_credit
+    from content.chapter_update_requests
+    where id = ${id}::uuid
+  `;
+  return [row.proposed_image_alt, row.proposed_image_credit];
+}
+
+async function acceptRequest(slug: string, proposal: { image?: string; alt?: string; credit?: string }) {
+  const id = await insertRequest(slug, {
+    proposed_image: proposal.image ?? '',
+    proposed_image_alt: proposal.alt ?? '',
+    proposed_image_credit: proposal.credit ?? '',
+    request_status: 'pending_review',
+  });
+  await editRequest(id, { request_status: 'accepted' });
 }
 
 // Stands in for a file a steward uploaded through Directus.
@@ -143,9 +170,12 @@ try {
 
   const migrations = (await readdir(migrationsDir)).filter((file) => file.endsWith('.sql')).sort((a, b) => a.localeCompare(b));
   assert.ok(migrations.includes(IMAGE_MIGRATION));
-  const imageMigration = await readFile(resolve(migrationsDir, IMAGE_MIGRATION), 'utf8');
+  assert.ok(migrations.includes(REQUEST_MIGRATION));
+  const readMigration = (file: string) => readFile(resolve(migrationsDir, file), 'utf8');
+  const imageMigration = await readMigration(IMAGE_MIGRATION);
+  const requestMigration = await readMigration(REQUEST_MIGRATION);
   for (const file of migrations.filter((name) => name < IMAGE_MIGRATION)) {
-    await sql.unsafe(await readFile(resolve(migrationsDir, file), 'utf8'));
+    await sql.unsafe(await readMigration(file));
   }
 
   // --- Backfill -----------------------------------------------------------
@@ -195,17 +225,98 @@ try {
   const replayed = new Map((await sql`select slug, md5(to_jsonb(c)::text) as hash from content.chapters c`).map((row) => [row.slug, row.hash]));
   for (const row of settled) assert.equal(replayed.get(row.slug), row.hash, `replay changed ${row.slug}`);
 
-  // The migrations after it, so the rest of the proof runs on the current schema.
-  for (const file of migrations.filter((name) => name > IMAGE_MIGRATION)) {
-    await sql.unsafe(await readFile(resolve(migrationsDir, file), 'utf8'));
-  }
-
   // Existing images keep their description on the public page.
   let published = await publicChapter('legacy-approved');
   assert.equal(published?.media.imageAlt, 'Original alt text.');
   assert.equal(published?.media.imageCredit, 'Original Photographer');
   assert.equal(Object.hasOwn(published ?? {}, 'imageAlt'), false);
   assert.equal(Object.hasOwn(published ?? {}, 'imageFileId'), false);
+
+  // --- Update request alt text and credit -----------------------------------
+  for (const file of migrations.filter((name) => name > IMAGE_MIGRATION && name < REQUEST_MIGRATION)) {
+    await sql.unsafe(await readMigration(file));
+  }
+
+  // Requests as they exist before 031, where an empty field holds ''.
+  await insertChapter('request-legacy', { image: '/images/chapters/request-legacy.jpg', media: sourced('request-legacy') });
+  const untouched = await insertRequest('request-legacy', { proposed_image: 'https://example.test/untouched.jpg' });
+  const padded = await insertRequest('request-legacy', {
+    proposed_image: 'https://example.test/padded.jpg',
+    proposed_image_alt: '  Padded alt.  ',
+    proposed_image_credit: '   ',
+  });
+  const described = await insertRequest('request-legacy', { proposed_image_alt: 'Kept alt.', proposed_image_credit: 'Kept credit' });
+  // The defect: alt text nobody entered was '', and Data Studio's required
+  // check only counts NULL as missing.
+  assert.deepEqual(await requestDescription(untouched), ['', '']);
+  // An accepted request whose empty credit the backfill rewrites.
+  await acceptRequest('request-legacy', { image: 'https://example.test/accepted-legacy.jpg', alt: 'Accepted legacy alt.' });
+
+  const digest = async (rows: PromiseLike<readonly Row[]>) => (await rows)[0].digest as string;
+  const everyRequest = () => digest(sql!`
+    select md5(string_agg(md5(to_jsonb(r)::text), '' order by r.id)) as digest
+    from content.chapter_update_requests r
+  `);
+  const outsideTheMigration = async () => ({
+    requests: await digest(sql!`
+      select md5(string_agg(
+        md5((to_jsonb(r) - 'proposed_image_alt' - 'proposed_image_credit')::text), '' order by r.id
+      )) as digest
+      from content.chapter_update_requests r
+    `),
+    chapters: await digest(sql!`
+      select md5(string_agg(md5(to_jsonb(c)::text), '' order by c.slug)) as digest from content.chapters c
+    `),
+    reviewEmails: await digest(sql!`
+      select md5(string_agg(md5(to_jsonb(n)::text), '' order by n.id)) as digest from content.review_notifications n
+    `),
+  });
+
+  const beforeRequestMigration = await outsideTheMigration();
+  await sql.unsafe(requestMigration);
+  // A storage move: nothing but the two columns changes, updated_at included.
+  // Rewriting an accepted request applies nothing to its chapter and queues
+  // no review email.
+  assert.deepEqual(await outsideTheMigration(), beforeRequestMigration);
+  assert.deepEqual(await requestDescription(untouched), [null, null]);
+  assert.deepEqual(await requestDescription(padded), ['Padded alt.', null]);
+  assert.deepEqual(await requestDescription(described), ['Kept alt.', 'Kept credit']);
+
+  // Nullable with no default: a field Data Studio never sent reaches its
+  // required check as NULL.
+  const requestColumns = await sql`
+    select column_name, is_nullable, column_default
+    from information_schema.columns
+    where table_schema = 'content'
+      and table_name = 'chapter_update_requests'
+      and column_name in ('proposed_image_alt', 'proposed_image_credit')
+    order by column_name
+  `;
+  assert.deepEqual(
+    requestColumns.map((column) => [column.column_name, column.is_nullable, column.column_default]),
+    [['proposed_image_alt', 'YES', null], ['proposed_image_credit', 'YES', null]]
+  );
+
+  // Applying it again changes nothing at all.
+  const settledRequests = await everyRequest();
+  await sql.unsafe(requestMigration);
+  assert.equal(await everyRequest(), settledRequests);
+
+  for (const file of migrations.filter((name) => name > REQUEST_MIGRATION)) {
+    await sql.unsafe(await readMigration(file));
+  }
+
+  // NULL is the one empty value for every writer. A request created without
+  // the two fields holds NULL, and blank text from the API or a script is
+  // stored as NULL too.
+  const omitted = await insertRequest('request-legacy', { proposed_image: 'https://example.test/omitted.jpg' });
+  assert.deepEqual(await requestDescription(omitted), [null, null]);
+  const blank = await insertRequest('request-legacy', { proposed_image_alt: '   ', proposed_image_credit: '' });
+  assert.deepEqual(await requestDescription(blank), [null, null]);
+  await editRequest(blank, { proposed_image_alt: '  Typed alt.  ', proposed_image_credit: 'Typed credit' });
+  assert.deepEqual(await requestDescription(blank), ['Typed alt.', 'Typed credit']);
+  await editRequest(blank, { proposed_image_alt: '', proposed_image_credit: null });
+  assert.deepEqual(await requestDescription(blank), [null, null]);
 
   // --- New rows ------------------------------------------------------------
   // A seeded or imported chapter describes its sourced image in media only.
