@@ -49,10 +49,10 @@ primary_region = "iad"
 [http_service]
   internal_port = 8055
   force_https = true
-  auto_stop_machines = "stop"
+  auto_stop_machines = "suspend"
   auto_start_machines = true
-  # Wake on editor visits and on website builds that copy uploaded images; keep
-  # no idle admin VM. The public site never loads an image from this machine.
+  # Preserve the loaded Directus process between visits to avoid its slow boot.
+  # A deploy or lost snapshot still cold-boots; see README.md for proof/fallback.
   min_machines_running = 0
   processes = ["app"]
 
