@@ -12,6 +12,7 @@ import {
   buildDirectusOperationalPermissionPlan,
   resolveSchemaCollectionNames,
 } from './directus-operational-content-setup.ts';
+import { buildDirectusStudioMetadataPlan } from './directus-studio-setup.ts';
 
 test('parseAssignments reads chapter and guild assignment TSV rows', () => {
   const assignments = parseAssignments([
@@ -458,4 +459,30 @@ test('operational permission plan carries the assigned editor policy on the stew
     (permission) => permission.policy === ASSIGNED_EDITOR_POLICY_NAME
   );
   assert.equal(assignedWithoutWorkflow.length, 10);
+});
+
+test('chapter selectors retain the readable inverse relation without granting nested writes', () => {
+  const studio = buildDirectusStudioMetadataPlan();
+  const identityGroup = studio.fields.find((f) => f.collection === 'chapters' && f.field === 'name')?.meta.group;
+  assert.equal(identityGroup, 'group_identity');
+  for (const prefix of ['', 'content.']) {
+    const chapters = `${prefix}chapters`;
+    const requests = `${prefix}chapter_update_requests`;
+    const plan = buildDirectusOperationalPermissionPlan(
+      [chapters], [], [`${prefix}chapter_editor_assignments`], [requests]
+    );
+    for (const policy of ['Greenpill Steward Editor', ASSIGNED_EDITOR_POLICY_NAME, 'Greenpill Trusted Publisher']) {
+      const reads = plan.permissions.filter((p) => p.policy === policy && p.collection === chapters && p.action === 'read');
+      assert(reads.some((p) => p.fields.includes('update_requests')), `${policy}: Directus would hide the chapter relation`);
+      assert(reads.some((p) => p.fields.includes(identityGroup)), `${policy}: the picker would omit chapter identity fields`);
+    }
+    for (const permission of plan.permissions.filter((p) => p.collection === chapters && ['create', 'update'].includes(p.action))) {
+      assert.equal(permission.fields.includes('update_requests'), false, permission.policy);
+      assert.equal(permission.fields.includes(identityGroup), false, permission.policy);
+    }
+    const requestRead = plan.permissions.find((p) => p.policy === ASSIGNED_EDITOR_POLICY_NAME && p.collection === requests && p.action === 'read');
+    assert.deepEqual((requestRead?.permissions as any)._and[1], {
+      chapter_slug: { _in: '$CURRENT_USER.chapter_editor_assignments.chapter_slug' },
+    });
+  }
 });

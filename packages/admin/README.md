@@ -349,6 +349,16 @@ any server that is not local. Prove the Directus path with
 `bun run directus:steward:smoke`. The smoke stops at once if Directus sees
 either alt text field as not nullable or with a default.
 
+The chapter selector also needs read access to the inverse
+`chapters.update_requests` relation and the `group_identity` form-group
+alias that contains the chapter's name and slug. Without the group alias,
+the picker sends `fields=` and cannot select a chapter.
+`directus:content:setup` includes both read-only aliases for stewards and
+publishers; request row filters still limit
+what can be read through it, and nested writes remain disabled. Re-run that
+setup when upgrading an existing instance. The steward smoke checks that
+Directus exposes the selector's relation to the scoped account.
+
 Prove the copy step with `bun run test:chapter-image-copies`, and with a real
 website build through `bun run test:chapter-image-copies:build`.
 
