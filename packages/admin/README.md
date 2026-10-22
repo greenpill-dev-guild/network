@@ -113,12 +113,12 @@ Prefer a direct Postgres URL for the first Directus bootstrap if the managed
 cluster offers both pooled and direct URLs. The admin service is low-traffic, and
 Directus owns its own system migrations on first boot.
 
-### Idle Suspend Trial (PRD-1219)
+### Idle Suspend and Resume (PRD-1219)
 
 `fly.toml` selects `auto_stop_machines = "suspend"`, with autostart enabled and
 zero machines kept running. Suspend preserves the loaded Directus process so
-ordinary visits avoid its bootstrap and server startup. This is a trial until
-the live checks below pass; the configuration alone does not prove the fix.
+ordinary visits avoid its bootstrap and server startup. The live verification
+below records the production checks; repeat them after changing this behavior.
 The admin deploy requires Afo's go-ahead, as specified in
 [PRD-1219](https://linear.app/green-goods/issue/PRD-1219).
 
@@ -149,9 +149,9 @@ After an approved deploy, verify the following:
    HTTP status and elapsed time, machine ID/state, idle duration, and the
    authenticated result in PRD-1219; omit tokens and private record contents.
 5. Repeat steps 2–4 at least three times. Include an extended idle period to
-   exercise expired database connections, and make an authenticated chapter
-   read the first request in one additional cycle to check that it does not
-   depend on the ping repairing a stale connection first. Each first request
+   exercise stale database connections, and reopen Data Studio before any operator ping
+   in one additional cycle to check that authenticated chapter access does not
+   depend on an operator health probe warming the service first. Each first request
    must succeed within five seconds. Check Fly events/logs for resume rather
    than a bootstrap/server restart.
 
@@ -173,6 +173,47 @@ autostart enabled. Commit both settings and deploy with Afo's approval, then
 repeat the idle and authenticated checks with the machine staying `started`
 in the primary region (`iad`). This prevents ordinary idle shutdowns; deploys
 and host failures still need recovery time.
+
+### Live Verification — 2026-10-21
+
+Afo approved the admin deploy. The suspend configuration was deployed to
+`network-admin` machine `7845032c2e5958` in `iad`, reusing the existing image
+`deployment-01KV71NE0X117B20GARCPGDNYH`. The deployed service has
+`autostop = "suspend"`, `autostart = true`, and `min_machines_running = 0`.
+
+Each measured request below followed an automatic suspension confirmed by
+Fly's control plane. The QA tab was parked between checks, and each curl
+measurement sent one request to `/server/ping`, without retries or a warm-up.
+Times are PDT. The interval is measured from the preceding authenticated
+chapter read, excluding Fly's internal health checks.
+
+| Cycle | First request | Since prior chapter read | HTTP | Total time |
+| --- | --- | --- | --- | --- |
+| 1 | 18:11:25 | about 7 min 10 s | 200 | 0.792139 s |
+| 2 | 18:18:06 | about 6 min 33 s | 200 | 0.792103 s |
+| 3 | 18:23:52 | about 5 min 36 s | 200 | 0.766115 s |
+
+After each automatic resume, the connected Brave profile successfully
+refreshed its existing session (`POST /auth/refresh`, HTTP 200), loaded the
+signed-in user (`GET /users/me`, HTTP 200), and rendered all 18 chapters.
+The chapter reads returned HTTP 304 after authenticated conditional requests,
+with server times of 15–32 ms. No new bootstrap/server-start sequence appeared
+in the captured post-resume logs.
+
+An additional test manually suspended the idle machine at 18:24:31 and
+confirmed it remained suspended at 18:29:50 with the same lifecycle timestamp.
+At 18:30:06, opening Data Studio directly initiated a proxy resume without an
+operator warm-up request. Brave navigation completed in 1.229 seconds. The
+session refresh returned 200 at 18:30:08, the user read returned 200 at 18:30:09,
+and the chapter reads returned 304 at 18:30:10. Subsequent visual inspection
+confirmed the complete chapter table; its precise render time was not measured.
+Fly's internal service health check ran on resume as usual. Captured logs
+contained no HTTP failures, database connection errors, or new boot sequence
+during this test.
+
+Retain suspend for routine idle visits based on these measurements. Snapshot
+loss can still produce the full-boot behavior described above; this is not a
+guarantee of uninterrupted availability after deploys, host moves, or maintenance.
 
 ### Upload Storage
 
