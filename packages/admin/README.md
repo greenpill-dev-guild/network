@@ -113,6 +113,67 @@ Prefer a direct Postgres URL for the first Directus bootstrap if the managed
 cluster offers both pooled and direct URLs. The admin service is low-traffic, and
 Directus owns its own system migrations on first boot.
 
+### Idle Suspend Trial (PRD-1219)
+
+`fly.toml` selects `auto_stop_machines = "suspend"`, with autostart enabled and
+zero machines kept running. Suspend preserves the loaded Directus process so
+ordinary visits avoid its bootstrap and server startup. This is a trial until
+the live checks below pass; the configuration alone does not prove the fix.
+The admin deploy requires Afo's go-ahead, as specified in
+[PRD-1219](https://linear.app/green-goods/issue/PRD-1219).
+
+[Fly's suspend documentation](https://fly.io/docs/reference/suspend-resume/)
+describes fast resume, requires no swap or machine schedule, and warns that
+snapshots can be discarded. The configured 1 GB VM is within its recommended
+memory range. Database connections may have expired while asleep, so a ping
+alone is insufficient proof.
+
+After an approved deploy, verify the following:
+
+1. Wait for Directus to finish its initial full boot. Use the authenticated
+   Brave QA profile to sign in to Data Studio and open an assigned chapter.
+2. Close the admin tabs and stop HTTP probes so they do not keep the machine
+   awake. Use `fly machine list --app network-admin` to wait until the machine
+   reports `suspended`; a fixed idle delay is not proof of suspension.
+3. Measure the first request without retries or a warm-up request:
+
+   ```sh
+   curl --silent --show-error --fail --max-time 10 --output /dev/null \
+     --write-out 'status=%{http_code} total_seconds=%{time_total}\n' \
+     https://admin.greenpill.network/server/ping
+   ```
+
+4. In the same Brave profile, reopen Data Studio and verify that the signed-in
+   user profile and assigned chapter load from authenticated requests. Confirm
+   the database-backed requests succeed without connection errors. Record the
+   HTTP status and elapsed time, machine ID/state, idle duration, and the
+   authenticated result in PRD-1219; omit tokens and private record contents.
+5. Repeat steps 2–4 at least three times. Include an extended idle period to
+   exercise expired database connections, and make an authenticated chapter
+   read the first request in one additional cycle to check that it does not
+   depend on the ping repairing a stale connection first. Each first request
+   must succeed within five seconds. Check Fly events/logs for resume rather
+   than a bootstrap/server restart.
+
+Deploys, host moves, maintenance, or a lost snapshot can still force a full
+boot. The October 9 measurements in PRD-1219 were 62–115 seconds before
+Directus listened, with a first request returning HTTP 503 after 46 seconds.
+A visitor may therefore see a 503 or a timeout and need to wait up to two
+minutes before reloading Data Studio, an invite, a reset, or a moderation link.
+There is no custom waiting page. Public chapter images are copied into the
+static website and do not wait for this VM.
+
+That delay is unacceptable for routine idle visits. A controlled deploy can
+allow for an initial boot before announcing availability; unexpected full
+boots remain an availability gap even if the resume trial passes. If any
+idle/resume cycle fails, authenticated reads fail after resume, or that
+remaining gap is unacceptable, use the issue's always-running fallback:
+set `auto_stop_machines = "stop"` and `min_machines_running = 1`, leaving
+autostart enabled. Commit both settings and deploy with Afo's approval, then
+repeat the idle and authenticated checks with the machine staying `started`
+in the primary region (`iad`). This prevents ordinary idle shutdowns; deploys
+and host failures still need recovery time.
+
 ### Upload Storage
 
 Production uploads use Tigris through Directus' S3 storage adapter. Keep the
