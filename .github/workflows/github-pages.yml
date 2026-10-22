@@ -62,6 +62,11 @@ jobs:
           # which leaves the currently deployed site untouched.
           OPERATIONAL_CONTENT_SNAPSHOT_URL: ${{ vars.OPERATIONAL_CONTENT_SNAPSHOT_URL || 'https://agent.greenpill.network/content/public-snapshot' }}
 
+      - name: Check Pages size budget
+        run: |
+          bun test scripts/pages-artifact-size.test.ts
+          bun --no-env-file scripts/pages-artifact-size.ts
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
