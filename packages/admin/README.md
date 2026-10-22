@@ -346,7 +346,11 @@ Before a steward sync:
 5. Assign chapters or guilds with
    `bun run directus:content-access -- assign --input assignments.tsv`.
 6. Pre-create one draft chapter update request per participating chapter with
-   `bun scripts/directus-steward-sync-prep.ts --input assignments.tsv`.
+   `bun scripts/directus-steward-sync-prep.ts --input assignments.tsv`. Each
+   draft starts from the chapter's current summary and primary link, so
+   accepting it unedited changes nothing. It carries no image, because an
+   accepted image replaces the current one and takes the request's alt text
+   and credit.
 7. Send [`STEWARD_SYNC_INVITE.md`](./STEWARD_SYNC_INVITE.md) alongside the
    Directus system invite so stewards know what to prepare.
 8. Run `bun run directus:steward:smoke` against representative assigned and

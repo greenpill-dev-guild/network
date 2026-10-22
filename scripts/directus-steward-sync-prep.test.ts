@@ -27,8 +27,9 @@ test('uniqueChapterSlugs keeps first chapter assignment and ignores guild rows',
   assert.deepEqual(slugs, ['brasil', 'nigeria']);
 });
 
-test('buildChapterUpdateRequestDraft preloads public chapter fields and a starter checklist', () => {
-  const draft = buildChapterUpdateRequestDraft({
+test('buildChapterUpdateRequestDraft preloads the summary, primary link, and a starter checklist', () => {
+  // A chapter with an image and its description, as Directus could return it.
+  const chapter = {
     slug: 'brasil',
     name: 'Greenpill Brasil',
     city: 'Rio de Janeiro',
@@ -36,15 +37,20 @@ test('buildChapterUpdateRequestDraft preloads public chapter fields and a starte
     summary: 'Public chapter summary.',
     primary_link: 'https://example.org',
     image: 'https://example.org/photo.jpg',
-  }, {
-    titlePrefix: 'Review',
-  });
+    image_alt: 'Members at a meetup.',
+    image_credit: 'Photo by Ada Example',
+  };
+  const draft = buildChapterUpdateRequestDraft(chapter, { titlePrefix: 'Review' });
 
   assert.equal(draft.chapter_slug, 'brasil');
   assert.equal(draft.title, 'Review Greenpill Brasil profile');
   assert.equal(draft.proposed_summary, 'Public chapter summary.');
   assert.equal(draft.proposed_primary_link, 'https://example.org');
-  assert.equal(draft.proposed_image, 'https://example.org/photo.jpg');
+  // The draft proposes no image, whatever the chapter shows. An accepted image
+  // replaces the chapter's own and takes the request's alt text and credit.
+  for (const field of ['proposed_image', 'proposed_image_alt', 'proposed_image_credit']) {
+    assert.equal(Object.hasOwn(draft, field), false, field);
+  }
   assert.equal(draft.request_status, 'draft');
   assert.deepEqual(draft.requested_changes.currentReference, {
     name: 'Greenpill Brasil',
@@ -73,7 +79,6 @@ test('prepareChapterUpdateRequests creates one draft per chapter and skips activ
       country: 'Brazil',
       summary: 'Brasil summary.',
       primary_link: 'https://brasil.example',
-      image: '',
     }],
     ['nigeria', {
       slug: 'nigeria',
@@ -82,7 +87,6 @@ test('prepareChapterUpdateRequests creates one draft per chapter and skips activ
       country: 'Nigeria',
       summary: 'Nigeria summary.',
       primary_link: 'https://nigeria.example',
-      image: '',
     }],
   ]);
   const client = {
