@@ -6,45 +6,45 @@
     {
       "level": 1,
       "stage": "seed",
-      "levelLabel": "Lowest friction",
+      "levelLabel": "Start light",
       "surfaceType": "email",
       "kicker": "Step 1 · Stay in the loop",
       "title": "Subscribe to field notes",
       "body": "An occasional public digest with chapter updates, new resources, podcast highlights, and upcoming calls. Unsubscribe any time.",
       "meta": "Public updates · unsubscribe anytime · no account",
-      "friction": "Lowest friction",
+      "friction": "Start light",
       "cta": {
         "label": "Subscribe",
-        "href": "#step-1",
+        "href": "/garden#step-1",
         "kind": "form"
       }
     },
     {
       "level": 2,
       "stage": "sapling",
-      "levelLabel": "Light friction",
+      "levelLabel": "Listen first",
       "surfaceType": "telegram",
       "kicker": "Step 2 · Lurk or chat",
       "title": "Join the public conversation",
-      "body": "Drop into the shared Greenpill chat and listen before you contribute. Lurk as long as you like — nobody is keeping score.",
+      "body": "Drop into the shared Greenpill chat and listen before you contribute. Lurk as long as you like. Nobody is keeping score.",
       "meta": "Public conversation · listen first",
-      "friction": "Light friction",
+      "friction": "Listen first",
       "cta": {
         "label": "Open Telegram",
-        "href": "https://t.me/+e-aa2Ed3LWVlYjNh",
+        "href": "",
         "kind": "external"
       }
     },
     {
       "level": 3,
       "stage": "budding",
-      "levelLabel": "Medium friction",
+      "levelLabel": "Find your fit",
       "surfaceType": "assessment",
       "kicker": "Step 3 · Match yourself",
       "title": "Take the Regen Assessment",
-      "body": "Seven quick questions about what you bring and what you want to grow. Your answers stay on this device — no account, no email, nothing sent anywhere.",
+      "body": "Seven quick questions about what you bring and what you want to grow. Answers stay on this device, with no account or email.",
       "meta": "7 questions · saved on this device · no account",
-      "friction": "Medium friction",
+      "friction": "Find your fit",
       "cta": {
         "label": "Start the assessment",
         "href": "/garden#assessment",
@@ -54,13 +54,13 @@
     {
       "level": 4,
       "stage": "flowering",
-      "levelLabel": "Highest friction",
+      "levelLabel": "When you're ready",
       "surfaceType": "steward-call",
       "kicker": "Step 4 · Human-to-human",
       "title": "Book a steward call",
       "body": "For people thinking about starting a chapter, joining a guild, partnering on a project, or finding the right steward to talk with.",
       "meta": "Private · by request",
-      "friction": "Highest friction",
+      "friction": "When you're ready",
       "cta": {
         "label": "Book a call",
         "href": "https://calendar.app.google/gia7UpaSVKwwEKxy5",
@@ -141,7 +141,7 @@
     "imageAlt": "",
     "cta": {
       "label": "Open Telegram",
-      "href": "https://t.me/+e-aa2Ed3LWVlYjNh",
+      "href": "",
       "kind": "external"
     }
   },
