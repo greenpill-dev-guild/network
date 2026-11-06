@@ -31,9 +31,9 @@ Batch A starts first because it covers the broken interactions and the accuracy 
 
 ### `qa-map-data` (findings 1, 2)
 
-- [ ] Pull live `/map/state` and list every node whose coordinates are impossible or far from its `place` (latitude ±90, longitude ±180, 0,0, or outside the named country).
+- [ ] Pull live `/map/state` and list every node whose coordinates are suspect (exactly 0,0, latitude ±90 or longitude ±180) or fall outside the country its `place` names.
 - [ ] Find how each got there: intake submission, edit link (`/map/edit`), click-to-place, geocoder fallback or seed. Reproduce on the local stack.
-- [ ] Reject impossible coordinates at the agent boundary and in the shared contract, with tests in `scripts/map-node-contract.test.ts`. Rejection is explicit, never a silent clamp to the edge.
+- [ ] At the agent boundary and in the shared contract, reject out-of-range and non-finite coordinates, and stop 0,0 or a clamped edge value from being stored in place of a real location. Rejection is explicit, never a silent clamp. A real location on the 180th meridian (Fiji) must still save, so longitude ±180 on its own is not an error. Tests in `scripts/map-node-contract.test.ts`.
 - [ ] Write a repair change set for the affected rows (node id, place, current and proposed coordinates, how the new value was derived) and stop for approval.
 - [ ] D2 (decided: remove): drop the ecoregion layer and dataset from the map and the shared package. `qa-brand-shell` drops the footer credit.
 
