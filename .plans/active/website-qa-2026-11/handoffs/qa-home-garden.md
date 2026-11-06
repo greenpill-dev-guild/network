@@ -4,7 +4,7 @@ Findings 2, 3, 5, 6 and 20 from `reports/2026-11-06-qa-findings.md`.
 
 ## Changed
 
-Pull request: PENDING
+Pull request: https://github.com/greenpill-dev-guild/network/pull/34 (not merged)
 
 - **Subscribe (finding 5).** The Garden's step 1 CTA is now `/garden#step-1`, so the home ramp's Subscribe card opens the Garden signup form (clicked in Brave: it lands on `/garden/#step-1` with the email field in view). On `/garden` the step still renders the form itself.
 - **Telegram (finding 6).** Home and Garden take the invite from `content/social-links.json` (`telegram`). The Telegram step's own `cta.href` in `garden.json` is empty, and so is the unused `telegramPreview` copy. The Garden page's fallback step list, which held a third copy, is gone. This also repairs the buttons today: the `social-links.json` invite (`t.me/+g9TM…`) opens the "Greenpill.network" group (1,037 members on 2026-11-06), while the old hard-coded one (`t.me/+e-aa…`) opens a generic t.me page with no group name, which suggests it was revoked. The footer still uses the old one (see requests below).
