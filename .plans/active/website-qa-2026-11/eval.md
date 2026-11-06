@@ -29,7 +29,7 @@ Each finding in `reports/2026-11-06-qa-findings.md` is closed when its check bel
 
 ## Proof
 
-- `bun run plans:validate`, `bun run ui:check`, `bun run ui:verify`, and the focused tests each session touches (`bun run test:map-nodes`, `bun run test:agent`, `bun run test:content`).
+- The repository's pre-PR gate from `AGENTS.md` on every session PR: `bun run typecheck`, the focused `bun run test:*` for the surface (for example `test:map-nodes`, `test:agent`, `test:content`), `bun run agentic:check` for website work (it runs `plans:validate` and `ui:check`), then `bun run build`. Add `bun run ui:verify` for rendered checks.
 - Visual QA in Afo's authenticated Brave profile at 375, 1024 and 1440, with screenshots referenced in each handoff. Isolated-browser output counts only as clean-room proof.
 - For content: the source list in each handoff, and Afo's approval recorded for every production change set.
 - After merge: the same checks against greenpill.network once GitHub Pages and Fly report the deploy.
