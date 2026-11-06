@@ -1,16 +1,30 @@
 import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 import { test } from 'node:test';
+import * as sharedMapNodes from '@greenpill-network/shared/map-nodes';
 import {
   containsPrivateMapNodeField,
-  derivePublicBioregionFromCoordinates,
-  lookupPublicBioregionFromCoordinates,
   EDITABLE_MAP_NODE_UPDATE_FIELDS,
   normalizePublicMapThemeSlugs,
   PRIVATE_MAP_NODE_FIELDS,
   toEditablePublicMapNode,
   toPublicMapNode,
 } from '@greenpill-network/shared/map-nodes';
+import {
+  getMapCoordinateProblem,
+  isPublicMapCoordinate,
+  MAP_COORDINATE_PROBLEM_MESSAGES,
+} from '@greenpill-network/shared/map-locations';
+import {
+  createMapNodeSubmission,
+  createMapNodeUpdateRequest,
+  listPublicMapNodes,
+  PublicInputError,
+} from '@greenpill-network/agent/map-nodes';
+import {
+  consumeMapLocationConfirmation,
+  createMapLocationRepository,
+} from '@greenpill-network/agent/map-locations';
 import {
   loadLocalPendingNodes as loadStoredLocalPendingNodes,
   localPendingNodeSignature as storedLocalPendingNodeSignature,
@@ -79,9 +93,10 @@ test('approved public projection removes private submission fields', () => {
 
   assert.equal(publicNode.status, 'approved');
   assert.equal(publicNode.name, 'Afo');
-  assert.equal(publicNode.bioregion, 'California interior chaparral and woodlands');
-  assert.equal(publicNode.bioregionId, '423');
-  assert.equal(publicNode.bioregionSource, 'resolve-ecoregions-2017');
+  // D2 (2026-11-06): no ecoregion is derived or published for a node.
+  assert.equal(publicNode.bioregion, '');
+  assert.equal(Object.hasOwn(publicNode, 'bioregionId'), false);
+  assert.equal(Object.hasOwn(publicNode, 'bioregionSource'), false);
   assert.equal(containsPrivateMapNodeField(publicNode), false);
   for (const field of PRIVATE_MAP_NODE_FIELDS) {
     assert.equal(Object.hasOwn(publicNode, field), false);
@@ -319,9 +334,12 @@ test('public map-state combines chapter anchors and approved submitted nodes saf
   assert.equal(payload.nodes.some((node) => node.type === 'chapter'), true);
   assert.equal(payload.nodes.some((node) => node.type === 'steward'), true);
   assert.equal(payload.nodes.some((node) => String(node.source) === 'generated-density'), false);
-  assert.equal(payload.nodes.find((node) => node.type === 'steward')?.bioregion, 'Nigerian lowland forests');
-  assert.equal(payload.nodes.find((node) => node.type === 'steward')?.bioregionId, '23');
-  assert.equal(payload.nodes.find((node) => node.type === 'steward')?.bioregionSource, 'resolve-ecoregions-2017');
+  // D2 (2026-11-06): neither people nor chapters carry ecoregion data.
+  for (const node of payload.nodes) {
+    assert.equal(node.bioregion ?? '', '');
+    assert.equal(Object.hasOwn(node, 'bioregionId'), false);
+    assert.equal(Object.hasOwn(node, 'bioregionSource'), false);
+  }
   assert.equal(payload.counts.chapterNodes, 1);
   assert.equal(payload.counts.approvedSubmittedNodes, 1);
   assert.equal(payload.counts.byType.steward, 1);
@@ -419,10 +437,12 @@ test('public map-state generates person-first relationship edges', () => {
     edge.kind === 'shared-theme' &&
     [edge.from, edge.to].sort().join(':') === 'submission:member-1:submission:member-2'
   )), true);
-  assert.equal(payload.edges.find((edge) => (
-    edge.kind === 'shared-theme' &&
-    [edge.from, edge.to].sort().join(':') === 'submission:member-1:submission:member-2'
-  ))?.bioregion, 'West African Coast');
+  // D2 (2026-11-06): a stored region label is not published, so threads carry
+  // no region either, even when both people share one.
+  assert.equal(payload.edges.some((edge) => (
+    Object.hasOwn(edge, 'bioregion') || Object.hasOwn(edge, 'bioregionId') || Object.hasOwn(edge, 'bioregionSource')
+  )), false);
+  assert.equal(JSON.stringify(payload).includes('West African Coast'), false);
 
   const typeByNodeId = new Map(payload.nodes.map((node) => [node.id, node.type]));
   assert.equal(payload.edges.some((edge) => (
@@ -449,8 +469,8 @@ test('public map-state includes real opt-in stewards without anonymous density',
     chapterLocations: [{
       id: 'anchor-chapter',
       name: 'Anchor Chapter',
-      lat: 0,
-      long: 0,
+      lat: 5.6037,
+      long: -0.187,
       link: '/chapters/anchor-chapter',
       status: 'active',
       themes: ['public'],
@@ -469,14 +489,39 @@ test('public map-state includes real opt-in stewards without anonymous density',
   )), false);
 });
 
-test('public bioregion field resolves from checked-in RESOLVE polygons', () => {
-  assert.deepEqual(lookupPublicBioregionFromCoordinates(37.8044, -122.2712), {
-    id: '423',
-    name: 'California interior chaparral and woodlands',
-    source: 'resolve-ecoregions-2017',
+test('D2: the shared package no longer ships or looks up ecoregions', async () => {
+  const sharedSourceFiles = await readdir(new URL('../packages/shared/src/', import.meta.url));
+  assert.equal(sharedSourceFiles.some((file) => file.startsWith('public-ecoregions')), false);
+
+  const sharedPackage = JSON.parse(await readFile(new URL('../packages/shared/package.json', import.meta.url), 'utf8'));
+  assert.equal(Object.hasOwn(sharedPackage.exports, './public-ecoregions'), false);
+  const sharedIndex = await readFile(new URL('../packages/shared/src/index.ts', import.meta.url), 'utf8');
+  assert.doesNotMatch(sharedIndex, /public-ecoregions/);
+
+  for (const removed of [
+    'PUBLIC_ECOREGIONS',
+    'findPublicEcoregionById',
+    'lookupPublicBioregionFromCoordinates',
+    'derivePublicBioregionMetadataFromCoordinates',
+    'derivePublicBioregionFromCoordinates',
+  ]) {
+    assert.equal(Object.hasOwn(sharedMapNodes, removed), false, `${removed} should be gone`);
+  }
+
+  // A region label already stored on a row (the agent wrote ecoregion names at
+  // intake until this change) is not published either.
+  const node = toPublicMapNode({
+    id: 'stored-region',
+    status: 'approved',
+    displayName: 'Stored Region',
+    placeName: 'Rio de Janeiro',
+    lat: -22.9068,
+    long: -43.1729,
+    bioregion: 'Serra do Mar coastal forests',
+    bioregion_id: '500',
   });
-  assert.equal(derivePublicBioregionFromCoordinates(37.8044, -122.2712), 'California interior chaparral and woodlands');
-  assert.equal(derivePublicBioregionFromCoordinates(37.8044, -122.2712, 'Bay Delta'), 'Bay Delta');
+  assert.equal(node?.bioregion, '');
+  assert.equal(JSON.stringify(node).includes('Serra do Mar'), false);
 });
 
 test('public content seed map nodes are approved-only projection fixtures', async () => {
@@ -536,9 +581,9 @@ test('public map-state guard rejects pending and private route payloads', () => 
 
 test('public map-state guard rejects non-person relationship edge endpoints', () => {
   const nodes = [
-    { id: 'chapter:nigeria', type: 'chapter', status: 'approved', source: 'chapter-content' },
-    { id: 'submission:member-1', type: 'member', status: 'approved', source: 'approved-submission' },
-    { id: 'submission:member-2', type: 'member', status: 'approved', source: 'approved-submission' },
+    { id: 'chapter:nigeria', type: 'chapter', status: 'approved', source: 'chapter-content', lat: 9.082, long: 8.6753 },
+    { id: 'submission:member-1', type: 'member', status: 'approved', source: 'approved-submission', lat: 6.5244, long: 3.3792 },
+    { id: 'submission:member-2', type: 'member', status: 'approved', source: 'approved-submission', lat: 5.6037, long: -0.187 },
   ];
 
   assert.throws(
@@ -1559,4 +1604,386 @@ test('home map uses exact-overlap fan-out instead of broad cluster bubbles', asy
   assert.match(component, /@keyframes gpMapClusterPop/);
   assert.doesNotMatch(component, /gpMapClusterPop[^;]*infinite/);
   assert.match(component, /reducedMotionPref\(\)/);
+});
+
+// ---------------------------------------------------------------------------
+// PRD-1409 (qa-map-data): nodes saved at impossible coordinates.
+// Live /map/state on 2026-11-06 held these public points. The June 2026
+// add-node client produced them: a pin drag clamped to the mini-map edge gave
+// latitude 90 or longitude -180, and a place typed with no pin read the empty
+// latitude and longitude fields as 0. The agent and the shared contract now
+// refuse them. Evidence: .plans/active/website-qa-2026-11/handoffs/qa-map-data.md
+// ---------------------------------------------------------------------------
+const LIVE_IMPOSSIBLE_POINTS = Object.freeze([
+  { place: 'Florida', lat: 90, long: 97.76261, problem: 'latitude_out_of_range' },
+  { place: 'Taiwan', lat: 90, long: 176.912492, problem: 'latitude_out_of_range' },
+  { place: 'Awka', lat: 56.462976, long: -180, problem: 'longitude_out_of_range' },
+  { place: 'Port Harcourt', lat: 0, long: 0, problem: 'null_island' },
+  { place: 'Rotterdam, Netherlands', lat: 0, long: 0, problem: 'null_island' },
+]);
+const LEGACY_LOCATION_ENV = Object.freeze({ MAP_LOCATION_CONFIRMATION_REQUIRED: 'false' });
+const TEST_CONFIRMATION_ID = '11111111-1111-4111-8111-111111111111';
+
+function createRecordingSql(respond: (text: string, values: unknown[]) => unknown[] | undefined = () => []) {
+  const statements: Array<{ text: string; values: unknown[] }> = [];
+  const sql: any = async (strings: TemplateStringsArray, ...values: unknown[]) => {
+    const text = strings.join('?').replace(/\s+/g, ' ').trim();
+    statements.push({ text, values });
+    return respond(text, values) ?? [];
+  };
+  sql.json = (value: unknown) => value;
+  sql.begin = async (callback: (tx: any) => unknown) => callback(sql);
+  sql.end = async () => {};
+  return { sql, statements };
+}
+
+const wroteTo = (statements: Array<{ text: string }>, table: string) => (
+  statements.some((statement) => statement.text.includes(`insert into ${table}`))
+);
+
+const approvedRow = (point: { place: string; lat: unknown; long: unknown }, index: number) => ({
+  id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+  status: 'approved',
+  displayName: `Person ${index}`,
+  placeName: point.place,
+  lat: point.lat,
+  long: point.long,
+  themes: ['public'],
+});
+
+test('map coordinates reject poles, the antimeridian, 0,0 and non-numbers instead of clamping', () => {
+  const cases: Array<[unknown, unknown, string | null]> = [
+    [90, 97.76261, 'latitude_out_of_range'],
+    [-90, 10, 'latitude_out_of_range'],
+    [90.5, 10, 'latitude_out_of_range'],
+    [56.462976, -180, 'longitude_out_of_range'],
+    [10, 180, 'longitude_out_of_range'],
+    [10, -181, 'longitude_out_of_range'],
+    [0, 0, 'null_island'],
+    ['0', '0.000000', 'null_island'],
+    [null, 3.3792, 'missing'],
+    ['', '', 'missing'],
+    ['   ', 3.3792, 'missing'],
+    [true, 3.3792, 'missing'],
+    ['north', 3.3792, 'missing'],
+    [Number.NaN, 3.3792, 'missing'],
+    [Number.POSITIVE_INFINITY, 3.3792, 'missing'],
+    [89.999999, 179.999999, null],
+    [-89.999999, -179.999999, null],
+    [0, 3.3792, null],
+    [51.4779, 0, null],
+    ['6.5244', '3.3792', null],
+  ];
+  for (const [lat, long, expected] of cases) {
+    assert.equal(getMapCoordinateProblem(lat, long), expected, `${String(lat)}, ${String(long)}`);
+    assert.equal(isPublicMapCoordinate(lat, long), expected === null, `${String(lat)}, ${String(long)}`);
+  }
+  for (const message of Object.values(MAP_COORDINATE_PROBLEM_MESSAGES)) {
+    assert.doesNotMatch(message, /\u2014/);
+  }
+});
+
+test('nodes saved at impossible coordinates stay off the public map instead of being drawn at an edge', () => {
+  for (const [index, point] of LIVE_IMPOSSIBLE_POINTS.entries()) {
+    assert.equal(toPublicMapNode(approvedRow(point, index)), null, point.place);
+  }
+  // Null and blank values used to read as 0 and project to 0,0.
+  assert.equal(toPublicMapNode(approvedRow({ place: 'Port Harcourt', lat: null, long: null }, 7)), null);
+  assert.equal(toPublicMapNode(approvedRow({ place: 'Port Harcourt', lat: '', long: '' }, 8)), null);
+
+  const toronto = approvedRow({ place: 'Toronto', lat: 43.6532, long: -79.3832 }, 9);
+  const payload = toPublicMapStatePayload({
+    generatedAt: '2026-11-06T22:58:27.831Z',
+    chapterLocations: [
+      { id: 'brasil', name: 'Greenpill Brasil', lat: -22.9068, long: -43.1729, status: 'active' },
+      { id: 'placeholder', name: 'Placeholder Chapter', lat: 0, long: 0, status: 'active' },
+    ],
+    publicMapNodes: [...LIVE_IMPOSSIBLE_POINTS.map(approvedRow), toronto],
+    sourceStatus: [
+      { source: 'chapter-locations', status: 'ok', count: 2 },
+      { source: 'approved-map-nodes', status: 'ok', count: 6 },
+    ],
+  });
+  assert.deepEqual(payload.nodes.map((node) => node.name).sort(), ['Greenpill Brasil', 'Person 9']);
+  assert.equal(payload.counts.chapterNodes, 1);
+  assert.equal(payload.counts.approvedSubmittedNodes, 1);
+  assert.equal(payload.nodes.every((node) => isPublicMapCoordinate(node.lat, node.long)), true);
+
+  // The payload guard refuses a payload that still carries one.
+  assert.throws(
+    () => assertPublicMapStatePayload({
+      ...payload,
+      nodes: [...payload.nodes, { ...payload.nodes[0], id: 'chapter:edge', lat: 90 }],
+    }),
+    /impossible coordinates/
+  );
+});
+
+test('the agent leaves impossible nodes out of the public list and reports only their ids', async () => {
+  const rows = [
+    ...LIVE_IMPOSSIBLE_POINTS.map((point, index) => ({
+      id: `00000000-0000-4000-8000-00000000001${index}`,
+      name: `Person ${index}`,
+      place: point.place,
+      city: '',
+      region: '',
+      country: '',
+      lat: point.lat,
+      long: point.long,
+      role: 'member',
+      chapterSlug: '',
+      themes: ['public'],
+      bioregion: null,
+      publicNote: '',
+      status: 'approved',
+    })),
+    {
+      id: '00000000-0000-4000-8000-000000000099',
+      name: 'Toronto Person',
+      place: 'Toronto',
+      city: '',
+      region: '',
+      country: '',
+      lat: 43.6532,
+      long: -79.3832,
+      role: 'member',
+      chapterSlug: '',
+      themes: ['public'],
+      bioregion: 'Southern Great Lakes forests',
+      publicNote: '',
+      status: 'approved',
+    },
+  ];
+  const { sql } = createRecordingSql((text) => (text.includes('from intake.public_map_nodes') ? rows : []));
+  const reports: Array<{ id: string; problem: string }[]> = [];
+  const nodes = await listPublicMapNodes(sql, { reportHiddenNodes: (hidden) => reports.push(hidden) });
+
+  assert.deepEqual(nodes.map((node) => node.name), ['Toronto Person']);
+  assert.equal(nodes[0].bioregion, '');
+  assert.equal(reports.length, 1);
+  assert.deepEqual(reports[0].map((node) => node.problem), LIVE_IMPOSSIBLE_POINTS.map((point) => point.problem));
+  assert.deepEqual(reports[0].map((node) => node.id), rows.slice(0, 5).map((row) => row.id));
+  assert.equal(JSON.stringify(reports).includes('Person'), false);
+});
+
+test('the agent rejects impossible legacy submission coordinates with an explicit error and writes nothing', async () => {
+  const cases = [
+    ...LIVE_IMPOSSIBLE_POINTS,
+    { place: 'Port Harcourt', lat: '0', long: '0', problem: 'null_island' },
+    { place: 'Nowhere', lat: 90.5, long: 10, problem: 'latitude_out_of_range' },
+  ];
+  for (const point of cases) {
+    const { sql, statements } = createRecordingSql((text) => (
+      text.includes('from intake.map_node_intake_settings') ? [{ liveOnboardingEnabled: false }] : []
+    ));
+    await assert.rejects(
+      () => createMapNodeSubmission(sql, {
+        name: 'Legacy Browser Member',
+        place: point.place,
+        lat: point.lat,
+        long: point.long,
+        themes: ['public'],
+        email: 'legacy@example.org',
+      }, {}, { env: LEGACY_LOCATION_ENV }),
+      (error) => error instanceof PublicInputError
+        && error.code === 'invalid_coordinates'
+        && error.status === 400
+        && error.message === MAP_COORDINATE_PROBLEM_MESSAGES[point.problem],
+      `${point.place} ${String(point.lat)}, ${String(point.long)}`
+    );
+    assert.equal(wroteTo(statements, 'intake.map_node_submissions'), false);
+  }
+});
+
+test('D2: the agent no longer stores a derived ecoregion name at intake', async () => {
+  const { sql, statements } = createRecordingSql((text) => {
+    if (text.includes('from intake.map_node_intake_settings')) return [{ liveOnboardingEnabled: false }];
+    if (text.includes('insert into intake.map_node_submissions')) {
+      return [{
+        id: '00000000-0000-4000-8000-000000000123',
+        status: 'pending',
+        displayName: 'Legacy Browser Member',
+        placeName: 'Oakland',
+        lat: 37.8044,
+        long: -122.2712,
+        themes: ['public'],
+        createdAt: '2026-11-06T12:00:00.000Z',
+      }];
+    }
+    if (text.includes('insert into intake.map_node_moderation_notifications')) return [{ id: 'notification-1' }];
+    return [];
+  });
+  await createMapNodeSubmission(sql, {
+    name: 'Legacy Browser Member',
+    place: 'Oakland',
+    lat: 37.8044,
+    long: -122.2712,
+    themes: ['public'],
+    email: 'legacy@example.org',
+  }, {}, { env: LEGACY_LOCATION_ENV, deferProviderSend: true });
+  const insert = statements.find((statement) => statement.text.includes('insert into intake.map_node_submissions'));
+  assert.ok(insert);
+  assert.equal(insert.values.includes('California interior chaparral and woodlands'), false);
+  assert.doesNotMatch(insert.text.split('returning')[0], /bioregion/);
+});
+
+test('a place confirmation that resolves to an impossible point is refused before anything is written', async () => {
+  const { sql, statements } = createRecordingSql((text) => {
+    if (text.includes('update intake.map_location_confirmations')) {
+      return [{ label: 'Null Island', lat: 0, long: 0, kind: 'settlement', provider: 'nominatim', providerPlaceId: 'node:1' }];
+    }
+    if (text.includes('from intake.map_node_intake_settings')) return [{ liveOnboardingEnabled: false }];
+    return [];
+  });
+  await assert.rejects(
+    () => createMapNodeSubmission(sql, {
+      name: 'Confirmed Member',
+      locationConfirmationId: TEST_CONFIRMATION_ID,
+      themes: ['public'],
+      email: 'member@example.org',
+    }),
+    (error) => error instanceof PublicInputError && error.code === 'invalid_location_confirmation'
+  );
+  assert.equal(wroteTo(statements, 'intake.map_node_submissions'), false);
+  await assert.rejects(
+    () => consumeMapLocationConfirmation(sql, TEST_CONFIRMATION_ID),
+    (error) => error instanceof PublicInputError && error.code === 'invalid_location_confirmation'
+  );
+});
+
+test('owner edits cannot move a node to an impossible point, including by changing one half of the pair', async () => {
+  const nodeId = '33333333-3333-4333-8333-333333333333';
+  const tokenRow = {
+    tokenId: '22222222-2222-4222-8222-222222222222',
+    normalizedEmail: 'owner@example.org',
+    submissionId: nodeId,
+    displayName: 'Owner',
+    placeName: 'Awka',
+    city: '',
+    region: '',
+    country: '',
+    lat: 56.462976,
+    long: -180,
+    themes: ['public'],
+    publicNote: '',
+    currentSubmissionUpdatedAt: '2026-06-17T12:00:00.000Z',
+  };
+  const updateSql = () => createRecordingSql((text) => {
+    if (text.includes('from intake.map_node_edit_tokens')) return [tokenRow];
+    if (text.includes('insert into intake.map_node_update_requests')) return [{ id: 'update-request-1', status: 'pending' }];
+    if (text.includes('update intake.map_node_edit_tokens')) return [{ id: tokenRow.tokenId }];
+    return [];
+  });
+  const cases: Array<[Record<string, unknown>, string]> = [
+    [{ lat: 90, long: 7.0661 }, 'latitude_out_of_range'],
+    [{ lat: 0, long: 0 }, 'null_island'],
+    // Only latitude changes, so the stored longitude of -180 would remain.
+    [{ lat: 6.2104 }, 'longitude_out_of_range'],
+  ];
+  for (const [change, problem] of cases) {
+    const { sql, statements } = updateSql();
+    await assert.rejects(
+      () => createMapNodeUpdateRequest(sql, nodeId, { token: 'valid-token', ...change }, {}, { env: LEGACY_LOCATION_ENV }),
+      (error) => error instanceof PublicInputError
+        && error.code === 'invalid_coordinates'
+        && error.message === MAP_COORDINATE_PROBLEM_MESSAGES[problem],
+      JSON.stringify(change)
+    );
+    assert.equal(wroteTo(statements, 'intake.map_node_update_requests'), false);
+  }
+
+  const { sql, statements } = updateSql();
+  await createMapNodeUpdateRequest(sql, nodeId, { token: 'valid-token', lat: 6.2104, long: 7.0661 }, {}, {
+    env: LEGACY_LOCATION_ENV,
+  });
+  assert.equal(wroteTo(statements, 'intake.map_node_update_requests'), true);
+});
+
+function createLocationSql() {
+  const cache = new Map();
+  const limits = new Map();
+  let confirmations = 0;
+  return createRecordingSql((text, values) => {
+    if (text.includes('from intake.map_location_geocode_cache')) {
+      const row = cache.get(values[0]);
+      return row ? [row] : [];
+    }
+    if (text.includes('insert into intake.map_location_request_limits')) {
+      if (!limits.has(values[0])) limits.set(values[0], { windowStartedAt: values[1], requestCount: 0 });
+      return [];
+    }
+    if (text.includes('from intake.map_location_request_limits')) {
+      const state = limits.get(values[0]);
+      return state ? [state] : [];
+    }
+    if (text.includes('select next_request_at')) return [{ nextRequestAt: new Date(0) }];
+    if (text.includes('insert into intake.map_location_geocode_cache')) {
+      cache.set(values[0], { payload: values[2], expiresAt: values[3] });
+      return [];
+    }
+    if (text.includes('insert into intake.map_location_confirmations')) {
+      confirmations += 1;
+      return [{ confirmationId: `00000000-0000-4000-8000-${String(confirmations).padStart(12, '0')}` }];
+    }
+    return [];
+  });
+}
+
+test('place search drops provider results at impossible points, and reverse refuses them before asking the provider', async () => {
+  const providerCalls: string[] = [];
+  const results = [
+    { display_name: 'Null Island', lat: '0', lon: '0', addresstype: 'island', osm_type: 'node', osm_id: 1 },
+    { display_name: 'North Pole', lat: '90', lon: '0', addresstype: 'locality', osm_type: 'node', osm_id: 2 },
+    { display_name: 'Awka, Anambra, Nigeria', lat: '6.2104', lon: '7.0661', addresstype: 'city', osm_type: 'relation', osm_id: 3 },
+  ];
+  const { sql } = createLocationSql();
+  const repository = createMapLocationRepository({
+    createSql: () => sql,
+    env: { MAP_GEOCODER_BASE_URL: 'https://geocoder.example.test' },
+    now: () => new Date('2026-11-06T12:00:00.000Z'),
+    fetchImpl: async (url) => {
+      providerCalls.push(String(url));
+      return Response.json(String(url).includes('/search') ? results : results[1]);
+    },
+  });
+
+  const search = await repository.search('Awka', { rateLimitKey: '198.51.100.20' });
+  assert.deepEqual(search.results.map((result) => result.label), ['Awka, Anambra, Nigeria']);
+
+  const callsBeforeReverse = providerCalls.length;
+  for (const [lat, long, problem] of [[90, 10, 'latitude_out_of_range'], [56.462976, -180, 'longitude_out_of_range'], [0, 0, 'null_island']] as const) {
+    await assert.rejects(
+      () => repository.reverse(lat, long, { rateLimitKey: '198.51.100.20' }),
+      (error) => error instanceof PublicInputError
+        && error.code === 'invalid_coordinates'
+        && error.message === MAP_COORDINATE_PROBLEM_MESSAGES[problem]
+    );
+  }
+  assert.equal(providerCalls.length, callsBeforeReverse);
+});
+
+test('local pending nodes saved by the June client at 0,0 or a pole are dropped on load', () => {
+  const storage = new MemoryStorage();
+  storage.setItem('greenpill.pendingMapNodes.v1', JSON.stringify([
+    { id: 'local-1', name: 'Pasted Place', place: 'Port Harcourt', lat: 0, long: 0, createdAt: '2026-06-17T12:00:00.000Z' },
+    { id: 'local-2', name: 'Dragged Up', place: 'Taiwan', lat: 90, long: 176.912492, createdAt: '2026-06-17T12:00:00.000Z' },
+    { id: 'local-3', name: 'Empty Fields', place: 'Rotterdam', lat: '', long: '', createdAt: '2026-06-17T12:00:00.000Z' },
+    { id: 'local-4', name: 'Real Place', place: 'Lagos', lat: 6.5244, long: 3.3792, createdAt: '2026-06-17T12:00:00.000Z' },
+  ]));
+  assert.deepEqual(loadStoredLocalPendingNodes(storage).map((node) => node.id), ['local-4']);
+  assert.deepEqual(sharedMapNodes.loadLocalPendingNodes(storage).map((node) => node.id), ['local-4']);
+});
+
+test('D2: the home map no longer loads ecoregions or draws a region boundary', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  assert.doesNotMatch(component, /public-ecoregions/);
+  assert.doesNotMatch(component, /Ecoregion/);
+  assert.doesNotMatch(component, /bioregion-outline|BioregionOutline/);
+  assert.doesNotMatch(component, /derivePublicBioregion/);
+
+  const scriptFiles = await readdir(new URL('./', import.meta.url));
+  assert.equal(scriptFiles.includes('generate-public-ecoregions.ts'), false);
 });

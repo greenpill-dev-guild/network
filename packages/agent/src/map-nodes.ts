@@ -1,9 +1,13 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { isIP } from 'node:net';
 import {
+  getMapCoordinateProblem,
+  MAP_COORDINATE_PROBLEM_MESSAGES,
+  type MapCoordinateProblem,
+} from '@greenpill-network/shared/map-locations';
+import {
   containsPrivateMapNodeField,
   createOptimisticPendingNode,
-  derivePublicBioregionFromCoordinates,
   normalizePublicMapThemeSlugs,
   toEditablePublicMapNode,
   toPublicMapNode,
@@ -158,6 +162,16 @@ const normalizeNumber = (value: unknown): number | null => {
 };
 
 const normalizeThemes = normalizePublicMapThemeSlugs;
+
+// Every write path checks the final pair: a pole, the antimeridian or 0,0 is
+// refused with an explicit error, never clamped. The June 2026 add-node client
+// saved such points (PRD-1409).
+function assertPublicMapCoordinates(lat: unknown, long: unknown): void {
+  const problem = getMapCoordinateProblem(lat, long);
+  if (problem) {
+    throw new PublicInputError('invalid_coordinates', MAP_COORDINATE_PROBLEM_MESSAGES[problem]);
+  }
+}
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -327,10 +341,10 @@ function normalizeSubmissionInput(
     throw new PublicInputError('location_confirmation_required', 'Find and confirm your place before submitting.');
   }
 
-  if (!locationConfirmationId && (!legacyLocation?.placeName || legacyLocation.lat === null || legacyLocation.long === null
-    || legacyLocation.lat < -90 || legacyLocation.lat > 90 || legacyLocation.long < -180 || legacyLocation.long > 180)) {
+  if (!locationConfirmationId && (!legacyLocation?.placeName || legacyLocation.lat === null || legacyLocation.long === null)) {
     throw new PublicInputError('invalid_coordinates', 'A valid place, latitude, and longitude are required during the rollout window.');
   }
+  if (legacyLocation) assertPublicMapCoordinates(legacyLocation.lat, legacyLocation.long);
 
   if (!isValidOwnerEmail(email)) {
     throw new PublicInputError('invalid_email', 'A valid email is required.');
@@ -425,6 +439,7 @@ export async function createMapNodeSubmission(
     if (!location || location.lat === null || location.long === null) {
       throw new PublicInputError('location_confirmation_required', 'Find and confirm your place before submitting.');
     }
+    assertPublicMapCoordinates(location.lat, location.long);
     const intakeMode = await getMapNodeIntakeMode(tx);
     const liveOnboarding = intakeMode === 'live';
     if (!liveOnboarding) {
@@ -445,7 +460,6 @@ export async function createMapNodeSubmission(
         role,
         chapter_slug,
         themes,
-        bioregion,
         public_note,
         raw_note,
         rate_limit_key,
@@ -465,7 +479,6 @@ export async function createMapNodeSubmission(
         ${normalized.role || null},
         ${normalized.chapterSlug || null},
         ${normalized.themes},
-        ${derivePublicBioregionFromCoordinates(location.lat, location.long) || null},
         ${normalized.publicNote || null},
         ${normalized.rawNote || null},
         ${meta.rateLimitKey || null},
@@ -574,15 +587,17 @@ function normalizeUpdateText(input: UnknownRecord, keys: string[]): string | und
   return undefined;
 }
 
+// Parses one coordinate field. Whether the pair is a usable map location is
+// checked once the stored half is known (createMapNodeUpdateRequest).
 function normalizeUpdateNumber(
   input: UnknownRecord,
   keys: string[],
-  { min, max, label }: { min: number; max: number; label: string }
+  { label }: { label: string }
 ): number | undefined {
   for (const key of keys) {
     if (!Object.hasOwn(input, key)) continue;
     const value = normalizeNumber(input[key]);
-    if (value === null || value < min || value > max) {
+    if (value === null) {
       throw new PublicInputError('invalid_update_field', `${label} is invalid.`);
     }
     return value;
@@ -653,17 +668,9 @@ function normalizeUpdateRequestInput(
       const value = normalizeUpdateText(source, [field]);
       if (value !== undefined) proposed[field] = value;
     }
-    const latitude = normalizeUpdateNumber(source, ['latitude', 'lat'], {
-      min: -90,
-      max: 90,
-      label: 'Latitude',
-    });
+    const latitude = normalizeUpdateNumber(source, ['latitude', 'lat'], { label: 'Latitude' });
     if (latitude !== undefined) proposed.latitude = latitude;
-    const longitude = normalizeUpdateNumber(source, ['longitude', 'long', 'lng'], {
-      min: -180,
-      max: 180,
-      label: 'Longitude',
-    });
+    const longitude = normalizeUpdateNumber(source, ['longitude', 'long', 'lng'], { label: 'Longitude' });
     if (longitude !== undefined) proposed.longitude = longitude;
   }
 
@@ -1482,6 +1489,15 @@ export async function createMapNodeUpdateRequest(
       proposal.proposedLatitude = confirmedLocation.lat;
       proposal.proposedLongitude = confirmedLocation.long;
     }
+    const proposedFields = proposal.proposedPublicFields;
+    if (Object.hasOwn(proposedFields, 'latitude') || Object.hasOwn(proposedFields, 'longitude')) {
+      // Check the pair the node would end up with, so changing one half cannot
+      // leave the stored other half at a pole, the antimeridian or 0,0.
+      assertPublicMapCoordinates(
+        Object.hasOwn(proposedFields, 'latitude') ? proposedFields.latitude : tokenRow.lat,
+        Object.hasOwn(proposedFields, 'longitude') ? proposedFields.longitude : tokenRow.long,
+      );
+    }
     const existingPending = await tx`
       select id
       from intake.map_node_update_requests
@@ -1639,7 +1655,19 @@ async function listPublicMapNodeRowsWithoutDirectus(sql: SqlLike): Promise<Unkno
   `;
 }
 
-export async function listPublicMapNodes(sql: SqlLike): Promise<PublicMapNode[]> {
+export type HiddenMapNode = { id: string; problem: MapCoordinateProblem };
+
+function reportHiddenMapNodes(hidden: HiddenMapNode[]): void {
+  console.warn('map_node_hidden_invalid_coordinates', { count: hidden.length, nodes: hidden });
+}
+
+// Approved rows at impossible coordinates are left off the public list (see
+// toPublicMapNode) and reported by public id and problem only, so operators can
+// repair them; nothing private is logged.
+export async function listPublicMapNodes(
+  sql: SqlLike,
+  { reportHiddenNodes = reportHiddenMapNodes }: { reportHiddenNodes?: (hidden: HiddenMapNode[]) => void } = {}
+): Promise<PublicMapNode[]> {
   let rows: UnknownRecord[];
   try {
     rows = await sql`
@@ -1670,6 +1698,12 @@ export async function listPublicMapNodes(sql: SqlLike): Promise<PublicMapNode[]>
     if (!isDirectusStewardSourceUnavailable(error)) throw error;
     rows = await listPublicMapNodeRowsWithoutDirectus(sql);
   }
+
+  const hidden = rows.flatMap((row) => {
+    const problem = getMapCoordinateProblem(row.lat, row.long);
+    return problem ? [{ id: cleanString(row.id), problem }] : [];
+  });
+  if (hidden.length > 0) reportHiddenNodes(hidden);
 
   return rows
     .map((row) => toPublicMapNode(row))

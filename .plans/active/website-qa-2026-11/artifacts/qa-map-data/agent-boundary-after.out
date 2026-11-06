@@ -1,0 +1,54 @@
+[
+ {
+  "case": "latitude exactly 90 (Ash pattern)",
+  "sent": {
+   "lat": 90,
+   "long": 97.76261
+  },
+  "status": 400,
+  "error": "invalid_coordinates",
+  "message": "Latitude must be between -90 and 90, not at a pole."
+ },
+ {
+  "case": "longitude exactly -180 (Amio pattern)",
+  "sent": {
+   "lat": 56.462976,
+   "long": -180
+  },
+  "status": 400,
+  "error": "invalid_coordinates",
+  "message": "Longitude must be between -180 and 180, not on the edge of the map."
+ },
+ {
+  "case": "0,0 (Emmanuel Jacobson pattern)",
+  "sent": {
+   "lat": 0,
+   "long": 0
+  },
+  "status": 400,
+  "error": "invalid_coordinates",
+  "message": "Latitude 0, longitude 0 is a placeholder, not a place. Find and confirm the place again."
+ },
+ {
+  "case": "empty strings (old client sent Number(\"\") = 0)",
+  "sent": {
+   "lat": "",
+   "long": ""
+  },
+  "status": 400,
+  "error": "invalid_coordinates",
+  "message": "A valid place, latitude, and longitude are required during the rollout window."
+ },
+ {
+  "case": "out of range control",
+  "sent": {
+   "lat": 90.5,
+   "long": 10
+  },
+  "status": 400,
+  "error": "invalid_coordinates",
+  "message": "Latitude must be between -90 and 90, not at a pole."
+ }
+]
+rows in local DB: []
+cleanup: deleted 0 QA rows

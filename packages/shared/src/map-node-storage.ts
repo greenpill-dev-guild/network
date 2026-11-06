@@ -1,3 +1,5 @@
+import { isPublicMapCoordinate, parseMapCoordinate } from './map-locations.js';
+
 type UnknownRecord = Record<string, any>;
 
 export type PublicBioregionSource = 'resolve-ecoregions-2017' | 'one-earth' | string;
@@ -44,12 +46,8 @@ export const PUBLIC_MAP_THEME_ALIASES: Readonly<Record<string, string>> = Object
 
 const cleanString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
-const normalizeNumber = (value: unknown): number | null => {
-  const number = typeof value === 'number' ? value : Number(value);
-  return Number.isFinite(number) ? number : null;
-};
-
-const normalizePublicBioregion = (value: unknown): string => cleanString(value);
+// Strict: blank, null and boolean values are missing, never 0.
+const normalizeNumber = parseMapCoordinate;
 
 export const normalizePublicMapThemeSlug = (theme: unknown): string => {
   const slug = cleanString(theme);
@@ -75,13 +73,8 @@ export function createLocalPendingMapNode(
     city: cleanString(input?.city),
     region: cleanString(input?.region),
     country: cleanString(input?.country),
-    bioregion: normalizePublicBioregion(input?.bioregion),
-    ...(cleanString(input?.bioregionId ?? input?.bioregion_id)
-      ? {
-          bioregionId: cleanString(input?.bioregionId ?? input?.bioregion_id),
-          bioregionSource: cleanString(input?.bioregionSource ?? input?.bioregion_source) || 'resolve-ecoregions-2017',
-        }
-      : {}),
+    // D2 (2026-11-06): no region label, even one stored by an older visit.
+    bioregion: '',
     lat: normalizeNumber(input?.lat),
     long: normalizeNumber(input?.long),
     role: cleanString(input?.role || input?.intent),
@@ -105,9 +98,11 @@ export function loadLocalPendingNodes(storage?: PendingMapNodeStorage | null): O
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
 
+    // Browsers that used the June 2026 add-node step can still hold a pending
+    // node at 0,0 or a pole; it is dropped rather than drawn.
     return parsed
       .map((node) => createLocalPendingMapNode(node, node.createdAt || new Date()))
-      .filter((node) => node.lat !== null && node.long !== null);
+      .filter((node) => isPublicMapCoordinate(node.lat, node.long));
   } catch {
     return [];
   }

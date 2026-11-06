@@ -1,6 +1,9 @@
 import { createHash } from 'node:crypto';
 import {
   assertPublicMapLocationPayload,
+  getMapCoordinateProblem,
+  isPublicMapCoordinate,
+  MAP_COORDINATE_PROBLEM_MESSAGES,
   normalizeMapLatitude,
   normalizeMapLocationQuery,
   normalizeMapLongitude,
@@ -164,6 +167,9 @@ function normalizeCandidate(raw: unknown): NormalizedLocationCandidate | null {
   // inventing an id for a response we cannot trace in the audit record.
   const providerId = cleanString(record.providerId) || (osmType && osmId ? `${osmType}:${osmId}` : '');
   if (!label || lat === null || long === null || !kind || !providerId) return null;
+  // A provider point at a pole, the antimeridian or 0,0 is never offered as a
+  // place a person can confirm.
+  if (!isPublicMapCoordinate(lat, long)) return null;
   return {
     label,
     lat,
@@ -519,6 +525,11 @@ export async function consumeMapLocationConfirmation(sql: SqlLike, confirmationI
   if (!row || lat === null || long === null || !label) {
     throw new PublicInputError('invalid_location_confirmation', 'This place confirmation has expired. Find and confirm the place again.');
   }
+  // Callers consume inside their write transaction, so refusing here also
+  // leaves the confirmation unconsumed.
+  if (!isPublicMapCoordinate(lat, long)) {
+    throw new PublicInputError('invalid_location_confirmation', 'This place cannot be shown on the map. Find and confirm the place again.');
+  }
 
   return {
     label,
@@ -587,8 +598,11 @@ export function createMapLocationRepository({
     async reverse(lat, long, requestMeta) {
       const latitude = normalizeMapLatitude(lat);
       const longitude = normalizeMapLongitude(long);
-      if (latitude === null || longitude === null) {
-        throw new PublicInputError('invalid_coordinates', 'Choose a valid point on the map.');
+      // Refused before any lookup: a pin dragged past the map edge arrives as a
+      // pole or the antimeridian, and an empty field must not read as 0.
+      const problem = getMapCoordinateProblem(lat, long);
+      if (problem || latitude === null || longitude === null) {
+        throw new PublicInputError('invalid_coordinates', MAP_COORDINATE_PROBLEM_MESSAGES[problem ?? 'missing']);
       }
       let candidates: NormalizedLocationCandidate[];
       try {
