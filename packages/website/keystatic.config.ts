@@ -131,6 +131,23 @@ const previewCardField = fields.object({
   cta: ctaField,
 }, { label: 'Preview Card' });
 
+// Home page ecosystem rows. Each entry links to the organization's own site;
+// the home page skips entries without a name or an https address.
+const ecosystemEntriesField = (label: string) => fields.array(
+  fields.object({
+    name: fields.text({ label: 'Name', validation: { isRequired: true } }),
+    blurb: fields.text({ label: 'One-line description' }),
+    href: fields.text({
+      label: 'Official site',
+      validation: {
+        isRequired: true,
+        pattern: { regex: /^https:\/\/\S+$/, message: 'Use the full https:// address of the organization’s own site.' },
+      },
+    }),
+  }),
+  { label, itemLabel: (props) => props.fields.name.value },
+);
+
 const regionOptions = [
   { label: 'Americas', value: 'americas' },
   { label: 'Africa', value: 'africa' },
@@ -353,6 +370,10 @@ export default config({
         featuredChapterSlugs: slugListField('Featured Chapter Slugs', 'Chapter Slug'),
         featuredStorySlugs: slugListField('Featured Story Slugs', 'Story Slug'),
         featuredResourceSlugs: slugListField('Featured Resource Slugs', 'Resource Slug'),
+        ecosystem: fields.object({
+          partners: ecosystemEntriesField('Partners and collaborators'),
+          tools: ecosystemEntriesField('Tools we build with'),
+        }, { label: 'Ecosystem (communities we coordinate with)' }),
         media: mediaField,
         seo: seoField,
       },
