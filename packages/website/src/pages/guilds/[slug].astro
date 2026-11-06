@@ -9,9 +9,14 @@ import Overline from '../../components/ui/Overline.astro';
 import Text from '../../components/ui/Text.astro';
 import Meta from '../../components/ui/Meta.astro';
 import LinkRow from '../../components/ui/LinkRow.astro';
+import Avatar from '../../components/ui/Avatar.astro';
+import SectionHeader from '../../components/ui/SectionHeader.astro';
 import Breadcrumb from '../../components/shell/Breadcrumb.astro';
-import StatusChip from '../../components/ui/StatusChip.astro';
-import { getOperationalGuilds, getOperationalProjects } from '../../lib/operational-content';
+import {
+  getOperationalCollection,
+  getOperationalGuilds,
+  getOperationalProjects,
+} from '../../lib/operational-content';
 import { hasPublicGuildPage } from '../../lib/public-routes';
 
 export async function getStaticPaths() {
@@ -23,20 +28,116 @@ export async function getStaticPaths() {
 
 const { item } = Astro.props;
 const data = item.data;
-const themes = (data.themeSlugs ?? []) as string[];
-const links = (data.links ?? []).filter((l: any) => l.url);
-const connectLinks = (data.connectLinks ?? []).filter((l: any) => l.url);
-const outputs = data.outputs ?? [];
-const mandate = data.mandateParagraphs ?? [];
-const principles = data.principles ?? [];
-const publicMembers = data.publicMembers ?? [];
-const proofSignals = data.proofSignals ?? [];
 
-const allProjects = await getOperationalProjects();
-const projects = allProjects.filter((p) => p.data.guild === item.id);
-const projectHref = (project: any) => project.data.liveUrl || project.data.repoUrl || '';
+const text = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
+const list = (value: unknown): any[] => (Array.isArray(value) ? value : []);
+const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+
+// Content dates are "YYYY", "YYYY-MM" or "YYYY-MM-DD"; show them as words, never raw.
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function formatDate(value: unknown): string {
+  const match = /^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?$/.exec(text(value));
+  if (!match) return '';
+  const [, year, month, day] = match;
+  const monthName = month ? MONTHS[Number(month) - 1] : '';
+  if (!monthName) return year;
+  return day ? `${monthName} ${Number(day)}, ${year}` : `${monthName} ${year}`;
+}
+
+// Link labels name the destination ("GitHub", "greengoods.app"), not the action.
+const HOST_LABELS: Record<string, string> = {
+  'github.com': 'GitHub',
+  'paragraph.com': 'Paragraph',
+  'hub.regencoordination.xyz': 'Regen Hub',
+  'gap.karmahq.xyz': 'Karma GAP',
+  'youtube.com': 'YouTube',
+  'youtu.be': 'YouTube',
+  'x.com': 'X',
+  'luma.com': 'Luma',
+  'lu.ma': 'Luma',
+};
+function destinationLabel(url: string): string {
+  if (url.startsWith('/')) return 'Read on this site';
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '');
+    return HOST_LABELS[host] ?? host;
+  } catch {
+    return 'Open';
+  }
+}
+
+const APPEARANCE_VERBS: Record<string, string> = {
+  podcast: 'Listen',
+  video: 'Watch',
+  recording: 'Watch',
+  talk: 'Watch',
+  space: 'Listen',
+};
+const appearanceLinkLabel = (appearance: any) =>
+  `${APPEARANCE_VERBS[text(appearance.kind).toLowerCase()] ?? 'Open'} on ${destinationLabel(text(appearance.href))}`;
+
+// Short mono labels for key links (DESIGN.md: text labels, not icons).
+const LINK_GLYPHS: Record<string, string> = {
+  github: 'GH',
+  karma: 'KARMA',
+  x: 'X',
+  twitter: 'X',
+  luma: 'LUMA',
+  paragraph: 'PG',
+  hub: 'HUB',
+  linkedin: 'IN',
+  youtube: 'YT',
+  farcaster: 'FC',
+  telegram: 'TG',
+  discord: 'DC',
+};
+function linkGlyph(link: any): string {
+  const mapped = LINK_GLYPHS[text(link.icon).toLowerCase()];
+  if (mapped) return mapped;
+  const words = text(link.label).split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  return (words[0] ?? '').slice(0, 2).toUpperCase();
+}
 
 const surfaceLabel = data.type === 'guild' ? 'Guild' : 'Pod';
+const status = text(data.status) || 'active';
+const heroSegments = [surfaceLabel, capitalize(status), data.foundedYear ? `Founded ${data.foundedYear}` : '']
+  .filter(Boolean);
+
+const themeRecords = await getOperationalCollection('themes');
+const themeNames = new Map(themeRecords.map((theme) => [theme.id, text(theme.data.name) || theme.id]));
+const themeLabels = [...new Set(list(data.themeSlugs).map((slug) => themeNames.get(slug)).filter(Boolean))]
+  .slice(0, 3) as string[];
+
+const keyLinks = list(data.links).filter((link) => text(link?.url) && text(link?.label));
+const connectLinks = list(data.connectLinks).filter((link) => text(link?.url) && text(link?.label));
+const mandate = list(data.mandateParagraphs).map(text).filter(Boolean);
+const principles = list(data.principles).filter((principle) => text(principle?.title));
+const publishedWork = list(data.outputs).filter((work) => text(work?.label));
+const appearances = list(data.media?.appearances).filter((a) => text(a?.title) && text(a?.href));
+const [leadAppearance, ...moreAppearances] = appearances;
+const contributors = list(data.publicMembers).filter((member) => text(member?.name));
+
+// Hats and roles: the guild's stewards field holds one entry per hat, grouped by `group`.
+const hatGroups = list(data.stewards)
+  .filter((hat) => text(hat?.role))
+  .reduce((groups: Map<string, any[]>, hat) => {
+    const group = text(hat.group) || 'Roles';
+    groups.set(group, [...(groups.get(group) ?? []), hat]);
+    return groups;
+  }, new Map<string, any[]>());
+
+// Active projects only, higher featured weight first.
+const projects = (await getOperationalProjects())
+  .filter((project) => project.data.guild === item.id && (text(project.data.status) || 'active') === 'active')
+  .sort((a, b) => Number(b.data.featuredWeight ?? 0) - Number(a.data.featuredWeight ?? 0))
+  .map((project) => ({
+    name: project.data.name,
+    summary: text(project.data.summary),
+    tech: list(project.data.techStack).map(text).filter(Boolean).slice(0, 4),
+    links: [text(project.data.repoUrl), text(project.data.liveUrl)]
+      .filter((url, index, urls) => url && urls.indexOf(url) === index),
+  }));
 ---
 
 <GpLayout
@@ -45,43 +146,41 @@ const surfaceLabel = data.type === 'guild' ? 'Guild' : 'Pod';
   ogImage={data.seo?.ogImage || data.media?.ogImage || undefined}
   canonicalPath={data.seo?.canonicalPath || `/guilds/${item.id}`}
   noindex={data.seo?.noindex}
-  activeNav="Guilds"
+  activeNav="Library"
   ogType="profile"
 >
   <main class="gp-guild">
-    <section class="gp-guild-hero gp-topo">
+    <section class="gp-guild-hero">
       <Container size="2xl">
-        <Breadcrumb
-          back={{ label: 'Garden', href: '/garden' }}
-          crumbs={[{ label: surfaceLabel }, { label: data.name }]}
-        />
+        <Breadcrumb back={{ label: 'Library', href: '/library#guilds' }} crumbs={[{ label: data.name }]} />
         <div class="gp-guild-hero-inner">
-          <Overline>
-            <span>{surfaceLabel}</span>
-            {data.foundedYear && <><span aria-hidden="true">·</span><span>since {data.foundedYear}</span></>}
-          </Overline>
-
-          <Text variant="display" class="gp-guild-name">{data.name}</Text>
-
-          {data.oneliner && <Text variant="body-lg" class="gp-guild-oneliner">{data.oneliner}</Text>}
-
-          {data.summary && data.summary !== data.oneliner && (
-            <Text variant="body" class="gp-guild-summary">{data.summary}</Text>
+          <Overline segments={heroSegments} />
+          <Text variant="display">{data.name}</Text>
+          {data.oneliner && (
+            <div class="gp-guild-prose">
+              <Text variant="body-lg">{data.oneliner}</Text>
+            </div>
           )}
 
-          <div class="gp-guild-chips">
-            <StatusChip>{(data.status || 'active').charAt(0).toUpperCase() + (data.status || 'active').slice(1)}</StatusChip>
-            {themes.slice(0, 6).map((t) => (
-              <Chip tone="soft-lime">{t.replace(/-/g, ' ')}</Chip>
-            ))}
-          </div>
-
-          {links.length > 0 && (
-            <div class="gp-guild-hero-actions">
-              {links.slice(0, 2).map((link: any) => (
-                <Button href={link.url} variant={link === links[0] ? 'primary' : 'ghost'}>{link.action || link.label}</Button>
+          {themeLabels.length > 0 && (
+            <ul class="gp-guild-row" aria-label="Themes">
+              {themeLabels.map((label) => (
+                <li><Chip size="sm">{label}</Chip></li>
               ))}
-            </div>
+            </ul>
+          )}
+
+          {keyLinks.length > 0 && (
+            <ul class="gp-guild-row gp-guild-key-links" aria-label="Key links">
+              {keyLinks.map((link) => (
+                <li>
+                  <Chip href={link.url} size="lg">
+                    <span class="gp-guild-key-glyph" aria-hidden="true">{linkGlyph(link)}</span>
+                    <span>{link.label}</span>
+                  </Chip>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       </Container>
@@ -90,28 +189,24 @@ const surfaceLabel = data.type === 'guild' ? 'Guild' : 'Pod';
     {(mandate.length > 0 || principles.length > 0) && (
       <section class="gp-guild-section">
         <Container size="2xl">
-          <div class="gp-guild-grid">
+          <div class="gp-guild-mandate-grid">
             {mandate.length > 0 && (
-              <div class="gp-guild-mandate">
-                <Overline>Mandate</Overline>
-                <div class="gp-guild-mandate-prose">
-                  {mandate.map((para: any) => (
-                    <Text variant="body">{para}</Text>
-                  ))}
-                </div>
+              <div class="gp-guild-stack gp-guild-prose">
+                <Overline as="h2" text="Mandate" />
+                {mandate.map((paragraph) => <Text variant="body-lg">{paragraph}</Text>)}
               </div>
             )}
 
             {principles.length > 0 && (
-              <div class="gp-guild-principles">
-                <Overline>Principles</Overline>
-                <ol class="gp-guild-principle-list">
-                  {principles.map((p: any) => (
+              <div class="gp-guild-stack">
+                <Overline as="h2" text="Principles" />
+                <ol class="gp-guild-principles">
+                  {principles.map((principle, index) => (
                     <li>
-                      <span class="gp-guild-principle-num">{String(p.order || 0).padStart(2, '0')}</span>
-                      <div>
-                        <Text variant="title-md">{p.title}</Text>
-                        {p.body && <Text variant="body-sm">{p.body}</Text>}
+                      <span class="gp-guild-principle-num" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+                      <div class="gp-guild-stack is-tight">
+                        <Text variant="title-md" as="h3">{principle.title}</Text>
+                        {principle.body && <Text variant="body">{principle.body}</Text>}
                       </div>
                     </li>
                   ))}
@@ -123,22 +218,41 @@ const surfaceLabel = data.type === 'guild' ? 'Guild' : 'Pod';
       </section>
     )}
 
-    {outputs.length > 0 && (
+    {publishedWork.length > 0 && (
       <section class="gp-guild-section">
         <Container size="2xl">
           <div class="gp-guild-section-head">
-            <Overline>Public outputs</Overline>
-            <Text variant="caption">{outputs.length} surfaces</Text>
+            <Overline as="h2" text="Published by the guild" />
           </div>
-          <div class="gp-guild-output-grid">
-            {outputs.map((output: any) => (
-              <a class="gp-guild-output" href={output.href || '#'} target={output.href?.startsWith('http') ? '_blank' : undefined} rel="noopener">
-                <Text variant="title-lg" class="gp-guild-output-title">{output.label}</Text>
-                {output.summary && <Text variant="body-sm">{output.summary}</Text>}
-                <span class="gp-guild-output-arrow" aria-hidden="true">↗</span>
-              </a>
-            ))}
-          </div>
+          <ul class="gp-guild-grid is-two">
+            {publishedWork.map((work) => {
+              const credits = list(work.contributors).map(text).filter(Boolean);
+              const meta = [text(work.kind), formatDate(work.date)].filter(Boolean);
+              const href = text(work.href);
+              return (
+                <li>
+                  <Card padded="lg">
+                    <div class="gp-guild-card-body">
+                      {meta.length > 0 && <Meta items={meta} accentIndex={0} />}
+                      <Text variant="title-lg" as="h3">{work.label}</Text>
+                      {work.summary && <Text variant="body">{work.summary}</Text>}
+                      {credits.length > 0 && (
+                        <p class="gp-guild-credit">
+                          <span class="gp-guild-credit-label">Contributors</span>
+                          <span>{credits.join(', ')}</span>
+                        </p>
+                      )}
+                      {href && (
+                        <div class="gp-guild-card-foot">
+                          <ArrowLink href={href} size="sm">{destinationLabel(href)}</ArrowLink>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                </li>
+              );
+            })}
+          </ul>
         </Container>
       </section>
     )}
@@ -147,63 +261,124 @@ const surfaceLabel = data.type === 'guild' ? 'Guild' : 'Pod';
       <section class="gp-guild-section">
         <Container size="2xl">
           <div class="gp-guild-section-head">
-            <Overline>Projects</Overline>
-            <Text variant="caption">{projects.length} public project{projects.length === 1 ? '' : 's'}</Text>
+            <Overline as="h2" text="Projects" />
           </div>
-          <div class="gp-guild-project-grid">
-            {projects.map((p) => (
-              <a
-                class="gp-guild-project"
-                href={projectHref(p) || '#'}
-                target={projectHref(p)?.startsWith('http') ? '_blank' : undefined}
-                rel={projectHref(p)?.startsWith('http') ? 'noopener' : undefined}
-              >
-                <Meta items={['Project', p.data.status || 'active']} accentIndex={1} />
-                <Text variant="title-lg" class="gp-guild-project-title">{p.data.name}</Text>
-                {p.data.summary && <Text variant="body-sm">{p.data.summary}</Text>}
-              </a>
+          <ul class="gp-guild-grid is-three">
+            {projects.map((project) => (
+              <li>
+                <Card padded="lg">
+                  <div class="gp-guild-card-body">
+                    <Text variant="title-lg" as="h3">{project.name}</Text>
+                    {project.summary && <Text variant="body">{project.summary}</Text>}
+                    {project.tech.length > 0 && <Meta items={project.tech} />}
+                    {project.links.length > 0 && (
+                      <div class="gp-guild-card-foot">
+                        {project.links.map((url) => (
+                          <ArrowLink href={url} size="sm">{destinationLabel(url)}</ArrowLink>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </li>
             ))}
+          </ul>
+        </Container>
+      </section>
+    )}
+
+    {leadAppearance && (
+      <section class="gp-guild-section">
+        <Container size="2xl">
+          <SectionHeader segments={['Media', 'Appearances']} title="See the guild in motion." />
+          <div class:list={['gp-guild-media', { 'has-list': moreAppearances.length > 0 }]}>
+            <Card variant="elevated" padded="lg">
+              <div class="gp-guild-card-body">
+                <Meta items={[text(leadAppearance.source), formatDate(leadAppearance.date)].filter(Boolean)} accentIndex={0} />
+                <Text variant="h3">{leadAppearance.title}</Text>
+                {list(leadAppearance.people).length > 0 && (
+                  <Text variant="body">With {list(leadAppearance.people).map(text).filter(Boolean).join(', ')}</Text>
+                )}
+                <div class="gp-guild-card-foot">
+                  <ArrowLink href={leadAppearance.href}>{appearanceLinkLabel(leadAppearance)}</ArrowLink>
+                </div>
+              </div>
+            </Card>
+
+            {moreAppearances.length > 0 && (
+              <ul class="gp-guild-media-list">
+                {moreAppearances.map((appearance) => (
+                  <li>
+                    <a class="gp-guild-media-row" href={appearance.href}>
+                      <span class="gp-guild-media-copy">
+                        <Meta items={[text(appearance.source), formatDate(appearance.date)].filter(Boolean)} accentIndex={0} />
+                        <span class="gp-guild-media-title">{appearance.title}</span>
+                      </span>
+                      <span class="gp-guild-media-arrow" aria-hidden="true">&rarr;</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </Container>
       </section>
     )}
 
-    {proofSignals.length > 0 && (
+    {hatGroups.size > 0 && (
       <section class="gp-guild-section">
         <Container size="2xl">
           <div class="gp-guild-section-head">
-            <Overline>Public proof</Overline>
-            <Text variant="caption">{proofSignals.length} source-backed signal{proofSignals.length === 1 ? '' : 's'}</Text>
+            <Overline as="h2" segments={['Hats', 'How the guild is organized']} />
           </div>
-          <div class="gp-guild-proof-grid">
-            {proofSignals.map((signal: any) => (
-              <a class="gp-guild-proof" href={signal.href || '#'} target="_blank" rel="noopener">
-                <Text variant="mono">{signal.source || 'Public source'}</Text>
-                <Text variant="title-md" class="gp-guild-proof-value">{signal.value}</Text>
-                <Text variant="body-sm">{signal.label}</Text>
-              </a>
-            ))}
-          </div>
-        </Container>
-      </section>
-    )}
-
-    {publicMembers.length > 0 && (
-      <section class="gp-guild-section">
-        <Container size="2xl">
-          <div class="gp-guild-section-head">
-            <Overline>Public contributors</Overline>
-            <Text variant="caption">{publicMembers.length} public reference{publicMembers.length === 1 ? '' : 's'}</Text>
-          </div>
-          <div class="gp-guild-member-grid">
-            {publicMembers.map((m: any) => (
-              <Card padded="md">
-                <Text variant="title-md">{m.name}</Text>
-                {m.role && <Text variant="caption">{m.role}</Text>}
-                {m.bio && <Text variant="body-sm">{m.bio}</Text>}
+          <div class="gp-guild-grid is-auto">
+            {[...hatGroups.entries()].map(([group, hats]) => (
+              <Card padded="lg">
+                <div class="gp-guild-card-body">
+                  <Overline as="h3" tone="muted" text={group} />
+                  <ul class="gp-guild-hat-list">
+                    {hats.map((hat) => (
+                      <li class="gp-guild-hat">
+                        <span class="gp-guild-hat-role">
+                          <Text variant="title-md" as="span">{hat.role}</Text>
+                        </span>
+                        {text(hat.name) ? (
+                          <span class="gp-guild-person is-compact">
+                            <Avatar name={hat.name} size={32} />
+                            <span>{hat.name}</span>
+                          </span>
+                        ) : (
+                          <Chip tone="soft-gold" size="sm">Open hat</Chip>
+                        )}
+                        {text(hat.href) && <ArrowLink href={hat.href} size="sm">Hat details</ArrowLink>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </Card>
             ))}
           </div>
+        </Container>
+      </section>
+    )}
+
+    {contributors.length > 0 && (
+      <section class="gp-guild-section">
+        <Container size="2xl">
+          <div class="gp-guild-section-head">
+            <Overline as="h2" segments={['People', 'Public contributors']} />
+          </div>
+          <ul class="gp-guild-members">
+            {contributors.map((member) => (
+              <li class="gp-guild-person">
+                <Avatar name={member.name} size={56} />
+                <span class="gp-guild-stack is-tight">
+                  <Text variant="title-md" as="span">{member.name}</Text>
+                  {member.role && <Text variant="body-sm" as="span">{member.role}</Text>}
+                </span>
+              </li>
+            ))}
+          </ul>
         </Container>
       </section>
     )}
@@ -212,11 +387,10 @@ const surfaceLabel = data.type === 'guild' ? 'Guild' : 'Pod';
       <section class="gp-guild-section">
         <Container size="2xl">
           <div class="gp-guild-section-head">
-            <Overline>Connect</Overline>
-            <Text variant="caption">Public channels.</Text>
+            <Overline as="h2" text="Connect" />
           </div>
           <Card padded="lg">
-            {connectLinks.map((link: any, index: number) => (
+            {connectLinks.map((link, index) => (
               <LinkRow
                 href={link.url}
                 label={link.label}
@@ -233,10 +407,10 @@ const surfaceLabel = data.type === 'guild' ? 'Guild' : 'Pod';
     <section class="gp-guild-cta">
       <Container size="2xl">
         <div class="gp-guild-cta-inner">
-          <div>
-            <Overline>Get involved</Overline>
+          <div class="gp-guild-stack gp-guild-cta-copy">
+            <Overline text="Get involved" />
             <Text variant="h2">Bring your craft into the guild.</Text>
-            <Text variant="body" class="gp-guild-cta-body">
+            <Text variant="body-lg">
               The Garden is the public ramp into Greenpill guilds. Start small and build up to a steward conversation
               when the project is right.
             </Text>
@@ -257,206 +431,255 @@ const surfaceLabel = data.type === 'guild' ? 'Guild' : 'Pod';
     background: transparent;
   }
 
-  .gp-guild-hero {
-    position: relative;
-    overflow: hidden;
-    padding: clamp(var(--gp-space-2xl), 6vw, var(--gp-space-4xl)) 0 var(--gp-space-2xl);
+  .gp-guild ul,
+  .gp-guild ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
 
-  .gp-guild-hero-inner {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    gap: var(--gp-space-md);
-    margin-top: var(--gp-space-xl);
-  }
-
-  .gp-guild-hero-inner :global(.gp-guild-name) {
-    max-width: 18ch;
-    font-size: var(--gp-display-size);
-    line-height: 1.02;
-    letter-spacing: 0;
-  }
-
-  .gp-guild-hero-inner :global(.gp-guild-oneliner) {
-    color: var(--gp-fg-muted);
-    max-width: 60ch;
-  }
-
-  .gp-guild-hero-inner :global(.gp-guild-summary) {
-    color: var(--gp-fg-muted);
-    max-width: 70ch;
-  }
-
-  .gp-guild-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .gp-guild-hero-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-top: var(--gp-space-md);
-  }
-
-  .gp-guild-section {
-    padding: clamp(var(--gp-space-2xl), 5vw, var(--gp-space-3xl)) 0;
-    border-top: 1px solid var(--gp-border-soft);
-  }
-
-  .gp-guild-section-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--gp-space-md);
-    flex-wrap: wrap;
-    margin-bottom: var(--gp-space-lg);
-  }
-
-  .gp-guild-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-    gap: clamp(var(--gp-space-xl), 4vw, var(--gp-space-3xl));
-  }
-
-  .gp-guild-mandate,
-  .gp-guild-principles {
+  .gp-guild-stack {
     display: flex;
     flex-direction: column;
     gap: var(--gp-space-md);
     min-width: 0;
   }
 
-  .gp-guild-mandate-prose {
+  .gp-guild-stack.is-tight {
+    gap: var(--gp-space-xs);
+  }
+
+  /* Reading text on this template runs at the body-lg token (18px). Setting the
+     wrapper to the same size makes 65ch match the prose inside it. */
+  .gp-guild-prose {
+    font-size: var(--gp-body-lg);
+    max-inline-size: 65ch;
+  }
+
+  .gp-guild-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gp-space-sm);
+  }
+
+  /* ── Hero ─────────────────────────────────────────────────────── */
+  .gp-guild-hero {
+    padding-block: clamp(var(--gp-space-2xl), 6vw, var(--gp-space-4xl)) var(--gp-space-2xl);
+  }
+
+  .gp-guild-hero-inner {
     display: flex;
     flex-direction: column;
     gap: var(--gp-space-md);
-    color: var(--gp-fg);
+    margin-block-start: var(--gp-space-xl);
   }
 
-  .gp-guild-principle-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
+  .gp-guild-key-links {
+    margin-block-start: var(--gp-space-sm);
+  }
+
+  .gp-guild-key-glyph {
+    color: var(--gp-primary);
+    font-family: var(--gp-font-mono);
+    font-size: var(--gp-label-sm);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── Sections ─────────────────────────────────────────────────── */
+  .gp-guild-section {
+    padding-block: clamp(var(--gp-space-2xl), 5vw, var(--gp-space-3xl));
+    border-block-start: 1px solid var(--gp-border-soft);
+  }
+
+  .gp-guild-section-head {
+    margin-block-end: var(--gp-space-lg);
+  }
+
+  .gp-guild-mandate-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: clamp(var(--gp-space-xl), 4vw, var(--gp-space-3xl));
+  }
+
+  .gp-guild-principles {
     display: flex;
     flex-direction: column;
     gap: var(--gp-space-md);
   }
 
-  .gp-guild-principle-list li {
+  .gp-guild-principles li {
     display: flex;
     gap: var(--gp-space-md);
-    padding: var(--gp-space-md);
+    padding: var(--gp-space-lg);
     border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-md);
+    border-radius: var(--gp-radius-lg);
     background: var(--gp-card);
-  }
-
-  .gp-guild-principle-list li > div {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
   }
 
   .gp-guild-principle-num {
-    color: var(--gp-primary);
-    font-family: var(--gp-font-display);
-    font-size: 24px;
-    font-weight: 500;
-    line-height: 1;
-    letter-spacing: 0;
     flex: none;
-  }
-
-  .gp-guild-output-grid,
-  .gp-guild-project-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--gp-space-md);
-  }
-
-  .gp-guild-output,
-  .gp-guild-project {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: var(--gp-space-sm);
-    padding: var(--gp-space-lg);
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-lg);
-    background: var(--gp-card);
-    color: var(--gp-fg);
-    text-decoration: none;
-    transition: border-color 200ms, background 200ms;
-  }
-
-  .gp-guild-output:hover,
-  .gp-guild-project:hover {
-    border-color: rgba(184, 232, 53, 0.32);
-    background: var(--gp-card-elev);
-  }
-
-  .gp-guild-output :global(.gp-guild-output-title),
-  .gp-guild-project :global(.gp-guild-project-title) {
-    letter-spacing: 0;
-  }
-
-  .gp-guild-output-arrow {
-    position: absolute;
-    top: var(--gp-space-lg);
-    right: var(--gp-space-lg);
-    color: var(--gp-fg-dim);
-    transition: color 200ms;
-  }
-
-  .gp-guild-output:hover .gp-guild-output-arrow {
-    color: var(--gp-primary);
-  }
-
-  .gp-guild-proof-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: var(--gp-space-md);
-  }
-
-  .gp-guild-proof {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: var(--gp-space-lg);
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-lg);
-    background: var(--gp-card);
-    color: var(--gp-fg);
-    text-decoration: none;
-    transition: border-color 200ms, background 200ms;
-  }
-
-  .gp-guild-proof:hover {
-    border-color: rgba(184, 232, 53, 0.42);
-    background: var(--gp-card-elev);
-  }
-
-  .gp-guild-proof-value {
-    color: var(--gp-primary);
+    color: var(--gp-secondary);
     font-family: var(--gp-font-display);
     font-size: var(--gp-h3-size);
     font-weight: 500;
-    letter-spacing: 0;
+    line-height: 1;
   }
 
-  .gp-guild-member-grid {
+  /* Card grids: each list item is a grid cell so the card stretches to the row
+     height, and the card foot sits at the bottom. */
+  .gp-guild-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: var(--gp-space-md);
   }
 
+  .gp-guild-grid.is-two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gp-guild-grid.is-three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .gp-guild-grid.is-auto {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  }
+
+  .gp-guild-grid > li {
+    display: grid;
+    min-width: 0;
+  }
+
+  .gp-guild-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-sm);
+    height: 100%;
+    min-width: 0;
+  }
+
+  .gp-guild-card-foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--gp-space-lg);
+    margin-block-start: auto;
+  }
+
+  .gp-guild-credit {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--gp-space-sm);
+    color: var(--gp-fg-muted);
+    font-size: var(--gp-body-sm);
+  }
+
+  .gp-guild-credit-label {
+    font-family: var(--gp-font-mono);
+    font-size: var(--gp-label-sm);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* ── Media and appearances ────────────────────────────────────── */
+  .gp-guild-media {
+    display: grid;
+    gap: var(--gp-space-md);
+  }
+
+  .gp-guild-media.has-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .gp-guild-media-list {
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-lg);
+    background: var(--gp-card);
+    overflow: hidden;
+  }
+
+  .gp-guild-media-list li + li {
+    border-block-start: 1px solid var(--gp-border-soft);
+  }
+
+  .gp-guild-media-row {
+    display: flex;
+    align-items: center;
+    gap: var(--gp-space-md);
+    min-height: 44px;
+    padding: var(--gp-space-md) var(--gp-space-lg);
+    color: var(--gp-fg);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .gp-guild-media-row:hover {
+    background: var(--gp-card-elev);
+  }
+
+  .gp-guild-media-copy {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--gp-space-xs);
+    min-width: 0;
+  }
+
+  .gp-guild-media-title {
+    font-size: var(--gp-body-lg);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .gp-guild-media-arrow {
+    flex: none;
+    color: var(--gp-primary);
+  }
+
+  /* ── Hats and people ──────────────────────────────────────────── */
+  .gp-guild-hat {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--gp-space-sm) var(--gp-space-md);
+    padding-block: var(--gp-space-md);
+    border-block-end: 1px solid var(--gp-border-soft);
+  }
+
+  .gp-guild-hat:last-child {
+    border-block-end: 0;
+    padding-block-end: 0;
+  }
+
+  .gp-guild-hat-role {
+    flex: 1 1 12rem;
+    min-width: 0;
+  }
+
+  .gp-guild-members {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--gp-space-lg) var(--gp-space-md);
+  }
+
+  .gp-guild-person {
+    display: flex;
+    align-items: center;
+    gap: var(--gp-space-md);
+    min-width: 0;
+  }
+
+  .gp-guild-person.is-compact {
+    gap: var(--gp-space-sm);
+    color: var(--gp-fg);
+  }
+
+  /* ── Call to action ───────────────────────────────────────────── */
   .gp-guild-cta {
-    padding: clamp(var(--gp-space-2xl), 5vw, var(--gp-space-4xl)) 0;
-    border-top: 1px solid var(--gp-border-soft);
+    padding-block: clamp(var(--gp-space-2xl), 5vw, var(--gp-space-4xl));
+    border-block-start: 1px solid var(--gp-border-soft);
   }
 
   .gp-guild-cta-inner {
@@ -465,38 +688,63 @@ const surfaceLabel = data.type === 'guild' ? 'Guild' : 'Pod';
     align-items: center;
     gap: var(--gp-space-2xl);
     padding: clamp(var(--gp-space-xl), 4vw, var(--gp-space-3xl));
-    border: 1px solid rgba(184, 232, 53, 0.32);
+    border: 1px solid color-mix(in srgb, var(--gp-primary) 32%, transparent);
     border-radius: var(--gp-radius-xl);
-    background: linear-gradient(135deg, rgba(184, 232, 53, 0.06), rgba(15, 61, 46, 0.5));
+    background: color-mix(in srgb, var(--gp-primary) 5%, transparent);
   }
 
-  .gp-guild-cta-inner > div:first-child {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gp-space-sm);
-    max-width: 540px;
-  }
-
-  .gp-guild-cta-body {
-    color: var(--gp-fg-muted);
+  .gp-guild-cta-copy {
+    max-inline-size: 34rem;
   }
 
   .gp-guild-cta-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: var(--gp-space-sm);
+  }
+
+  /* ── Reflow (DESIGN.md guild row: members 4 / 3 / 2) ──────────── */
+  @container (max-width: 1100px) {
+    .gp-guild-grid.is-three {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .gp-guild-members {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
   }
 
   @container (max-width: 980px) {
-    .gp-guild-grid,
-    .gp-guild-output-grid,
-    .gp-guild-project-grid {
-      grid-template-columns: 1fr;
+    .gp-guild-mandate-grid,
+    .gp-guild-media.has-list {
+      grid-template-columns: minmax(0, 1fr);
     }
 
     .gp-guild-cta-inner {
       flex-direction: column;
       align-items: flex-start;
+    }
+  }
+
+  @container (max-width: 720px) {
+    .gp-guild-grid.is-two,
+    .gp-guild-grid.is-three {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @container (max-width: 520px) {
+    .gp-guild-members {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .gp-guild-members .gp-guild-person {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .gp-guild-cta-actions {
+      inline-size: 100%;
     }
   }
 </style>
