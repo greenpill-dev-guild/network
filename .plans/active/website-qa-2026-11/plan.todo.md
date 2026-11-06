@@ -17,6 +17,8 @@ Each session runs Opus 5.5 at extra-high effort in its own worktree, cut from th
 | `qa-map-polish` | PRD-739 P0: sizing, clustering, reset and empty states, stale state, "Join the map" | `HomeMap.astro`, home hero CTA in `content/home-page.json` and `pages/index.astro` | 3301 | 2, after `qa-map-data` and `qa-home-garden` merge |
 | `qa-system-pass` | One card treatment, em-dash check and sweep, fallback snapshot refresh, full-site QA | card CSS on every page, `components/ui/Card.astro`, a copy check in `scripts/`, `src/data/operational-content-snapshot.json` | 3321 | 2, after all of wave 1 merges |
 
+Ports are for each session's Mac-side preview server (spec rule 7); nothing runs a dev server inside the dev machine except on 3301, which only `qa-map-data` and later `qa-map-polish` use.
+
 Batch A starts first because it covers the broken interactions and the accuracy risks Afo named. Batch B starts as batch A sessions open their pull requests.
 
 ## Merge order
