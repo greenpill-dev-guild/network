@@ -111,3 +111,13 @@ At launch: one parent issue in P-PRD-19 for this hub (label `source:plans` if av
 | PRD-739 | `qa-map-polish` (reused) |
 
 Batch B sessions other than `qa-chapters` get their sub-issues when they start.
+
+## Shared files
+
+Some files hold pieces several sessions own. Edit only your piece, add rather than rewrite, and name the file in your PR description.
+
+| File | Rule |
+| --- | --- |
+| `scripts/data/ui-source-baseline.tsv` | Rows are keyed by file, code and value. When your change removes a baselined value, prune that row (`bun run ui:check` hard-fails on stale rows). Prune only rows for files you own; never add rows and never run `--write-source-baseline`. |
+| `packages/website/keystatic.config.ts` and `packages/website/src/content/config.ts` | Split by schema block: homePage and garden to `qa-home-garden`; stories and storiesIndex to `qa-stories`; books, library, podcast and resources to `qa-library`; siteSettings and socialLinks to `qa-brand-shell`. |
+| `packages/website/src/content/social-links.json` | The `telegram` value belongs to `qa-home-garden`; every other key to `qa-brand-shell`. |
