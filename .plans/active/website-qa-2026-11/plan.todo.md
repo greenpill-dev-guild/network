@@ -7,12 +7,12 @@ Each session runs Opus 5.5 at extra-high effort in its own worktree, cut from th
 | Session | Focus | Writes | Port | Wave |
 | --- | --- | --- | --- | --- |
 | `qa-map-data` | Bad node coordinates; ecoregion layer (D2) | `packages/agent/src/map-nodes.ts` and the intake and edit validation it calls, `packages/shared` map contracts, `packages/website/src/pages/map/edit.astro` (location handling only), `HomeMap.astro` (ecoregion removal only), `packages/shared/src/public-ecoregions.*`, `scripts/map-node-contract.test.ts` | 3301 (only this session; it is the origin the agent allows) | 1A |
-| `qa-home-garden` | Subscribe, Telegram, home tiles, ecosystem, ramp labels | `pages/index.astro`, `content/home-page.json`, `pages/garden/index.astro`, `content/garden.json` | 3321 | 1A |
-| `qa-guilds` | Dev Guild July feedback, breadcrumb, Writers Guild research and links | `pages/guilds/[slug].astro`, `src/data/operational-content-seed/guilds/*`, Directus change set for guilds and projects | 3324 | 1A |
+| `qa-home-garden` | Subscribe, Telegram, home tiles, ecosystem, ramp labels | `pages/index.astro`, `content/home-page.json`, `pages/garden/index.astro`, `content/garden.json`, and only the `telegram` value in `content/social-links.json` | 3321 | 1A |
+| `qa-guilds` | Dev Guild July feedback, breadcrumb, Writers Guild research and links | `pages/guilds/[slug].astro`, `src/data/operational-content-seed/guilds/*`, Directus change set for guilds and projects; with Afo's OK only, the guild parts of `packages/shared/src/public-content.ts` and the agent's guild projection if a new field is unavoidable | 3324 | 1A |
 | `qa-stories` | Story accuracy, missing 2026 stories, typo, byline and category | `content/stories/*`, `content/stories-index.json`, `pages/stories/*`, story images under `public/images/` | 3325 | 1A |
 | `qa-assessment` | Assessment overflow and multi-select (D1: keep) | `components/page-sections/GardenAssessment.astro` | 3322 | 1B |
 | `qa-library` | Book dialog, podcast freshness, Knowledge Garden and protocol removal | `pages/library/index.astro`, `content/library.json`, `content/books/*`, `content/podcast.json`, `src/data/podcast-feed-snapshot.json`, `scripts/podcast-feed-snapshot.ts`, `.github/workflows/github-pages.yml` (podcast refresh step only), new `components/page-sections/BookDialog.astro` | 3323 | 1B |
-| `qa-brand-shell` | Brand kit and logo, background, external links, footer | `layouts/GpLayout.astro`, `styles/gp-tokens.css` (background and brand tokens only), `components/shell/*`, `content/social-links.json`, `content/site-settings.json`, brand assets under `public/` (logo, favicon, touch icon, share image) | 3326 | 1B |
+| `qa-brand-shell` | Brand kit and logo, background, external links, footer | `layouts/GpLayout.astro`, `styles/gp-tokens.css` (background and brand tokens only), `components/shell/*`, `content/social-links.json` (all keys except `telegram`), `content/site-settings.json`, brand assets under `public/` (logo, favicon, touch icon, share image) | 3326 | 1B |
 | `qa-chapters` | PRD-625: chapter copy accuracy and locations | Directus change set for chapters, initiatives and locations; no code unless a template bug blocks the content | 3327 | 1B |
 | `qa-map-polish` | PRD-739 P0: sizing, clustering, reset and empty states, stale state, "Join the map" | `HomeMap.astro`, home hero CTA in `content/home-page.json` and `pages/index.astro` | 3301 | 2, after `qa-map-data` and `qa-home-garden` merge |
 | `qa-system-pass` | One card treatment, em-dash check and sweep, fallback snapshot refresh, full-site QA | card CSS on every page, `components/ui/Card.astro`, a copy check in `scripts/`, `src/data/operational-content-snapshot.json` | 3321 | 2, after all of wave 1 merges |
@@ -99,3 +99,15 @@ Batch A starts first because it covers the broken interactions and the accuracy 
 ## Linear mirror
 
 At launch: one parent issue in P-PRD-19 for this hub (label `source:plans` if available), and one child per launched session. PRD-739 and PRD-625 are reused as the children for `qa-map-polish` and `qa-chapters`.
+
+| Linear | Session |
+| --- | --- |
+| PRD-1408 | Parent: QA session 2026-11-06 |
+| PRD-1409 | `qa-map-data` |
+| PRD-1410 | `qa-home-garden` |
+| PRD-1411 | `qa-guilds` |
+| PRD-1412 | `qa-stories` |
+| PRD-625 | `qa-chapters` (reused) |
+| PRD-739 | `qa-map-polish` (reused) |
+
+Batch B sessions other than `qa-chapters` get their sub-issues when they start.

@@ -17,7 +17,7 @@ Twenty review notes (see `reports/2026-11-06-qa-findings.md`) plus two open Line
 9. **Privacy boundary.** Map and intake data must never expose emails, notes, IP addresses, user agents, pending submissions or steward review notes, including in PR descriptions, logs and handoffs. Public node names and places may be referenced.
 10. **External links.** Do not hand-add `target="_blank"` to individual links. `qa-brand-shell` owns one site-wide rule for external links.
 11. **Shared anchors.** The Library keeps an `id="guilds"` anchor on its guild cards; guild breadcrumbs link to `/library#guilds`.
-12. **Handoff.** Before you stop, write `handoffs/<session-name>.md` in this hub: what changed, evidence (commands, screenshots, sources), open items, and decisions you need from Afo. Tick your items in `plan.todo.md` in the same PR.
+12. **Handoff.** Before you stop, write `handoffs/<session-name>.md` in this hub: what changed, evidence (commands, screenshots, sources), open items, and decisions you need from Afo. Commit it in your PR. Do not edit `plan.todo.md` or `status.json`; the orchestrating session keeps those current, which avoids merge conflicts between sessions.
 
 ## Decisions
 
