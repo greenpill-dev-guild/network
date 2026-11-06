@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import {
   ASSIGNED_EDITOR_POLICY_NAME,
   buildAssignedEditorPermissions,
+  chapterSelectorReadFields,
 } from './directus-content-access.ts';
 
 export const DIRECTUS_OPERATIONAL_COLLECTIONS = Object.freeze([
@@ -920,6 +921,7 @@ function buildContentOperationsPermissions(contentOpsCollectionNames = [], impac
       'attempts',
       'provider_error',
       'sent_at',
+      'resolved_at',
       'created_at',
       'updated_at',
     ];
@@ -1330,7 +1332,7 @@ export function buildDirectusOperationalPermissionPlan(
         permissions: statusFilter(['published']),
         validation: null,
         presets: null,
-        fields: collectionFields(collection, { read: true }),
+        fields: [...collectionFields(collection, { read: true }), ...chapterSelectorReadFields(collection)],
       },
       {
         role: 'Greenpill Trusted Publisher',
@@ -1340,7 +1342,7 @@ export function buildDirectusOperationalPermissionPlan(
         permissions: null,
         validation: null,
         presets: null,
-        fields: collectionFields(collection, { publisher: true, read: true }),
+        fields: [...collectionFields(collection, { publisher: true, read: true }), ...chapterSelectorReadFields(collection)],
       },
       {
         role: 'Greenpill Trusted Publisher',

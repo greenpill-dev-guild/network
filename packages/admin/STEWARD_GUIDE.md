@@ -144,6 +144,16 @@ Create a request with:
 - `proof_signals`: public proof signals to add or update.
 - `request_status`: use `draft` while editing, then `pending_review`.
 
+Fill in `proposed_image` only when you want a different image. Once the
+request is accepted, that image replaces the one your chapter shows, including
+an image you uploaded, and its alt text and credit come from the request. To
+keep the current image, leave `proposed_image` empty. Alt text or credit
+entered without an image update the image your chapter already shows.
+
+A draft prepared for you before a steward sync starts with your chapter's
+current summary and primary link, and proposes no image. Left as prepared, it
+changes nothing about your chapter.
+
 Use the structured link rows instead of raw JSON for normal public links:
 
 ```json
@@ -165,6 +175,11 @@ Use structured proof signal rows for source-backed public claims:
   "href": "https://example.org/source"
 }
 ```
+
+A proposed image needs alt text: one sentence describing what the picture
+shows, for people who cannot see it. The form does not save a draft or send a
+request for review with an image and no alt text. If you decide not to propose
+an image after all, empty `proposed_image` and save.
 
 Use `requested_changes` only as an advanced fallback for unusual edits that do
 not fit the structured fields above.

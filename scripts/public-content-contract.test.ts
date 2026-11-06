@@ -47,6 +47,7 @@ const chapterInitiativesMigrationPath = join(rootDir, 'packages/agent/migrations
 const chapterImageUploadsMigrationPath = join(rootDir, 'packages/agent/migrations/022_chapter_image_uploads.sql');
 const contentPublishHealthMigrationPath = join(rootDir, 'packages/agent/migrations/028_content_publish_health.sql');
 const chapterImageAltCreditMigrationPath = join(rootDir, 'packages/agent/migrations/029_chapter_image_alt_credit.sql');
+const snapshotAlertEpisodesMigrationPath = join(rootDir, 'packages/agent/migrations/030_snapshot_alert_episodes.sql');
 const activeChapterEnrichmentSlugs = [
   'brasil',
   'c-te-d-ivoire',
@@ -853,6 +854,32 @@ test('chapter image migration adds alt text and credit without disturbing live c
   assert.match(migration, /'chapter_image_withheld'/);
   assert.match(migration, /content_review_notification_image_withheld_idx[\s\S]*where kind = 'chapter_image_withheld'/);
   assert.doesNotMatch(migration, /STORAGE_TIGRIS_SECRET|DATABASE_URL/);
+});
+
+test('alert episode migration makes only open snapshot alerts unique and keeps the alert history', async () => {
+  const migration = await readFile(snapshotAlertEpisodesMigrationPath, 'utf8');
+
+  assert.match(migration, /add column if not exists resolved_at timestamptz;/);
+  // A resolved row no longer blocks the alert for the record's next episode.
+  assert.match(
+    migration,
+    /create unique index content_review_notification_quarantine_idx\s+on content\.review_notifications \(kind, record_collection, record_slug\)\s+where kind = 'record_quarantined' and resolved_at is null;/
+  );
+  assert.match(
+    migration,
+    /create unique index content_review_notification_image_withheld_idx\s+on content\.review_notifications \(record_slug\)\s+where kind = 'chapter_image_withheld' and resolved_at is null;/
+  );
+  // The earlier migrations create these names only when they are missing, so
+  // applying one of them after this keeps the open-only definition.
+  const reviewNotificationsMigration = await readFile(
+    join(rootDir, 'packages/agent/migrations/026_content_review_notifications.sql'),
+    'utf8'
+  );
+  const imageMigration = await readFile(chapterImageAltCreditMigrationPath, 'utf8');
+  assert.match(reviewNotificationsMigration, /create unique index if not exists content_review_notification_quarantine_idx/);
+  assert.match(imageMigration, /create unique index if not exists content_review_notification_image_withheld_idx/);
+  // Sent alerts stay on record: no row is removed or rewritten.
+  assert.doesNotMatch(migration, /delete from|truncate|update content\.review_notifications/i);
 });
 
 test('chapter upload migration preserves legacy URLs and projects only a Directus file id', async () => {
