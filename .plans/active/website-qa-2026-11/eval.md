@@ -1,0 +1,35 @@
+# Website QA Pass, November 2026: Evaluation
+
+## Acceptance checks
+
+Each finding in `reports/2026-11-06-qa-findings.md` is closed when its check below passes on the deployed site, not only in a pull request.
+
+| Finding | Check |
+| --- | --- |
+| 1 | Live `/map/state` has no node at latitude ±90, longitude ±180 or 0,0, and each node is within its named country. The agent rejects those values with a clear error, covered by tests. |
+| 2 | No "Knowledge map" or "Open the toolkit" tile on the home page. The ecoregion layer, its dataset and the footer credit are gone (D2). |
+| 3 | Every ecosystem entry links to the organization's own page and has a source in the `qa-home-garden` handoff; partners and tools are separate rows. |
+| 4 | Every story claim has a source in the `qa-stories` handoff; at least the verifiable stories from the last 12 months are published with exact dates; no "storyies", "seed copy" or raw category slugs render. |
+| 5 | Subscribe on the home page leads to a working signup, or is replaced as decided in D3. A real signup reaches the chosen list (tested by Afo or with his approval). |
+| 6 | One Telegram invite link, read from `content/social-links.json`, requires admin approval, and opens in a new tab. |
+| 7 | On the home, Library, a guild, a chapter and a story page, every external link opens in a new tab with `rel="noopener"` and an accessible hint; internal links do not. |
+| 8 | Every page uses the plain background; no seams at 375, 1024, 1440 or 1920. |
+| 9 | Cards on every page use `Card` with the home treatment; no page-local card classes remain. |
+| 10 | Each book opens a dialog with the larger cover, the English PDF, every translation and every store or edition link; works with keyboard and screen reader; the cover still works without JavaScript. |
+| 11 | The Library shows episodes from the current month; the scheduled build refreshes the feed; the count comes from the feed. |
+| 12 | No Knowledge Garden block or inactive protocol guides; GreenSci listed or not per I4. |
+| 13 | The Dev Guild page has the hero key links, active projects only, a media section, a Hats list, contributor credits and larger body text. |
+| 14 | Guild breadcrumbs read Library and link to `/library#guilds`. |
+| 15 | The Writers Guild page lists only verified Writers Guild work, credits contributors, and does not claim the podcast. |
+| 16 | The footer says Farcaster and includes LinkedIn; the unmaintained website link is gone. |
+| 17 | Header, favicon, touch icon and default share image use the current brand kit. |
+| 18 | The em-dash check passes in CI; no em dashes in website copy or Directus content. |
+| 19 | The assessment stays (D1). Its legends sit inside their cards, and the questions Afo marks as multi-answer accept several answers, at all three widths and with keyboard and screen reader. |
+| 20 | The footer's bottom row is friendly and accurate; no retired "friction" labels. |
+
+## Proof
+
+- `bun run plans:validate`, `bun run ui:check`, `bun run ui:verify`, and the focused tests each session touches (`bun run test:map-nodes`, `bun run test:agent`, `bun run test:content`).
+- Visual QA in Afo's authenticated Brave profile at 375, 1024 and 1440, with screenshots referenced in each handoff. Isolated-browser output counts only as clean-room proof.
+- For content: the source list in each handoff, and Afo's approval recorded for every production change set.
+- After merge: the same checks against greenpill.network once GitHub Pages and Fly report the deploy.

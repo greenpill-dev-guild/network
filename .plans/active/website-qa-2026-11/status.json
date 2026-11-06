@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "feature": {
+    "slug": "website-qa-2026-11",
+    "title": "Website QA Pass, November 2026",
+    "kind": "feature",
+    "stage": "active"
+  },
+  "workflow": {
+    "overall_status": "active",
+    "priority": "p1",
+    "created_at": "2026-11-06T23:30:00Z",
+    "updated_at": "2026-11-07T00:15:00Z"
+  },
+  "links": {
+    "brief": "brief.md",
+    "spec": "spec.md",
+    "plan": "plan.todo.md",
+    "eval": "eval.md"
+  },
+  "notes": [
+    "status.json is authoritative for hub state.",
+    ".plans carries planning truth; packages carry runtime contracts.",
+    "Source: Afo's 2026-11-06 website review, the 2026-07-16 call decisions, the 2026-09-24 audit, and open P-PRD-19 issues PRD-739 and PRD-625.",
+    "Sessions are listed in plan.todo.md. Lanes map as ui = qa-home-garden, qa-assessment, qa-library, qa-guilds (template), qa-brand-shell, qa-map-polish; content = qa-stories, qa-guilds (research), qa-chapters; platform = qa-map-data, podcast feed refresh; qa_pass_1 = qa-system-pass; qa_pass_2 = Codex and CodeRabbit PR review plus post-deploy checks.",
+    "2026-11-06: Afo approved the launch. D1 keep and fix the assessment; D2 remove the ecoregion layer; batch A (qa-map-data, qa-home-garden, qa-guilds, qa-stories) started; batch B follows."
+  ],
+  "taxonomy": {
+    "initiative": "public-experience",
+    "tracks": ["ui", "content", "platform"],
+    "work_types": ["qa-remediation", "content-accuracy", "design-system"],
+    "surfaces": ["website-home", "website-garden", "website-library", "website-guilds", "website-stories", "website-chapters", "website-map", "website-shell"],
+    "depends_on_features": []
+  },
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "in_progress",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "content": {
+      "owner": "claude",
+      "status": "in_progress",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "platform": {
+      "owner": "claude",
+      "status": "in_progress",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "qa_pass_1": {
+      "owner": "claude",
+      "status": "blocked",
+      "depends_on": ["ui", "content", "platform"],
+      "handoff": "handoffs/README.md"
+    },
+    "qa_pass_2": {
+      "owner": "codex",
+      "status": "blocked",
+      "depends_on": ["qa_pass_1"],
+      "handoff": "handoffs/README.md"
+    }
+  },
+  "history": [
+    {
+      "timestamp": "2026-11-06T23:30:00Z",
+      "actor": "claude",
+      "lane": "system",
+      "status": "scaffolded",
+      "note": "Scaffolded from Afo's 2026-11-06 QA review with findings, session roster, decisions and acceptance checks."
+    },
+    {
+      "timestamp": "2026-11-07T00:15:00Z",
+      "actor": "claude",
+      "lane": "system",
+      "status": "activated",
+      "note": "Moved to active on Afo's launch approval; batch A sessions started."
+    }
+  ]
+}
