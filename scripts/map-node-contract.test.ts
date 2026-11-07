@@ -21,6 +21,12 @@ import {
 } from '@greenpill-network/shared/map-locations';
 import { toPublicOperationalLocations } from '@greenpill-network/shared/public-content';
 import {
+  groupOverlappingPins,
+  layoutFan,
+  pickerPointToLocation,
+  separateLabels,
+} from '../packages/website/src/lib/home-map-layout.ts';
+import {
   createMapNodeSubmission,
   createMapNodeUpdateRequest,
   listPublicMapNodes,
@@ -1631,7 +1637,7 @@ test('home map stacks overlapping pins across node types, counts them, and fans 
   // and broad zoom-level cluster bubbles are not drawn.
   assert.match(component, /data-home-map-clusters/);
   assert.match(component, /const OVERLAP_STACK_RADIUS = 1\.4;/);
-  assert.match(component, /const groupPins = [\s\S]*?pointsWithin\(group\[i\]\.center, other\.center, OVERLAP_STACK_RADIUS\)/);
+  assert.match(component, /const groupPins = \(pins: ClusterMember\[\]\): ClusterMember\[\]\[\] => groupOverlappingPins\(pins, OVERLAP_STACK_RADIUS\);/);
   assert.doesNotMatch(component, /overlapKeyFor/);
   assert.doesNotMatch(component, /renderClusterBubble/);
   assert.doesNotMatch(component, /gp-home-map-cluster-count/);
@@ -1725,10 +1731,118 @@ test('home map location picker ignores a pin dragged off the map instead of clam
   // or longitude -180 (qa-map-data handoff). Off the map is now no point at all.
   assert.doesNotMatch(picker, /Math\.min\(VIEW_W, Math\.max\(0, point\.x\)\)/);
   assert.doesNotMatch(picker, /Math\.min\(MAP_VIEW_H, Math\.max\(0, point\.y\)\)/);
-  assert.match(picker, /const onMap = point\.x >= 0 && point\.x <= VIEW_W && point\.y >= 0 && point\.y <= MAP_VIEW_H;/);
-  assert.match(picker, /if \(!onMap\) return null;/);
-  // A drag that leaves the map keeps the last point it had on the map.
-  assert.match(component, /const updateDraggedPin = \(event: PointerEvent\) => \{\s*const point = pointFromLocationPointer\(event\);\s*if \(!point\) return;/);
+  assert.match(picker, /return pickerPointToLocation\(\{ x: point\.x, y: point\.y \}, \{ width: VIEW_W, height: MAP_VIEW_H, worldHeight: VIEW_H \}\);/);
+  // The rule itself: a point on the drawn map (200 x 88 of a 200 x 100 world)
+  // is a place, and a point past any edge is none. Only the exact boundary
+  // reads as an edge value, which the agent refuses as raw coordinates.
+  const picker200 = { width: 200, height: 88, worldHeight: 100 };
+  assert.deepEqual(pickerPointToLocation({ x: 100, y: 50 }, picker200), { lat: 0, long: 0 });
+  assert.deepEqual(pickerPointToLocation({ x: 0, y: 0 }, picker200), { lat: 90, long: -180 });
+  assert.equal(pickerPointToLocation({ x: 100, y: -0.01 }, picker200), null);
+  assert.equal(pickerPointToLocation({ x: -3, y: 40 }, picker200), null);
+  assert.equal(pickerPointToLocation({ x: 200.5, y: 40 }, picker200), null);
+  assert.equal(pickerPointToLocation({ x: 100, y: 88.2 }, picker200), null);
+  assert.equal(pickerPointToLocation({ x: Number.NaN, y: 40 }, picker200), null);
+  // A drag that leaves the map keeps the last point it had on the map: the
+  // move is ignored, so the pending point stays, and release confirms it.
+  assert.match(component, /const updateDraggedPin = \(event: PointerEvent\) => \{\s*const point = pointFromLocationPointer\(event\);\s*if \(!point\) return;\s*pendingLocationPoint = point;/);
+  assert.match(component, /const endLocationDrag = \(event: PointerEvent\) => \{[\s\S]*?if \(pendingLocationPoint\) void confirmDraggedLocation\(pendingLocationPoint\);/);
+});
+
+test('home map stack and fan geometry: grouping, in-bounds fans and readable names', () => {
+  type Pin = { key: string; center: { x: number; y: number } };
+  const pin = (key: string, x: number, y: number): Pin => ({ key, center: { x, y } });
+  const keysOf = (groups: Pin[][]) => groups.map((group) => group.map((p) => p.key).sort().join('+')).sort();
+
+  // A chapter and a person on the same spot group together; a pin just past
+  // the radius stays alone; neighbours chain (a-b and b-c group a, b, c).
+  assert.deepEqual(
+    keysOf(groupOverlappingPins([pin('chapter', 50, 30), pin('person', 50, 30), pin('far', 51.5, 30)], 1.4)),
+    ['chapter+person', 'far']
+  );
+  assert.deepEqual(keysOf(groupOverlappingPins([pin('a', 10, 10), pin('b', 11.2, 10), pin('c', 12.4, 10)], 1.4)), ['a+b+c']);
+  assert.deepEqual(keysOf(groupOverlappingPins([pin('a', 10, 10), pin('b', 10, 11.5)], 1.4)), ['a', 'b']);
+
+  // A small fan is a circle around its pins, its satellites about one touch
+  // target apart.
+  const wideView = { x: 0, y: 0, width: 200, height: 88 };
+  const small = layoutFan({ count: 3, center: { x: 100, y: 44 }, view: wideView, spacing: 8.8, minRadius: 6.8, reach: 4.4 });
+  assert.equal(small.radiusX, small.radiusY);
+  assert.equal(small.points.length, 3);
+
+  // At phone size (about 1.6 px per map unit) a stack of 12 needs a ring
+  // taller than the 88-unit map. It flattens into an ellipse so every
+  // satellite and its touch target stay on the map, still about 44px apart.
+  const scale = 1.625;
+  const phone = { count: 12, center: { x: 60, y: 30 }, view: wideView, spacing: 44 / scale, minRadius: 34 / scale, reach: 22 / scale };
+  const big = layoutFan(phone);
+  assert.equal(big.points.length, 12);
+  assert.ok(big.radiusY < big.radiusX, 'a ring too tall for the map should flatten');
+  for (const point of big.points) {
+    assert.ok(point.x - phone.reach >= wideView.x - 1e-6 && point.x + phone.reach <= wideView.x + wideView.width + 1e-6, `x ${point.x} must keep its target on the map`);
+    assert.ok(point.y - phone.reach >= wideView.y - 1e-6 && point.y + phone.reach <= wideView.y + wideView.height + 1e-6, `y ${point.y} must keep its target on the map`);
+  }
+  const gaps = big.points.map((point, i) => {
+    const next = big.points[(i + 1) % big.points.length];
+    return Math.hypot(next.x - point.x, next.y - point.y);
+  });
+  assert.ok(Math.min(...gaps) >= phone.spacing * 0.9, `neighbouring satellites should stay about 44px apart: ${Math.min(...gaps)}`);
+  assert.ok(big.hitRadius * 2 <= Math.min(...gaps) + 1e-6, 'hit areas must not overlap');
+
+  // Names that collide step apart and stay on the map, including when a name
+  // pushed up from the bottom edge would land on one already placed.
+  const bounds = { top: 0, bottom: 40 };
+  const boxes = [
+    { x: 0, y: 20, width: 30, height: 6 },
+    { x: 10, y: 22, width: 30, height: 6 },
+    { x: 5, y: 33, width: 30, height: 6 },
+    { x: 8, y: 34, width: 30, height: 6 },
+  ];
+  const shifts = separateLabels(boxes, bounds, 1);
+  const moved = boxes.map((box, i) => ({ ...box, y: box.y + shifts[i] }));
+  moved.forEach((box, i) => {
+    assert.ok(box.y >= bounds.top && box.y + box.height <= bounds.bottom, `label ${i} must stay on the map`);
+    moved.slice(i + 1).forEach((other, j) => {
+      const overlap = box.x < other.x + other.width && other.x < box.x + box.width
+        && box.y < other.y + other.height && other.y < box.y + box.height;
+      assert.equal(overlap, false, `labels ${i} and ${i + j + 1} must not overlap`);
+    });
+  });
+  assert.equal(shifts[0], 0, 'a label with room stays where it is');
+});
+
+test('home map keeps focus, hover and selection honest when stacks rebuild', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  // The filter note is chrome: a touch on its Show all button must reach the
+  // button instead of starting a map gesture.
+  assert.match(component, /const isGestureBlocked = [\s\S]*?\.gp-home-map-legend, \.gp-home-map-filter-note,/);
+  // A selection the filter closed does not get its coloured threads back.
+  assert.match(component, /const selectedId = selectedFocusTarget\?\.getAttribute\('data-node-id'\) \|\| '';/);
+  assert.doesNotMatch(component, /const selectedId = selectedNode\?\.getAttribute/);
+  // Closing a card rebuilds the stacks, so a person drawn while selected goes
+  // back into their badge.
+  assert.match(component, /const closeSelected = \(\) => \{[\s\S]*?clusterDirty\(\);[\s\S]*?\n    \};/);
+  // Rebuilding keeps keyboard focus on what stands for the same people, and a
+  // hovered pin that is now hidden gives up the hover card.
+  const recompute = component.match(/const recomputeClustersNow = \(\) => \{([\s\S]*?)\n    \};/)?.[1] ?? '';
+  assert.match(recompute, /const focusKeys = keysForControl\(active\);/);
+  assert.match(recompute, /if \(active && \(!active\.isConnected \|\| active\.classList\.contains\('is-clustered'\)\)\) focusControlFor\(focusKeys\);/);
+  assert.match(recompute, /if \(pointerFocusTarget\?\.classList\.contains\('is-clustered'\)\) \{\s*pointerFocusTarget = null;\s*clearFocus\(\);/);
+  // Escape hands focus to whatever stands for any of the fan's people.
+  assert.match(component, /const fanKeys = activeFan\.map\(\(member\) => member\.key\);[\s\S]*?if \(!root\.contains\(document\.activeElement\)\) focusControlFor\(fanKeys\);/);
+  // A mouse click on a stack opens that stack; only touch asks about every pin
+  // inside its target.
+  assert.match(component, /const contested = viaTouch \|\| !resolved\.stack \? pinsContestingPointer\(event, viaTouch\) : \[\];/);
+  // Scrolling keeps the preview of a marker or satellite that has keyboard focus.
+  assert.match(component, /active\.matches\('\.gp-home-map-node-link:focus-visible, \[data-home-map-cluster\]:focus-visible, \.gp-home-map-cluster-sat:focus-visible'\)/);
+  // New map controls and the compact band use spacing tokens; heights derive
+  // from the 44px touch target.
+  assert.match(component, /--gp-map-edge: var\(--gp-space-sm\);/);
+  assert.match(component, /--gp-map-row: calc\(44px \+ var\(--gp-space-xs\) \* 2 \+ 2px\);/);
+  assert.match(component, /\.gp-home-map-join \{[\s\S]*?min-height: calc\(40px \+ var\(--gp-space-xs\) \* 2 \+ 2px\);\s*padding: 0 var\(--gp-space-md\);/);
 });
 
 test('home map no longer reads ecoregion names into its cards or thread tooltips', async () => {

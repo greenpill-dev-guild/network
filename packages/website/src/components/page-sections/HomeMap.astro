@@ -599,6 +599,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     reconcileLocalPendingNodes,
     saveLocalPendingNode,
   } from '@greenpill-network/shared/map-node-storage';
+  import {
+    groupOverlappingPins,
+    layoutFan,
+    pickerPointToLocation,
+    separateLabels,
+  } from '../../lib/home-map-layout';
 
   type DynamicMapNodeType = 'chapter' | 'steward' | 'member';
 
@@ -1592,7 +1598,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     const isGestureBlocked = (target: EventTarget | null) => (
       target instanceof Element &&
-      Boolean(target.closest('.gp-home-map-controls, .gp-home-map-legend, .gp-home-map-focus, .gp-home-map-selected, .gp-home-map-edge-tooltip, .gp-home-map-list-drawer'))
+      Boolean(target.closest('.gp-home-map-controls, .gp-home-map-legend, .gp-home-map-filter-note, .gp-home-map-focus, .gp-home-map-selected, .gp-home-map-edge-tooltip, .gp-home-map-list-drawer'))
     );
 
     const pointerDistance = (a: PointerEvent, b: PointerEvent) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
@@ -1955,6 +1961,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       clearFocusState();
       revealDefaultState();
       if (shouldRecoverMobileView) resetMapView();
+      // A person drawn while selected goes back into their stack.
+      clusterDirty();
       if (
         restoreFocus &&
         focusTarget &&
@@ -2255,7 +2263,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (activeFocusTarget && !activeFocusTarget.classList.contains('is-filtered-out')) {
         setFocus(activeFocusTarget);
       }
-      const selectedId = selectedNode?.getAttribute('data-node-id') || '';
+      // Read the selection again: the filter may have just closed it.
+      const selectedId = selectedFocusTarget?.getAttribute('data-node-id') || '';
       if (selectedId) {
         markSelectedThreads(selectedId);
         renderSelectedEdgeList(selectedId);
@@ -2845,24 +2854,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const visibleChapterPins = (): ClusterMember[] => visiblePins(chaptersGroup);
 
     // Group pins that sit on top of each other, chaining through neighbours.
-    const groupPins = (pins: ClusterMember[]): ClusterMember[][] => {
-      const grouped = new Set<ClusterMember>();
-      const groups: ClusterMember[][] = [];
-      pins.forEach((pin) => {
-        if (grouped.has(pin)) return;
-        const group = [pin];
-        grouped.add(pin);
-        for (let i = 0; i < group.length; i += 1) {
-          pins.forEach((other) => {
-            if (grouped.has(other) || !pointsWithin(group[i].center, other.center, OVERLAP_STACK_RADIUS)) return;
-            grouped.add(other);
-            group.push(other);
-          });
-        }
-        groups.push(group);
-      });
-      return groups;
-    };
+    const groupPins = (pins: ClusterMember[]): ClusterMember[][] => groupOverlappingPins(pins, OVERLAP_STACK_RADIUS);
 
     const centroidOf = (members: ClusterMember[]) => ({
       x: members.reduce((s, m) => s + m.center.x, 0) / members.length,
@@ -2955,22 +2947,18 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       // Hover belongs to the fan now, not to the pin that was under the pointer.
       dropPointerFocus();
 
-      const ringPx = Math.max(OVERLAP_FAN_RADIUS_PX, (members.length * FAN_SATELLITE_SPACING_PX) / (2 * Math.PI));
-      const radius = Math.max(pxToViewBox(ringPx), 2.4);
       const dotRadius = pxToViewBox(FAN_SATELLITE_DOT_PX);
       const labelFont = pxToViewBox(FAN_LABEL_FONT_PX);
-      // Keep the whole ring on the map, and neighbouring satellites out of each
-      // other's hit area.
-      const targetRadius = pxToViewBox(POINTER_TARGET_RADIUS_PX);
-      const keepInView = (value: number, start: number, size: number) => {
-        const reach = radius + targetRadius;
-        return size < reach * 2 ? start + size / 2 : Math.min(Math.max(value, start + reach), start + size - reach);
-      };
-      const origin = {
-        x: keepInView(center.x, currentViewBox.x, currentViewBox.width),
-        y: keepInView(center.y, currentViewBox.y, currentViewBox.height),
-      };
-      const hitRadius = Math.min(targetRadius, radius * Math.sin(Math.PI / members.length));
+      // The whole ring stays on the map, with room for every satellite's touch
+      // target; a ring too tall for a small map flattens into an ellipse.
+      const { origin, points, hitRadius } = layoutFan({
+        count: members.length,
+        center,
+        view: currentViewBox,
+        spacing: pxToViewBox(FAN_SATELLITE_SPACING_PX),
+        minRadius: Math.max(pxToViewBox(OVERLAP_FAN_RADIUS_PX), 2.4),
+        reach: pxToViewBox(POINTER_TARGET_RADIUS_PX),
+      });
       // Satellites take the order their pins have around the fan, so the leader
       // lines back to each pin do not cross.
       const bearing = (m: ClusterMember) => (
@@ -2979,9 +2967,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const ordered = [...members].sort((a, b) => bearing(a) - bearing(b));
       const animate = !reducedMotionPref();
       ordered.forEach((m, i) => {
-        const angle = (i / ordered.length) * Math.PI * 2 - Math.PI / 2;
-        const sx = origin.x + Math.cos(angle) * radius;
-        const sy = origin.y + Math.sin(angle) * radius;
+        const { x: sx, y: sy, angle } = points[i];
         const leader = document.createElementNS(SVG_NS, 'line');
         leader.setAttribute('class', 'gp-home-map-cluster-leader');
         leader.setAttribute('x1', m.center.x.toFixed(2));
@@ -3080,31 +3066,24 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         }
         fanSatellites.push({ member: m, el: sat, center: { x: sx, y: sy }, hitRadius, labelBox, pick });
       });
-      // Names that would overlap step apart, top to bottom: each moves below
-      // any name already placed over it, or above it when there is no room
-      // left below on the map.
-      const placedLabels: MapBox[] = [];
-      const labelGapY = pxToViewBox(2);
-      const viewBottom = currentViewBox.y + currentViewBox.height - pxToViewBox(4);
-      [...fanSatellites]
-        .sort((a, b) => (a.labelBox?.y ?? 0) - (b.labelBox?.y ?? 0))
-        .forEach((satellite) => {
-          const label = satellite.el.querySelector('.gp-home-map-cluster-sat-label');
-          let box = satellite.labelBox;
-          if (!label || !box) return;
-          for (const other of placedLabels) {
-            const overlaps = box.x < other.x + other.width && other.x < box.x + box.width
-              && box.y < other.y + other.height && other.y < box.y + box.height;
-            if (!overlaps) continue;
-            const down = other.y + other.height + labelGapY - box.y;
-            const up = other.y - labelGapY - (box.y + box.height);
-            const shift = box.y + down + box.height <= viewBottom ? down : up;
-            label.setAttribute('y', (Number(label.getAttribute('y')) + shift).toFixed(2));
-            box = { ...box, y: box.y + shift };
-          }
-          placedLabels.push(box);
-          satellite.labelBox = box;
-        });
+      // Names that would overlap step apart: each takes the smallest move that
+      // clears every name already placed and stays on the map.
+      const labelled = fanSatellites.filter((satellite) => satellite.labelBox);
+      const labelShifts = separateLabels(
+        labelled.map((satellite) => satellite.labelBox as MapBox),
+        {
+          top: currentViewBox.y + pxToViewBox(4),
+          bottom: currentViewBox.y + currentViewBox.height - pxToViewBox(4),
+        },
+        pxToViewBox(2)
+      );
+      labelled.forEach((satellite, index) => {
+        const shift = labelShifts[index];
+        const label = satellite.el.querySelector('.gp-home-map-cluster-sat-label');
+        if (!shift || !label || !satellite.labelBox) return;
+        label.setAttribute('y', (Number(label.getAttribute('y')) + shift).toFixed(2));
+        satellite.labelBox = { ...satellite.labelBox, y: satellite.labelBox.y + shift };
+      });
       if (viaKeyboard) fanSatellites[0]?.el.focus?.();
     };
 
@@ -3229,8 +3208,41 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       clustersGroup.append(group);
     };
 
+    // The people a focused map control stands for: a marker's people, a fan
+    // satellite's pin, or a pin itself.
+    const keysForControl = (el: Element | null): string[] => {
+      if (!el) return [];
+      if (el.matches('[data-home-map-cluster]')) return (el.getAttribute('data-cluster-members') || '').split(' ').filter(Boolean);
+      if (el.matches('.gp-home-map-cluster-sat')) return [el.getAttribute('data-fan-member') || ''].filter(Boolean);
+      if (el.matches('.gp-home-map-node-link')) return [el.getAttribute('data-node-id') || ''].filter(Boolean);
+      return [];
+    };
+
+    // Gives focus to what now stands for these people: their own marker, a
+    // marker holding any of them, or a pin of theirs still drawn.
+    const focusControlFor = (keys: string[]) => {
+      if (!keys.length) return false;
+      const wanted = new Set(keys);
+      const exact = [...wanted].sort().join(' ');
+      const marker = overlapStacks.find((stack) => stackKeyOf(stack.members) === exact)?.marker
+        ?? overlapStacks.find((stack) => stack.members.some((member) => wanted.has(member.key)))?.marker;
+      const pin = marker ? null : keys
+        .map((key) => root.querySelector(`.gp-home-map-node-link[data-node-id="${CSS.escape(key)}"]`))
+        .find((el) => el && !el.classList.contains('is-clustered') && !el.classList.contains('is-filtered-out'));
+      const target = (marker ?? pin) as (HTMLElement | SVGElement | null | undefined);
+      if (!target || typeof target.focus !== 'function') return false;
+      target.focus({ preventScroll: true });
+      return true;
+    };
+
     const recomputeClustersNow = () => {
       if (!clustersGroup || !membersGroup) return;
+      // Keyboard focus on a marker, a fan satellite or a pin about to be hidden
+      // must not fall to the page when the markers are rebuilt.
+      const active = document.activeElement instanceof Element && root.contains(document.activeElement)
+        ? document.activeElement
+        : null;
+      const focusKeys = keysForControl(active);
       collapseFan();
       clearClusters();
       clearStackFocus();
@@ -3242,6 +3254,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         .filter(({ people, chapters }) => people.length >= (chapters.length ? 1 : 2))
         .filter(({ people }) => !people.every((pin) => pin.el === selectedFocusTarget));
       stacks.forEach(({ people }) => people.forEach((pin) => setPinClustered(pin.el, true)));
+      // A hovered pin that has just been hidden no longer owns the hover card;
+      // the next pointer move shows what is there now.
+      if (pointerFocusTarget?.classList.contains('is-clustered')) {
+        pointerFocusTarget = null;
+        clearFocus();
+      }
 
       // What is still drawn, so badges can be placed beside it rather than on it.
       const taken: Footprint[] = [...visibleChapterPins(), ...visiblePeoplePins()]
@@ -3279,6 +3297,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           renderOverlapStack(people, chapters, center, radius, centroidOf(anchors));
           taken.push({ center, radius });
         });
+      if (active && (!active.isConnected || active.classList.contains('is-clustered'))) focusControlFor(focusKeys);
     };
 
     // ---- Pointer disambiguation ---------------------------------------------
@@ -3329,7 +3348,9 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         return;
       }
       const viaTouch = isRecentTouchMapClick();
-      const contested = pinsContestingPointer(event, viaTouch);
+      // A mouse click on a stack opens that stack, as its preview said; only a
+      // finger is asked to choose between everything inside its target.
+      const contested = viaTouch || !resolved.stack ? pinsContestingPointer(event, viaTouch) : [];
       if (contested.length > 1) {
         takeOver();
         fanOutCluster(contested, centroidOf(contested), false);
@@ -3365,11 +3386,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     });
     document.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape' || !activeFan) return;
-      // Hand focus back to the stack this fan came from, when there is one.
-      const fanKey = activeFan[0]?.key;
+      // Hand focus back to what the fan came from: a marker holding any of its
+      // people, or, for a chooser of chapters and pins, one of those pins.
+      const fanKeys = activeFan.map((member) => member.key);
       collapseFan();
       recomputeClustersNow();
-      overlapStacks.find((stack) => stack.members.some((member) => member.key === fanKey))?.marker.focus?.();
+      if (!root.contains(document.activeElement)) focusControlFor(fanKeys);
     });
 
     const toMember = (
@@ -3790,7 +3812,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       paddingInlineEnd: '',
     };
 
-    const yToLat = (y: number) => 90 - (y / VIEW_H) * 180;
     type ConfirmedLocation = {
       confirmationId: string;
       label: string;
@@ -4237,12 +4258,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const matrix = locationSvg?.getScreenCTM();
       if (!locationSvg || !matrix) return null;
       const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse());
-      const onMap = point.x >= 0 && point.x <= VIEW_W && point.y >= 0 && point.y <= MAP_VIEW_H;
-      if (!onMap) return null;
-      return {
-        lat: yToLat(point.y),
-        long: (point.x / VIEW_W) * 360 - 180,
-      };
+      return pickerPointToLocation({ x: point.x, y: point.y }, { width: VIEW_W, height: MAP_VIEW_H, worldHeight: VIEW_H });
     };
 
     let locationDragging = false;
@@ -4450,7 +4466,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     // clear it.
     window.addEventListener('scroll', () => {
       const active = document.activeElement;
-      if (active instanceof Element && root.contains(active) && active.matches('.gp-home-map-node-link:focus-visible')) return;
+      if (
+        active instanceof Element &&
+        root.contains(active) &&
+        active.matches('.gp-home-map-node-link:focus-visible, [data-home-map-cluster]:focus-visible, .gp-home-map-cluster-sat:focus-visible')
+      ) return;
       dropPointerFocus();
     }, { passive: true });
     window.addEventListener(PENDING_NODE_UPDATED_EVENT, renderLocalPending);
@@ -5134,7 +5154,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     box-sizing: border-box;
     flex: none;
     min-height: 34px;
-    padding: 3px 12px;
+    padding: var(--gp-space-xs) var(--gp-space-md);
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-pill);
     background: transparent;
@@ -5182,9 +5202,9 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     z-index: 3;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--gp-space-sm);
     max-width: calc(100% - 24px);
-    padding: 6px 6px 6px 14px;
+    padding: var(--gp-space-xs) var(--gp-space-xs) var(--gp-space-xs) var(--gp-space-md);
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-pill);
     background: var(--gp-map-pop-bg);
@@ -5632,13 +5652,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   }
 
   /* A quiet pill beside the map controls. The hero keeps the page's one lime
-     action. Its height matches the control groups next to it. */
+     action. Its height matches the control groups next to it: a 40px button,
+     their inner padding and border. */
   .gp-home-map-join {
     appearance: none;
     box-sizing: border-box;
     flex: none;
-    min-height: 50px;
-    padding: 0 18px;
+    min-height: calc(40px + var(--gp-space-xs) * 2 + 2px);
+    padding: 0 var(--gp-space-md);
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-pill);
     background: color-mix(in srgb, var(--gp-green-950) 74%, transparent);
@@ -7276,8 +7297,9 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
        node's bar. The band grows to fit the bar, so a selection covers none of
        the map; the page below moves down instead, on the tap that asked. */
     .gp-home-map-canvas {
-      --gp-map-edge: 8px;
-      --gp-map-row: 54px;
+      --gp-map-edge: var(--gp-space-sm);
+      /* One row of chrome: a 44px touch target, the row's padding and border. */
+      --gp-map-row: calc(44px + var(--gp-space-xs) * 2 + 2px);
       --gp-map-lower: var(--gp-map-row);
       aspect-ratio: auto;
       block-size: calc(44cqw + var(--gp-map-edge) * 4 + var(--gp-map-row) + var(--gp-map-lower));
@@ -7337,8 +7359,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       inset-block-start: auto;
       inset-block-end: calc(var(--gp-map-edge) * 2 + var(--gp-map-lower));
       max-width: calc(100% - var(--gp-map-edge) * 2);
-      padding: 4px;
-      gap: 4px;
+      padding: var(--gp-space-xs);
+      gap: var(--gp-space-xs);
       flex-wrap: nowrap;
       justify-content: flex-start;
       overflow-x: auto;
@@ -7439,8 +7461,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     }
 
     .gp-home-map-join {
-      min-height: 54px;
-      padding-inline: 14px;
+      min-height: var(--gp-map-row);
+      padding-inline: var(--gp-space-md);
     }
 
     /* The Show all chip ends the legend row, after the pills. */
