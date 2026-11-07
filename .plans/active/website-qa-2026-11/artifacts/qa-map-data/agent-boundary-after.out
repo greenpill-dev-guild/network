@@ -7,7 +7,7 @@
   },
   "status": 400,
   "error": "invalid_coordinates",
-  "message": "Latitude must be between -90 and 90, not at a pole."
+  "message": "A point on the edge of the map needs a confirmed place. Find and confirm your place."
  },
  {
   "case": "longitude exactly -180 (Amio pattern)",
@@ -17,7 +17,7 @@
   },
   "status": 400,
   "error": "invalid_coordinates",
-  "message": "Longitude must be between -180 and 180, not on the edge of the map."
+  "message": "A point on the edge of the map needs a confirmed place. Find and confirm your place."
  },
  {
   "case": "0,0 (Emmanuel Jacobson pattern)",
@@ -47,8 +47,21 @@
   },
   "status": 400,
   "error": "invalid_coordinates",
-  "message": "Latitude must be between -90 and 90, not at a pole."
+  "message": "Latitude must be between -90 and 90."
+ },
+ {
+  "case": "real place just inside the 180th meridian",
+  "sent": {
+   "lat": -16.8,
+   "long": 179.99
+  },
+  "status": 201,
+  "stored": {
+   "lat": -16.8,
+   "long": 179.99,
+   "status": "pending"
+  }
  }
 ]
-rows in local DB: []
-cleanup: deleted 0 QA rows
+rows in local DB: [{"name":"QA repro real place just inside the 180th meridian","lat":-16.8,"long":179.99,"status":"pending"}]
+cleanup: deleted 1 QA rows
