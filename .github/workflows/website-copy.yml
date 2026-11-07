@@ -1,0 +1,50 @@
+name: Website Copy
+
+# Fails a pull request that puts an em dash, or a spelling that renders as one,
+# into website copy (website QA, November 2026, finding 18). The rule and what
+# counts as copy live in scripts/website-em-dashes.ts; `bun run check:em-dashes`
+# runs the same check locally and inside `agentic:check`.
+#
+# Pull requests only. The hourly publish (github-pages.yml) never runs this
+# check, so steward copy from Directus cannot block it; that copy is cleaned in
+# Directus through an approved change set.
+#
+# The check only reads files. It needs no install, no secrets and no write
+# access, so the token is read-only and is not kept after checkout.
+
+on:
+  pull_request:
+    paths:
+      - "packages/website/**"
+      - "scripts/website-em-dashes.ts"
+      - "scripts/website-em-dashes.test.ts"
+      - ".github/workflows/website-copy.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: website-copy-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  em-dashes:
+    name: Em dashes in website copy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.10"
+
+      - name: Check website copy
+        run: bun scripts/website-em-dashes.ts
+
+      - name: Test the check
+        run: bun test ./scripts/website-em-dashes.test.ts
