@@ -5,7 +5,7 @@ Session `qa-chapters`, Linear PRD-625. Every chapter's public copy, links and lo
 ## Changed
 
 - **Production (Directus), applied 2026-11-07 03:22 to 03:24 UTC:** 153 field changes across 38 records (all 18 chapters, all 16 chapter initiatives, 4 steward profiles), exactly as in [`artifacts/qa-chapters-change-set.json`](../artifacts/qa-chapters-change-set.json) and the table below. Evidence under Production change set.
-- **Pull request** (PR_LINK, not merged):
+- **Pull request** ([#40](https://github.com/greenpill-dev-guild/network/pull/40), not merged):
   - `packages/website/src/lib/chapter-pages.ts` (new) and `packages/website/src/lib/operational-content.ts`: chapters with status `inactive` or `archived` get no page. The rule sits in `getOperationalChapterPages()`, which the chapter route, the chapter index, the home map, the sitemap and related-chapter links all read, so no link can point at a page that is not built. Forming chapters keep their pages. With the change set applied, six pages stop building: California, Denver, Dominican Republic, India, Uganda and Uncommons (all noindex, linked from nowhere on the site).
   - `scripts/public-content-contract.test.ts`: a test for the rule.
   - `packages/website/src/content/chapters-index.json`: removes internal notes from the `/chapters` meta description ("steward review gaps"), hero dek ("source-backed activity") and empty state; fixes the unrendered `body` note and the redirected Hub category link.
