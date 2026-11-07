@@ -115,7 +115,7 @@
       "actor": "claude",
       "lane": "qa_pass_2",
       "status": "completed",
-      "note": "Post-deploy checks on greenpill.network after Pages run 42420430610: shared cards on every page, the /chapters region filter, no em dash in page copy apart from one podcast feed title, no source-backed caption, footer links, no overflow at 375, no seams at 1920, network-agent ready."
+      "note": "Post-deploy checks on greenpill.network after Pages run 42420430610: shared cards on home, /chapters, a chapter, both guilds, /stories, a story, /library and /garden; the /chapters region filter, no em dash in page copy apart from one podcast feed title, no source-backed caption, footer links, no overflow at 375, no seams at 1920, network-agent ready."
     },
     {
       "timestamp": "2026-11-07T22:28:39Z",
