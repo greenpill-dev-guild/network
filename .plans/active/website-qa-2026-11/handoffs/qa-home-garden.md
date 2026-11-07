@@ -38,7 +38,7 @@ Other commands (run in this worktree; `bun` runs inside the dev machine):
 - `bun run --cwd packages/website check` (astro check): 0 errors, 0 warnings; 6 hints, none in files this PR touches.
 - `bun run build:website`: 47 pages built.
 - `bun run plans:validate`: 11 hubs valid.
-- `bun run ui:verify / /garden`: the build ran, then every rendering check was skipped: "No Chrome/Chromium binary found". The dev machine (linux/arm64) has no Chrome, Chromium or Playwright browser, and installing one needs Afo's OK. This lane gave no rendered evidence; the Brave checks below cover its layout and accessibility channels by hand, but not axe.
+- `bun run ui:verify / /garden`: **not run** (spec rule 3). The build ran, then every rendering check was skipped: "No Chrome/Chromium binary found". The dev machine (linux/arm64) has no Chrome, Chromium or Playwright browser, and installing one needs Afo's OK. The Brave checks below cover its layout and accessibility channels by hand, but not axe.
 - `fly secrets list -a network-agent`: names only (see D3).
 
 Brave QA (Afo's profile through Claude in Chrome, `Browser 1`), against the built site exported with `dm-export` and served on the Mac at `http://localhost:3321`:
@@ -117,5 +117,5 @@ Recommendation: B, with the card reworded to match what Paragraph sends, if Afo 
 
 - No new Telegram link yet (needs I1).
 - D3 is open; Subscribe still points at the Resend form.
-- `ui:verify` rendered nothing (no browser in the dev machine), so axe-core did not run.
+- `ui:verify` not run: it cannot render in the dev machine (no browser), so axe-core did not run.
 - Suggested follow-up, not in this scope: the `/garden` step body runs about 1,100px wide at 1440 (September audit, line length); a `max-inline-size: 65ch` on step copy would fix it.
