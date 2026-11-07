@@ -7,7 +7,7 @@ Findings 2, 3, 5, 6 and 20 from `reports/2026-11-06-qa-findings.md`.
 Pull request: https://github.com/greenpill-dev-guild/network/pull/34 (not merged)
 
 - **Subscribe (finding 5, D3).** Afo chose Paragraph ("Paragraph subscribe", 2026-11-06). Step 1 on home and `/garden` is now "Get Greenpill's posts by email" with a "Subscribe on Paragraph" button to `https://paragraph.com/@greenpill/subscribe`, the publication's signup page. The copy promises no cadence, and the Garden summary matches. The Garden page's Resend form, its script and its CSS are gone; the agent's `POST /newsletter/subscribe` route stays, unused. Nothing was written to production.
-- **Telegram (finding 6).** Home and Garden take the invite from `content/social-links.json` (`telegram`). The Telegram step's own `cta.href` in `garden.json` is empty, and so is the unused `telegramPreview` copy. The Garden page's fallback step list, which held a third copy, is gone. This also repairs the buttons today: the `social-links.json` invite (`t.me/+g9TM…`) opens the "Greenpill.network" group (1,037 members on 2026-11-06), while the old hard-coded one (`t.me/+e-aa…`) opens a generic t.me page with no group name, which suggests it was revoked. The footer still uses the old one (see requests below).
+- **Telegram (finding 6).** Home and Garden take the invite from `content/social-links.json` (`telegram`), which now holds the approval-gated invite Afo created on 2026-11-07 (I1, below). Garden step 2 says so: "Ask to join the shared Greenpill chat. An admin approves new members to keep out spam. Lurk as long as you like." The Telegram step's own `cta.href` in `garden.json` is empty, and so is the unused `telegramPreview` copy. The Garden page's fallback step list, which held a third copy, is gone. Before this PR the buttons used a hard-coded invite (`t.me/+e-aa…`) that opens a generic t.me page with no group name, which suggests it was revoked. The footer still hard-codes it on `main`; `qa-brand-shell`'s PR #39 makes the footer read `social-links.json` too.
 - **Commons bento (finding 2).** The "Knowledge map · In design" and "Open the toolkit" tiles are removed. The grid is two rows: books on the left spanning both, podcast over the guild pair on the right. At 1440 the heights match (books 609px; podcast 322px, 20px gap, guild pair 267px). The dek no longer mentions field guides, since no guide tile remains. At `qa-guilds`' request, the Dev Guild tile's footer is now a static label, "Open-source coordination tools" (from the guild's public summary), instead of counting `outputs`, which their pending Directus change set clears. The podcast tile's count now comes from `src/data/podcast-feed-snapshot.json` (`episodeCount`, as the Library does), and its "Listen on Apple Podcasts" button opens Apple Podcasts; it used to open the raw Libsyn RSS XML via a `home-page.json` proof signal, which is now removed.
 - **Ecosystem (finding 3).** Two labeled rows read from `home-page.json` (`ecosystem.partners`, `ecosystem.tools`), each tile linking to the organization's own site. Partners and collaborators: Regen Coordination, ReFi DAO, Bloom Network, Bread Cooperative, Gitcoin, Artizen, VDAO, Network Nations, JournoDAO. Tools we build with: Gardens, Hypercerts, Karma. Every entry has a public source from 2025 or 2026 (below). Octant and Giveth were dropped (latest sourced joint activity is 2024); Bloom Network and Artizen are new. The page skips any entry without a name or an `https://` link.
 - **Ramp labels (finding 20).** "Lowest friction" to "Highest friction" become Start light, Listen first, Find your fit, When you're ready. All four cards stay (D1). Card 03 is reworded and shorter, so the home card's four-line clamp no longer cuts it mid-sentence.
@@ -24,7 +24,17 @@ No change to `package.json`, the lockfile, `.github/workflows/**`, `CLAUDE.md`, 
 
 ## Evidence
 
-AGENTS.md pre-PR gate, rerun on the empty-ramp fix (also passed on `c69c8c3`, `658b2aa` and `1255293`, with 33 content tests before the two Garden ramp tests):
+AGENTS.md pre-PR gate on the final tree (2026-11-07): the I1 invite commit `adeb3b1`, merged with `main` in `55581b5` after #33, #35, #36, #37, #38 and #40 landed:
+
+- `bun run typecheck`: exit 0.
+- `bun run test:content`: 43 pass, 0 fail (the merged PRs added tests).
+- `bun run agentic:check`: exit 0; policy check passed, 11 plan hubs valid, `ui:check` 0 hard, 0 warn.
+- `bun run build`: exit 0, 46 pages.
+- `astro check`: 1 error, not in this PR's files: `src/lib/operational-content.ts:114` (`hasChapterPage(item.data)`, ts(2559)), which matches `main` and came with #40 (`03ca9c5`). On `adeb3b1` before the merge it was 0 errors, 0 warnings.
+
+Brave QA of the I1 change on that merged build (Afo's profile; 1460 is the window, 1024 and 375 through the same-origin iframe harness): home and `/garden` have no horizontal overflow at any width; step 2 shows the new copy, unclamped and without em dashes; both "Open Telegram" buttons link to `https://t.me/+Ff6zs580IVs2MzEx` (166 x 48px at 1460; at 375, 277 x 48px on home and 327 x 48px on `/garden`); the home ramp is two columns at 1024. The footer still links `t.me/+e-aa…` on this build, as expected until #39 merges.
+
+Earlier gate, on the empty-ramp fix (also passed on `c69c8c3`, `658b2aa` and `1255293`, with 33 content tests before the two Garden ramp tests):
 
 - `bun run typecheck`: exit 0, no diagnostics.
 - `bun run test:content`: 35 pass, 0 fail.
@@ -90,13 +100,11 @@ None. Nothing was written to production, and no signup was submitted.
 
 ## Open items and decisions needed
 
-### I1: Telegram invite (for Afo)
+### I1: Telegram invite (done)
 
-Please create a new invite link for the Greenpill.network group with "Request admin approval" turned on and send it to me. I will put it in `social-links.json` (`telegram`) in this PR. The `social-links.json` invite today is `t.me/+g9TM…` (a plain join link). Once approval is on, I suggest step 2's copy says so: "Ask to join the shared Greenpill chat. An admin approves new members to keep out spam. Lurk as long as you like."
+Afo created a new invite for the Greenpill.network group with "Request admin approval" on, and the orchestrating session relayed it on 2026-11-07: `https://t.me/+Ff6zs580IVs2MzEx`. It replaces the plain join link `t.me/+g9TM…` in `social-links.json` (`telegram`), and step 2's copy now says an admin approves new members. In Brave, the invite's t.me page shows "Greenpill.network", "1 037 members" and a "Join Group" button; that public page does not say whether approval is on, so the approval gate rests on Afo's setup. I did not open the invite in Telegram or send a join request.
 
-Revoke the old links only after the new invite is deployed and verified on home, Garden and the footer; revoking earlier breaks the live buttons in between (review on PR #34, now in the hub's I1).
-
-PR #34 should not merge before this lands (Codex P1 on the PR): the live buttons point at an invite that looks revoked, so merging with the plain-join link would open a new way in for spam instead of closing one.
+Revoke the old links only after the new invite is deployed and verified on home, Garden and the footer; revoking earlier breaks the live buttons in between. Afo handles the revocation. The footer picks up `social-links.json` when `qa-brand-shell`'s PR #39 merges.
 
 ### D3: newsletter (decided: Paragraph)
 
@@ -114,7 +122,7 @@ Follow-ups outside this PR: publishing the 2025 review or 2026 thesis would give
 
 ### Requests to other sessions
 
-- **`qa-brand-shell`:** `SiteFooter.astro:34` still hard-codes `t.me/+e-aa2Ed3LWVlYjNh`, which looks revoked; please read `social-links.json` `telegram`. The ecosystem tiles (`index.astro`) and the Garden step buttons (`garden/index.astro`) still carry their existing hand-set `target="_blank"` and `rel`; your site-wide rule can replace them. The home ramp's Telegram button sets no `target` and relies on your rule in PR #39 (CodeRabbit flagged it on PR #34).
+- **`qa-brand-shell`:** handled in PR #39, whose footer reads `social-links.json` `telegram`; on `main`, `SiteFooter.astro:34` still hard-codes `t.me/+e-aa2Ed3LWVlYjNh`, which looks revoked. The ecosystem tiles (`index.astro`) and the Garden step buttons (`garden/index.astro`) still carry their existing hand-set `target="_blank"` and `rel`; your site-wide rule can replace them. The home ramp's Telegram button sets no `target` and relies on your rule in PR #39 (CodeRabbit flagged it on PR #34).
 - **`qa-library`:** resolved. Your PR fixes `podcast.json` (title and em dash). The home tile now reads `podcastFeed.episodeCount`, so your build-time feed refresh updates it too; until that lands it shows the committed June count (296).
 - **`qa-chapters`, `qa-guilds`, `qa-stories`:** `checker.gitcoin.co` no longer resolves (DNS failure in Brave on 2026-11-06). It is linked from the Kenya and Brasil chapter seeds, the Grant Ships project seed, the Brasil GG20 story and the committed snapshot.
 - **`qa-assessment`:** an option label in `GardenAssessment.astro` has an em dash ("Understanding the ideas — regen, public goods, coordination").
@@ -122,7 +130,6 @@ Follow-ups outside this PR: publishing the 2025 review or 2026 thesis would give
 
 ### Not done here
 
-- No new Telegram link yet (needs I1).
 - `ui:verify` not run: it cannot render in the dev machine (no browser), so axe-core did not run.
 - Suggested follow-up, not in this scope: the `/garden` step body runs about 1,100px wide at 1440 (September audit, line length); a `max-inline-size: 65ch` on step copy would fix it.
 - Suggested follow-up: the Keystatic Garden editor still lets an editor save an empty step list; the pages now handle that, but the editor could refuse it. `@keystatic/core` 0.5.50 array fields take `validation: { length: { min: 1 } }` (error "Must have at least 1 element"). Not added here, because the Keystatic editor can't be exercised in this session (the shared dev ports).
