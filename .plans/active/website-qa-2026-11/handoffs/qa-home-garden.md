@@ -8,7 +8,7 @@ Pull request: https://github.com/greenpill-dev-guild/network/pull/34 (not merged
 
 - **Subscribe (finding 5, D3).** Afo chose Paragraph ("Paragraph subscribe", 2026-11-06). Step 1 on home and `/garden` is now "Get Greenpill's posts by email" with a "Subscribe on Paragraph" button to `https://paragraph.com/@greenpill/subscribe`, the publication's signup page. The copy promises no cadence, and the Garden summary matches. The Garden page's Resend form, its script and its CSS are gone; the agent's `POST /newsletter/subscribe` route stays, unused. Nothing was written to production.
 - **Telegram (finding 6).** Home and Garden take the invite from `content/social-links.json` (`telegram`). The Telegram step's own `cta.href` in `garden.json` is empty, and so is the unused `telegramPreview` copy. The Garden page's fallback step list, which held a third copy, is gone. This also repairs the buttons today: the `social-links.json` invite (`t.me/+g9TM…`) opens the "Greenpill.network" group (1,037 members on 2026-11-06), while the old hard-coded one (`t.me/+e-aa…`) opens a generic t.me page with no group name, which suggests it was revoked. The footer still uses the old one (see requests below).
-- **Commons bento (finding 2).** The "Knowledge map · In design" and "Open the toolkit" tiles are removed. The grid is two rows: books on the left spanning both, podcast over the guild pair on the right. At 1440 the heights match (books 609px; podcast 322px, 20px gap, guild pair 267px). The dek no longer mentions field guides, since no guide tile remains.
+- **Commons bento (finding 2).** The "Knowledge map · In design" and "Open the toolkit" tiles are removed. The grid is two rows: books on the left spanning both, podcast over the guild pair on the right. At 1440 the heights match (books 609px; podcast 322px, 20px gap, guild pair 267px). The dek no longer mentions field guides, since no guide tile remains. At `qa-guilds`' request, the Dev Guild tile's footer is now a static label, "Open-source coordination tools" (from the guild's public summary), instead of counting `outputs`, which their pending Directus change set clears.
 - **Ecosystem (finding 3).** Two labeled rows read from `home-page.json` (`ecosystem.partners`, `ecosystem.tools`), each tile linking to the organization's own site. Partners and collaborators: Regen Coordination, ReFi DAO, Bloom Network, Bread Cooperative, Gitcoin, Artizen, VDAO, Network Nations, JournoDAO. Tools we build with: Gardens, Hypercerts, Karma. Every entry has a public source from 2025 or 2026 (below). Octant and Giveth were dropped (latest sourced joint activity is 2024); Bloom Network and Artizen are new. The page skips any entry without a name or an `https://` link.
 - **Ramp labels (finding 20).** "Lowest friction" to "Highest friction" become Start light, Listen first, Find your fit, When you're ready. All four cards stay (D1). Card 03 is reworded and shorter, so the home card's four-line clamp no longer cuts it mid-sentence.
 - **Em dashes.** None left in copy these files render: the commons dek, the ecosystem dek, and Garden steps 2 and 3.
@@ -22,7 +22,7 @@ No change to `package.json`, the lockfile, `.github/workflows/**`, `CLAUDE.md`, 
 
 ## Evidence
 
-AGENTS.md pre-PR gate, rerun on commit `1255293` (after the D3 change):
+AGENTS.md pre-PR gate, rerun on commit `658b2aa` (after the Dev Guild label change; also passed on `1255293` after D3):
 
 - `bun run typecheck`: exit 0, no diagnostics.
 - `bun run test:content`: 33 pass, 0 fail.
