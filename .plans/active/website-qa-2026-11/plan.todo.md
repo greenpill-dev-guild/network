@@ -67,12 +67,14 @@ Batch A starts first because it covers the broken interactions and the accuracy 
 - [ ] Fix the legend overflow with the standard fieldset reset.
 - [ ] Decide with Afo which questions take several answers; convert those to checkbox groups and adjust scoring and the result copy.
 - [ ] Keep answers on the device as today; keyboard and screen reader behavior verified.
+- [ ] Carried from `qa-home-garden`: the option label "Understanding the ideas … regen, public goods, coordination" uses an em dash.
 
 ### `qa-library` (findings 10, 11, 12)
 
 - [ ] Book detail dialog on native `<dialog>`: larger cover, description, read or download the English PDF, every translation, and every store or edition link from `formats`. The cover stays a working link without JavaScript.
 - [ ] Podcast: run the feed snapshot in the scheduled build so episodes stay current; check that players work; take the episode count from the feed.
 - [ ] Remove the Knowledge Garden block and guides for protocols that are not active; ask Afo about GreenSci (I4). Keep the guild cards with `id="guilds"`.
+- [ ] Carried from `qa-home-garden`: `podcast.json` `title` reads "Learn > Podcast" on the home tile (July copy: "The Greenpill Podcast"), and `secondaryDescription` has an em dash. Expose the feed's episode count (300 items on 2026-11-06; the home tile still says 296 from `home-page.json` `proofSignals`) and name the field in your handoff so the home tile can read it.
 
 ### `qa-brand-shell` (findings 6, 7, 8, 16, 17, 20)
 
@@ -80,16 +82,19 @@ Batch A starts first because it covers the broken interactions and the accuracy 
 - [ ] One rule for external links: new tab, `rel="noopener"`, and an accessible "opens in a new tab" hint. Prefer a build-time step over client script.
 - [ ] Footer: Farcaster instead of Warpcast, LinkedIn, YouTube, Luma, Code of Conduct; Telegram from `social-links.json`; friendlier bottom row. Leave the ecoregion credit line to `qa-map-data` (it goes with the layer); rebase on `main` before editing the bottom row if that PR has merged. Edit `social-links.json` only after the `qa-home-garden` PR has merged, rebased on `main`.
 - [ ] Brand kit (I3): current logo in the header, favicon, touch icon and default share image; book art only where a book is the subject.
+- [ ] Carried from `qa-home-garden`: `SiteFooter.astro:34` still hard-codes `t.me/+e-aa2Ed3LWVlYjNh`, which now opens a generic page (likely revoked); read `social-links.json` `telegram`. The ecosystem tiles (`index.astro`) and Garden step buttons (`garden/index.astro`) keep hand-set `target` and `rel` that the site-wide rule should replace.
 
 ### `qa-chapters` (PRD-625)
 
 - [ ] For each of the 18 chapters, check the public copy, links and location against public sources. Remove internal-note copy (the September audit lists 10 affected rows).
 - [ ] Decide with Afo how dormant and forming chapters should read.
 - [ ] Directus change set; stop for approval.
+- [ ] Carried from `qa-home-garden`: `checker.gitcoin.co` no longer resolves (DNS failure on 2026-11-06); the Kenya and Brasil chapter rows link it.
 
 ### `qa-map-polish` (PRD-739)
 
 - [ ] P0 items from `docs/design/map-polish-audit.md`: container sizing, clustering across node types, filter reset and empty state, stale hover and selection state, "Join the map" trigger with "Find your people" browsing instead.
+- [ ] Carried from `qa-home-garden`: at 375 the legend items are wider than the viewport, and the "Map list" heading is an h3 directly under the page h1.
 
 ### `qa-system-pass`
 
