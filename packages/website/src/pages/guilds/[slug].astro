@@ -76,6 +76,11 @@ const APPEARANCE_VERBS: Record<string, string> = {
 const avatarName = (name: unknown) => text(name).replace(/[()]/g, '');
 const appearanceLinkLabel = (appearance: any) =>
   `${APPEARANCE_VERBS[text(appearance.kind).toLowerCase()] ?? 'Open'} on ${destinationLabel(text(appearance.href))}`;
+// "With Afo, Coi, Matt" for the people an appearance credits; empty when it names none.
+const appearancePeople = (appearance: any) => {
+  const names = list(appearance.people).map(text).filter(Boolean);
+  return names.length > 0 ? `With ${names.join(', ')}` : '';
+};
 
 // Short mono labels for key links (DESIGN.md: text labels, not icons).
 const LINK_GLYPHS: Record<string, string> = {
@@ -306,9 +311,7 @@ const projects = (await getOperationalProjects())
               <div class="gp-guild-card-body">
                 <Meta items={[text(leadAppearance.source), formatContentDate(leadAppearance.date)].filter(Boolean)} accentIndex={0} />
                 <Text variant="h3">{leadAppearance.title}</Text>
-                {list(leadAppearance.people).length > 0 && (
-                  <Text variant="body-lg">With {list(leadAppearance.people).map(text).filter(Boolean).join(', ')}</Text>
-                )}
+                {appearancePeople(leadAppearance) && <Text variant="body-lg">{appearancePeople(leadAppearance)}</Text>}
                 <div class="gp-guild-card-foot">
                   <ArrowLink href={leadAppearance.href}>{appearanceLinkLabel(leadAppearance)}</ArrowLink>
                 </div>
@@ -323,6 +326,7 @@ const projects = (await getOperationalProjects())
                       <span class="gp-guild-media-copy">
                         <Meta items={[text(appearance.source), formatContentDate(appearance.date)].filter(Boolean)} accentIndex={0} />
                         <span class="gp-guild-media-title">{appearance.title}</span>
+                        {appearancePeople(appearance) && <span class="gp-guild-media-people">{appearancePeople(appearance)}</span>}
                       </span>
                       <span class="gp-guild-media-arrow" aria-hidden="true">&rarr;</span>
                     </a>
@@ -655,6 +659,11 @@ const projects = (await getOperationalProjects())
     font-size: var(--gp-body-lg);
     font-weight: 600;
     line-height: 1.4;
+  }
+
+  .gp-guild-media-people {
+    color: var(--gp-fg-muted);
+    font-size: var(--gp-body-sm);
   }
 
   .gp-guild-media-arrow {
