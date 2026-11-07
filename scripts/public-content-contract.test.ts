@@ -12,6 +12,7 @@ import {
   toPublicOperationalContentSnapshot,
   toPublicWebsiteBuildMetadata,
 } from '@greenpill-network/shared/public-content';
+import { formatContentDate } from '../packages/website/src/lib/content-dates.ts';
 import {
   buildDirectusOperationalPermissionPlan,
 } from './directus-operational-content-setup.ts';
@@ -1078,4 +1079,19 @@ test('operational content migration preserves existing Directus-owned rows', asy
   assert.doesNotMatch(script, /data = excluded\.data/);
   assert.match(migration, /join content\.guilds guild on guild\.slug = project\.guild_slug/);
   assert.match(migration, /guild\.publication_status = 'published'/);
+});
+
+test('content dates read as words and never show a day that is not on the calendar', () => {
+  assert.equal(formatContentDate('2026'), '2026');
+  assert.equal(formatContentDate('2026-03'), 'Mar 2026');
+  assert.equal(formatContentDate(' 2026-03-05 '), 'Mar 5, 2026');
+  assert.equal(formatContentDate('2024-02-29'), 'Feb 29, 2024');
+  assert.equal(formatContentDate('2026-02-29'), 'Feb 2026');
+  assert.equal(formatContentDate('2026-02-31'), 'Feb 2026');
+  assert.equal(formatContentDate('2026-04-31'), 'Apr 2026');
+  assert.equal(formatContentDate('2026-03-00'), 'Mar 2026');
+  assert.equal(formatContentDate('2026-13'), '2026');
+  assert.equal(formatContentDate('2026-00-10'), '2026');
+  assert.equal(formatContentDate('March 2026'), '');
+  assert.equal(formatContentDate(undefined), '');
 });
