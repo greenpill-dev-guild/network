@@ -1,11 +1,11 @@
 {
-  "title": "Dev Guild Regenerative Stack",
+  "title": "The Dev Guild's Regenerative Stack",
   "status": "published",
   "category": "guild",
   "publishDate": "2026-03-23",
-  "updatedDate": "2026-03-23",
-  "dek": "The Dev Guild Paragraph series gives the site a public story for PGSP, Squad Staking, Green Goods, GreenWill, Allo allocation tooling, and capital formation.",
-  "excerpt": "A source-backed Dev Guild story connecting validator rewards, impact verification, reputation, allocation tools, and sustainable public-goods funding.",
+  "updatedDate": "2026-11-06",
+  "dek": "How the Greenpill Dev Guild plans to fund regenerative work, from squad staking to Green Goods, in its own posts on Paragraph.",
+  "excerpt": "The Dev Guild's four-layer stack links validator rewards, allocation tools, reputation and impact reporting into one funding loop.",
   "region": "global",
   "tag": "Dev Guild",
   "tags": [
@@ -14,10 +14,10 @@
     "coordination-tools",
     "capital-formation"
   ],
-  "body": "The Greenpill Dev Guild's Paragraph series now gives the website a public source trail for the regenerative stack it has been describing across grants, tools, and builder updates.\n\nThe Public Goods Staking Protocol v0 article frames validator infrastructure, distributed validator technology, and vault routing as a way to create recurring funding for public goods. The earlier Squad Staking article provides the community-staking foundation, while the Capital Formation article connects that yield-bearing path to Green Goods and broader impact financing.\n\nThe same series also documents the application and social layers: Green Goods for visible and verifiable regenerative work, GreenWill for reputation and governance participation, and Allo-aligned allocation tools such as grant ships, conviction voting, streaming funds, and cookie jars.\n\nFor the website, this should read as one Dev Guild workstream story. Individual Paragraph posts belong in the Library and project proof links rather than becoming a scattered set of project pages.\n\n## Sources\n\n- S059: https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0\n- S060: https://paragraph.com/@greenpilldevguild/pioneering-a-regenerative-stack\n- S061: https://paragraph.com/@greenpilldevguild/squad-staking-turning-validator-rewards-into-public-good\n- S062: https://paragraph.com/@greenpilldevguild/the-allo-alliance-innovating-capital-allocation-on-chain\n- S063: https://paragraph.com/@greenpilldevguild/greenwill-powering-governance-through-reputation-tracking\n- S064: https://paragraph.com/@greenpilldevguild/green-goods-simplifying-impact-capture-and-exchange\n- S065: https://paragraph.com/@greenpilldevguild/capital-formation-turning-impact-into-sustainable-revenue\n- S066: https://paragraph.com/@greenpilldevguild/validating-the-regenerative-stack",
+  "body": "Since it began in October 2023, the Greenpill Dev Guild has looked for ways to fund regenerative work from the impact it creates, rather than from one grant after another. Between June 30 and July 6, 2025, the guild published a seven-part series on Paragraph, Pioneering a Regenerative Stack, describing its answer as four connected layers of the Ethereum ecosystem.\n\n## Four layers\n\n- Blockchain: squad staking, where a small group stakes 32 ETH together with tools from Obol, Dappnode and Lido, so validator rewards can fund public goods.\n- Protocol: the Allo Alliance, where builders work on allocation tools such as Grant Ships, conviction voting, streaming funds and cookie jars.\n- Social: GreenWill, a reputation tool that turns regenerative actions into a verifiable record for governance.\n- Application: Green Goods, an app that makes grassroots conservation work visible, verifiable and fundable.\n\nThe series closed with Capital Formation, on how verified impact data could connect the stack to larger pools of funding, and Validating the Regenerative Stack, a roadmap for pilots in the second half of 2025.\n\n## The Public Goods Staking Protocol\n\nOn March 23, 2026, the guild published The Public Goods Staking Protocol v0. In it, small squads use distributed validator technology to run Ethereum validators together and send the yield to Octant vaults, which keep the principal separate so only the yield is spent. The protocol builds on Dappnode, Obol DVT, the Lido Community Staking Module and Octant Vaults. With a 2.4 ETH bond, a squad can access 32 ETH of delegated capital to run a validator.",
   "image": "/images/guilds/dev-guild-regenerative-stack.jpg",
-  "author": "Greenpill Network research",
-  "authorRole": "Source-backed seed copy",
+  "author": "",
+  "authorRole": "",
   "authorBio": "",
   "authorSlug": "",
   "authorAvatar": "",
@@ -25,12 +25,12 @@
   "relatedGuild": "dev-guild",
   "relatedStorySlugs": [
     "growing-greenpill-impact-framework",
-    "greenpill-2026-thesis"
+    "greenpill-nigeria-tech-and-sun-round"
   ],
   "continueReadingStorySlugs": [
     "growing-greenpill-impact-framework",
-    "greenpill-garden-season-one",
-    "greenpill-2026-thesis"
+    "greenpill-nigeria-tech-and-sun-round",
+    "greenpill-garden-season-one"
   ],
   "themeSlugs": [
     "opensrc",
@@ -42,34 +42,64 @@
   "translations": [],
   "proofSignals": [
     {
-      "label": "PGSP v0",
-      "value": "Paragraph article",
-      "source": "S059",
-      "href": "https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0"
-    },
-    {
-      "label": "Regenerative Stack",
-      "value": "Series overview",
-      "source": "S060",
+      "label": "Greenpill Dev Guild, June 30, 2025",
+      "value": "Pioneering A Regenerative Stack",
+      "source": "Paragraph",
       "href": "https://paragraph.com/@greenpilldevguild/pioneering-a-regenerative-stack"
     },
     {
-      "label": "Validating the stack",
-      "value": "Road-ahead update",
-      "source": "S066",
+      "label": "Greenpill Dev Guild, July 1, 2025",
+      "value": "Squad Staking",
+      "source": "Paragraph",
+      "href": "https://paragraph.com/@greenpilldevguild/squad-staking-turning-validator-rewards-into-public-good"
+    },
+    {
+      "label": "Greenpill Dev Guild, July 2, 2025",
+      "value": "The Allo Alliance",
+      "source": "Paragraph",
+      "href": "https://paragraph.com/@greenpilldevguild/the-allo-alliance-innovating-capital-allocation-on-chain"
+    },
+    {
+      "label": "Greenpill Dev Guild, July 3, 2025",
+      "value": "GreenWill",
+      "source": "Paragraph",
+      "href": "https://paragraph.com/@greenpilldevguild/greenwill-powering-governance-through-reputation-tracking"
+    },
+    {
+      "label": "Greenpill Dev Guild, July 4, 2025",
+      "value": "Green Goods",
+      "source": "Paragraph",
+      "href": "https://paragraph.com/@greenpilldevguild/green-goods-simplifying-impact-capture-and-exchange"
+    },
+    {
+      "label": "Greenpill Dev Guild, July 5, 2025",
+      "value": "Capital Formation",
+      "source": "Paragraph",
+      "href": "https://paragraph.com/@greenpilldevguild/capital-formation-turning-impact-into-sustainable-revenue"
+    },
+    {
+      "label": "Greenpill Dev Guild, July 6, 2025",
+      "value": "Validating The Regenerative Stack",
+      "source": "Paragraph",
       "href": "https://paragraph.com/@greenpilldevguild/validating-the-regenerative-stack"
+    },
+    {
+      "label": "Greenpill Dev Guild, March 23, 2026",
+      "value": "The Public Goods Staking Protocol v0",
+      "source": "Paragraph",
+      "href": "https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0"
     }
   ],
   "featuredWeight": 92,
-  "readTime": "4 min read",
+  "readTime": "",
   "media": {
     "image": "/images/guilds/dev-guild-regenerative-stack.jpg",
-    "imageAlt": "Infographic for the Greenpill Dev Guild regenerative stack.",
+    "imageAlt": "Cover image for the Dev Guild's post Validating the Regenerative Stack: a layered stack inside a ring of project icons.",
     "ogImage": "/images/guilds/dev-guild-regenerative-stack.jpg"
   },
   "seo": {
-    "title": "Dev Guild Regenerative Stack · Greenpill Stories",
-    "description": "Source-backed story for the Greenpill Dev Guild regenerative stack, PGSP, Squad Staking, Green Goods, GreenWill, and allocation tooling.",
+    "title": "The Dev Guild's Regenerative Stack · Greenpill Stories",
+    "description": "How the Greenpill Dev Guild connects squad staking, allocation tools, GreenWill and Green Goods to fund regenerative work, and its 2026 Public Goods Staking Protocol.",
     "ogImage": "/images/guilds/dev-guild-regenerative-stack.jpg",
     "canonicalPath": "/stories/dev-guild-regenerative-stack",
     "noindex": false
