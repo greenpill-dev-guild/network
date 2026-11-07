@@ -14,6 +14,8 @@ Five commits on `main` at `ad466a2`. The first two are the paused October work, 
 | `25a5c25` | Stacking across node types, finished from the October WIP (`ff72c82`), plus hover from geometry only and stale-state clearing. Details below. |
 | `f504581` | The compact map keeps its legend and controls in a band below the drawing instead of over it. |
 
+Review follow-up `b2da3fe` (Codex on #41): a click landing directly on a fan satellite or stack marker no longer bubbles on to the touch fallback that opens the nearest pin within 44 px, and closing the node list gives focus back to whatever opened it (the hero link or the List toggle). Both were checked in Brave; the contract tests pass (60). The two review threads have replies; resolving them was refused by this session's permission check, so they stay open for Afo.
+
 Not carried: `63e5316` (a test fix that `main` already has as `e8810f3`/`6eee884`). Checked against PR #35 on `main`: the coordinate rules, the chapter-anchor guard (`isPublicMapCoordinate`) and the ecoregion removal are untouched, and nothing in `HomeMap.astro` mentions a region any more.
 
 ### P0 items
