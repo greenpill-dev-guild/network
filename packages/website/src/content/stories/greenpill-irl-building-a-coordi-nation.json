@@ -1,0 +1,74 @@
+{
+  "title": "Greenpill IRL, Episode 1: Building a Coordi-Nation",
+  "status": "published",
+  "category": "program",
+  "publishDate": "2026-11-05",
+  "updatedDate": "",
+  "dek": "The Greenpill podcast's new series about the network itself opens with Kevin Owocki, Matt and Afolabi looking back at three years of Greenpill.",
+  "excerpt": "A 49-minute conversation on what ties the network together, what worked and what didn't, and where Greenpill goes into 2027.",
+  "region": "global",
+  "tag": "Podcast",
+  "tags": [
+    "podcast",
+    "greenpill-irl",
+    "network"
+  ],
+  "body": "On November 5, 2026, the Greenpill podcast released the first episode of Greenpill IRL, a new series about the network itself: its chapters, stewards, tools and lessons. Where the main show has mostly been conversations about ideas, Greenpill IRL looks at the people and the work behind the network. Episode 1 is the \"where we are and how we got here\" conversation, and future episodes will visit the chapters.\n\nIn \"Building a Coordi-Nation\", Kevin Owocki sits down with stewards Matt (Matty Compost) and Afolabi to look back at three years of Greenpill, from a meme and a book to local chapters around the world.\n\n## What they cover\n\n- How Matt and Afolabi found Greenpill, and a tour of the chapters, including Greenpill NYC's work with Gardens and Octant vaults\n- What ties the network together: Stewards Syncs, the Greenpill Garden and onboarding people into local action\n- What worked and what didn't: burnout, the end of easy grant money, AI and coordinating across time zones\n- Losing Izzy, and keeping the network alive\n- Tech & Sun, Greenpill Nigeria's solar-powered hub for university students\n- Regen Knowledge Commons, knowledge sovereignty and sharing knowledge with local AI\n- Green Goods: its origins, gardens and local endowments, and closing the loop from documented impact to funding\n- What's next: stewardship, accounting and curation, the case for endowment-style structures, Kevin on rebuilding Gitcoin, and a cosmolocal future for Greenpill heading into 2027\n\nOn November 6, Afolabi opened a thread on the Regen Coordination Hub inviting chapter stewards to share what worked for them this year, to point out anything the episode got wrong or left out, and to nominate the next guests.",
+  "image": "",
+  "author": "",
+  "authorRole": "",
+  "authorBio": "",
+  "authorSlug": "",
+  "authorAvatar": "",
+  "relatedChapter": "",
+  "relatedGuild": "",
+  "relatedStorySlugs": [
+    "network-nations-podcast-series",
+    "greenpill-garden-season-one"
+  ],
+  "continueReadingStorySlugs": [
+    "network-nations-podcast-series",
+    "greenpill-nigeria-tech-and-sun-round",
+    "greenpill-garden-season-one"
+  ],
+  "themeSlugs": [
+    "stories",
+    "public",
+    "coordination-tools"
+  ],
+  "translations": [],
+  "proofSignals": [
+    {
+      "label": "Episode page, November 5, 2026",
+      "value": "Greenpill IRL: Building a Coordi-Nation with Kevin Owocki, Matt & Afolabi",
+      "source": "Greenpill podcast",
+      "href": "https://128c3f4a-6136-477c-8898-83d022a2d198.libsyn.com/greenpill-irl-building-a-coordi-nation-with-kevin-owocki-matt-afo"
+    },
+    {
+      "label": "Discussion thread, November 6, 2026",
+      "value": "Greenpill IRL · Ep 1: Building a Coordi-Nation",
+      "source": "Regen Coordination Hub",
+      "href": "https://hub.regencoordination.xyz/t/478"
+    },
+    {
+      "label": "@greenpillnet, November 6, 2026",
+      "value": "New Greenpill pod: Greenpill IRL, Ep 1",
+      "source": "X",
+      "href": "https://x.com/greenpillnet/status/2118790265918132296"
+    }
+  ],
+  "featuredWeight": 99,
+  "readTime": "",
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Greenpill IRL, Episode 1: Building a Coordi-Nation · Greenpill Stories",
+    "description": "Greenpill IRL, a new series on the Greenpill podcast, opens with Kevin Owocki, Matt and Afolabi on three years of the Greenpill Network.",
+    "ogImage": "",
+    "canonicalPath": "/stories/greenpill-irl-building-a-coordi-nation",
+    "noindex": false
+  }
+}

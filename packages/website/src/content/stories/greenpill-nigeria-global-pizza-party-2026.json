@@ -1,0 +1,73 @@
+{
+  "title": "Global Pizza Party in Awka",
+  "status": "published",
+  "category": "chapter",
+  "publishDate": "2026-05-22",
+  "updatedDate": "",
+  "dek": "Greenpill Nigeria, PizzaDAO and Bitcoin Anambra brought 145 people together in Awka for Global Pizza Party on May 22, 2026.",
+  "excerpt": "An afternoon of pizza, networking and conversations about blockchain and Bitcoin, with groups from across Anambra's tech community.",
+  "region": "africa",
+  "tag": "Local Events",
+  "tags": [
+    "global-pizza-party",
+    "awka",
+    "nigeria"
+  ],
+  "body": "On Friday, May 22, 2026, Greenpill Nigeria joined PizzaDAO's Global Pizza Party with a gathering in Awka, Anambra State. The event, listed on RSV.Pizza, ran from 1:00 to 6:00 PM, with hosts including Amio, PizzaDAO, Own The Doge, ENS and World Pizza Champions. Bitcoin Anambra, Greenpill Nigeria and PizzaDAO were the key partners.\n\nAccording to the event recap, 136 people RSVPed online and 145 signed in on site. Participants included members of TAS Hub UNIZIK, Anambra Techies, the Anambra Web3 Conference and the Anambra Startup Network. Over pizza, people networked and talked about blockchain, Bitcoin and community development, and community members could also join online.\n\nIt was the third time Amio has hosted a Global Pizza Party in Anambra. In Greenpill Nigeria's report to the Greenpill Fund for Regenerative Gatherings, the chapter wrote that relaxed, experiential events like this one build strong relationships across the local Web3 and public goods community.",
+  "image": "",
+  "author": "",
+  "authorRole": "",
+  "authorBio": "",
+  "authorSlug": "",
+  "authorAvatar": "",
+  "relatedChapter": "nigeria",
+  "relatedGuild": "",
+  "relatedStorySlugs": [
+    "greenpill-nigeria-tech-and-sun-round",
+    "ethereum-at-10-awka"
+  ],
+  "continueReadingStorySlugs": [
+    "greenpill-nigeria-tech-and-sun-round",
+    "ethereum-at-10-awka",
+    "greenpill-cape-town-trash-to-treasure"
+  ],
+  "themeSlugs": [
+    "events",
+    "public"
+  ],
+  "translations": [],
+  "proofSignals": [
+    {
+      "label": "Event page and recap, May 22, 2026",
+      "value": "Global Pizza Party Anambra",
+      "source": "RSV.Pizza",
+      "href": "https://www.rsv.pizza/report/d29e6b0fc4dc8d36"
+    },
+    {
+      "label": "Greenpill Nigeria report, September 19, 2026",
+      "value": "Greenpill Nigeria: PizzaDAO Global Pizza Party",
+      "source": "Regen Coordination Hub",
+      "href": "https://hub.regencoordination.xyz/t/464/7"
+    },
+    {
+      "label": "@amioantho, May 25, 2026",
+      "value": "Third Global Pizza Party in Anambra",
+      "source": "X",
+      "href": "https://x.com/amioantho/status/2058909330326311046"
+    }
+  ],
+  "featuredWeight": 72,
+  "readTime": "",
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Global Pizza Party in Awka · Greenpill Stories",
+    "description": "Greenpill Nigeria, PizzaDAO and Bitcoin Anambra hosted Global Pizza Party in Awka on May 22, 2026, with 145 people signed in.",
+    "ogImage": "",
+    "canonicalPath": "/stories/greenpill-nigeria-global-pizza-party-2026",
+    "noindex": false
+  }
+}

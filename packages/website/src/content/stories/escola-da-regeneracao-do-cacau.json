@@ -1,0 +1,64 @@
+{
+  "title": "Escola da Regeneração do Cacau: Learning Through Cacao",
+  "status": "published",
+  "category": "chapter",
+  "publishDate": "2026-09-17",
+  "updatedDate": "",
+  "dek": "A cacao school connected to Greenpill Brasil used chocolate as a shared reference point to learn how a regenerative network coordinates and moves value.",
+  "excerpt": "From a Gardens allocation to bean-to-bar chocolate in São Paulo and a planned return to Bahia, an experiment in regenerative coordination.",
+  "region": "americas",
+  "tag": "Food & Farms",
+  "tags": [
+    "cacao",
+    "bahia",
+    "sao-paulo",
+    "community-currency"
+  ],
+  "body": "The Escola da Regeneração do Cacau (Cacao Regeneration School) is an experiment based in Mogi das Cruzes, São Paulo, that ran from November 2025 to September 2026. It connected regenerative networks in São Paulo and Bahia, including Greenpill Brasil, ReRe, CabrucaDAO, Coop dos Povos and BayaNativa. Its organizer described the work on the Regen Coordination Hub on September 17, 2026, in a report for the Greenpill Fund for Regenerative Gatherings.\n\nThe starting question: what happens when a regenerative network uses a real material resource, cacao, as a common reference point for experimenting with coordination, value circulation and Web3 tools?\n\n## From cacao to chocolate\n\nThrough a Gardens proposal, the project received 1,520 GPBRV, part of which paid for cacao. Cacao from Bahia was harvested, fermented and dried, but transport to São Paulo became a bottleneck, so the project bought local cacao through Casa Hateva and kept producing. The chocolate was made bean to bar in São Paulo, and part of it was delivered to members of the Greenpill Brasil network.\n\nThe project then created 4,200 K-KAU, a community currency for circulating the chocolate, with matching offers set up on Sarafu. The report is clear that the infrastructure exists but the currency has not yet circulated.\n\n## Back to Bahia\n\nSince April 2026, the project has held regular Tuesday and Sunday meetings with the Bahia network, where relationships grew around CabrucaDAO, Coop dos Povos, agricultural communities and women's networks. The next step, still in preparation at the time of the report, is an in-person activity in Bahia that combines cacao with practical Web3 education, through the BayaNativa and Pedagogingas network.\n\nThe report's main lesson: building technical infrastructure is not the same as creating circulation, which still depends on relationships, trust, logistics and participation.",
+  "image": "",
+  "author": "",
+  "authorRole": "",
+  "authorBio": "",
+  "authorSlug": "",
+  "authorAvatar": "",
+  "relatedChapter": "brasil",
+  "relatedGuild": "",
+  "relatedStorySlugs": [
+    "greenpill-brasil-gg20-climate-milestones",
+    "regenmeetup-rio"
+  ],
+  "continueReadingStorySlugs": [
+    "greenpill-brasil-gg20-climate-milestones",
+    "regenmeetup-rio",
+    "greenpill-garden-season-one"
+  ],
+  "themeSlugs": [
+    "food",
+    "currency",
+    "local-regeneration",
+    "coordination-tools"
+  ],
+  "translations": [],
+  "proofSignals": [
+    {
+      "label": "Impact report, September 17, 2026",
+      "value": "Escola da Regeneração do Cacau: Season 6 report",
+      "source": "Regen Coordination Hub",
+      "href": "https://hub.regencoordination.xyz/t/464/6"
+    }
+  ],
+  "featuredWeight": 73,
+  "readTime": "",
+  "media": {
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
+  },
+  "seo": {
+    "title": "Escola da Regeneração do Cacau: Learning Through Cacao · Greenpill Stories",
+    "description": "The Escola da Regeneração do Cacau, connected to Greenpill Brasil, used cacao and chocolate to test how a regenerative network coordinates and moves value.",
+    "ogImage": "",
+    "canonicalPath": "/stories/escola-da-regeneracao-do-cacau",
+    "noindex": false
+  }
+}
