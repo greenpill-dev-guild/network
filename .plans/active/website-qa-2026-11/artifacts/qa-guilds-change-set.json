@@ -1,0 +1,1340 @@
+{
+  "version": 1,
+  "session": "qa-guilds",
+  "linear": "PRD-1411",
+  "status": "proposed, not approved",
+  "note": "One entry per record field. `current` is the production value from https://agent.greenpill.network/content/public-snapshot read on 2026-11-06 (generatedAt 2026-11-06T23:42:53Z); it matched the committed fallback snapshot field for field. publication_status is not in the public snapshot; every listed record is published today. Apply only after Afo approves, in Directus or through the admin API, then update the seed files to match. Entries with needsAfo wait for that confirmation.",
+  "changes": [
+    {
+      "collection": "guilds",
+      "slug": "dev-guild",
+      "directusField": "links",
+      "snapshotField": "links",
+      "current": [
+        {
+          "url": "https://github.com/greenpill-dev-guild",
+          "icon": "github",
+          "kind": "external",
+          "label": "GitHub",
+          "action": "Visit org",
+          "handle": "greenpill-dev-guild",
+          "subtext": "Public repositories"
+        },
+        {
+          "url": "https://paragraph.com/@greenpilldevguild",
+          "icon": "article",
+          "kind": "external",
+          "label": "Dev Guild Paragraph",
+          "action": "Read",
+          "handle": "@greenpilldevguild",
+          "subtext": "Public writing and updates"
+        },
+        {
+          "url": "https://discuss.octant.app/t/greenpill-dev-guild-regeneration-through-collaboration/456",
+          "icon": "external",
+          "kind": "external",
+          "label": "Octant proposal",
+          "action": "Open",
+          "handle": "Octant forum",
+          "subtext": "Public funding proposal"
+        }
+      ],
+      "proposed": [
+        {
+          "label": "GitHub",
+          "url": "https://github.com/greenpill-dev-guild",
+          "subtext": "Public repositories",
+          "handle": "greenpill-dev-guild",
+          "action": "Visit",
+          "icon": "github",
+          "kind": "external"
+        },
+        {
+          "label": "Karma GAP",
+          "url": "https://www.karmahq.org/project/greenpill-dev-guild",
+          "subtext": "Grants, milestones and updates",
+          "handle": "Karma",
+          "action": "Visit",
+          "icon": "karma",
+          "kind": "external"
+        },
+        {
+          "label": "Green Goods",
+          "url": "https://greengoods.app",
+          "subtext": "Green Goods app",
+          "handle": "greengoods.app",
+          "action": "Open",
+          "icon": "",
+          "kind": "website"
+        },
+        {
+          "label": "@greenpilldevs",
+          "url": "https://x.com/greenpilldevs",
+          "subtext": "Guild updates",
+          "handle": "X",
+          "action": "Follow",
+          "icon": "x",
+          "kind": "social"
+        },
+        {
+          "label": "Calls and workshops",
+          "url": "https://luma.com/greengoods",
+          "subtext": "Community calls, demos and workshops",
+          "handle": "Luma",
+          "action": "Join",
+          "icon": "luma",
+          "kind": "external"
+        }
+      ],
+      "reason": "July key links (GitHub, Karma GAP, Green Goods, X, calendar) for the hero. Drops the August 2024 Octant proposal link. The guild's Luma address now redirects to the Green Goods calendar, so the link goes there and says what it holds.",
+      "sources": [
+        "https://github.com/greenpill-dev-guild",
+        "https://www.karmahq.org/project/greenpill-dev-guild",
+        "https://greengoods.app",
+        "https://luma.com/greengoods",
+        "docs/design/claude-design-wireframe-prompts.md (Prompt 3 and appendix)"
+      ]
+    },
+    {
+      "collection": "guilds",
+      "slug": "dev-guild",
+      "directusField": "connect_links",
+      "snapshotField": "connectLinks",
+      "current": [
+        {
+          "url": "https://github.com/greenpill-dev-guild",
+          "icon": "github",
+          "kind": "external",
+          "label": "GitHub",
+          "action": "Visit org",
+          "handle": "greenpill-dev-guild",
+          "subtext": "Public repos, issues, and project code"
+        },
+        {
+          "url": "https://paragraph.com/@greenpilldevguild",
+          "icon": "article",
+          "kind": "external",
+          "label": "Dev Guild Paragraph",
+          "action": "Read updates",
+          "handle": "@greenpilldevguild",
+          "subtext": "Builder updates and grant context"
+        },
+        {
+          "url": "https://luma.com/greenpilldevguild",
+          "icon": "calendar",
+          "kind": "external",
+          "label": "Builder spaces",
+          "action": "Join a space",
+          "handle": "Luma",
+          "subtext": "Public workshop calendar"
+        }
+      ],
+      "proposed": [
+        {
+          "label": "GitHub",
+          "url": "https://github.com/greenpill-dev-guild",
+          "subtext": "Public repos, issues, and project code",
+          "handle": "greenpill-dev-guild",
+          "action": "Visit org",
+          "icon": "github",
+          "kind": "external"
+        },
+        {
+          "label": "Dev Guild Paragraph",
+          "url": "https://paragraph.com/@greenpilldevguild",
+          "subtext": "Builder updates and grant context",
+          "handle": "@greenpilldevguild",
+          "action": "Read updates",
+          "icon": "article",
+          "kind": "external"
+        },
+        {
+          "label": "Calls and workshops",
+          "url": "https://luma.com/greengoods",
+          "subtext": "Community calls, demos and workshops",
+          "handle": "Luma",
+          "action": "Join",
+          "icon": "calendar",
+          "kind": "external"
+        },
+        {
+          "label": "LinkedIn",
+          "url": "https://www.linkedin.com/company/greenpilldevguild",
+          "subtext": "Greenpill Dev Guild company page",
+          "handle": "LinkedIn",
+          "action": "Follow",
+          "icon": "linkedin",
+          "kind": "social"
+        }
+      ],
+      "reason": "\"Builder spaces\" (luma.com/greenpilldevguild) now redirects to the Green Goods calendar. Adds the LinkedIn page that the guild's Karma profile links.",
+      "sources": [
+        "https://luma.com/greengoods",
+        "https://www.karmahq.org/project/greenpill-dev-guild",
+        "https://www.linkedin.com/company/greenpilldevguild"
+      ],
+      "needsAfo": "Confirm the LinkedIn page, and which unmaintained website link it replaces (input I2)."
+    },
+    {
+      "collection": "guilds",
+      "slug": "dev-guild",
+      "directusField": "summary",
+      "snapshotField": "summary",
+      "current": "The engineering arm of Greenpill Network, building open-source coordination tools for chapters, funders, and regenerative communities.",
+      "proposed": "A collective of regen developers building open-source tools for Greenpill chapters and regen communities.",
+      "reason": "Card summary on the home page and Library. \"The engineering arm of Greenpill Network\" has no public source; this follows the guild's GitHub description.",
+      "sources": [
+        "https://github.com/greenpill-dev-guild"
+      ]
+    },
+    {
+      "collection": "guilds",
+      "slug": "dev-guild",
+      "directusField": "mandate_paragraphs",
+      "snapshotField": "mandateParagraphs",
+      "current": [
+        "The Dev Guild is the engineering arm of Greenpill Network. It designs and ships open-source software that helps chapters and allied communities coordinate without relying on private intermediaries.",
+        "The strongest public proof points are Green Goods, GreenWill, Cookie Jar, Grant Ships, Impact Reef, public GitHub repositories, and the Octant / Gitcoin funding trail.",
+        "Where existing tools already do the job, the public direction should frame the guild as an integrator and steward of coordination infrastructure rather than a team rebuilding every primitive from scratch."
+      ],
+      "proposed": [
+        "The Dev Guild is a community of builders making open-source tools, guides and workshops for Greenpill chapters and regen communities, focused on impact measurement, community coordination, capital allocation and capital formation."
+      ],
+      "reason": "July asks for one short mandate paragraph. Paragraphs 2 and 3 were research notes (\"strongest public proof points\", \"the public direction should frame the guild\"). The new paragraph follows the guild's own description.",
+      "sources": [
+        "https://www.karmahq.org/project/greenpill-dev-guild/about",
+        "https://github.com/greenpill-dev-guild"
+      ]
+    },
+    {
+      "collection": "guilds",
+      "slug": "dev-guild",
+      "directusField": "description",
+      "snapshotField": "description",
+      "current": "The Dev Guild ships public tooling for impact measurement, capital allocation, community governance, reputation, and public network surfaces. Public sources connect the guild to Green Goods, GreenWill, Impact Reef, Cookie Jar, Grant Ships, Octant funding, Gitcoin rounds, and recurring builder programming.",
+      "proposed": "A community of builders making open-source tools, guides and workshops for Greenpill chapters and regen communities.",
+      "reason": "Removes research-note wording and a list that includes archived projects.",
+      "sources": [
+        "https://www.karmahq.org/project/greenpill-dev-guild/about"
+      ]
+    },
+    {
+      "collection": "guilds",
+      "slug": "dev-guild",
+      "directusField": "cadence",
+      "snapshotField": "cadence",
+      "current": {
+        "format": "Builder spaces and public async work",
+        "summary": "Public sources confirm recurring builder programming, but exact call cadence should be steward-confirmed before launch copy promises a standing schedule.",
+        "callTime": "",
+        "recordingsHref": ""
+      },
+      "proposed": {
+        "format": "Builder spaces and public async work",
+        "summary": "",
+        "callTime": "",
+        "recordingsHref": ""
+      },
+      "reason": "Clears an internal note (\"should be steward-confirmed before launch\"). Not rendered, but published in the public snapshot.",
+      "sources": []
+    },
+    {
+      "collection": "guilds",
+      "slug": "dev-guild",
+      "directusField": "outputs",
+      "snapshotField": "outputs",
+      "current": [
+        {
+          "href": "https://github.com/greenpill-dev-guild/green-goods",
+          "label": "Impact verification",
+          "summary": "Green Goods and related tools help communities document and verify regenerative work."
+        },
+        {
+          "href": "https://github.com/greenpill-dev-guild",
+          "label": "Capital allocation",
+          "summary": "Grant Ships, Cookie Jar, and related experiments explore public-goods funding mechanisms."
+        },
+        {
+          "href": "https://github.com/greenpill-dev-guild/greenwill",
+          "label": "Reputation primitives",
+          "summary": "GreenWill explores public-good reputation and pay-it-forward activity."
+        },
+        {
+          "href": "https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0",
+          "label": "Public goods staking",
+          "summary": "PGSP and Squad Staking explore validator rewards as recurring funding for public goods."
+        },
+        {
+          "href": "https://paragraph.com/@greenpilldevguild",
+          "label": "Public writing",
+          "summary": "The Dev Guild Paragraph documents builder work and grant-facing updates."
+        }
+      ],
+      "proposed": [],
+      "reason": "The five outputs restate the projects (one links an archived repo, one the organization root). July's Dev Guild frame shows projects and media instead. The home tile counts outputs: request sent to qa-home-garden.",
+      "sources": [
+        "docs/design/claude-design-wireframe-prompts.md (Prompt 3 and appendix)"
+      ]
+    },
+    {
+      "collection": "guilds",
+      "slug": "dev-guild",
+      "directusField": "proof_signals",
+      "snapshotField": "proofSignals",
+      "current": [
+        {
+          "href": "https://www.cryptoaltruists.com/blog/trailblazers-of-octant-episode-4-greenpill-dev-guild-scaling-the-regen-movement-with-web3-coordination-tools",
+          "label": "Octant Community Fund grant",
+          "value": "2.5 ETH",
+          "source": "S013 Crypto Altruists"
+        },
+        {
+          "href": "https://discuss.octant.app/t/greenpill-dev-guild-regeneration-through-collaboration/456",
+          "label": "Octant proposal",
+          "value": "$60k request",
+          "source": "S012 Octant forum"
+        },
+        {
+          "href": "https://paragraph.com/@greenpilldevguild/pioneering-a-regenerative-stack",
+          "label": "Regenerative stack",
+          "value": "Paragraph series",
+          "source": "S060"
+        }
+      ],
+      "proposed": [],
+      "reason": "Public proof is retired on guild pages (July). The Crypto Altruists episode moves to media appearances; the Octant proposal stays reachable through Karma. The Library card label counts these: request sent to qa-library.",
+      "sources": [
+        "docs/design/claude-design-wireframe-prompts.md (Prompt 3 and appendix)"
+      ]
+    },
+    {
+      "collection": "guilds",
+      "slug": "dev-guild",
+      "directusField": "media",
+      "snapshotField": "media",
+      "current": {
+        "image": "/images/guilds/dev-guild-regenerative-stack.jpg",
+        "ogImage": "/images/guilds/dev-guild-regenerative-stack.jpg",
+        "imageAlt": "Infographic for the Greenpill Dev Guild regenerative stack.",
+        "imageCredit": "Greenpill Dev Guild via Paragraph",
+        "reviewStatus": "approved",
+        "imageSourceUrl": "https://paragraph.com/@greenpilldevguild/validating-the-regenerative-stack"
+      },
+      "proposed": {
+        "image": "/images/guilds/dev-guild-regenerative-stack.jpg",
+        "ogImage": "/images/guilds/dev-guild-regenerative-stack.jpg",
+        "imageAlt": "Infographic for the Greenpill Dev Guild regenerative stack.",
+        "imageCredit": "Greenpill Dev Guild via Paragraph",
+        "reviewStatus": "approved",
+        "imageSourceUrl": "https://paragraph.com/@greenpilldevguild/validating-the-regenerative-stack",
+        "appearances": [
+          {
+            "kind": "podcast",
+            "source": "Greenpill Podcast",
+            "date": "2026-11-05",
+            "title": "Greenpill IRL: Building a Coordi-Nation with Kevin Owocki, Matt & Afolabi",
+            "href": "https://128c3f4a-6136-477c-8898-83d022a2d198.libsyn.com/greenpill-irl-building-a-coordi-nation-with-kevin-owocki-matt-afo",
+            "people": []
+          },
+          {
+            "kind": "article",
+            "source": "Dev Guild Paragraph",
+            "date": "2026-03-23",
+            "title": "The Public Goods Staking Protocol v0",
+            "href": "https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0",
+            "people": [
+              "Afo",
+              "Matt",
+              "Trinity Morphy"
+            ]
+          },
+          {
+            "kind": "podcast",
+            "source": "Crypto Altruists",
+            "date": "2024-12-28",
+            "title": "Trailblazers of Octant Episode 4: Greenpill Dev Guild",
+            "href": "https://www.cryptoaltruists.com/blog/trailblazers-of-octant-episode-4-greenpill-dev-guild-scaling-the-regen-movement-with-web3-coordination-tools",
+            "people": [
+              "Afo",
+              "Coi",
+              "Matt"
+            ]
+          },
+          {
+            "kind": "video",
+            "source": "YouTube",
+            "date": "2024",
+            "title": "Greenpill Hypercerts Workshop Highlights",
+            "href": "https://www.youtube.com/watch?v=5zf9ynSXppE",
+            "people": []
+          },
+          {
+            "kind": "video",
+            "source": "YouTube",
+            "date": "",
+            "title": "Workshop videos on the Greenpill Network channel",
+            "href": "https://www.youtube.com/@GreenpillNet/playlists",
+            "people": []
+          }
+        ]
+      },
+      "reason": "Adds media.appearances for the new Media and appearances section; the image fields are unchanged. No Builder Space recordings exist on Luma, so the YouTube workshop videos the guild launched stand in for them.",
+      "sources": [
+        "https://128c3f4a-6136-477c-8898-83d022a2d198.libsyn.com/greenpill-irl-building-a-coordi-nation-with-kevin-owocki-matt-afo",
+        "https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0",
+        "https://www.cryptoaltruists.com/blog/trailblazers-of-octant-episode-4-greenpill-dev-guild-scaling-the-regen-movement-with-web3-coordination-tools",
+        "https://hub.regencoordination.xyz/t/greenpill-dev-guild-2024-recap/162 (links the Hypercerts video)",
+        "https://paragraph.com/@greenpill/q1-2025-laying-the-groundwork (\"launched the first of many workshop videos\")"
+      ]
+    },
+    {
+      "collection": "guilds",
+      "slug": "dev-guild",
+      "directusField": "stewards",
+      "snapshotField": "stewards",
+      "current": [],
+      "proposed": [
+        {
+          "group": "Guild stewardship",
+          "role": "Core steward",
+          "name": "Afolabi Aiyeloja",
+          "personSlug": "afo-aiyeloja"
+        },
+        {
+          "group": "Guild stewardship",
+          "role": "Lead",
+          "name": "Caue Tomaz",
+          "personSlug": "coi"
+        },
+        {
+          "group": "Guild stewardship",
+          "role": "Lead and treasury manager",
+          "name": "Matt Strachman",
+          "personSlug": "matt-mattycompost"
+        },
+        {
+          "group": "Project leads",
+          "role": "Public Goods Staking",
+          "holders": [
+            "Afolabi Aiyeloja",
+            "Matt Strachman",
+            "Trinity Morphy"
+          ]
+        },
+        {
+          "group": "Project leads",
+          "role": "Greenpill Impact Framework",
+          "holders": [
+            "Afolabi Aiyeloja",
+            "Wasabi",
+            "Irthu"
+          ]
+        }
+      ],
+      "reason": "Hats and roles list. No public Hats tree ID was found (the 2024 recap says Hats integration was initiated on Optimism), so this draft uses the roles the people state publicly in November 2025.",
+      "sources": [
+        "https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363",
+        "https://hub.regencoordination.xyz/t/regen-protocols/364",
+        "https://hub.regencoordination.xyz/t/greenpill-dev-guild-2024-recap/162"
+      ],
+      "needsAfo": "Confirm these roles or send the Optimism Hats tree link; do not apply without one or the other."
+    },
+    {
+      "collection": "guilds",
+      "slug": "dev-guild",
+      "directusField": "public_members",
+      "snapshotField": "publicMembers",
+      "current": [
+        {
+          "bio": "Publicly referenced in Dev Guild / Octant research as part of the builder layer.",
+          "name": "Afo (Afolabi Aiyeloja)",
+          "role": "Dev Guild contributor",
+          "avatar": "",
+          "location": "",
+          "personSlug": "afo-aiyeloja",
+          "chapterSlug": ""
+        },
+        {
+          "bio": "Publicly referenced in Dev Guild / Octant and Garden-oriented research.",
+          "name": "Matt (mattycompost)",
+          "role": "Dev Guild contributor",
+          "avatar": "",
+          "location": "",
+          "personSlug": "matt-mattycompost",
+          "chapterSlug": ""
+        }
+      ],
+      "proposed": [
+        {
+          "personSlug": "afo-aiyeloja",
+          "name": "Afolabi Aiyeloja",
+          "role": "Core steward",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "coi",
+          "name": "Caue Tomaz",
+          "role": "Guild lead",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "matt-mattycompost",
+          "name": "Matt Strachman",
+          "role": "Guild lead and treasury manager",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "trinity-morphy",
+          "name": "Trinity Morphy",
+          "role": "Public Goods Staking lead and writer",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "",
+          "name": "Marcin",
+          "role": "Product lead",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "",
+          "name": "Leo",
+          "role": "Social media lead",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "",
+          "name": "Marcus",
+          "role": "Designer",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "",
+          "name": "Nansel",
+          "role": "Designer",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "",
+          "name": "BitBeckers",
+          "role": "Engineer",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "",
+          "name": "Tarun",
+          "role": "Engineer",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "",
+          "name": "Athus",
+          "role": "Engineer",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "",
+          "name": "Steve",
+          "role": "Engineer",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        }
+      ],
+      "reason": "Credits 12 people named publicly as guild members. Roles from the November 2025 Hub posts where they exist, otherwise from the August 2024 Octant proposal. Removes the internal bios.",
+      "sources": [
+        "https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363",
+        "https://hub.regencoordination.xyz/t/regen-protocols/364",
+        "https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0",
+        "https://discuss.octant.app/t/greenpill-dev-guild-regeneration-through-collaboration/456"
+      ],
+      "needsAfo": "Confirm names and current roles; the 2024 roles may be out of date."
+    },
+    {
+      "collection": "guilds",
+      "slug": "writers-guild",
+      "directusField": "links",
+      "snapshotField": "links",
+      "current": [
+        {
+          "url": "https://paragraph.com/@greenpill",
+          "icon": "article",
+          "kind": "external",
+          "label": "Greenpill Paragraph",
+          "action": "Read",
+          "handle": "@greenpill",
+          "subtext": "Public Greenpill writing"
+        },
+        {
+          "url": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639",
+          "icon": "podcast",
+          "kind": "external",
+          "label": "Greenpill Podcast",
+          "action": "Listen",
+          "handle": "Apple Podcasts",
+          "subtext": "Podcast archive"
+        }
+      ],
+      "proposed": [
+        {
+          "label": "Newsletter",
+          "url": "https://paragraph.com/@greenpill",
+          "subtext": "Greenpill Network newsletter",
+          "handle": "@greenpill",
+          "action": "Read",
+          "icon": "paragraph",
+          "kind": "external"
+        },
+        {
+          "label": "@GreenpillWrites",
+          "url": "https://x.com/GreenpillWrites",
+          "subtext": "Guild posts and curated reading",
+          "handle": "X",
+          "action": "Follow",
+          "icon": "x",
+          "kind": "social"
+        },
+        {
+          "label": "Regen Hub",
+          "url": "https://hub.regencoordination.xyz/t/greenpill-writers-guild/159",
+          "subtext": "Guild updates on the Regen Coordination Hub",
+          "handle": "Regen Hub",
+          "action": "Read",
+          "icon": "hub",
+          "kind": "external"
+        },
+        {
+          "label": "Karma GAP",
+          "url": "https://www.karmahq.org/project/greenpill-writers-guild",
+          "subtext": "Grants and project updates",
+          "handle": "Karma",
+          "action": "Visit",
+          "icon": "karma",
+          "kind": "external"
+        }
+      ],
+      "reason": "July key links for the Writers Guild minus the Greenpill Podcast, which is not guild work: the newsletter the guild restarted, its X account, its Hub thread and its Karma profile.",
+      "sources": [
+        "https://hub.regencoordination.xyz/t/greenpill-writers-guild/159",
+        "https://x.com/GreenpillWrites",
+        "https://www.karmahq.org/project/greenpill-writers-guild",
+        "https://paragraph.com/@greenpill",
+        "docs/design/claude-design-wireframe-prompts.md (Prompt 3 and appendix)"
+      ]
+    },
+    {
+      "collection": "guilds",
+      "slug": "writers-guild",
+      "directusField": "connect_links",
+      "snapshotField": "connectLinks",
+      "current": [
+        {
+          "url": "https://paragraph.com/@greenpill",
+          "icon": "article",
+          "kind": "external",
+          "label": "Greenpill Paragraph",
+          "action": "Read",
+          "handle": "@greenpill",
+          "subtext": "Public writing"
+        },
+        {
+          "url": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639",
+          "icon": "podcast",
+          "kind": "external",
+          "label": "Greenpill Podcast",
+          "action": "Listen",
+          "handle": "Apple Podcasts",
+          "subtext": "Long-running public podcast archive"
+        }
+      ],
+      "proposed": [
+        {
+          "label": "Greenpill Network newsletter",
+          "url": "https://paragraph.com/@greenpill",
+          "subtext": "Network news written by the guild",
+          "handle": "@greenpill",
+          "action": "Read",
+          "icon": "article",
+          "kind": "external"
+        },
+        {
+          "label": "X",
+          "url": "https://x.com/GreenpillWrites",
+          "subtext": "Guild posts and curated reading",
+          "handle": "@GreenpillWrites",
+          "action": "Follow",
+          "icon": "x",
+          "kind": "social"
+        },
+        {
+          "label": "Regen Hub",
+          "url": "https://hub.regencoordination.xyz/t/greenpill-writers-guild/159",
+          "subtext": "Guild updates",
+          "handle": "Regen Hub",
+          "action": "Read",
+          "icon": "hub",
+          "kind": "external"
+        }
+      ],
+      "reason": "Removes the Greenpill Podcast; adds the guild's own channels.",
+      "sources": [
+        "https://hub.regencoordination.xyz/t/greenpill-writers-guild/159",
+        "https://x.com/GreenpillWrites",
+        "https://paragraph.com/@greenpill"
+      ]
+    },
+    {
+      "collection": "guilds",
+      "slug": "writers-guild",
+      "directusField": "proof_signals",
+      "snapshotField": "proofSignals",
+      "current": [
+        {
+          "href": "https://paragraph.com/@greenpill",
+          "label": "Greenpill Paragraph",
+          "value": "Public publication",
+          "source": "S004"
+        },
+        {
+          "href": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639",
+          "label": "Podcast archive",
+          "value": "293 episodes",
+          "source": "S006"
+        },
+        {
+          "href": "https://paragraph.com/@greenpill/preview/rN8MvIeOa4RGvE8kJN9L",
+          "label": "Carbon Copy collaboration",
+          "value": "Web3 Tooling Series",
+          "source": "S071"
+        }
+      ],
+      "proposed": [],
+      "reason": "Public proof is retired on guild pages (July). The podcast count was not guild work, and the Carbon Copy link pointed at an unpublished Paragraph draft.",
+      "sources": [
+        "docs/design/claude-design-wireframe-prompts.md (Prompt 3 and appendix)"
+      ]
+    },
+    {
+      "collection": "guilds",
+      "slug": "writers-guild",
+      "directusField": "outputs",
+      "snapshotField": "outputs",
+      "current": [
+        {
+          "href": "/stories",
+          "label": "Field reports",
+          "summary": "Chapter and guild updates that turn local work into public learning."
+        },
+        {
+          "href": "https://hub.regencoordination.xyz/t/greenpill-brasil/44",
+          "label": "Translations",
+          "summary": "Translation work around Greenpill books and chapter resources, including Brasil's Portuguese work."
+        },
+        {
+          "href": "https://paragraph.com/@greenpill",
+          "label": "Publication surfaces",
+          "summary": "Greenpill Paragraph, podcast notes, newsletter copy, and public Hub threads."
+        },
+        {
+          "href": "https://paragraph.com/@greenpill/preview/rN8MvIeOa4RGvE8kJN9L",
+          "label": "Tooling research",
+          "summary": "The Carbon Copy collaboration explores how ReFi communities use Web3 tools."
+        }
+      ],
+      "proposed": [
+        {
+          "kind": "Book",
+          "date": "2024",
+          "label": "On-Chain Impact Networks",
+          "summary": "How crypto is being used to regenerate the world, and the second version of Impact DAOs (2022). Written, published and designed by the guild.",
+          "href": "/pdf/onchain-impact-networks.pdf",
+          "contributors": [
+            "Riley Blackwell",
+            "Sarah Smith",
+            "Kate Goheen",
+            "Ifeanyi Princewill",
+            "Lana Dingwall",
+            "Trinity Morphy",
+            "Matt Strachman",
+            "Anthony Amio",
+            "Eunice Eyo",
+            "Rayne Leach",
+            "Cauê Tomaz",
+            "Anthony Luong",
+            "Ashna Srivastava",
+            "Izzy Lawrence"
+          ]
+        },
+        {
+          "kind": "Book",
+          "date": "2025",
+          "label": "Onchain Capital Allocation Handbook: Explorers Edition",
+          "summary": "The second edition of Kevin Owocki's handbook. Guild members made up about half the team and handled project management, research, writing, editing and diagrams.",
+          "href": "/pdf/onchain-capital-allocation-v2.pdf",
+          "contributors": [
+            "Sarah Smith (lead writer)",
+            "Matt Strachman",
+            "Trinity Morphy",
+            "Riley Blackwell",
+            "Izzy Lawrence"
+          ]
+        },
+        {
+          "kind": "Newsletter",
+          "label": "Greenpill Network newsletter",
+          "summary": "News from the network's chapters and guilds, which the guild restarted in December 2024. Issues include Greenpill 2024: A Year in Review and Greenpill Q1 2025: Laying The Groundwork.",
+          "href": "https://paragraph.com/@greenpill",
+          "contributors": [
+            "Sarah Smith",
+            "Matt Strachman"
+          ]
+        },
+        {
+          "kind": "Research series",
+          "date": "2026-01",
+          "label": "Web3 Tooling Series",
+          "summary": "Three articles with CARBON Copy on how ReFi communities use web3 tools, drawn from surveys, interviews and case studies.",
+          "href": "https://carboncopy.news/content/web3-tooling-series",
+          "contributors": []
+        }
+      ],
+      "reason": "Replaces unverified surfaces (stories, Brasil translations, podcast notes, a draft preview link) with work the guild is credited for. Order follows July: books, newsletter, series.",
+      "sources": [
+        "https://www.karmahq.org/project/greenpill-writers-guild/about",
+        "https://www.karmahq.org/project/greenpill-writers-guild",
+        "https://greenpill.network/pdf/onchain-impact-networks.pdf (credits page)",
+        "https://greenpill.network/pdf/onchain-capital-allocation-v2.pdf (credits page)",
+        "https://hub.regencoordination.xyz/t/greenpill-writers-guild/159",
+        "https://paragraph.com/@greenpill",
+        "https://carboncopy.news/content/web3-tooling-series"
+      ]
+    },
+    {
+      "collection": "guilds",
+      "slug": "writers-guild",
+      "directusField": "public_members",
+      "snapshotField": "publicMembers",
+      "current": [],
+      "proposed": [
+        {
+          "personSlug": "",
+          "name": "Sarah Smith",
+          "role": "Writer, researcher and designer",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "matt-mattycompost",
+          "name": "Matt Strachman",
+          "role": "Guild steward, writer and researcher",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "",
+          "name": "Riley Blackwell",
+          "role": "Editor",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "",
+          "name": "Lana Dingwall",
+          "role": "Project lead, writer and researcher",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "",
+          "name": "Izzy Lawrence",
+          "role": "Helped lead the guild",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "trinity-morphy",
+          "name": "Trinity Morphy",
+          "role": "Writer and researcher",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "",
+          "name": "Anthony Amio",
+          "role": "Writer and researcher",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "",
+          "name": "Anthony Luong",
+          "role": "Designer",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "",
+          "name": "Ashna Srivastava",
+          "role": "Designer",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "coi",
+          "name": "Cauê Tomaz",
+          "role": "Writer and researcher",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "",
+          "name": "Eunice Eyo",
+          "role": "Writer and researcher",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "",
+          "name": "Ifeanyi Princewill",
+          "role": "Writer and researcher",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "",
+          "name": "Kate Goheen",
+          "role": "Writer and researcher",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        },
+        {
+          "personSlug": "",
+          "name": "Rayne Leach",
+          "role": "Writer and researcher",
+          "bio": "",
+          "location": "",
+          "chapterSlug": "",
+          "avatar": ""
+        }
+      ],
+      "reason": "Credits the people named on the credits pages of the guild's two books (July named Sarah and Matty; Matty is Matt Strachman). Roles as printed, Matt's from his 2025 Hub bio, Izzy's from the guild's Hub thread.",
+      "sources": [
+        "https://greenpill.network/pdf/onchain-impact-networks.pdf (credits page)",
+        "https://greenpill.network/pdf/onchain-capital-allocation-v2.pdf (credits page)",
+        "https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363",
+        "https://hub.regencoordination.xyz/t/greenpill-writers-guild/159"
+      ],
+      "needsAfo": "Confirm the names and that each person is happy to be listed. Izzy has died (Hub, December 2024: \"our late friend Izzy who helped lead the Writers Guild\"); please choose how Izzy is credited. The handbook prints \"Izzy Lawrence\", On-Chain Impact Networks \"Izzy Lawernce-Onwuzurike\"."
+    },
+    {
+      "collection": "guilds",
+      "slug": "writers-guild",
+      "directusField": "mandate_paragraphs",
+      "snapshotField": "mandateParagraphs",
+      "current": [
+        "The Writers Guild makes the network legible. It turns local experiments, chapter practice, books, podcasts, and builder work into public stories people can reuse.",
+        "The launch website should show stories as proof of activity and learning, not as a generic blog feed.",
+        "Draft newsletters and internal Drive notes should stay internal until a steward approves them for public publication."
+      ],
+      "proposed": [
+        "The Writers Guild is an open collective of researchers, writers, editors, translators and designers. It makes books, newsletters, articles and documentation that explain the regenerative web3 ecosystem and help new people find their way in."
+      ],
+      "reason": "Paragraphs 2 and 3 were internal notes (launch website, Drive drafts). The new paragraph follows the guild's own description and mission.",
+      "sources": [
+        "https://www.karmahq.org/project/greenpill-writers-guild/about"
+      ]
+    },
+    {
+      "collection": "guilds",
+      "slug": "writers-guild",
+      "directusField": "principles",
+      "snapshotField": "principles",
+      "current": [
+        {
+          "body": "Every story should link to public proof or a steward-approved publication source.",
+          "order": 1,
+          "title": "Source-backed storytelling"
+        },
+        {
+          "body": "Lead with real chapter, guild, and program updates instead of abstract claims.",
+          "order": 2,
+          "title": "Field-first writing"
+        },
+        {
+          "body": "Newsletter drafts, Drive docs, raw notes, and submission data stay out of public Keystatic until approved.",
+          "order": 3,
+          "title": "No private drafts in public content"
+        }
+      ],
+      "proposed": [],
+      "reason": "The three principles came from internal research notes (one names Keystatic) and no public source attributes them to the guild. A steward can add the guild's own.",
+      "sources": []
+    },
+    {
+      "collection": "guilds",
+      "slug": "writers-guild",
+      "directusField": "summary",
+      "snapshotField": "summary",
+      "current": "Publishing, storytelling, research, and public sensemaking across the Greenpill network.",
+      "proposed": "Books, newsletters and research from an open collective of writers, editors, translators and designers.",
+      "reason": "Card summary on the home page and Library, from the guild's own description.",
+      "sources": [
+        "https://www.karmahq.org/project/greenpill-writers-guild/about"
+      ]
+    },
+    {
+      "collection": "guilds",
+      "slug": "writers-guild",
+      "directusField": "oneliner",
+      "snapshotField": "oneliner",
+      "current": "Stories, translations, field reports, and public knowledge work for the network.",
+      "proposed": "Books, newsletters, research and translations from the network's writers.",
+      "reason": "Field reports are not verified as guild work; books, newsletters and translation work are in the guild's own description.",
+      "sources": [
+        "https://www.karmahq.org/project/greenpill-writers-guild/about"
+      ]
+    },
+    {
+      "collection": "guilds",
+      "slug": "writers-guild",
+      "directusField": "description",
+      "snapshotField": "description",
+      "current": "The Writers Guild supports essays, field reports, translations, publishing workflows, and editorial work across chapters and guilds. Public sources show Greenpill's Paragraph publication, the long-running podcast, Garden writing needs, and a network-wide push toward clearer public knowledge infrastructure.",
+      "proposed": "An open collective of researchers, writers, editors, translators and designers producing books, newsletters, articles and documentation about the regenerative web3 ecosystem.",
+      "reason": "Removes the podcast and research-note wording.",
+      "sources": [
+        "https://www.karmahq.org/project/greenpill-writers-guild/about"
+      ]
+    },
+    {
+      "collection": "guilds",
+      "slug": "writers-guild",
+      "directusField": "founded_year",
+      "snapshotField": "foundedYear",
+      "current": 2024,
+      "proposed": null,
+      "reason": "No public source states when the guild was founded. Earliest dated evidence: a Hub mention in May 2024 and the guild's 2024 book; its Karma profile dates newsletter work from October 2023. The hero drops \"Founded\" when this is empty.",
+      "sources": [
+        "https://hub.regencoordination.xyz/t/welcome-to-greenpill-network/5",
+        "https://greenpill.network/pdf/onchain-impact-networks.pdf (credits page)"
+      ],
+      "needsAfo": "Keep 2024 instead if you can confirm the founding year."
+    },
+    {
+      "collection": "guilds",
+      "slug": "writers-guild",
+      "directusField": "cadence",
+      "snapshotField": "cadence",
+      "current": {
+        "format": "Editorial working group",
+        "summary": "Public sources confirm Writers Guild activity and publication surfaces, but exact cadence needs steward confirmation before launch.",
+        "callTime": "",
+        "recordingsHref": ""
+      },
+      "proposed": {
+        "format": "Editorial working group",
+        "summary": "",
+        "callTime": "",
+        "recordingsHref": ""
+      },
+      "reason": "Clears an internal note (\"needs steward confirmation before launch\"). Not rendered, but published in the public snapshot.",
+      "sources": []
+    },
+    {
+      "collection": "guilds",
+      "slug": "writers-guild",
+      "directusField": "seo",
+      "snapshotField": "seo",
+      "current": {
+        "title": "Writers Guild · Greenpill Network",
+        "noindex": false,
+        "ogImage": "/images/guilds/writers-guild-greenpill-paragraph.png",
+        "description": "The Greenpill Writers Guild supports field reports, publishing, translations, and public knowledge work across the network.",
+        "canonicalPath": "/guilds/writers-guild"
+      },
+      "proposed": {
+        "title": "Writers Guild · Greenpill Network",
+        "noindex": false,
+        "ogImage": "/images/guilds/writers-guild-greenpill-paragraph.png",
+        "description": "The Greenpill Writers Guild writes books, newsletters and research about the regenerative web3 ecosystem.",
+        "canonicalPath": "/guilds/writers-guild"
+      },
+      "reason": "Search description matched the old field-reports framing.",
+      "sources": [
+        "https://www.karmahq.org/project/greenpill-writers-guild/about"
+      ]
+    },
+    {
+      "collection": "projects",
+      "slug": "greenpill-podcast",
+      "directusField": "publication_status",
+      "snapshotField": "publication_status",
+      "current": "published",
+      "proposed": "archived",
+      "reason": "This project row puts the Greenpill Podcast on the Writers Guild page. The podcast is Kevin Owocki's show and no guild source claims it; it stays in the Library (content/podcast.json). Archiving only removes this guild-owned row.",
+      "sources": [
+        "https://sites.libsyn.com/400481/announcing-the-green-pill-podcast-kevin-owocki",
+        "https://www.karmahq.org/project/greenpill-writers-guild/about"
+      ]
+    },
+    {
+      "collection": "projects",
+      "slug": "greenwill",
+      "directusField": "summary",
+      "snapshotField": "summary",
+      "current": "Public-good reputation and pay-it-forward activity tooling.",
+      "proposed": "The badge and recognition layer the guild is designing for Green Goods.",
+      "reason": "Afo, April 2026: \"GreenWill, the badge and recognition layer we're designing for Green Goods\". Still active, so it stays on the page with a current summary.",
+      "sources": [
+        "https://hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411"
+      ]
+    },
+    {
+      "collection": "projects",
+      "slug": "greenwill",
+      "directusField": "description",
+      "snapshotField": "description",
+      "current": "GreenWill is described in the research source inventory as an open Farcaster mini-app for accumulating Greenpill and ReFi reputation from pay-it-forward activity such as Octant, Gitcoin, and sponsored rounds.",
+      "proposed": "GreenWill began as a mini-app for Greenpill and ReFi reputation. In 2026 the guild is redesigning it as the badge and recognition layer for Green Goods, the first implementation phase of the Greenpill Impact Framework.",
+      "reason": "Replaces research-note wording with the 2026 direction.",
+      "sources": [
+        "https://hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411",
+        "https://github.com/greenpill-dev-guild/greenwill"
+      ]
+    },
+    {
+      "collection": "projects",
+      "slug": "greenwill",
+      "directusField": "repo_url",
+      "snapshotField": "repoUrl",
+      "current": "https://github.com/greenpill-dev-guild/greenwill",
+      "proposed": "",
+      "reason": "The greenwill repository is archived (last push 2025-01-23); linking it from an active project would mislead.",
+      "sources": [
+        "https://github.com/greenpill-dev-guild/greenwill"
+      ]
+    },
+    {
+      "collection": "projects",
+      "slug": "greenwill",
+      "directusField": "live_url",
+      "snapshotField": "liveUrl",
+      "current": "",
+      "proposed": "https://hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411",
+      "reason": "Where the current GreenWill work is posted.",
+      "sources": [
+        "https://hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411"
+      ]
+    },
+    {
+      "collection": "projects",
+      "slug": "greenwill",
+      "directusField": "tech_stack",
+      "snapshotField": "techStack",
+      "current": [
+        "Farcaster",
+        "Reputation",
+        "Public goods"
+      ],
+      "proposed": [
+        "Badges",
+        "Reputation",
+        "Green Goods"
+      ],
+      "reason": "\"Farcaster\" described the archived mini-app.",
+      "sources": [
+        "https://hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411"
+      ]
+    },
+    {
+      "collection": "projects",
+      "slug": "impact-reef",
+      "directusField": "entity_status",
+      "snapshotField": "status",
+      "current": "experimental",
+      "proposed": "archived",
+      "reason": "Repository archived on GitHub (last push 2026-05-27); no 2025 or 2026 activity found.",
+      "sources": [
+        "https://github.com/greenpill-dev-guild/impact-reef"
+      ]
+    },
+    {
+      "collection": "projects",
+      "slug": "grant-ships",
+      "directusField": "entity_status",
+      "snapshotField": "status",
+      "current": "active",
+      "proposed": "inactive",
+      "reason": "Grant Ships is the DAO Masons' grants game; the guild ran rounds on it. Its dev log ends 2024-08-13 (topic archived) and the last guild mention is December 2024; no 2025 or 2026 activity found.",
+      "sources": [
+        "https://forum.arbitrum.foundation/t/grant-ships-weekly-dev-log/20191",
+        "https://hub.regencoordination.xyz/t/greenpill-dev-guild-2024-recap/162"
+      ]
+    },
+    {
+      "collection": "projects",
+      "slug": "green-goods",
+      "directusField": "live_url",
+      "snapshotField": "liveUrl",
+      "current": "https://docs.greengoods.app/community/why-we-build",
+      "proposed": "https://greengoods.app",
+      "reason": "Points the card at the app (the repository's homepage) instead of one docs page.",
+      "sources": [
+        "https://github.com/greenpill-dev-guild/green-goods",
+        "https://greengoods.app"
+      ]
+    },
+    {
+      "collection": "projects",
+      "slug": "public-goods-staking-protocol",
+      "directusField": "description",
+      "snapshotField": "description",
+      "current": "The Public Goods Staking Protocol is a Greenpill Dev Guild workstream sourced from the Dev Guild Paragraph series. Public sources describe a path where validator infrastructure, Dappnode, Obol distributed validator technology, Lido CSM, and Octant-aligned vault routing can help communities generate recurring funding for public goods. Treat Squad Staking as part of this workstream, not a separate project seed in this batch.",
+      "proposed": "The Public Goods Staking Protocol coordinates validator squads to create long-term funding for public goods, drawing on validator infrastructure, Dappnode, Obol distributed validator technology, Lido CSM and Octant-aligned vault routing.",
+      "reason": "Removes an internal note (\"not a separate project seed in this batch\") from the public description.",
+      "sources": [
+        "https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0"
+      ]
+    },
+    {
+      "collection": "projects",
+      "slug": "greenpill-impact-framework",
+      "directusField": "description",
+      "snapshotField": "description",
+      "current": "The public companion thread frames the Greenpill Impact Framework as a way to connect Green Goods v1, impact, strategy, measurement, coordination, and capital formation. Internal framework details shaped the research artifact, but launch copy should point to the public Hub thread unless stewards approve more.",
+      "proposed": "A framework connecting Green Goods with impact strategy, measurement, coordination and capital formation. Work in 2026 starts with GreenWill badges in Green Goods.",
+      "reason": "Removes an internal note (\"launch copy should point to the public Hub thread unless stewards approve more\").",
+      "sources": [
+        "https://hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411"
+      ]
+    },
+    {
+      "collection": "projects",
+      "slug": "greenpill-v2-website",
+      "directusField": "name",
+      "snapshotField": "name",
+      "current": "Greenpill Network V2 Website",
+      "proposed": "Greenpill Network website",
+      "reason": "July copy.",
+      "sources": [
+        "docs/design/claude-design-wireframe-prompts.md (Prompt 3 and appendix)"
+      ]
+    },
+    {
+      "collection": "projects",
+      "slug": "greenpill-v2-website",
+      "directusField": "summary",
+      "snapshotField": "summary",
+      "current": "Public front-door rebuild for chapters, Library, Stories, Guilds, Garden, map, and impact surfaces.",
+      "proposed": "Public front door for chapters, Library, Stories, Guilds, and the map.",
+      "reason": "July copy.",
+      "sources": [
+        "docs/design/claude-design-wireframe-prompts.md (Prompt 3 and appendix)"
+      ]
+    },
+    {
+      "collection": "projects",
+      "slug": "greenpill-v2-website",
+      "directusField": "repo_url",
+      "snapshotField": "repoUrl",
+      "current": "https://github.com/greenpill-dev-guild",
+      "proposed": "https://github.com/greenpill-dev-guild/network",
+      "reason": "Was the organization root.",
+      "sources": [
+        "https://github.com/greenpill-dev-guild/network"
+      ]
+    },
+    {
+      "collection": "projects",
+      "slug": "greenpill-v2-website",
+      "directusField": "live_url",
+      "snapshotField": "liveUrl",
+      "current": "https://hub.regencoordination.xyz/t/greenpill-network-website-revamp/414",
+      "proposed": "https://greenpill.network",
+      "reason": "Was the April 2026 revamp thread; the site itself is live.",
+      "sources": [
+        "https://greenpill.network"
+      ]
+    },
+    {
+      "collection": "projects",
+      "slug": "greenpill-v2-website",
+      "directusField": "tech_stack",
+      "snapshotField": "techStack",
+      "current": [
+        "Astro",
+        "Keystatic",
+        "Public agent routes",
+        "Source-backed content"
+      ],
+      "proposed": [
+        "Astro",
+        "Directus",
+        "Hono"
+      ],
+      "reason": "\"Keystatic\" and \"Source-backed content\" no longer describe the stack.",
+      "sources": [
+        "https://github.com/greenpill-dev-guild/network"
+      ]
+    }
+  ]
+}
