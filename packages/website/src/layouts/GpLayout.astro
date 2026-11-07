@@ -11,12 +11,8 @@ interface Props {
   activeNav?: string | null;
   noindex?: boolean;
   hideShell?: boolean;
-  /**
-   * @deprecated Every page now uses the plain background (decision D4,
-   * November 2026 QA). Still accepted so existing callers keep compiling;
-   * it has no effect.
-   */
-  backgroundMode?: 'plain';
+  /** `graphic` draws the illustrated background layer; the home page asks for `plain`. */
+  backgroundMode?: 'graphic' | 'plain';
   ogType?: 'website' | 'article' | 'profile';
 }
 
@@ -28,6 +24,7 @@ const {
   activeNav = null,
   noindex = false,
   hideShell = false,
+  backgroundMode = 'graphic',
   ogType = 'website',
 } = Astro.props;
 const site = Astro.site ?? new URL('https://greenpill.network');
@@ -65,6 +62,7 @@ const ogImageUrl = new URL(ogImage, site).href;
     <link rel="shortcut icon" href="/favicon.ico" />
   </head>
   <body class="gp-root">
+    {backgroundMode === 'graphic' && <div class="gp-background-parallax" aria-hidden="true"></div>}
     {!hideShell && <a class="gp-skip-link" href="#main-content">Skip to content</a>}
     {!hideShell && <SiteHeader activeNav={activeNav} />}
     <div id="main-content" class="gp-main-target" tabindex="-1">
@@ -89,10 +87,6 @@ const ogImageUrl = new URL(ogImage, site).href;
     overflow-x: clip;
   }
 
-  /* One plain canvas on every page (decision D4, November 2026 QA): the
-     home page's flat green-950. The old illustrated layer, its two glow
-     gradients and the tiled topo texture are gone; the texture tiles left
-     visible seams at wide widths. */
   body.gp-root {
     margin: 0;
     min-block-size: 100dvh;
@@ -100,6 +94,38 @@ const ogImageUrl = new URL(ogImage, site).href;
     position: relative;
     isolation: isolate;
     overflow-x: clip;
+  }
+
+  /* The illustrated background: two soft glows over the topographic line
+     art, fixed behind the page. It does not animate. November 2026 QA
+     (finding 8) traced the seams it used to show to two layers: each glow
+     was painted in a box narrower than the screen, so its edge was cut off
+     in a straight line, and a gradient texture tiled every 1200px met itself
+     at hard edges. The glows now span the whole layer and fade out within a
+     set radius, and the tiled texture is gone. The line art never repeats
+     inside the layer at common screen sizes (it is at least 1944px tall). */
+  body.gp-root .gp-background-parallax {
+    position: fixed;
+    /* Overscan, so collapsing mobile toolbars never reveal the layer's edge. */
+    inset-block: -14lvh;
+    inset-inline: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(circle 27vmax at 16% 18%, color-mix(in srgb, var(--gp-lime-500) 10%, transparent), transparent),
+      radial-gradient(circle 26vmax at 82% 74%, color-mix(in srgb, var(--gp-gold-500) 8%, transparent), transparent),
+      url('/images/greenpill-bg.png');
+    background-position:
+      center,
+      center,
+      top center;
+    background-repeat: no-repeat, no-repeat, repeat-y;
+    background-size:
+      100% 100%,
+      100% 100%,
+      max(1400px, 100vw) auto;
+    opacity: 0.94;
+    transform: translate3d(0, 0, 0);
   }
 
   /* Main content and footer are their own stacking layer, so positioned
