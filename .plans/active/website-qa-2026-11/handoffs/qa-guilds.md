@@ -99,7 +99,7 @@ Project activity judgement (GitHub API and the sources above, read 2026-11-06):
 
 ## Production change set
 
-**Approved by Afo on 2026-11-06 in this session. Not applied yet: apply after PR #36 merges** (the old template would render the new links as two "Visit" buttons). Exact values for every row, with each full current value, are in [`artifacts/qa-guilds-change-set.json`](../artifacts/qa-guilds-change-set.json) (42 field changes). Afo approved 40 of them: as drafted, except the seven marked †, which his answers settled or changed (recorded per row in `afoDecision`). The two rows marked ‡ were added afterwards at the orchestrator's request (the dead `checker.gitcoin.co` link on Grant Ships) and **still need his OK** (`pendingAfo`).
+**Approved by Afo on 2026-11-06 in this session. Not applied yet: apply after PR #36 merges** (the old template would render the new links as two "Visit" buttons). Exact values for every row, with each full current value, are in [`artifacts/qa-guilds-change-set.json`](../artifacts/qa-guilds-change-set.json) (42 field changes). Afo approved all of them: as drafted, except the nine marked †, which his answers settled, changed or added (recorded per row in `afoDecision`). Two of those, on Grant Ships, clear the dead `checker.gitcoin.co` link; the orchestrator asked for them after the first approval and Afo said "Yes, clear it".
 
 How to apply: change only the listed fields, in Directus or with targeted PATCH requests to `/items/guilds/<slug>` and `/items/projects/<slug>` using the admin token. Do not use `scripts/directus-operational-enrichment.ts` for this: it re-sends every field of all three guilds and every visible chapter initiative from the seed files, which would overwrite steward edits made since. The website picks the changes up on the next hourly build. The guild seed files already match the approved values (this PR); the project seed files and the fallback snapshot are for `qa-system-pass`.
 
@@ -139,8 +139,8 @@ Preview screenshots (Brave, local dev server with the approved change set applie
 | 30 | projects/greenwill | `tech_stack` | 3: Farcaster; Reputation; Public goods | 3: Badges; Reputation; Green Goods | [hub.regencoordination.xyz](https://hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411) |
 | 31 | projects/impact-reef | `entity_status` | experimental | archived | [github.com](https://github.com/greenpill-dev-guild/impact-reef) |
 | 32 | projects/grant-ships | `entity_status` | active | inactive | [forum.arbitrum.foundation](https://forum.arbitrum.foundation/t/grant-ships-weekly-dev-log/20191)<br>[hub.regencoordination.xyz](https://hub.regencoordination.xyz/t/greenpill-dev-guild-2024-recap/162) |
-| 33 | projects/grant-ships | `live_url` ‡ | https://checker.gitcoin.co/public/project/show/greenpill-dev-guild | "" | [forum.arbitrum.foundation](https://forum.arbitrum.foundation/t/grant-ships-weekly-dev-log/20191) |
-| 34 | projects/grant-ships | `proof_signals` ‡ | 2: Gitcoin project; Allo Alliance article | 1: Allo Alliance article | [paragraph.com](https://paragraph.com/@greenpilldevguild/the-allo-alliance-innovating-capital-allocation-on-chain) |
+| 33 | projects/grant-ships | `live_url` † | https://checker.gitcoin.co/public/project/show/greenpill-dev-guild | "" | [forum.arbitrum.foundation](https://forum.arbitrum.foundation/t/grant-ships-weekly-dev-log/20191) |
+| 34 | projects/grant-ships | `proof_signals` † | 2: Gitcoin project; Allo Alliance article | 1: Allo Alliance article | [paragraph.com](https://paragraph.com/@greenpilldevguild/the-allo-alliance-innovating-capital-allocation-on-chain) |
 | 35 | projects/green-goods | `live_url` | https://docs.greengoods.app/community/why-we-build | https://greengoods.app | [github.com](https://github.com/greenpill-dev-guild/green-goods)<br>[greengoods.app](https://greengoods.app) |
 | 36 | projects/public-goods-staking-protocol | `description` | The Public Goods Staking Protocol is a Greenpill Dev Guild workstream sourced from the Dev Guild Paragraph series. Public sources describe a path whe… | The Public Goods Staking Protocol coordinates validator squads to create long-term funding for public goods, drawing on validator infrastructure, Dap… | [paragraph.com](https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0) |
 | 37 | projects/greenpill-impact-framework | `description` | The public companion thread frames the Greenpill Impact Framework as a way to connect Green Goods v1, impact, strategy, measurement, coordination, an… | A framework connecting Green Goods with impact strategy, measurement, coordination and capital formation. Work in 2026 starts with GreenWill badges i… | [hub.regencoordination.xyz](https://hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411) |
@@ -169,10 +169,10 @@ Afo's answers (2026-11-06):
 3. Hats: built from the Linear team (Afolabi, Matt, Nansel, Kit, Gui).
 4. Contributors: both lists approved as drafted, including Izzy's credit.
 5. Writers Guild: links are the Paragraph newsletter and X; founding year 2023.
+6. Grant Ships: clear its `live_url` and the proof signal that link `checker.gitcoin.co`, which no longer resolves ("Yes, clear it").
 
 Still open:
 
-- The two Grant Ships rows marked ‡: clear its `live_url` and drop the proof signal that links `checker.gitcoin.co`, which no longer resolves. Grant Ships is hidden from the page either way (inactive).
 - Coop (`greenpill-dev-guild/coop`, last push 2026-06-19) is not a project row. Asked Afo whether to add it to the Dev Guild.
 - Applying the change set after PR #36 merges (production write, approved). Then `qa-system-pass` refreshes the fallback snapshot from the agent.
 
