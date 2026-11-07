@@ -2,7 +2,7 @@
   "version": 1,
   "session": "qa-guilds",
   "linear": "PRD-1411",
-  "status": "approved by Afo on 2026-11-06 in the qa-guilds session; apply after PR #36 merges",
+  "status": "approved by Afo on 2026-11-06 in the qa-guilds session; apply after PR #36 and PR #34 merge",
   "note": "One entry per record field. `current` is the production value from https://agent.greenpill.network/content/public-snapshot read on 2026-11-06 (generatedAt 2026-11-06T23:42:53Z); it matched the committed fallback snapshot field for field. publication_status is not in the public snapshot; every listed record is published today. Apply only after Afo approves, in Directus or through the admin API, then update the seed files to match. Rows with afoDecision were changed, settled or added by Afo's answers that day; the rest were approved as drafted.",
   "changes": [
     {
