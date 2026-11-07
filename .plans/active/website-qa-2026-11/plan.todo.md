@@ -114,6 +114,7 @@ One parent issue in P-PRD-19 for this hub, and one child per session, created wh
 | PRD-1410 | `qa-home-garden` |
 | PRD-1411 | `qa-guilds` |
 | PRD-1412 | `qa-stories` |
+| PRD-1413 | `qa-library` (batch B, started 2026-11-07) |
 | PRD-625 | `qa-chapters` (reused) |
 | PRD-739 | `qa-map-polish` (reused) |
 
