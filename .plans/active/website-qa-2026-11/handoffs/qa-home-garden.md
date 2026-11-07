@@ -12,23 +12,27 @@ Pull request: https://github.com/greenpill-dev-guild/network/pull/34 (not merged
 - **Ecosystem (finding 3).** Two labeled rows read from `home-page.json` (`ecosystem.partners`, `ecosystem.tools`), each tile linking to the organization's own site. Partners and collaborators: Regen Coordination, ReFi DAO, Bloom Network, Bread Cooperative, Gitcoin, Artizen, VDAO, Network Nations, JournoDAO. Tools we build with: Gardens, Hypercerts, Karma. Every entry has a public source from 2025 or 2026 (below). Octant and Giveth were dropped (latest sourced joint activity is 2024); Bloom Network and Artizen are new. The page skips any entry without a name or an `https://` link.
 - **Ramp labels (finding 20).** "Lowest friction" to "Highest friction" become Start light, Listen first, Find your fit, When you're ready. All four cards stay (D1). Card 03 is reworded and shorter, so the home card's four-line clamp no longer cuts it mid-sentence.
 - **Em dashes.** None left in copy these files render: the commons dek, the ecosystem dek, and Garden steps 2 and 3.
+- **No ramp steps (review on PR #34).** If `garden.json` has no `steps` list, or an empty one, home and `/garden` now build and leave the ramp out, and the Garden hero drops its "Start with Step 1" button rather than link to a missing `#step-1`. Before, a missing list failed the build (`find` on `undefined`). Both pages read the ramp through `src/lib/garden-ramp.ts`, which also holds the Telegram rule they used to define separately. It does not bring back an in-code copy of the ramp; the last one drifted from `garden.json`.
 
 Shared files touched, per the hub's "Shared files" rules:
 
 - `packages/website/keystatic.config.ts`: the `homePage` block gains an `ecosystem` object, plus one helper (`ecosystemEntriesField`) placed after the Garden's `previewCardField`. Keystatic rejects keys its schema does not define (`Key on object value "…" is not allowed`, `@keystatic/core` 0.5.50 `parseProps`), so without it the Home Page editor would not load. The editor also requires an `https://` site address.
 - `scripts/data/ui-source-baseline.tsv`: pruned the four `index.astro` rows that belonged to the removed tiles (two `rgba` values on the "In design" tile, the pill's border and its `font-size: 10px`). The other `font-size: 10px` row still covers the book captions.
+- `scripts/public-content-contract.test.ts`: two Garden ramp tests, placed after the content-reference test, and one import placed between the shared imports, away from the lines PRs #36 and #40 insert on.
 
 No change to `package.json`, the lockfile, `.github/workflows/**`, `CLAUDE.md`, `AGENTS.md` or `.claude/**`.
 
 ## Evidence
 
-AGENTS.md pre-PR gate, rerun on the podcast tile commit (also passed on `658b2aa` and `1255293`):
+AGENTS.md pre-PR gate, rerun on the empty-ramp fix (also passed on `c69c8c3`, `658b2aa` and `1255293`, with 33 content tests before the two Garden ramp tests):
 
 - `bun run typecheck`: exit 0, no diagnostics.
-- `bun run test:content`: 33 pass, 0 fail.
+- `bun run test:content`: 35 pass, 0 fail.
 - `bun run agentic:check`: exit 0. Guidance retrieved; "Authenticated browser QA policy check passed for 3 guidance file(s)"; 11 plan hubs valid; `ui:check` 0 hard, 0 warn.
 - `bun run build`: exit 0, 47 pages.
-- `astro check`: 0 errors, 0 warnings.
+- `astro check`: 0 errors, 0 warnings; 6 hints, none in files this PR touches.
+
+Ramp without steps (review on PR #34): I built the site with `garden.json`'s `steps` key removed, then with `"steps": []`. Both builds pass (47 pages). In both, `/garden` has no step articles, no ramp heading and no `#step-` link, the home page has no `#garden-ramp` section, and the hero and other `/garden` links remain. With the real content, the built home page matches the previous commit's, ignoring Astro's generated ids and asset hashes. The Garden page differs only in where Astro inlines the Button CSS (before the page stylesheet instead of after it); the only rules that tie both set `width: 100%`, so no computed style changes. Brave QA was not rerun for this fix for that reason.
 
 Brave QA of the D3 change (the window was 1014px wide by then and still ignored resizing; 1440 and 375 via the iframe harness): home step 1 shows the new title, body and "Subscribe on Paragraph" link with no clamped copy at 375, 1014 and 1440; on `/garden`, step 1 has no form or email field, the button links to the signup page, there is no horizontal overflow at any width, and the 375 button is 327 x 48px.
 
@@ -88,7 +92,11 @@ None. Nothing was written to production, and no signup was submitted.
 
 ### I1: Telegram invite (for Afo)
 
-Please create a new invite link for the Greenpill.network group with "Request admin approval" turned on, revoke the old links, and send me the new one. I will put it in `social-links.json` (`telegram`) in this PR. The live invite today is `t.me/+g9TM…` (a plain join link). Once approval is on, I suggest step 2's copy says so: "Ask to join the shared Greenpill chat. An admin approves new members to keep out spam. Lurk as long as you like."
+Please create a new invite link for the Greenpill.network group with "Request admin approval" turned on and send it to me. I will put it in `social-links.json` (`telegram`) in this PR. The `social-links.json` invite today is `t.me/+g9TM…` (a plain join link). Once approval is on, I suggest step 2's copy says so: "Ask to join the shared Greenpill chat. An admin approves new members to keep out spam. Lurk as long as you like."
+
+Revoke the old links only after the new invite is deployed and verified on home, Garden and the footer; revoking earlier breaks the live buttons in between (review on PR #34, now in the hub's I1).
+
+PR #34 should not merge before this lands (Codex P1 on the PR): the live buttons point at an invite that looks revoked, so merging with the plain-join link would open a new way in for spam instead of closing one.
 
 ### D3: newsletter (decided: Paragraph)
 
@@ -106,7 +114,7 @@ Follow-ups outside this PR: publishing the 2025 review or 2026 thesis would give
 
 ### Requests to other sessions
 
-- **`qa-brand-shell`:** `SiteFooter.astro:34` still hard-codes `t.me/+e-aa2Ed3LWVlYjNh`, which looks revoked; please read `social-links.json` `telegram`. The ecosystem tiles (`index.astro`) and the Garden step buttons (`garden/index.astro`) still carry their existing hand-set `target="_blank"` and `rel`; your site-wide rule can replace them.
+- **`qa-brand-shell`:** `SiteFooter.astro:34` still hard-codes `t.me/+e-aa2Ed3LWVlYjNh`, which looks revoked; please read `social-links.json` `telegram`. The ecosystem tiles (`index.astro`) and the Garden step buttons (`garden/index.astro`) still carry their existing hand-set `target="_blank"` and `rel`; your site-wide rule can replace them. The home ramp's Telegram button sets no `target` and relies on your rule in PR #39 (CodeRabbit flagged it on PR #34).
 - **`qa-library`:** resolved. Your PR fixes `podcast.json` (title and em dash). The home tile now reads `podcastFeed.episodeCount`, so your build-time feed refresh updates it too; until that lands it shows the committed June count (296).
 - **`qa-chapters`, `qa-guilds`, `qa-stories`:** `checker.gitcoin.co` no longer resolves (DNS failure in Brave on 2026-11-06). It is linked from the Kenya and Brasil chapter seeds, the Grant Ships project seed, the Brasil GG20 story and the committed snapshot.
 - **`qa-assessment`:** an option label in `GardenAssessment.astro` has an em dash ("Understanding the ideas — regen, public goods, coordination").
@@ -117,3 +125,4 @@ Follow-ups outside this PR: publishing the 2025 review or 2026 thesis would give
 - No new Telegram link yet (needs I1).
 - `ui:verify` not run: it cannot render in the dev machine (no browser), so axe-core did not run.
 - Suggested follow-up, not in this scope: the `/garden` step body runs about 1,100px wide at 1440 (September audit, line length); a `max-inline-size: 65ch` on step copy would fix it.
+- Suggested follow-up: the Keystatic Garden editor still lets an editor save an empty step list; the pages now handle that, but the editor could refuse it. `@keystatic/core` 0.5.50 array fields take `validation: { length: { min: 1 } }` (error "Must have at least 1 element"). Not added here, because the Keystatic editor can't be exercised in this session (the shared dev ports).
