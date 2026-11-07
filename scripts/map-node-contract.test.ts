@@ -889,10 +889,20 @@ test('home map intake requires a valid email and stores local pending only after
   assert.match(component, /<button type="button" class="gp-home-map-legend-reset" data-home-map-filter-reset hidden>Show all<\/button>/);
   assert.match(component, /const resetMapFilters = \(\) => \{[\s\S]*?activeTypeFilter = '';[\s\S]*?activeThemes\.add\(theme\)[\s\S]*?applyMapFilters\(\);/);
   assert.match(component, /syncFilterStatus\(visibleNodeIds\.size, nodeTypeById\.size\)/);
-  assert.match(component, /const dropPointerFocus = \(\) => \{[\s\S]*?pointerFocusTarget = null;[\s\S]*?if \(selectedFocusTarget\) return;/);
+  assert.match(component, /const dropPointerFocus = \(\) => \{[\s\S]*?pointerFocusTarget = null;[\s\S]*?hoveredStackKey = '';[\s\S]*?if \(selectedFocusTarget\) return;/);
   assert.match(component, /root\.addEventListener\('mouseleave', dropPointerFocus\)/);
   assert.match(component, /window\.addEventListener\('scroll', \(\) => \{[\s\S]*?dropPointerFocus\(\);[\s\S]*?\{ passive: true \}\)/);
-  assert.match(component, /const target = isGestureBlocked\(event\.target\) \? null : nodeAtPointer\(event\)/);
+  // Hover resolves from geometry, over the map only: never from the element
+  // under the pointer, whose hit circle can lie over a neighbouring pin.
+  assert.match(component, /const hoverTargetAtPointer = [\s\S]*?if \(isGestureBlocked\(event\.target\)\) return \{\};[\s\S]*?targetAtPointer\(event\)/);
+  assert.doesNotMatch(component, /addEventListener\('mouseenter'/);
+  assert.doesNotMatch(component, /addEventListener\('mouseleave', clearFocus\)/);
+  // A panel, the list or the join dialog opening clears the selection, any
+  // open fan and hover, so no stale card or coloured web stays under them.
+  assert.match(component, /const clearMapSurfaces = \(\) => \{[\s\S]*?closeSelected\(\);[\s\S]*?closeFanNow\(\);[\s\S]*?dropPointerFocus\(\);/);
+  assert.match(component, /const setFilterPanel = [\s\S]*?if \(openFilterPanel\) \{[\s\S]*?clearMapSurfaces\(\);/);
+  assert.match(component, /const openNodeList = \(\) => \{[\s\S]*?clearMapSurfaces\(\);/);
+  assert.match(component, /const openAddDialog = \(trigger\?: HTMLElement\) => \{[\s\S]*?clearMapSurfaces\(\);/);
   assert.match(homepage, /min-block-size: calc\(100dvh - var\(--gp-header-height\)\)/);
   assert.match(homepage, /<Text variant="display" class="gp-home-hero-title">/);
   assert.doesNotMatch(homepage, /font-size:\s*clamp\(40px, calc\(30\.1px \+ 2\.65vw\), 64px\)/);
@@ -1251,7 +1261,7 @@ test('home map mobile touch mode supports bounded zoom and compact connection ro
   assert.match(component, /\.gp-home-map-filter-panel\.is-themes \.gp-home-map-filter-option\s*{[\s\S]*?font-size:\s*var\(--gp-caption\)/);
   assert.match(component, /\.gp-home-map-control-row\s*{[\s\S]*?flex-wrap:\s*nowrap/);
   assert.match(component, /const closeFilterPanels = \(\) => \{[\s\S]*?openFilterPanel = ''[\s\S]*?syncFilterPanels\(\)/);
-  assert.match(component, /const setFilterPanel = \(panelName: string\) => \{[\s\S]*?if \(openFilterPanel\) closeNodeList\(\);[\s\S]*?syncFilterPanels\(\)/);
+  assert.match(component, /const setFilterPanel = \(panelName: string\) => \{[\s\S]*?if \(openFilterPanel\) \{\s*closeNodeList\(\);[\s\S]*?syncFilterPanels\(\)/);
   assert.match(component, /const openNodeList = \(\) => \{[\s\S]*?closeFilterPanels\(\);[\s\S]*?listDrawer\.hidden = false/);
   assert.match(component, /document\.addEventListener\('pointerdown', \(event\) => \{[\s\S]*?target\.closest\('\.gp-home-map-controls'\)[\s\S]*?closeFilterPanels\(\)[\s\S]*?\.gp-home-map-list-drawer, \[data-home-map-list-toggle\][\s\S]*?closeNodeList\(\)/);
   assert.match(component, /if \(event\.key !== 'Escape'\) return;[\s\S]*?closeFilterPanels\(\);[\s\S]*?closeNodeList\(\)/);
@@ -1590,49 +1600,90 @@ test('home map location picker searches, confirms, then reverse-confirms a dragg
   assert.doesNotMatch(component, /data-location-mode-toggle/);
 });
 
-test('home map uses exact-overlap fan-out instead of broad cluster bubbles', async () => {
+test('home map stacks overlapping pins across node types, counts them, and fans them out', async () => {
   const component = await readFile(
     new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
     'utf8'
   );
 
-  // A fan-out layer exists, but broad count bubbles are not rendered.
+  // Only pins that sit on top of each other stack (about one pin apart, in map
+  // units, so the rule holds at every zoom); merely near pins stay separate,
+  // and broad zoom-level cluster bubbles are not drawn.
   assert.match(component, /data-home-map-clusters/);
-  assert.match(component, /const recomputeClustersNow = \(\)/);
-  assert.match(component, /const groupPins =/);
-  assert.match(component, /overlapKeyFor/);
-  assert.match(component, /renderOverlapStack/);
-  assert.match(component, /gp-home-map-overlap-stack/);
+  assert.match(component, /const OVERLAP_STACK_RADIUS = 1\.4;/);
+  assert.match(component, /const groupPins = [\s\S]*?pointsWithin\(group\[i\]\.center, other\.center, OVERLAP_STACK_RADIUS\)/);
+  assert.doesNotMatch(component, /overlapKeyFor/);
   assert.doesNotMatch(component, /renderClusterBubble/);
   assert.doesNotMatch(component, /gp-home-map-cluster-count/);
-  assert.doesNotMatch(component, /members\.length\}\s*people/);
+  assert.doesNotMatch(component, /framePoints\(members\.map\(\(m\) => m\.center\)/);
+  assert.doesNotMatch(component, /groupIsCoincident/);
 
-  // Exact-overlap stack affordances are real labelled controls.
+  // Chapters and people are grouped together. Chapters never hide: people on a
+  // chapter become a badge placed beside it, where it covers no other pin.
+  const recompute = component.match(/const recomputeClustersNow = \(\) => \{([\s\S]*?)\n    \};/)?.[1] ?? '';
+  assert.match(recompute, /groupPins\(\[\.\.\.visibleChapterPins\(\), \.\.\.visiblePeoplePins\(\)\]\)/);
+  assert.match(recompute, /people\.length >= \(chapters\.length \? 1 : 2\)/);
+  assert.match(recompute, /people\.forEach\(\(pin\) => setPinClustered\(pin\.el, true\)\)/);
+  assert.doesNotMatch(recompute, /chapters\.forEach\(\(pin\) => setPinClustered/);
+  assert.match(recompute, /badgeCenterFor\(anchors, radius, taken\)/);
+  assert.match(component, /const BADGE_DIRECTIONS = \[-45, -135, 45, 135, 0, 180, -90, 90\]/);
+
+  // A marker for several people shows how many, in their colour: members,
+  // stewards, or members with a steward ring. The old three-dot glyph painted a
+  // gold dot whether or not a steward was there.
+  assert.match(component, /count\.textContent = String\(members\.length\)/);
+  assert.match(component, /const tone = stewards === members\.length \? ' is-stewards' : stewards > 0 \? ' has-steward' : ''/);
+  assert.doesNotMatch(component, /gp-home-map-overlap-dot/);
+  assert.match(component, /\.gp-home-map-overlap-count\s*{[\s\S]*?font-family:\s*var\(--gp-font-mono\)/);
+
+  // Markers are real labelled controls that say who is there and what
+  // activating them does, and keyboard focus previews them like hover.
   assert.match(component, /group\.setAttribute\('role', 'button'\)/);
-  assert.match(component, /People\$\{place \? ` near \$\{place\}` : ' at this location'\}/);
-  assert.match(component, /Activate to fan out/);
+  assert.match(component, /Activate to choose one\./);
+  assert.match(component, /const stackWhere = /);
+  assert.match(component, /const showStackFocus = \(stack: OverlapStack\) => \{/);
   assert.match(component, /event\.key === 'Enter' \|\| event\.key === ' '/);
 
-  // Hidden stacked pins leave the tab order/accessibility tree, but the selected
-  // node is explicitly exempt so active selection remains visible while zooming.
+  // Hidden pins leave the tab order, the accessibility tree and the pointer
+  // (their hit circle opts back into pointer events, so it is switched off
+  // too). The selected node stays drawn.
   assert.match(component, /const shouldCluster = clustered && el !== selectedFocusTarget/);
   assert.match(component, /el\.classList\.toggle\('is-clustered', shouldCluster\)/);
   assert.match(component, /el\.setAttribute\('tabindex', shouldCluster \? '-1' : '0'\)/);
   assert.match(component, /setAttribute\('aria-hidden', 'true'\)/);
+  assert.match(component, /\.gp-home-map-node-link\.is-clustered \.gp-home-map-node-hit\s*{\s*pointer-events:\s*none;/);
 
-  // Exact overlaps fan out with leaders and satellite pins; no spread-out zoom
-  // cluster path remains.
-  assert.match(component, /expandCluster\(members, markerCenter, viaKeyboard\)/);
+  // Fans: leader lines, satellites sized in screen px, and each satellite's
+  // name beside it, so a touch can choose without hovering. Picking rebuilds
+  // the stacks right after the click, not on the 90 ms debounce, so a quick
+  // second click finds its marker again; and not during it, because handlers
+  // further along still ask where the click landed.
+  assert.match(component, /fanOutCluster\(members, fanCenter, viaKeyboard\)/);
   assert.match(component, /gp-home-map-cluster-leader/);
-  assert.match(component, /gp-home-map-cluster-sat/);
-  assert.doesNotMatch(component, /framePoints\(members\.map\(\(m\) => m\.center\)/);
-  assert.doesNotMatch(component, /groupIsCoincident/);
+  assert.match(component, /gp-home-map-cluster-sat-label/);
+  assert.match(component, /const pick = \(vk: boolean\) => \{[\s\S]*?collapseFan\(\);[\s\S]*?activateMapNode\(m\.el, vk\);[\s\S]*?window\.setTimeout\(recomputeClustersNow, 0\);/);
+  // A press on a satellite's name keeps the fan open for the pick.
+  assert.match(component, /if \(targetAtPointer\(event\)\.satellite\) return;/);
+
+  // Pointer rules: geometry decides. A mouse is asked to choose only between
+  // pins on the same spot; a touch is asked when more than one pin falls inside
+  // its 44px target.
+  assert.match(component, /const POINTER_TARGET_RADIUS_PX = 22;/);
+  assert.match(component, /const SAME_SPOT_PX = 3;/);
+  assert.match(component, /const pinsContestingPointer = /);
+  assert.match(component, /if \(contested\.length > 1\) \{[\s\S]*?fanOutCluster\(contested, centroidOf\(contested\), false\)/);
+  // The handler that closes a card on an outside click counts the fan as
+  // inside, by the event's path, which still holds a satellite removed by the
+  // pick it made.
+  assert.match(component, /const insideMap = event\.composedPath\(\)\.some\(\(node\) => \([\s\S]*?node\.matches\('\.gp-home-map-node-link, \.gp-home-map-clusters, \.gp-home-map-selected/);
 
   // Astro-scope every JS-created styled element, or the scoped CSS misses it.
-  assert.match(component, /makeCircle\('gp-home-map-overlap-dot is-a'/);
+  assert.match(component, /makeCircle\('gp-home-map-overlap-disc'/);
+  assert.match(component, /applyScope\(count\)/);
+  assert.match(component, /applyScope\(label\)/);
   assert.match(component, /applyScope\(leader\)/);
 
-  // One-shot motion only — no idle/looping stack animation; reduced-motion safe.
+  // One-shot motion only: no idle or looping stack animation; reduced-motion safe.
   assert.match(component, /@keyframes gpMapClusterPop/);
   assert.doesNotMatch(component, /gpMapClusterPop[^;]*infinite/);
   assert.match(component, /reducedMotionPref\(\)/);
