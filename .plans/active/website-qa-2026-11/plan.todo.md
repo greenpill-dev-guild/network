@@ -123,9 +123,11 @@ One parent issue in P-PRD-19 for this hub, and one child per session, created wh
 | PRD-1412 | `qa-stories` |
 | PRD-1413 | `qa-library` (batch B, started 2026-11-07) |
 | PRD-1414 | `qa-assessment` (batch B, ready to start) |
-| PRD-1415 | `qa-brand-shell` (batch B, ready to start) |
+| PRD-1415 | `qa-brand-shell` (batch B, started 2026-11-07) |
 
-Pull requests so far: #33 this hub, #34 `qa-home-garden`, #35 `qa-map-data` (its nine-row coordinate repair is approved by Afo and runs after #35 deploys), #37 `qa-stories`, #38 `qa-library` (also updates `scripts/public-content-contract.test.ts`, which pinned the old episode count; named in its PR).
+`qa-chapters` (PRD-625) is ready as a start card.
+
+Pull requests so far: #33 this hub, #34 `qa-home-garden`, #35 `qa-map-data` (its nine-row coordinate repair is approved by Afo and runs after #35 deploys), #36 `qa-guilds`, #37 `qa-stories`, #38 `qa-library` (also updates `scripts/public-content-contract.test.ts`, which pinned the old episode count; named in its PR).
 | PRD-625 | `qa-chapters` (reused) |
 | PRD-739 | `qa-map-polish` (reused) |
 
