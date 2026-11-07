@@ -13,7 +13,7 @@ Pull request: https://github.com/greenpill-dev-guild/network/pull/37 (not merged
   - No byline unless a story names a real author; the "GN · Greenpill Network research · Source-backed seed copy" byline is gone from every story.
   - Category labels instead of slugs in meta rows and cards ("Field report", not "field-report"), using the labels editors already pick from in `keystatic.config.ts`. Regions are capitalized. The story breadcrumb is now "All stories / title": at 375 px the shared Breadcrumb component let a non-link category crumb overlap the title ("Field repoTech & Sun"), and the category already sits in the meta line under the breadcrumb.
   - Dates formatted for people: "Mar 14, 2026", "Mar 2026", "2026".
-  - Read time is computed from the body, so it cannot drift from the copy; it moved into the meta row.
+  - Read time moved into the meta row. It is estimated from the body unless an editor fills the story's Read Time field, which then wins; every story leaves it empty today.
   - "Proof links" with internal IDs (S048 and so on) became a **Sources** card: publisher, title, and author or date per source. A source without a URL renders as plain text instead of a link to `#`. The duplicate "## Sources" list of raw URLs at the end of every body is gone.
   - Related chips use public chapter and guild names from the operational snapshot ("Chapter · Greenpill Nigeria", not "Chapter · c te d ivoire"), and only render when that chapter or public guild page exists.
   - SEO titles match each h1 (the audit found five mismatches).
@@ -37,6 +37,12 @@ No changes to `package.json`, the lockfile, workflows, `CLAUDE.md`, `AGENTS.md` 
   - `/stories/greenpill-nigeria-tech-and-sun-round/`, `/stories/greenpill-cote-divoire-la-ligne-verte/`, `/stories/greenpill-irl-building-a-coordi-nation/`: no horizontal overflow at 375 or 1024; Sources card goes from three columns (1024) to one (375); related chips show "Chapter · Greenpill Nigeria" and "Guild · Dev Guild".
   - Found and fixed in QA: the caption rendered "20stories" (Astro dropped the space between two expressions; now one template string), and the breadcrumb overlap at 375 described above.
   - axe-core 4.11.4 (the repo's pinned copy, served same-origin) with WCAG 2.0 and 2.1 A and AA plus best-practice rules: no violations on `/stories/` and four story pages.
+  - Screenshots of the fixed build, taken in Brave on 2026-11-06 (1440 in a 1440 px iframe, 375 and 1024 side by side), in `../artifacts/qa-stories/`:
+    - `stories-index-1440-featured.jpg`: featured story with readable meta.
+    - `stories-index-1440-grid.jpg`: three-column grid and the "20 stories" caption.
+    - `stories-index-375-1024-grid.jpg`: one and two columns.
+    - `tech-and-sun-375-1024-hero.jpg`: "All stories / title" breadcrumb, meta row, hero image.
+    - `tech-and-sun-375-1024-sources.jpg`: Sources card in one and three columns, related chips.
 
 ## Sources
 
