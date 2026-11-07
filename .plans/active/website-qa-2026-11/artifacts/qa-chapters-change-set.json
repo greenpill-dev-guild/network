@@ -2,7 +2,7 @@
   "version": 1,
   "session": "qa-chapters",
   "linear": "PRD-625",
-  "status": "awaiting Afo's approval in the qa-chapters session; nothing written to production",
+  "status": "approved by Afo on 2026-11-07 in the qa-chapters session (\"Approve all\"); applied to production Directus on 2026-11-07 between 03:22 and 03:24 UTC through his signed-in Brave session; all 153 fields verified by readback and in the live public snapshot (generatedAt 2026-11-07T03:24:24Z)",
   "note": "One entry per record column. `current` is the production value from https://agent.greenpill.network/content/public-snapshot read on 2026-11-07 (generatedAt 2026-11-07T02:07:16Z); the live snapshot matched the committed fallback snapshot record for record except chapters/greensofa.image. `proposed` is the full new column value (jsonb columns such as seo, media, links and stewards are complete values, built from the current value). `decision` groups rows Afo can approve or reject together: status, location, steward-name, accent; null means a copy, link or source-label fix. Before writing a column, read it and compare it with `current`; skip and ask if it differs. publication_status is never changed.",
   "changes": [
     {

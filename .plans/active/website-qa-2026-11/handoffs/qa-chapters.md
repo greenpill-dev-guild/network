@@ -1,11 +1,16 @@
 # Handoff: qa-chapters (PRD-625)
 
-Session `qa-chapters`, Linear PRD-625. Every chapter's public copy, links and location checked against public sources opened on 2026-11-06 and 2026-11-07. **Nothing has been written to production.** The change set below waits for Afo's approval in this session.
+Session `qa-chapters`, Linear PRD-625. Every chapter's public copy, links and location checked against public sources opened on 2026-11-06 and 2026-11-07. **Afo approved the change set on 2026-11-07 ("Approve all"), and it was applied to production Directus the same night through his Brave session and verified in the live snapshot.** Inactive chapters no longer get a page (his decision), and the `/chapters` index copy is fixed in the PR.
 
 ## Changed
 
-- No code or content files changed yet. The production change set is ready: [`artifacts/qa-chapters-change-set.json`](../artifacts/qa-chapters-change-set.json) holds every field change with its full current value, proposed value and sources; the table at the end of this file lists the same rows.
-- Proposed, pending Afo: a short "not active" variant of the chapter page (see Decisions), and a copy fix in `content/chapters-index.json`, which is file-backed and so needs a PR.
+- **Production (Directus), applied 2026-11-07 03:22 to 03:24 UTC:** 153 field changes across 38 records (all 18 chapters, all 16 chapter initiatives, 4 steward profiles), exactly as in [`artifacts/qa-chapters-change-set.json`](../artifacts/qa-chapters-change-set.json) and the table below. Evidence under Production change set.
+- **Pull request** (PR_LINK, not merged):
+  - `packages/website/src/lib/chapter-pages.ts` (new) and `packages/website/src/lib/operational-content.ts`: chapters with status `inactive` or `archived` get no page. The rule sits in `getOperationalChapterPages()`, which the chapter route, the chapter index, the home map, the sitemap and related-chapter links all read, so no link can point at a page that is not built. Forming chapters keep their pages. With the change set applied, six pages stop building: California, Denver, Dominican Republic, India, Uganda and Uncommons (all noindex, linked from nowhere on the site).
+  - `scripts/public-content-contract.test.ts`: a test for the rule.
+  - `packages/website/src/content/chapters-index.json`: removes internal notes from the `/chapters` meta description ("steward review gaps"), hero dek ("source-backed activity") and empty state; fixes the unrendered `body` note and the redirected Hub category link.
+  - This handoff and the change set JSON.
+  - The brief limited code to `pages/chapters/[slug].astro` and `index.astro`. The rule went into the shared loader instead, so the index, map and sitemap follow it too; neither page file changed. No other open PR touches these files.
 
 ## What is wrong today
 
@@ -24,6 +29,14 @@ The live snapshot (`https://agent.greenpill.network/content/public-snapshot`, ge
 - **Dead or moved links:** `checker.gitcoin.co` no longer resolves (DNS failure; Kenya's main link, link row, connect row and proof card, and Brasil's link row and proof card). Toronto's Consensus 2025 sponsor page returns 404. California's only link, `x.com/greenpill_LA`, says "This account doesn't exist". `uncommons.cc` shows "This page is down". GreenSofa's Ethereum Localism field report moved (the old URL returns 404). Karma GAP (`karmahq.xyz` to `karmahq.org`) and Crypto Altruists (`cryptoaltruism.org` to `cryptoaltruists.com`) links redirect.
 - **Map pins:** 8 of the 12 pins on the map sit in their stated city (within about 6 km of each city's Wikipedia coordinates), and Germany's sits at the center of the country it lists as "Distributed". Three need a change: Nigeria's is in Lagos, which no source supports (see above); Kenya's sits at the center of Kenya, labeled "Distributed", while the chapter's own account and its April 2026 event are in Nairobi; GreenSofa's sits at the center of Taiwan while the city reads "Taipei (distributed)", and no source names Taipei (its HackMD gives no city; the Ethereum Localism field report says "Location: Taiwan"). The six noindex chapters are not on the map; the Dominican Republic page names Santo Domingo, but its stored point is about 45 km west of it.
 - **Draft story references:** the Uncommons chapter (`featuredStorySlugs`) and its initiative (`relatedStorySlugs`) point at `greenpill-2025-year-in-review`, a draft since PR #37. Neither field renders.
+
+## Evidence
+
+- **Gate (AGENTS.md), on the PR commit:** `bun run typecheck` passed with no errors; `bun run test:content` 34 pass, 0 fail (includes the new chapter-page test); `bun run test:chapter-image-copies` 23 pass, 0 fail; `bun run agentic:check` passed (guidance, browser-verification policy, 11 plan hubs valid, `ui:check` 0 hard, 0 warn); `bun run build` built 43 pages. `bun run ui:verify` was not run: the dev machine has no Chrome.
+- **Build output:** `dist/chapters/` holds 14 chapter pages built from the committed fallback snapshot. California, India, Uganda and Uncommons are inactive there, so they get no page. Denver and the Dominican Republic are still "forming" in the fallback; they drop out once `qa-system-pass` refreshes it, and production builds already read them as inactive.
+- **Brave QA** (Afo's profile through Claude in Chrome), the build exported with `dm-export` and served on `127.0.0.1:3327`: `/chapters/` at 1460 (window width), 1024 and 375 (same-origin iframes) shows the new dek with no horizontal overflow; `/chapters/california/` returns 404. Screenshots: `artifacts/qa-chapters/chapters-index-1440.jpg`, `artifacts/qa-chapters/chapters-index-375-1024.jpg`.
+- **Production:** apply and verification steps are under Production change set.
+- **Live site** after the scheduled Pages build at 2026-11-07 03:29 UTC (`/build-metadata.json`): every chapter page shows the new place and copy (for example "Awka, Nigeria", "Nairobi, Kenya", "Abidjan, Côte d'Ivoire", "Distributed, Taiwan"); `/locations.json` has Nigeria at 6.20694, 7.06778 and Kenya at -1.28639, 36.81722. The only internal-sounding text left on chapter pages is two captions in the chapter template ("Source-backed evidence anchoring this chapter profile." and "N source-backed destinations"); see Open items.
 
 ## Every chapter at a glance
 
@@ -50,7 +63,16 @@ Public activity is the newest dated item found in the chapter's own channels (Hu
 | Uganda | inactive (noindex) | Earth Day tree planting listed for Apr 22, 2026 | Not on the map | Copy from the 2024 Hub thread and the 2026 listing; publisher name instead of `S041` |
 | Uncommons | inactive (noindex) | X post, Jan 23, 2026 | Not on the map | New summary from its own bio; drops the draft-story reference and the unpublished Paragraph preview; removes the dead website; initiative rewritten from the Hub thread and its X account |
 
-## Decisions needed from Afo
+## Decisions (Afo, 2026-11-07, in this session)
+
+1. Change set: **"Approve all (Recommended)"**, status rows included.
+2. Dormant and forming chapters: **"Stop building them"**: inactive chapters get no page and their URLs 404; forming chapters keep theirs. Implemented in the PR (archived treated like inactive).
+3. Archive instead of rewrite: not asked separately; the approved rewrite stands, and the pages no longer build anyway.
+4. `chapters-index.json`: **"Yes, fix it in my PR"**.
+5. How to apply: **"My Brave Directus session"**; Afo signed in to `admin.greenpill.network` in Brave when asked.
+6. Unverified steward names (below): no answer yet, so they are unchanged.
+
+The options as they were put to Afo:
 
 1. **Approve the change set.** Every row that adds or keeps a claim cites a source; rows that only remove something give the reason (a dead link, an unpublished draft, or, for the Dominican Republic, no public source at all). Rows tagged in the table can be approved or rejected as a group:
    - `status`: Denver and Dominican Republic from forming to inactive; seven finished initiatives (one-off events and ended programs) from active to inactive. The initiative card then reads "Initiative · inactive". Alternative: keep them active and let the dates in the new copy speak.
@@ -64,7 +86,16 @@ Public activity is the newest dated item found in the chapter's own channels (Hu
 
 ## Production change set
 
-**Not approved yet. Nothing written to production.** 153 field changes across 38 records: all 18 chapters, all 16 chapter initiatives, and 4 steward profiles (`people`, which the website does not render but the public snapshot does). Full values for every row are in [`artifacts/qa-chapters-change-set.json`](../artifacts/qa-chapters-change-set.json); `current` there is the production value from the live snapshot read on 2026-11-07 (generatedAt 2026-11-07T02:07:16Z). The table abbreviates link, proof and steward lists. Rows tagged `status`, `location`, `steward-name` or `accent` are the groups in Decisions above; untagged rows are copy, link and source-label fixes.
+**Approved by Afo on 2026-11-07 ("Approve all") and applied that night through his signed-in Brave session on `admin.greenpill.network`.**
+
+Apply evidence (Directus REST calls from the Data Studio tab, same origin, Afo's session):
+- The change set was loaded into the page in three chunks, each checked against the local file by SHA-256 (all matched).
+- Dry run: all 38 records read, every one of the 153 target fields still equal to its recorded `current` value (0 mismatches).
+- Writes: one `PATCH /items/<collection>/<slug>` per field, each preceded by a fresh read and compare. 151 succeeded on the first pass and read back equal. The two `text[]` fields (`chapters.featured_story_slugs` on Uncommons, `chapter_initiatives.related_story_slugs` on its initiative) failed with "malformed array literal" for `[]`; after re-reading them, both were written as the Postgres literal `{}` and read back as `[]`.
+- Post-apply check: all 153 fields equal their approved values (0 differences).
+- Live agent snapshot (generatedAt 2026-11-07T03:24:24Z): all 55 chapter, initiative and people records equal the expected post-change records (record hashes), and `locations` moved Nigeria to 6.20694, 7.06778 and Kenya to -1.28639, 36.81722.
+- `publication_status` was not touched, so no review email was queued.
+ 153 field changes across 38 records: all 18 chapters, all 16 chapter initiatives, and 4 steward profiles (`people`, which the website does not render but the public snapshot does). Full values for every row are in [`artifacts/qa-chapters-change-set.json`](../artifacts/qa-chapters-change-set.json); `current` there is the production value from the live snapshot read on 2026-11-07 (generatedAt 2026-11-07T02:07:16Z). The table abbreviates link, proof and steward lists. Rows tagged `status`, `location`, `steward-name` or `accent` are the groups in Decisions above; untagged rows are copy, link and source-label fixes.
 
 | # | Record | Field | Current | Proposed | Source | Why |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -222,16 +253,18 @@ Public activity is the newest dated item found in the chapter's own channels (Hu
 | 152 | chapterInitiatives/uncommons-publications-learning-series | `proofSignals` | 2: Publications shipped / Approved Paragraph preview / S072; Open Good recognition / COSCon'25 mention / S072 | 1: UnResearch / Crypto humanities research / Regen Hub | [hub.regencoordination.xyz/t/uncommons-previous-greenpill-cn/](https://hub.regencoordination.xyz/t/uncommons-previous-greenpill-cn/63) | Removes two cards that cited the unpublished draft (S072). |
 | 153 | chapterInitiatives/uncommons-publications-learning-series | `relatedStorySlugs` | greenpill-2025-year-in-review | (empty list) | none found (see why) | `greenpill-2025-year-in-review` is a draft since PR #37 (field not rendered). |
 
-## How to apply (after approval)
+## How it was applied, and how to repeat it
 
 Change only the listed fields, in Directus Data Studio or with targeted `PATCH /items/<collection>/<slug>` requests using the admin token, one column per request. Collections are `chapters`, `chapter_initiatives` and `people`; the JSON names each Directus column (`directusField`), for example `primary_link`, `connect_links`, `proof_signals`, `entity_status`, `latitude`.
 
 1. Before writing each field, read it and compare it with the recorded `current` value. If it differs, a steward edited it after 2026-11-07: skip that field and check with Afo or the steward. Never PATCH a whole record from a stale copy.
 2. Partial jsonb edits (`seo.description`, `media`) are stored as the full column value in `proposed`, built from the current value, so a single column write replaces it exactly.
-3. Do not use `scripts/directus-operational-enrichment.ts`: it re-sends every field of every visible chapter initiative from the seed files.
-4. These edits queue no email. The only notification trigger on these tables fires when an initiative's `publication_status` moves to `pending_review` (migration 026), and no row here changes `publication_status`; `entity_status` is a separate column.
-5. The website picks the changes up on the next hourly build. Then check the live snapshot (`/content/public-snapshot`), `/locations.json` and the chapter pages. `qa-system-pass` refreshes the committed fallback snapshot afterwards.
-6. The chapter seed files (`src/data/operational-content-seed/chapters/*`, `chapter-initiatives/*`, `people/*`) still hold the old copy. They feed only local seeding and `content:snapshot`, never production. Updating them to the approved values is a follow-up (see Open items).
+3. The two `text[]` story-slug columns (`featured_story_slugs`, `related_story_slugs`) rejected `[]` through the Directus API ("malformed array literal"); the Postgres empty-array literal `{}` worked and reads back as `[]`. Other `text[]` columns probably behave the same (not tested).
+4. Do not use `scripts/directus-operational-enrichment.ts`: it re-sends every field of every visible chapter initiative from the seed files.
+5. These edits queue no email. The only notification trigger on these tables fires when an initiative's `publication_status` moves to `pending_review` (migration 026), and no row here changes `publication_status`; `entity_status` is a separate column.
+6. The website picks the changes up on the next hourly build. Then check the live snapshot (`/content/public-snapshot`), `/locations.json` and the chapter pages. `qa-system-pass` refreshes the committed fallback snapshot afterwards.
+7. The dev machine has no outbound network, so repo scripts cannot reach production from a session; the Brave Data Studio tab can.
+8. The chapter seed files (`src/data/operational-content-seed/chapters/*`, `chapter-initiatives/*`, `people/*`) still hold the old copy. They feed only local seeding and `content:snapshot`, never production. Updating them to the approved values is a follow-up (see Open items).
 
 ## Sources
 
@@ -339,8 +372,9 @@ Opened on 2026-11-06 and 2026-11-07, in Afo's Brave profile through Claude in Ch
 
 ## Open items and requests
 
-- **Apply and verify** after approval: write the approved rows, wait for the hourly build, then check `/content/public-snapshot`, `/locations.json` and the chapter pages, and comment on PRD-625.
-- **Seed files:** `src/data/operational-content-seed/chapters/*`, `chapter-initiatives/*` and `people/*` still hold the old copy. They never reach production, but `bun run content:snapshot` rebuilds the fallback snapshot from them, so they should match the approved values (as `qa-guilds` did for guilds). Proposed: update them in this session's PR after approval.
+- **Website build:** done; the Pages build at 03:29 UTC published the change set (see Evidence). The six inactive chapter pages stay live until this PR merges, and the `/chapters` meta description fix ships with it.
+- **Template captions:** `pages/chapters/[slug].astro` still prints "Source-backed evidence anchoring this chapter profile." and "N source-backed destinations" on every chapter page with proof cards or links. Afo did not pick the option that included removing them; asked at the end of this session whether to add it to this PR, otherwise it belongs to `qa-system-pass`.
+- **Seed files:** `src/data/operational-content-seed/chapters/*`, `chapter-initiatives/*` and `people/*` still hold the old copy. They never reach production, but `bun run content:snapshot` rebuilds the fallback snapshot from them, so they should match the approved values (as `qa-guilds` did for guilds). Not done here (outside this session's files); proposed as a follow-up.
 - **Ask the stewards:** whether Ottawa (last public post April 2025) and Germany (last chapter update August 2024) are still active, and whether Uganda is restarting (it listed an Earth Day 2026 tree planting).
 - **Kenya's Gitcoin project:** I did not find a working replacement for the Octant community round page that lived on `checker.gitcoin.co`; the change set links the chapter's Hub thread and X account instead. Brasil's grants are all on its Karma GAP page.
 - **`qa-system-pass`:** refresh the fallback snapshot from the agent after this change set is applied; the `/chapters` hero fallback dek in `pages/chapters/index.astro` has an em dash; the template captions listed in Decision 2 if I do not fix them here.
