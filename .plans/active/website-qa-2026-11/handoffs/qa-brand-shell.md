@@ -33,6 +33,8 @@ One rule, applied when Astro renders each page (`src/middleware.ts`, logic in `s
 
 The hint is a description rather than part of the link name, following the repo's Modern Web Guidance ("Don't pack descriptions, error messages, or instructions into the label"): names stay equal to the visible text, and screen readers announce "Opens in a new tab" as the link's description. Hand-set `target`/`rel` in other sessions' pages keep working; the rule fills in what they lack.
 
+Links that page scripts build in the browser are created after the rule has run. Codex review on #39 flagged the chapter impact events (`chapters/[slug].astro`, `renderEvents`): they now get the same description, with the hint's id and text passed from `lib/external-links.ts` through `define:vars`, and the script adds the hint element if a page lacks it. The impact panel is off site-wide today (`CHAPTER_IMPACT_UI_ENABLED = false` in `packages/shared`), so this was checked on a local build with the flag on (not committed): with a stubbed impact response, both event links carry `target="_blank"`, `rel="noopener"` and the description, the hint is recreated once when removed, and axe reports 0 violations. HomeMap's runtime links already say "in a new tab" in their `aria-label`, so they are left alone; a site-wide runtime hook would have made screen readers say it twice there.
+
 ### Footer (findings 6, 16, 20)
 
 `SiteFooter.astro`, following the July 16 footer spec:
@@ -60,6 +62,7 @@ Old files left in place: `images/greenpill-logo.svg` (the Garden page hero still
 - `scripts/data/ui-source-baseline.tsv`: pruned 8 rows whose values this change removed (5 in `GpLayout.astro`, 2 in `SiteFooter.astro`, 1 in `SiteHeader.astro`).
 - `scripts/public-content-contract.test.ts`: the "site shell keeps the graphic page background visible" test pinned the footer to the literal `rgba(7, 24, 15, 0)` (a fully transparent background, removed here as a no-op). It now checks the intent: the `.gp-site-footer` rule sets no background. One assertion at line 453; PR #38 edits the same file only at the imports and from line 462 down, so the two merge cleanly.
 - New files the rule needs: `packages/website/src/middleware.ts`, `packages/website/src/lib/external-links.ts`, `scripts/external-links.test.ts`. No `package.json` script was added; run the test with `bun test scripts/external-links.test.ts`.
+- `packages/website/src/pages/chapters/[slug].astro`: the impact-events script describes its runtime links as opening in a new tab (Codex review fix; no open PR touches this file).
 - No change to `package.json`, the lockfile, `.github/workflows/**`, `CLAUDE.md`, `AGENTS.md` or `.claude/**`. `social-links.json` and `keystatic.config.ts` are unchanged (PR #34 has not merged).
 
 ## Evidence
@@ -111,5 +114,5 @@ Brand: Figma "Marketing" (`TVr9MTO5dtH2rlodiA76di`), pages "Greenpill Pitch Deck
 - After PR #34 merges: rebase, then move the footer's literal links into `content/social-links.json` (rename `warpcast` to `farcaster` with the farcaster.xyz URL, add LinkedIn, Luma and the Code of Conduct) with matching `socialLinks` fields in `keystatic.config.ts`. Keep the footer's Regen Hub link working (hub `plan.todo.md`, commit 4a53b88): before the footer reads `hub`, set it to `https://hub.regencoordination.xyz`, since `hub.greenpill.network` does not load; otherwise keep the footer's literal Hub link. Open the link in Brave and confirm it loads before pushing.
 - For the owners of those files (requests, not changes made here):
   - `qa-home-garden`: `home-page.json` `media.image` (twice) points at `/images/hifi/pill-3d.png`, which does not exist; `/images/brand/greenpill-mark.png` is the brand-kit capsule if a mark is wanted there. The Garden hero still draws the book starburst (`garden/index.astro:81`).
-  - `qa-system-pass`: the hand-set `target`/`rel` in `index.astro`, `garden/index.astro`, `library/index.astro`, `stories/[slug].astro`, `chapters/[slug].astro`, `guilds/[slug].astro` and `GardenAssessment.astro` are now redundant and can go when those files are next touched. Links built in the browser (HomeMap profile links, chapter impact events) already set `target` and `rel`; they do not get the description, so HomeMap's `aria-label` text is the only hint there.
+  - `qa-system-pass`: the hand-set `target`/`rel` in `index.astro`, `garden/index.astro`, `library/index.astro`, `stories/[slug].astro`, `chapters/[slug].astro`, `guilds/[slug].astro` and `GardenAssessment.astro` are now redundant and can go when those files are next touched. The runtime links in `chapters/[slug].astro` and HomeMap still set their own `target` and `rel`, since the rule never sees them.
   - LinkedIn's company logo is still the book starburst; updating it is outside the repo.
