@@ -22,7 +22,14 @@ No change to `package.json`, the lockfile, `.github/workflows/**`, `CLAUDE.md`, 
 
 ## Evidence
 
-Commands (run in this worktree; `bun` runs inside the dev machine):
+AGENTS.md pre-PR gate, rerun on commit `7c6f552`:
+
+- `bun run typecheck`: exit 0, no diagnostics.
+- `bun run test:content`: 33 pass, 0 fail.
+- `bun run agentic:check`: exit 0. Guidance retrieved; "Authenticated browser QA policy check passed for 3 guidance file(s)"; 11 plan hubs valid; `ui:check` 0 hard, 0 warn.
+- `bun run build`: exit 0, 47 pages.
+
+Other commands (run in this worktree; `bun` runs inside the dev machine):
 
 - `bun install --frozen-lockfile`: 1362 packages, no lockfile change.
 - `bun run agentic:guidance`: read before the UI work (lists for repeated content, `role="list"` on flex lists for Safari, sequential headings).
