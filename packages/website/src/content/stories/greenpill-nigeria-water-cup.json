@@ -2,10 +2,10 @@
   "title": "Greenpill Nigeria Water Cup Mapping",
   "status": "published",
   "category": "field-report",
-  "publishDate": "2025",
-  "updatedDate": "",
-  "dek": "Nigeria's strongest public proof point combines Water Cup updates, an onchain Hypercert, and an Awka Ethereum-at-10 showcase.",
-  "excerpt": "A source-backed launch story for Greenpill Nigeria: Project Water Cup updates, a Water Cup Mapping Hypercert, and public event context from Awka.",
+  "publishDate": "2025-07-17",
+  "updatedDate": "2026-11-06",
+  "dek": "In June and July 2025, Greenpill Nigeria and Atlantisp2p surveyed water access and sanitation in 15 communities across Anambra, Enugu and Imo States.",
+  "excerpt": "Water Cup's mapping stage gathered grassroots data on drinking water, taps, wastewater and toilets, and contributors received impact certificates.",
   "region": "africa",
   "tag": "Impact Tracking",
   "tags": [
@@ -13,10 +13,10 @@
     "hypercert",
     "nigeria"
   ],
-  "body": "Greenpill Nigeria has one of the strongest public chapter footprints in the research artifact.\n\nThe Water Cup thread on the Regen Coordination Hub gives the program context. A public Hypercert records the Water Cup Mapping proof surface. A separate Awka Ethereum-at-10 event page shows the chapter presenting Water Cup alongside ReFi and public-goods education.\n\nThis story should render as a proof-backed field note, not as a claim that every downstream impact metric is already verified by the website.\n\n## Sources\n\n- S015: https://hub.regencoordination.xyz/t/greenpill-nigeria-project-water-cup-updates/307\n- S046: https://app.hypercerts.org/hypercerts/42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-86091438830997431256233775680237357498368\n- S017: https://luma.com/hlkglzcg",
+  "body": "Water Cup is an environmental and public health initiative by Greenpill Nigeria with Atlantisp2p, working toward safe, clean and accessible water in Nigeria. It has three stages: mapping, implementing and maintaining. Greenpill Nigeria shared results from the first stage on the Regen Coordination Hub on July 17, 2025.\n\n## Mapping water access\n\nRun through a Greenpill dNFT campaign, the mapping stage assessed water access, use and sanitation in Southeastern Nigeria around four themes: drinking water quality, tap water access, wastewater disposal and sanitation facilities. Between June and July 2025, research teams visited 15 localities, each team covering three:\n\n- Anambra State: Ihite, Ezira, Umunze, Ufuma, Amansea, Enugwu-Ukwu, Amaokpala, Ifite-Oko and Ezi-Oko\n- Enugu State: Abakpa, Trans-Ekulu and Emene\n- Imo State: Isu, Ikeduru and Mbaise\n\nThe teams interviewed more than 75 residents, inspected sites and documented what they saw. The chapter reported widespread reliance on untreated water, inconsistent tap supply and low pressure, clogged drainage, and poorly maintained toilets, especially in low-income and rural communities.\n\n## Recognizing contributors\n\nBy July 2025, the field research and report were complete, and contributors could claim $250 in USDGlo along with impact certificates. A Water Cup Mapping hypercert is published on Celo. The next step, an implementation stage, was listed for funding on Impact Landscapes.\n\nGreenpill Nigeria also showcased Water Cup at its Ethereum at 10 meetup in Awka on July 30, 2025.",
   "image": "/images/stories/greenpill-nigeria-water-cup.jpeg",
-  "author": "Greenpill Network research",
-  "authorRole": "Source-backed seed copy",
+  "author": "",
+  "authorRole": "",
   "authorBio": "",
   "authorSlug": "",
   "authorAvatar": "",
@@ -27,41 +27,47 @@
     "ethereum-at-10-awka"
   ],
   "continueReadingStorySlugs": [
+    "ethereum-at-10-awka",
     "take-the-greenpill-nigeria-refi-education",
-    "greenpill-brasil-gg20-climate-milestones",
-    "growing-greenpill-impact-framework"
+    "greenpill-nigeria-tech-and-sun-round"
   ],
   "themeSlugs": [
     "water",
-    "education",
+    "impact",
     "public",
-    "impact"
+    "local-regeneration"
   ],
   "translations": [],
   "proofSignals": [
     {
-      "label": "Water Cup thread",
-      "value": "Public Hub source",
-      "source": "S015",
+      "label": "Greenpill Nigeria, July 17, 2025",
+      "value": "Greenpill Nigeria: Project Water Cup Updates",
+      "source": "Regen Coordination Hub",
       "href": "https://hub.regencoordination.xyz/t/greenpill-nigeria-project-water-cup-updates/307"
     },
     {
-      "label": "Water Cup Mapping",
-      "value": "Hypercert",
-      "source": "S046",
+      "label": "Hypercert on Celo",
+      "value": "Greenpill Nigeria-Project Water Cup Mapping",
+      "source": "Hypercerts",
       "href": "https://app.hypercerts.org/hypercerts/42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-86091438830997431256233775680237357498368"
+    },
+    {
+      "label": "Showcase agenda, July 30, 2025",
+      "value": "Celebrating Ethereum At 10 - Greenpill Nigeria (Awka Edition)",
+      "source": "Luma",
+      "href": "https://luma.com/hlkglzcg"
     }
   ],
   "featuredWeight": 100,
-  "readTime": "3 min read",
+  "readTime": "",
   "media": {
     "image": "/images/stories/greenpill-nigeria-water-cup.jpeg",
-    "imageAlt": "Map of Nigerian areas covered by the Greenpill Nigeria Water Cup.",
+    "imageAlt": "Infographic listing the areas in Anambra, Enugu and Imo States covered by the Water Cup survey.",
     "ogImage": "/images/stories/greenpill-nigeria-water-cup.jpeg"
   },
   "seo": {
     "title": "Greenpill Nigeria Water Cup Mapping · Greenpill Stories",
-    "description": "Greenpill Nigeria's Water Cup story is grounded in public Hub, Hypercert, and event sources.",
+    "description": "Greenpill Nigeria's Water Cup mapping: a June and July 2025 survey of water access and sanitation in 15 communities across Anambra, Enugu and Imo States.",
     "ogImage": "/images/stories/greenpill-nigeria-water-cup.jpeg",
     "canonicalPath": "/stories/greenpill-nigeria-water-cup",
     "noindex": false

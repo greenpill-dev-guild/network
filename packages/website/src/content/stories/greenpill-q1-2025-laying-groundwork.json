@@ -3,9 +3,9 @@
   "status": "published",
   "category": "program",
   "publishDate": "2025-04-30",
-  "updatedDate": "2025-04-30",
-  "dek": "The Q1 Paragraph update captures Greenpill's early 2025 shift toward clearer onboarding, Regen Coordination, public calls, and chapter/guild alignment.",
-  "excerpt": "A public quarterly update on Greenpill's 2025 groundwork, including onboarding, public calls, Regen Coordination, and network alignment.",
+  "updatedDate": "2026-11-06",
+  "dek": "Greenpill's first-quarter update for 2025 covers two new chapters, a busy ETHDenver, the General Forum on Ethereum Localism and community-led Gitcoin rounds.",
+  "excerpt": "New chapters in Cape Town and London, Ontario, service projects in Denver, and a shared impact standard for Regen Coordination.",
   "region": "global",
   "tag": "Network Update",
   "tags": [
@@ -14,10 +14,10 @@
     "regen-coordination",
     "network"
   ],
-  "body": "The Q1 2025 update is a useful bridge between the 2024 recap and the later Garden, Localism, and Dev Guild work.\n\nThe public Paragraph source frames the network as moving into 2025 with renewed purpose, clearer chapter onboarding goals, stronger Regen Coordination ties, public calls, and chapter/guild alignment. It should support editorial copy about the network's operating direction, not a new operational collection.\n\nFor launch content, keep this as a network story and source for related public pages. Do not infer private governance state, application workflows, or internal roadmaps beyond the public article.\n\n## Sources\n\n- S068: https://paragraph.com/@greenpill/q1-2025-laying-the-groundwork",
+  "body": "Greenpill published its Q1 2025 update on Paragraph on April 30, 2025. The network started the year slowly, postponing its January gathering, and then centered its attention on Izzy Initiatives, a Gardens signaling pool created to carry on the legacy of Izzy.\n\n## New chapters\n\nGreenpill welcomed its first new chapters since revamping its onboarding: Cape Town, which holds weekly gatherings in Muizenberg, and London, Ontario, led by the Institute for Community Sustainability, whose work includes a Repair Café program and a Thing Library. Both chapters were trained on Charmverse, Karma GAP and Safe multisig wallets.\n\n## ETHDenver and Ethereum Localism\n\nIn February, Greenpill members gathered in Denver for the second time. Fourteen people stayed at a Greenpill hackerhouse, and a Friday barbecue brought in friends from across the regen space. Ryan organized three service projects under the name Greenpill Goonies Giveback: two shifts at Food Bank of the Rockies and a river cleanup with the Greenway Foundation that pulled 17 pounds of litter from the South Platte River. Many members also attended the General Forum on Ethereum Localism in Boulder.\n\n## Regen Coordination and local rounds\n\nRegen Coordination began using the Common Impact Data Standard (CIDS) to measure project activity and outcomes, with onboarding workshops in English, Portuguese and Spanish. Community-led Gitcoin rounds included Regen Rio from Greenpill Brasil, a Web3 Universities round for African universities, a DeSci community round and a Gardens round where members proposed and voted on treasury allocations. Greenpill Toronto hosted the first Chapter Demo Day on April 21.",
   "image": "/images/stories/greenpill-q1-2025-groundwork.jpg",
-  "author": "Greenpill Network research",
-  "authorRole": "Source-backed seed copy",
+  "author": "",
+  "authorRole": "",
   "authorBio": "",
   "authorSlug": "",
   "authorAvatar": "",
@@ -25,13 +25,12 @@
   "relatedGuild": "",
   "relatedStorySlugs": [
     "greenpill-2024-year-in-review",
-    "greenpill-garden-season-one",
-    "growing-greenpill-impact-framework"
+    "greenpill-garden-season-one"
   ],
   "continueReadingStorySlugs": [
-    "greenpill-garden-season-one",
-    "greenpill-2025-year-in-review",
-    "greenpill-2026-thesis"
+    "greenpill-2024-year-in-review",
+    "vibe-coding-good-london-ontario",
+    "greenpill-garden-season-one"
   ],
   "themeSlugs": [
     "public",
@@ -42,22 +41,22 @@
   "translations": [],
   "proofSignals": [
     {
-      "label": "Q1 2025 update",
-      "value": "Paragraph article",
-      "source": "S068",
+      "label": "Greenpill Network, April 30, 2025",
+      "value": "Greenpill Q1 2025: Laying The Groundwork",
+      "source": "Paragraph",
       "href": "https://paragraph.com/@greenpill/q1-2025-laying-the-groundwork"
     }
   ],
   "featuredWeight": 76,
-  "readTime": "3 min read",
+  "readTime": "",
   "media": {
     "image": "/images/stories/greenpill-q1-2025-groundwork.jpg",
-    "imageAlt": "Greenpill Q1 2025 cover artwork.",
+    "imageAlt": "Illustration of a green pill floating above a river valley with wildflowers.",
     "ogImage": "/images/stories/greenpill-q1-2025-groundwork.jpg"
   },
   "seo": {
-    "title": "Greenpill Q1 2025 · Greenpill Stories",
-    "description": "Source-backed Q1 2025 Greenpill network update on onboarding, Regen Coordination, and chapter/guild alignment.",
+    "title": "Greenpill Q1 2025: Laying the Groundwork · Greenpill Stories",
+    "description": "Greenpill's Q1 2025 update: new chapters in Cape Town and London, Ontario, ETHDenver service projects, Ethereum Localism and community Gitcoin rounds.",
     "ogImage": "/images/stories/greenpill-q1-2025-groundwork.jpg",
     "canonicalPath": "/stories/greenpill-q1-2025-laying-groundwork",
     "noindex": false

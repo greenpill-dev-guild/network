@@ -2,16 +2,16 @@
   "name": "GreenWill",
   "status": "active",
   "guild": "dev-guild",
-  "summary": "Public-good reputation and pay-it-forward activity tooling.",
-  "description": "GreenWill is described in the research source inventory as an open Farcaster mini-app for accumulating Greenpill and ReFi reputation from pay-it-forward activity such as Octant, Gitcoin, and sponsored rounds.",
+  "summary": "The badge and recognition layer the guild is designing for Green Goods.",
+  "description": "GreenWill began as a mini-app for Greenpill and ReFi reputation. In 2026 the guild is redesigning it as the badge and recognition layer for Green Goods, the first implementation phase of the Greenpill Impact Framework.",
   "image": "",
   "techStack": [
-    "Farcaster",
+    "Badges",
     "Reputation",
-    "Public goods"
+    "Green Goods"
   ],
-  "repoUrl": "https://github.com/greenpill-dev-guild/greenwill",
-  "liveUrl": "",
+  "repoUrl": "",
+  "liveUrl": "https://hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411",
   "stewardSlugs": [],
   "themeSlugs": [
     "public",

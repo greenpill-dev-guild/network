@@ -469,6 +469,46 @@ test('moderation input limits decline notes and never accepts an approval note',
   );
 });
 
+test('a magic link cannot approve a pending node saved at 0,0 or out of range, and can still decline it (PRD-1409)', async () => {
+  for (const point of [{ lat: 0, long: 0 }, { lat: 0, long: 0.0000001 }, { lat: null, long: null }, { lat: 95, long: 10 }]) {
+    const row = { ...pendingAccessRow(), ...point };
+    const token = createMapNodeModerationToken(row, linkSecret);
+    const { sql, statements } = createModerationAccessSql(row);
+    await assert.rejects(
+      moderateMapNode(sql, row.submissionId, { token, decision: 'approved' }, {
+        env: magicEnv,
+        now: new Date('2026-07-12T16:00:00.000Z'),
+      }),
+      (error: any) => error?.code === 'moderation_invalid_location'
+        && error?.status === 422
+        && /can't show it\. Decline it, or correct the location in Directus/.test(error?.message),
+      JSON.stringify(point)
+    );
+    assert.equal(statements.some((statement) => statement.text.includes('update intake.map_node_submissions')), false);
+    assert.equal(statements.some((statement) => statement.text.includes('insert into intake.map_node_reviews')), false);
+    assert.equal(row.submissionStatus, 'pending');
+
+    const declined = await moderateMapNode(sql, row.submissionId, { token, decision: 'rejected' }, {
+      env: magicEnv,
+      now: new Date('2026-07-12T16:01:00.000Z'),
+    });
+    assert.equal(declined.decision, 'rejected');
+    assert.equal(row.submissionStatus, 'rejected');
+  }
+
+  // A real place, including one on the 180th meridian, still approves.
+  for (const point of [{ lat: 6.2104, long: 7.0661 }, { lat: -16.8, long: 180 }]) {
+    const row = { ...pendingAccessRow(), ...point };
+    const token = createMapNodeModerationToken(row, linkSecret);
+    const { sql } = createModerationAccessSql(row);
+    const approved = await moderateMapNode(sql, row.submissionId, { token, decision: 'approved' }, {
+      env: magicEnv,
+      now: new Date('2026-07-12T16:00:00.000Z'),
+    });
+    assert.equal(approved.decision, 'approved');
+  }
+});
+
 test('moderation access migration stores only signed-link metadata without constraining legacy reviews', async () => {
   const migration = await readFile(
     new URL('../packages/agent/migrations/020_map_node_moderation_access_links.sql', import.meta.url),

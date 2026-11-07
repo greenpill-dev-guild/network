@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readdir, readFile } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -12,6 +13,8 @@ import {
   toPublicOperationalContentSnapshot,
   toPublicWebsiteBuildMetadata,
 } from '@greenpill-network/shared/public-content';
+import { formatContentDate } from '../packages/website/src/lib/content-dates.ts';
+import { chapterPageSlugs, hasChapterPage } from '../packages/website/src/lib/chapter-pages.ts';
 import {
   buildDirectusOperationalPermissionPlan,
 } from './directus-operational-content-setup.ts';
@@ -28,6 +31,12 @@ import {
 import {
   loadOperationalEnrichment,
 } from './directus-operational-enrichment.ts';
+import {
+  minimumRecentEpisodes,
+  parseFeed,
+  snapshotProblems,
+  writeSnapshotFromFeed,
+} from './podcast-feed-snapshot.ts';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const editorialContentDir = join(rootDir, 'packages/website/src/content');
@@ -396,6 +405,49 @@ test('noindex chapters keep their own page while staying out of discovery', asyn
   assert.match(chapterPage, /noindex=\{data\.seo\?\.noindex\}/);
 });
 
+test('inactive and archived chapters get no page anywhere; forming and active chapters keep theirs', async () => {
+  assert.equal(hasChapterPage({ status: 'active' }), true);
+  assert.equal(hasChapterPage({ status: 'forming' }), true);
+  assert.equal(hasChapterPage({}), true);
+  assert.equal(hasChapterPage({ status: 'inactive' }), false);
+  assert.equal(hasChapterPage({ status: ' Archived ' }), false);
+
+  // The page route, the chapter index, the home map, the sitemap and related
+  // chapters all read chapters through getOperationalChapterPages, so the
+  // rule has to live there for no link to point at a page that is not built.
+  const librarySource = await readFile(operationalContentLibraryPath, 'utf8');
+  assert.match(
+    librarySource,
+    /getOperationalChapterPages\(\)[\s\S]*?getOperationalCollection\('chapters'\)[\s\S]*?hasChapterPage\(item\.data\)/
+  );
+});
+
+test('locations and impact-source feeds only list chapters that get a page', async () => {
+  assert.deepEqual(
+    [...chapterPageSlugs([
+      { slug: 'open', status: 'active' },
+      { slug: 'starting', status: 'forming' },
+      { slug: 'paused', status: 'inactive' },
+      { slug: 'closed', status: 'archived' },
+      { status: 'active' },
+    ])].sort(),
+    ['open', 'starting']
+  );
+
+  // The snapshot's precomputed locations and impact-source bindings leave out
+  // only noindex chapters, and both link to /chapters/<slug>, so the website
+  // filters them against the chapters that get a page.
+  const librarySource = await readFile(operationalContentLibraryPath, 'utf8');
+  assert.match(
+    librarySource,
+    /getOperationalLocations\(\)[\s\S]*?chapterPageSlugs\(snapshot\.chapters\)[\s\S]*?locations\.filter\(/
+  );
+  assert.match(
+    librarySource,
+    /getOperationalImpactSourceBindings\(\)[\s\S]*?chapterPageSlugs\(snapshot\.chapters\)[\s\S]*?bindings\.chapters\.filter\(/
+  );
+});
+
 test('chapter pages render approved media and steward avatar cards', async () => {
   const [chapterPage, chapterIndexPage] = await Promise.all([
     readFile(chapterPagePath, 'utf8'),
@@ -508,17 +560,161 @@ test('library podcast section uses RSS snapshot and in-page audio', async () => 
   const podcastSnapshot = JSON.parse(podcastSnapshotSource);
 
   assert.equal(podcastSnapshot.sourceUrl, 'https://rss.libsyn.com/shows/400481/destinations/3304589.xml');
-  assert.equal(podcastSnapshot.episodeCount, 296);
-  assert.equal(podcastSnapshot.episodes.length >= 8, true);
-  assert.equal(podcastSnapshot.episodes.every((episode) => episode.title && episode.audioUrl), true);
+  // The count is whatever the feed carried when the snapshot was taken; the
+  // Pages build refreshes it, so pin its shape rather than a number.
+  assert.equal(Number.isInteger(podcastSnapshot.episodeCount), true);
+  assert.equal(podcastSnapshot.episodeCount >= podcastSnapshot.episodes.length, true);
+  // The committed fallback meets the same checks a refresh must pass.
+  assert.deepEqual(snapshotProblems(podcastSnapshot), []);
 
   assert.match(libraryPage, /import podcastFeed/);
+  assert.match(libraryPage, /podcastFeed\.episodeCount/);
   assert.match(libraryPage, /id="podcast"/);
   assert.match(libraryPage, /<audio class="gp-library-audio/);
-  assert.match(libraryPage, /gardenGuides\.map/);
   assert.doesNotMatch(libraryPage, /episodeResources\.map/);
   assert.doesNotMatch(libraryPage, /guideResources\.map/);
   assert.doesNotMatch(libraryPage, /gp-library-play/);
+});
+
+function podcastFeedItem(title: string, urls: { link?: string; audioUrl?: string; image?: string } = {}) {
+  const slug = title.toLowerCase().replace(/\W+/g, '-');
+  return [
+    '<item>',
+    `<title>${title}</title>`,
+    `<link>${urls.link ?? `https://example.com/episodes/${slug}`}</link>`,
+    `<enclosure url="${urls.audioUrl ?? `https://example.com/audio/${slug}.mp3`}" type="audio/mpeg" length="1000"/>`,
+    urls.image ? `<itunes:image href="${urls.image}"/>` : '',
+    '</item>',
+  ].join('');
+}
+
+function podcastFeedXml(items: string[], channel: { link?: string; image?: string } = {}) {
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<rss version="2.0">',
+    '<channel>',
+    '<title>Test feed</title>',
+    `<link>${channel.link ?? 'https://example.com/'}</link>`,
+    '<description>A feed for tests.</description>',
+    `<itunes:image href="${channel.image ?? 'https://example.com/cover.jpg'}"/>`,
+    ...items,
+    '</channel>',
+    '</rss>',
+  ].join('\n');
+}
+
+test('podcast refresh publishes only https links and media from the feed', () => {
+  const { snapshot } = parseFeed(podcastFeedXml([
+    podcastFeedItem('Safe episode'),
+    podcastFeedItem('Script image', { image: 'javascript:alert(1)' }),
+    podcastFeedItem('Script link', { link: 'javascript:alert(document.domain)' }),
+    // unwrap() decodes entities twice, so this becomes javascript: too.
+    podcastFeedItem('Encoded script link', { link: '&amp;#106;avascript:alert(1)' }),
+    podcastFeedItem('Hidden script link', { link: '<![CDATA[ JaVa\tScRiPt:alert(1)]]>' }),
+    podcastFeedItem('Relative link', { link: '/episodes/relative' }),
+    podcastFeedItem('Data audio', { audioUrl: 'data:audio/mpeg;base64,AAAA' }),
+    podcastFeedItem('Plain http audio', { audioUrl: 'http://example.com/audio.mp3' }),
+  ]));
+
+  assert.deepEqual(snapshot.episodes.map((episode) => episode.title), ['Safe episode', 'Script image']);
+  // A bad episode image falls back to the channel cover instead of dropping the episode.
+  assert.equal(snapshot.episodes[1].image, 'https://example.com/cover.jpg');
+  assert.doesNotMatch(JSON.stringify(snapshot), /javascript:|data:|http:\/\//i);
+
+  const { snapshot: hostileChannel } = parseFeed(podcastFeedXml(
+    [podcastFeedItem('Safe episode')],
+    { link: 'javascript:alert(1)', image: 'javascript:alert(2)' },
+  ));
+
+  assert.equal(hostileChannel.siteUrl, '');
+  assert.equal(hostileChannel.image, '');
+  assert.equal(hostileChannel.episodes[0].image, '');
+});
+
+test('podcast refresh keeps the existing snapshot when the feed is short', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'podcast-snapshot-'));
+  const targetPath = join(directory, 'podcast-feed-snapshot.json');
+  const playable = (count: number) => Array.from({ length: count }, (_, index) => podcastFeedItem(`Episode ${index + 1}`));
+
+  try {
+    await writeFile(targetPath, '{"committed":true}\n');
+    // Skipped items do not count toward the minimum.
+    const shortFeed = podcastFeedXml([
+      ...playable(minimumRecentEpisodes - 1),
+      podcastFeedItem('Script link', { link: 'javascript:alert(1)' }),
+    ]);
+
+    await assert.rejects(writeSnapshotFromFeed(shortFeed, targetPath), /snapshot checks/);
+    assert.equal(await readFile(targetPath, 'utf8'), '{"committed":true}\n');
+
+    await writeSnapshotFromFeed(podcastFeedXml(playable(minimumRecentEpisodes)), targetPath);
+    const written = JSON.parse(await readFile(targetPath, 'utf8'));
+    assert.equal(written.episodes.length, minimumRecentEpisodes);
+    assert.deepEqual(snapshotProblems(written), []);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('library lists guilds under the anchor that guild breadcrumbs link to, without the retired Knowledge Garden block', async () => {
+  const [libraryPage, libraryContentSource] = await Promise.all([
+    readFile(libraryPagePath, 'utf8'),
+    readFile(join(editorialContentDir, 'library.json'), 'utf8'),
+  ]);
+  const libraryContent = JSON.parse(libraryContentSource);
+
+  assert.match(libraryPage, /id="guilds"/);
+  assert.doesNotMatch(libraryPage, /Knowledge Garden|gardenGuides|gp-library-garden/);
+  // Search results and link previews describe only what the page holds.
+  assert.doesNotMatch(libraryPage, /Garden onboarding/);
+  assert.doesNotMatch(libraryContent.seo.description, /Garden/);
+});
+
+test('every book links to files that ship with the site and opens a detail dialog', async () => {
+  const publicDir = join(rootDir, 'packages/website/public');
+  const libraryPage = await readFile(libraryPagePath, 'utf8');
+  const problems = [];
+
+  for (const [slug, book] of await readCollection('books')) {
+    const siteLinks = [
+      ['image', book.image],
+      ['ebookLink', book.ebookLink],
+      ...(book.formats ?? []).map((format, index) => [`formats[${index}].link`, format.link]),
+      ...(book.translations ?? []).map((translation, index) => [`translations[${index}].link`, translation.link]),
+    ];
+    for (const [field, link] of siteLinks) {
+      if (typeof link !== 'string' || !link) {
+        problems.push(`books/${slug}.json ${field} is empty`);
+        continue;
+      }
+      if (!link.startsWith('/')) continue;
+      const file = await stat(join(publicDir, decodeURI(link))).catch(() => null);
+      if (!file?.isFile()) {
+        problems.push(`books/${slug}.json ${field} points at missing file ${link}`);
+      }
+    }
+    if (!book.ebookLink?.startsWith('/pdf/')) {
+      problems.push(`books/${slug}.json ebookLink should be a site PDF so the cover works without JavaScript`);
+    }
+  }
+
+  assert.deepEqual(problems, []);
+  assert.match(libraryPage, /<BookDialog/);
+  assert.match(libraryPage, /href=\{book\.data\.ebookLink\}/);
+  assert.match(libraryPage, /data-book-dialog-trigger=/);
+});
+
+test('scheduled Pages builds refresh the podcast snapshot without blocking the publish', async () => {
+  const workflow = await readFile(join(rootDir, '.github/workflows/github-pages.yml'), 'utf8');
+  const refreshStep = workflow.match(/- name: Refresh podcast feed snapshot\n([\s\S]*?)\n\n/)?.[1] ?? '';
+
+  assert.match(workflow, /schedule:/);
+  assert.match(refreshStep, /continue-on-error: true/);
+  assert.match(refreshStep, /run: bun --no-env-file scripts\/podcast-feed-snapshot\.ts/);
+  assert.equal(
+    workflow.indexOf('- name: Refresh podcast feed snapshot') < workflow.indexOf('- name: Build website'),
+    true,
+  );
 });
 
 test('operational content snapshot generation quarantines unsafe records and rejects non-published input', () => {
@@ -1124,4 +1320,19 @@ test('operational content migration preserves existing Directus-owned rows', asy
   assert.doesNotMatch(script, /data = excluded\.data/);
   assert.match(migration, /join content\.guilds guild on guild\.slug = project\.guild_slug/);
   assert.match(migration, /guild\.publication_status = 'published'/);
+});
+
+test('content dates read as words and never show a day that is not on the calendar', () => {
+  assert.equal(formatContentDate('2026'), '2026');
+  assert.equal(formatContentDate('2026-03'), 'Mar 2026');
+  assert.equal(formatContentDate(' 2026-03-05 '), 'Mar 5, 2026');
+  assert.equal(formatContentDate('2024-02-29'), 'Feb 29, 2024');
+  assert.equal(formatContentDate('2026-02-29'), 'Feb 2026');
+  assert.equal(formatContentDate('2026-02-31'), 'Feb 2026');
+  assert.equal(formatContentDate('2026-04-31'), 'Apr 2026');
+  assert.equal(formatContentDate('2026-03-00'), 'Mar 2026');
+  assert.equal(formatContentDate('2026-13'), '2026');
+  assert.equal(formatContentDate('2026-00-10'), '2026');
+  assert.equal(formatContentDate('March 2026'), '');
+  assert.equal(formatContentDate(undefined), '');
 });

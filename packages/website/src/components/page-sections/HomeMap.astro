@@ -1,9 +1,7 @@
 ---
 import { getOperationalChapters } from '../../lib/operational-content';
+import { isPublicMapCoordinate } from '@greenpill-network/shared/map-locations';
 import { PUBLIC_MAP_THEMES } from '@greenpill-network/shared/map-state';
-import {
-  derivePublicBioregionMetadataFromCoordinates,
-} from '@greenpill-network/shared/map-nodes';
 import { WORLD_LAND_RINGS, type WorldLandRing } from '../../data/world-land-rings';
 
 // Add-node walkthrough theme choices use the canonical public theme list.
@@ -90,9 +88,6 @@ type ChapterNode = {
   name: string;
   city: string;
   region: string;
-  bioregion: string;
-  bioregionId: string;
-  bioregionSource: string;
   themes: string[];
   x: number;
   y: number;
@@ -102,10 +97,16 @@ type ChapterNode = {
 
 const chapters = await getOperationalChapters();
 
+// Chapter anchors follow the /map/state rule: a chapter saved at 0,0 or out of
+// range is left off rather than drawn somewhere false. The live refresh never
+// redraws chapters, so this is the only place that can leave one off.
 const chapterNodes: ChapterNode[] = chapters
-  .filter((c) => typeof c.data.lat === 'number' && typeof c.data.long === 'number')
+  .filter((c) => (
+    typeof c.data.lat === 'number' &&
+    typeof c.data.long === 'number' &&
+    isPublicMapCoordinate(c.data.lat, c.data.long)
+  ))
   .map((c) => {
-    const bioregion = derivePublicBioregionMetadataFromCoordinates(c.data.lat, c.data.long);
     const size = 1.38;
     const chapterNodeId = `chapter:${c.id}`;
     return {
@@ -114,9 +115,6 @@ const chapterNodes: ChapterNode[] = chapters
       name: c.data.name,
       city: c.data.city || '',
       region: c.data.region || '',
-      bioregion: bioregion?.name || '',
-      bioregionId: bioregion?.id || '',
-      bioregionSource: bioregion?.source || '',
       themes: [],
       x: lonToX(c.data.long),
       y: latToY(c.data.lat),
@@ -184,8 +182,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         ))}
       </g>
 
-      <g class="gp-home-map-bioregion-outline" data-home-map-bioregion-outline aria-hidden="true"></g>
-
       {/* mycelial threads — theme-tinted relationship edges. pathLength
           normalizes every path so the stroke-dash grow-in lands the same
           duration regardless of arc length. */}
@@ -225,9 +221,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
             data-node-name={c.name}
             data-node-role="Chapter"
             data-node-place={c.city || c.region}
-            data-node-bioregion={c.bioregion}
-            data-node-bioregion-id={c.bioregionId}
-            data-node-bioregion-source={c.bioregionSource}
             data-node-themes={c.themes.join(' ')}
           >
             <title>{`${c.name}${c.city ? ` · ${c.city}` : ''}`}</title>
@@ -592,7 +585,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     reconcileLocalPendingNodes,
     saveLocalPendingNode,
   } from '@greenpill-network/shared/map-node-storage';
-  import type { PublicEcoregionDataset, PublicEcoregionRegion } from '@greenpill-network/shared/public-ecoregions';
 
   type DynamicMapNodeType = 'chapter' | 'steward' | 'member';
 
@@ -675,7 +667,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const dynamicThreadsGroup = root.querySelector('[data-home-map-dynamic-threads]') as SVGGElement | null;
     const dynamicThreadHitsGroup = root.querySelector('[data-home-map-dynamic-thread-hits]') as SVGGElement | null;
     const selectionStrandsGroup = root.querySelector('[data-home-map-selection-strands]') as SVGGElement | null;
-    const bioregionOutlineGroup = root.querySelector('[data-home-map-bioregion-outline]') as SVGGElement | null;
     const svgEl = root.querySelector('.gp-home-map-svg') as SVGSVGElement | null;
     const focusEl = root.querySelector('[data-home-map-focus]') as HTMLElement | null;
     const focusRole = root.querySelector('[data-focus-role]') as HTMLElement | null;
@@ -694,9 +685,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const listClose = root.querySelector('[data-home-map-list-close]') as HTMLButtonElement | null;
     const listItems = root.querySelector('[data-home-map-list-items]') as HTMLElement | null;
     const listCount = root.querySelector('[data-home-map-list-count]') as HTMLElement | null;
-    let ecoregionDatasetPromise: Promise<PublicEcoregionDataset> | null = null;
-    let ecoregionsById: Map<string, PublicEcoregionRegion> | null = null;
-    let bioregionOutlineRequest = 0;
 
     // Theme labels/colors for member chips, serialized from SSR.
     const themeInfo: Record<string, { label: string; color: string }> = (() => {
@@ -790,148 +778,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const isOwnedNode = (node: Record<string, any>, key = '') => {
       const owned = loadOwnedNodeKeys();
       return ownedNodeKeysFor(node, key).some((item) => owned.has(item));
-    };
-
-    const loadEcoregions = async () => {
-      if (!ecoregionDatasetPromise) {
-        ecoregionDatasetPromise = import('@greenpill-network/shared/public-ecoregions')
-          .then((module) => module.PUBLIC_ECOREGIONS);
-      }
-      const dataset = await ecoregionDatasetPromise;
-      if (!ecoregionsById) {
-        ecoregionsById = new Map(dataset.regions.map((region) => [region.id, region]));
-      }
-      return dataset;
-    };
-
-    const clearBioregionOutline = () => {
-      bioregionOutlineRequest += 1;
-      bioregionOutlineGroup?.replaceChildren();
-      root.classList.remove('has-bioregion-outline');
-    };
-
-    const pointInRing = (
-      lon: number,
-      lat: number,
-      ring: PublicEcoregionRegion['polygons'][number][number]
-    ) => {
-      let inside = false;
-      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-        const [xi, yi] = ring[i];
-        const [xj, yj] = ring[j];
-        const intersects = yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi + 1e-9) + xi;
-        if (intersects) inside = !inside;
-      }
-      return inside;
-    };
-
-    const pointInPolygon = (
-      lon: number,
-      lat: number,
-      polygon: PublicEcoregionRegion['polygons'][number]
-    ) => {
-      const [outer, ...holes] = polygon;
-      if (!outer || !pointInRing(lon, lat, outer)) return false;
-      return !holes.some((hole) => pointInRing(lon, lat, hole));
-    };
-
-    const bboxContains = (bbox: PublicEcoregionRegion['bbox'], lon: number, lat: number, tolerance = 0) => (
-      lon >= bbox[0] - tolerance &&
-      lon <= bbox[2] + tolerance &&
-      lat >= bbox[1] - tolerance &&
-      lat <= bbox[3] + tolerance
-    );
-
-    const distanceToSegmentSq = (point: [number, number], start: [number, number], end: [number, number]) => {
-      const dx = end[0] - start[0];
-      const dy = end[1] - start[1];
-      if (dx === 0 && dy === 0) return (point[0] - start[0]) ** 2 + (point[1] - start[1]) ** 2;
-      const t = Math.max(0, Math.min(1, ((point[0] - start[0]) * dx + (point[1] - start[1]) * dy) / (dx * dx + dy * dy)));
-      const x = start[0] + t * dx;
-      const y = start[1] + t * dy;
-      return (point[0] - x) ** 2 + (point[1] - y) ** 2;
-    };
-
-    const distanceToOuterRingsSq = (lon: number, lat: number, region: PublicEcoregionRegion) => {
-      let nearest = Number.POSITIVE_INFINITY;
-      region.polygons.forEach((polygon) => {
-        const outer = polygon[0];
-        if (!outer) return;
-        for (let i = 0; i < outer.length - 1; i += 1) {
-          nearest = Math.min(nearest, distanceToSegmentSq([lon, lat], outer[i], outer[i + 1]));
-        }
-      });
-      return nearest;
-    };
-
-    const lookupEcoregionFromCoordinates = (
-      dataset: PublicEcoregionDataset,
-      lat: unknown,
-      long: unknown
-    ) => {
-      const latitude = finiteNumber(lat);
-      const longitude = finiteNumber(long);
-      if (latitude === null || longitude === null) return null;
-      const tolerance = 0.45;
-      let nearest: { region: PublicEcoregionRegion; distanceSq: number } | null = null;
-
-      for (const region of dataset.regions) {
-        if (!bboxContains(region.bbox, longitude, latitude, tolerance)) continue;
-        if (region.polygons.some((polygon) => pointInPolygon(longitude, latitude, polygon))) return region;
-        const distanceSq = distanceToOuterRingsSq(longitude, latitude, region);
-        if (!nearest || distanceSq < nearest.distanceSq) nearest = { region, distanceSq };
-      }
-
-      return nearest && nearest.distanceSq <= tolerance * tolerance ? nearest.region : null;
-    };
-
-    const drawBioregionOutline = (
-      region: PublicEcoregionRegion,
-      member: Pick<DynamicMapNode, 'bioregion' | 'bioregionSource'>
-    ) => {
-      if (!bioregionOutlineGroup) return;
-      bioregionOutlineGroup.replaceChildren();
-      root.classList.add('has-bioregion-outline');
-      bioregionOutlineGroup.style.setProperty('--bioregion-color', region.color || 'var(--gp-primary)');
-      bioregionOutlineGroup.dataset.bioregionId = region.id;
-      bioregionOutlineGroup.dataset.bioregionSource = member.bioregionSource || region.source;
-
-      region.polygons.forEach((polygon) => {
-        const path = document.createElementNS(SVG_NS, 'path');
-        applyScope(path);
-        path.setAttribute('class', 'gp-home-map-bioregion-path');
-        path.setAttribute(
-          'd',
-          polygon.map((ring) => (
-            ring.map(([lon, lat], index) => (
-              `${index === 0 ? 'M' : 'L'} ${lonToX(lon).toFixed(2)} ${latToY(lat).toFixed(2)}`
-            )).join(' ') + ' Z'
-          )).join(' ')
-        );
-        const title = document.createElementNS(SVG_NS, 'title');
-        title.textContent = member.bioregion || region.name;
-        path.append(title);
-        bioregionOutlineGroup.append(path);
-      });
-    };
-
-    const renderBioregionOutline = (member: DynamicMapNode) => {
-      if (!bioregionOutlineGroup) return;
-      const request = ++bioregionOutlineRequest;
-      bioregionOutlineGroup.replaceChildren();
-      root.classList.remove('has-bioregion-outline');
-
-      void loadEcoregions().then((dataset) => {
-        if (request !== bioregionOutlineRequest) return;
-        const byId = ecoregionsById ?? new Map(dataset.regions.map((region) => [region.id, region]));
-        const region = member.bioregionId
-          ? byId.get(member.bioregionId)
-          : lookupEcoregionFromCoordinates(dataset, member.lat, member.long);
-        if (!region) return;
-        drawBioregionOutline(region, member);
-      }).catch(() => {
-        if (request === bioregionOutlineRequest) root.classList.remove('has-bioregion-outline');
-      });
     };
 
     const themeFilterButtons = Array.from(scope.querySelectorAll('[data-theme-filter]')) as HTMLButtonElement[];
@@ -2001,7 +1847,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         selectedEl.hidden = true;
         delete selectedEl.dataset.selectedType;
       }
-      clearBioregionOutline();
       resetUpdateState();
       selectedFocusTarget = null;
       root.querySelectorAll('.gp-home-map-node-link.is-selected').forEach((l) => l.classList.remove('is-selected'));
@@ -2071,11 +1916,9 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         selectedLinks.hidden = renderNodeLinks(selectedLinks, member) === 0;
       }
       if (isChapter) {
-        clearBioregionOutline();
         if (selectedEdgeItems) selectedEdgeItems.textContent = '';
         if (selectedEdgeList) selectedEdgeList.hidden = true;
       } else {
-        renderBioregionOutline(member);
         renderSelectedEdgeList(member.key);
       }
 
@@ -4170,27 +4013,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
   .gp-home-map-canvas.is-focused .gp-home-map-world circle {
     opacity: 0.3;
-  }
-
-  .gp-home-map-bioregion-outline {
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 220ms cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .gp-home-map-canvas.has-bioregion-outline .gp-home-map-bioregion-outline {
-    opacity: 1;
-  }
-
-  .gp-home-map-bioregion-path {
-    fill: color-mix(in srgb, var(--bioregion-color, var(--gp-primary)) 7%, transparent);
-    stroke: color-mix(in srgb, var(--bioregion-color, var(--gp-primary)) 86%, var(--gp-off-white));
-    stroke-width: 0.42;
-    stroke-linejoin: round;
-    stroke-linecap: round;
-    stroke-dasharray: 1.5 0.9;
-    opacity: 0.88;
-    filter: drop-shadow(0 0 1.2px color-mix(in srgb, var(--bioregion-color, var(--gp-primary)) 64%, transparent));
   }
 
   .gp-home-map-thread {

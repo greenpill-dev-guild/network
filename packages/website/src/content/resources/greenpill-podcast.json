@@ -3,7 +3,7 @@
   "kind": "podcast",
   "status": "published",
   "summary": "Long-running Greenpill public podcast archive covering regenerative crypto, public goods, coordination, and network-state adjacent themes.",
-  "description": "The current Libsyn RSS snapshot exposes a 296-episode archive active from 2022 through 2026, including VDAO x Greenpill and Network Nations sub-series.",
+  "description": "The Libsyn RSS feed carries the full public archive, from the first episode in February 2022 to the newest.",
   "author": "Kevin Owocki and guests",
   "publishDate": "2022",
   "updatedDate": "2026",
@@ -28,15 +28,13 @@
     "gov"
   ],
   "relatedChapterSlugs": [],
-  "relatedGuildSlugs": [
-    "writers-guild"
-  ],
+  "relatedGuildSlugs": [],
   "featuredWeight": 100,
   "card": {
     "eyebrow": "Podcast",
     "title": "Greenpill Podcast",
-    "summary": "A 296-episode public archive of regenerative crypto and public-goods conversations.",
-    "badge": "296 episodes",
+    "summary": "A long-running public archive of regenerative crypto and public-goods conversations.",
+    "badge": "",
     "surfaceType": "podcast",
     "image": "",
     "imageAlt": "",

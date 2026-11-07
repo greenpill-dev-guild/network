@@ -12,6 +12,7 @@ import {
   DEFAULT_DIRECTUS_PUBLIC_URL,
   type DroppedChapterImage,
 } from './chapter-image-copies.js';
+import { chapterPageSlugs, hasChapterPage } from './chapter-pages.js';
 
 const snapshotUrl = (
   process.env.OPERATIONAL_CONTENT_SNAPSHOT_URL ||
@@ -109,7 +110,8 @@ export async function getOperationalCollection(collection: PublicOperationalCont
 }
 
 export async function getOperationalChapterPages() {
-  return getOperationalCollection('chapters');
+  const chapters = await getOperationalCollection('chapters');
+  return chapters.filter((item) => hasChapterPage(item.data));
 }
 
 export async function getOperationalChapters() {
@@ -138,14 +140,24 @@ export async function getOperationalProjects() {
 
 export async function getOperationalLocations() {
   const snapshot = await getOperationalContentSnapshot();
-  return snapshot.locations.length
+  const locations = snapshot.locations.length
     ? snapshot.locations
     : toPublicOperationalLocations(snapshot.chapters);
+  // A location without a link falls back to /chapters/<slug>, so a chapter
+  // without a page stays out of the feed.
+  const withPages = chapterPageSlugs(snapshot.chapters);
+  return locations.filter((location) => withPages.has(location.id));
 }
 
 export async function getOperationalImpactSourceBindings() {
   const snapshot = await getOperationalContentSnapshot();
-  return snapshot.impactSourceBindings?.chapters
+  const bindings = snapshot.impactSourceBindings?.chapters
     ? snapshot.impactSourceBindings
     : toPublicOperationalImpactSourceBindings(snapshot.chapters, snapshot.generatedAt);
+  // Every binding links to /chapters/<slug>; keep only chapters with a page.
+  const withPages = chapterPageSlugs(snapshot.chapters);
+  return {
+    ...bindings,
+    chapters: bindings.chapters.filter((binding) => withPages.has(binding.chapterSlug)),
+  };
 }

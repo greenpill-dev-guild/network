@@ -2,7 +2,7 @@
   "title": "Exploring MycoFi",
   "description": "Exploring MycoFi: Mycelial Design Patterns for Web3 and Beyond guides readers on an underground exploration into the world wise web of mycelial networks.",
   "image": "/images/mycofi-cover.png",
-  "imageAlt": "Exploring MyCoFi - Mycelial Design Patterns for Web3 and Beyond",
+  "imageAlt": "Exploring MycoFi book cover",
   "imageWidth": 203,
   "imageHeight": 300,
   "imageStyle": "",
@@ -10,11 +10,11 @@
   "formats": [
     {
       "label": "Softcover",
-      "link": "https://www.blurb.com/b/12458839-exploring-mycofi"
+      "link": "https://www.blurb.com/b/12470732-exploring-mycofi"
     },
     {
-      "label": "Mint",
-      "link": "https://mycofi.art/"
+      "label": "Website",
+      "link": "https://mycofi.earth/"
     }
   ],
   "translations": [

@@ -11,6 +11,8 @@ import Meta from '../../components/ui/Meta.astro';
 import Breadcrumb from '../../components/shell/Breadcrumb.astro';
 import Avatar from '../../components/ui/Avatar.astro';
 import { publicGuildPath } from '../../lib/public-routes';
+import { getOperationalChapterPages, getOperationalGuilds } from '../../lib/operational-content';
+import { formatStoryDate, storyCategoryLabel, storyMetaItems, storyReadTime } from './_story-format';
 
 export async function getStaticPaths() {
   const items = await getCollection('stories');
@@ -64,8 +66,19 @@ function linkifyText(text: string) {
 }
 
 const bodyBlocks = bodyToBlocks(data.body || '');
+// The editor's Read Time field wins when filled; otherwise estimate from the body.
+const heroMeta = [...storyMetaItems(data), data.readTime?.trim() || storyReadTime(data.body)];
+const sources = (data.proofSignals ?? []).filter((signal) => signal.value || signal.label);
+
+// Related chips use the public chapter and guild names, never the slugs.
+const relatedChapter = data.relatedChapter
+  ? (await getOperationalChapterPages()).find((chapter) => chapter.id === data.relatedChapter)
+  : undefined;
 const relatedGuild = data.relatedGuild || '';
 const relatedGuildPath = publicGuildPath(relatedGuild);
+const relatedGuildName = relatedGuildPath
+  ? (await getOperationalGuilds()).find((guild) => guild.id === relatedGuild)?.data.name || ''
+  : '';
 const storyImage = data.media?.image || data.image || '';
 const storyImageAlt = data.media?.imageAlt || `${data.title} story image`;
 ---
@@ -84,10 +97,10 @@ const storyImageAlt = data.media?.imageAlt || `${data.title} story image`;
       <Container size="lg">
         <Breadcrumb
           back={{ label: 'All stories', href: '/stories' }}
-          crumbs={[{ label: data.category || 'story' }, { label: data.title }]}
+          crumbs={[{ label: data.title }]}
         />
         <div class="gp-story-hero-inner">
-          <Meta items={[data.category || 'story', data.region || 'global', data.publishDate || '']} accentIndex={0} />
+          <Meta items={heroMeta} accentIndex={0} />
           <Text variant="display" class="gp-story-title">{data.title}</Text>
           {data.dek && <Text variant="body-lg" class="gp-story-dek">{data.dek}</Text>}
           {!data.dek && data.excerpt && <Text variant="body-lg" class="gp-story-dek">{data.excerpt}</Text>}
@@ -99,11 +112,6 @@ const storyImageAlt = data.media?.imageAlt || `${data.title} story image`;
                 <Text variant="title-md">{data.author}</Text>
                 {data.authorRole && <Text variant="caption">{data.authorRole}</Text>}
               </div>
-              {data.readTime && (
-                <span class="gp-story-readtime">
-                  <Text variant="mono">{data.readTime}</Text>
-                </span>
-              )}
             </div>
           )}
 
@@ -146,26 +154,36 @@ const storyImageAlt = data.media?.imageAlt || `${data.title} story image`;
       </section>
     )}
 
-    {(data.proofSignals?.length ?? 0) > 0 && (
+    {sources.length > 0 && (
       <section class="gp-story-section">
         <Container size="lg">
           <Card padded="lg">
-            <Overline>Proof links</Overline>
-            <div class="gp-story-proof">
-              {(data.proofSignals ?? []).map((signal: any) => (
-                <a class="gp-story-proof-row" href={signal.href || '#'} target="_blank" rel="noopener">
-                  <Text variant="mono">{signal.source || 'Source'}</Text>
-                  <Text variant="title-md">{signal.value}</Text>
-                  <Text variant="body-sm">{signal.label}</Text>
-                </a>
+            <Overline as="h2">Sources</Overline>
+            <ul class="gp-story-proof">
+              {sources.map((signal) => (
+                <li>
+                  {signal.href ? (
+                    <a class="gp-story-proof-row" href={signal.href} target="_blank" rel="noopener">
+                      {signal.source && <Text variant="mono">{signal.source}</Text>}
+                      <Text variant="title-md">{signal.value}</Text>
+                      {signal.label && <Text variant="body-sm">{signal.label}</Text>}
+                    </a>
+                  ) : (
+                    <div class="gp-story-proof-row">
+                      {signal.source && <Text variant="mono">{signal.source}</Text>}
+                      <Text variant="title-md">{signal.value}</Text>
+                      {signal.label && <Text variant="body-sm">{signal.label}</Text>}
+                    </div>
+                  )}
+                </li>
               ))}
-            </div>
+            </ul>
           </Card>
         </Container>
       </section>
     )}
 
-    {(data.relatedChapter || data.relatedGuild) && (
+    {(relatedChapter || relatedGuildName) && (
       <section class="gp-story-section">
         <Container size="lg">
           <div class="gp-story-section-head">
@@ -173,17 +191,17 @@ const storyImageAlt = data.media?.imageAlt || `${data.title} story image`;
             <Text variant="caption">Where this story connects in the network.</Text>
           </div>
           <ul class="gp-story-related">
-            {data.relatedChapter && (
+            {relatedChapter && (
               <li>
-                <a class="gp-story-related-chip" href={`/chapters/${data.relatedChapter}`}>
-                  Chapter · {data.relatedChapter.replace(/-/g, ' ')}
+                <a class="gp-story-related-chip" href={`/chapters/${relatedChapter.id}`}>
+                  Chapter · {relatedChapter.data.name || relatedChapter.id}
                 </a>
               </li>
             )}
-            {relatedGuildPath && (
+            {relatedGuildName && (
               <li>
                 <a class="gp-story-related-chip" href={relatedGuildPath}>
-                  Guild · {relatedGuild.replace(/-/g, ' ')}
+                  Guild · {relatedGuildName}
                 </a>
               </li>
             )}
@@ -202,7 +220,7 @@ const storyImageAlt = data.media?.imageAlt || `${data.title} story image`;
           <div class="gp-story-continue-grid">
             {continueReading.map((c) => (
               <a class="gp-story-continue" href={`/stories/${c.id}`}>
-                <Meta items={[c.data.category || 'story', c.data.publishDate || '']} accentIndex={0} />
+                <Meta items={[storyCategoryLabel(c.data.category), formatStoryDate(c.data.publishDate)].filter(Boolean)} accentIndex={0} />
                 <Text variant="h3" class="gp-story-continue-title">{c.data.title}</Text>
                 {c.data.excerpt && <Text variant="body-sm">{c.data.excerpt}</Text>}
                 <ArrowLink size="sm">Read</ArrowLink>
@@ -280,10 +298,6 @@ const storyImageAlt = data.media?.imageAlt || `${data.title} story image`;
     height: 100%;
     display: block;
     object-fit: cover;
-  }
-
-  .gp-story-readtime {
-    margin-inline-start: auto;
   }
 
   .gp-story-body {
@@ -369,11 +383,19 @@ const storyImageAlt = data.media?.imageAlt || `${data.title} story image`;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: var(--gp-space-md);
-    margin-top: var(--gp-space-md);
+    margin: var(--gp-space-md) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .gp-story-proof li {
+    display: flex;
+    min-width: 0;
   }
 
   .gp-story-proof-row {
     display: flex;
+    flex: 1;
     flex-direction: column;
     gap: 4px;
     padding: var(--gp-space-md);
@@ -384,7 +406,7 @@ const storyImageAlt = data.media?.imageAlt || `${data.title} story image`;
     transition: border-color 200ms;
   }
 
-  .gp-story-proof-row:hover {
+  a.gp-story-proof-row:hover {
     border-color: rgba(184, 232, 53, 0.42);
   }
 

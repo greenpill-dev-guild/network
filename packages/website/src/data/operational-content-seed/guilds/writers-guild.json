@@ -2,65 +2,209 @@
   "name": "Writers Guild",
   "type": "guild",
   "status": "active",
-  "summary": "Publishing, storytelling, research, and public sensemaking across the Greenpill network.",
-  "description": "The Writers Guild supports essays, field reports, translations, publishing workflows, and editorial work across chapters and guilds. Public sources show Greenpill's Paragraph publication, the long-running podcast, Garden writing needs, and a network-wide push toward clearer public knowledge infrastructure.",
-  "foundedYear": 2024,
-  "oneliner": "Stories, translations, field reports, and public knowledge work for the network.",
+  "summary": "Books, newsletters and research from an open collective of writers, editors, translators and designers.",
+  "description": "An open collective of researchers, writers, editors, translators and designers producing books, newsletters, articles and documentation about the regenerative web3 ecosystem.",
+  "foundedYear": 2023,
+  "oneliner": "Books, newsletters, research and translations from the network's writers.",
   "outputs": [
     {
-      "label": "Field reports",
-      "summary": "Chapter and guild updates that turn local work into public learning.",
-      "href": "/stories"
+      "kind": "Book",
+      "date": "2024",
+      "label": "On-Chain Impact Networks",
+      "summary": "How crypto is being used to regenerate the world, and the second version of Impact DAOs (2022). Written, published and designed by the guild.",
+      "href": "/pdf/onchain-impact-networks.pdf",
+      "contributors": [
+        "Riley Blackwell",
+        "Sarah Smith",
+        "Kate Goheen",
+        "Ifeanyi Princewill",
+        "Lana Dingwall",
+        "Trinity Morphy",
+        "Matt Strachman",
+        "Anthony Amio",
+        "Eunice Eyo",
+        "Rayne Leach",
+        "Cauê Tomaz",
+        "Anthony Luong",
+        "Ashna Srivastava",
+        "Izzy Lawrence"
+      ]
     },
     {
-      "label": "Translations",
-      "summary": "Translation work around Greenpill books and chapter resources, including Brasil's Portuguese work.",
-      "href": "https://hub.regencoordination.xyz/t/greenpill-brasil/44"
+      "kind": "Book",
+      "date": "2025",
+      "label": "Onchain Capital Allocation Handbook: Explorers Edition",
+      "summary": "The second edition of Kevin Owocki's handbook. Guild members made up about half the team and handled project management, research, writing, editing and diagrams.",
+      "href": "/pdf/onchain-capital-allocation-v2.pdf",
+      "contributors": [
+        "Sarah Smith (lead writer)",
+        "Matt Strachman",
+        "Trinity Morphy",
+        "Riley Blackwell",
+        "Izzy Lawrence"
+      ]
     },
     {
-      "label": "Publication surfaces",
-      "summary": "Greenpill Paragraph, podcast notes, newsletter copy, and public Hub threads.",
-      "href": "https://paragraph.com/@greenpill"
+      "kind": "Newsletter",
+      "label": "Greenpill Network newsletter",
+      "summary": "News from the network's chapters and guilds, which the guild restarted in December 2024. Issues include Greenpill 2024: A Year in Review and Greenpill Q1 2025: Laying The Groundwork.",
+      "href": "https://paragraph.com/@greenpill",
+      "contributors": [
+        "Sarah Smith",
+        "Matt Strachman"
+      ]
     },
     {
-      "label": "Tooling research",
-      "summary": "The Carbon Copy collaboration explores how ReFi communities use Web3 tools.",
-      "href": "https://paragraph.com/@greenpill/preview/rN8MvIeOa4RGvE8kJN9L"
+      "kind": "Research series",
+      "date": "2026-01",
+      "label": "Web3 Tooling Series",
+      "summary": "Three articles with CARBON Copy on how ReFi communities use web3 tools, drawn from surveys, interviews and case studies.",
+      "href": "https://carboncopy.news/content/web3-tooling-series",
+      "contributors": []
     }
   ],
   "mandateParagraphs": [
-    "The Writers Guild makes the network legible. It turns local experiments, chapter practice, books, podcasts, and builder work into public stories people can reuse.",
-    "The launch website should show stories as proof of activity and learning, not as a generic blog feed.",
-    "Draft newsletters and internal Drive notes should stay internal until a steward approves them for public publication."
+    "The Writers Guild is an open collective of researchers, writers, editors, translators and designers. It makes books, newsletters, articles and documentation that explain the regenerative web3 ecosystem and help new people find their way in."
   ],
   "cadence": {
-    "summary": "Public sources confirm Writers Guild activity and publication surfaces, but exact cadence needs steward confirmation before launch.",
-    "callTime": "",
     "format": "Editorial working group",
+    "summary": "",
+    "callTime": "",
     "recordingsHref": ""
   },
-  "principles": [
-    {
-      "order": 1,
-      "title": "Source-backed storytelling",
-      "body": "Every story should link to public proof or a steward-approved publication source."
-    },
-    {
-      "order": 2,
-      "title": "Field-first writing",
-      "body": "Lead with real chapter, guild, and program updates instead of abstract claims."
-    },
-    {
-      "order": 3,
-      "title": "No private drafts in public content",
-      "body": "Newsletter drafts, Drive docs, raw notes, and submission data stay out of public Keystatic until approved."
-    }
-  ],
+  "principles": [],
   "image": "/images/guilds/writers-guild-greenpill-paragraph.png",
   "stewards": [],
   "stewardSlugs": [],
   "memberSlugs": [],
-  "publicMembers": [],
+  "publicMembers": [
+    {
+      "personSlug": "",
+      "name": "Sarah Smith",
+      "role": "Writer, researcher and designer",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "matt-mattycompost",
+      "name": "Matt Strachman",
+      "role": "Guild steward, writer and researcher",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "",
+      "name": "Riley Blackwell",
+      "role": "Editor",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "",
+      "name": "Lana Dingwall",
+      "role": "Project lead, writer and researcher",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "",
+      "name": "Izzy Lawrence",
+      "role": "Helped lead the guild",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "trinity-morphy",
+      "name": "Trinity Morphy",
+      "role": "Writer and researcher",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "",
+      "name": "Anthony Amio",
+      "role": "Writer and researcher",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "",
+      "name": "Anthony Luong",
+      "role": "Designer",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "",
+      "name": "Ashna Srivastava",
+      "role": "Designer",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "coi",
+      "name": "Cauê Tomaz",
+      "role": "Writer and researcher",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "",
+      "name": "Eunice Eyo",
+      "role": "Writer and researcher",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "",
+      "name": "Ifeanyi Princewill",
+      "role": "Writer and researcher",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "",
+      "name": "Kate Goheen",
+      "role": "Writer and researcher",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "",
+      "name": "Rayne Leach",
+      "role": "Writer and researcher",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    }
+  ],
   "themeSlugs": [
     "stories",
     "education",
@@ -69,65 +213,46 @@
   ],
   "links": [
     {
-      "label": "Greenpill Paragraph",
+      "label": "Newsletter",
       "url": "https://paragraph.com/@greenpill",
-      "subtext": "Public Greenpill writing",
+      "subtext": "Greenpill Network newsletter",
       "handle": "@greenpill",
       "action": "Read",
-      "icon": "article",
+      "icon": "paragraph",
       "kind": "external"
     },
     {
-      "label": "Greenpill Podcast",
-      "url": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639",
-      "subtext": "Podcast archive",
-      "handle": "Apple Podcasts",
-      "action": "Listen",
-      "icon": "podcast",
-      "kind": "external"
+      "label": "@GreenpillWrites",
+      "url": "https://x.com/GreenpillWrites",
+      "subtext": "Guild posts and curated reading",
+      "handle": "X",
+      "action": "Follow",
+      "icon": "x",
+      "kind": "social"
     }
   ],
   "connectLinks": [
     {
-      "label": "Greenpill Paragraph",
+      "label": "Greenpill Network newsletter",
       "url": "https://paragraph.com/@greenpill",
-      "subtext": "Public writing",
+      "subtext": "Network news written by the guild",
       "handle": "@greenpill",
       "action": "Read",
       "icon": "article",
       "kind": "external"
     },
     {
-      "label": "Greenpill Podcast",
-      "url": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639",
-      "subtext": "Long-running public podcast archive",
-      "handle": "Apple Podcasts",
-      "action": "Listen",
-      "icon": "podcast",
-      "kind": "external"
+      "label": "X",
+      "url": "https://x.com/GreenpillWrites",
+      "subtext": "Guild posts and curated reading",
+      "handle": "@GreenpillWrites",
+      "action": "Follow",
+      "icon": "x",
+      "kind": "social"
     }
   ],
   "featuredWeight": 70,
-  "proofSignals": [
-    {
-      "label": "Greenpill Paragraph",
-      "value": "Public publication",
-      "source": "S004",
-      "href": "https://paragraph.com/@greenpill"
-    },
-    {
-      "label": "Podcast archive",
-      "value": "296 episodes",
-      "source": "S006",
-      "href": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639"
-    },
-    {
-      "label": "Carbon Copy collaboration",
-      "value": "Web3 Tooling Series",
-      "source": "S071",
-      "href": "https://paragraph.com/@greenpill/preview/rN8MvIeOa4RGvE8kJN9L"
-    }
-  ],
+  "proofSignals": [],
   "media": {
     "image": "/images/guilds/writers-guild-greenpill-paragraph.png",
     "imageAlt": "Greenpill publication artwork used for the public Paragraph archive.",
@@ -138,9 +263,9 @@
   },
   "seo": {
     "title": "Writers Guild · Greenpill Network",
-    "description": "The Greenpill Writers Guild supports field reports, publishing, translations, and public knowledge work across the network.",
+    "noindex": false,
     "ogImage": "/images/guilds/writers-guild-greenpill-paragraph.png",
-    "canonicalPath": "/guilds/writers-guild",
-    "noindex": false
+    "description": "The Greenpill Writers Guild writes books, newsletters and research about the regenerative web3 ecosystem.",
+    "canonicalPath": "/guilds/writers-guild"
   }
 }

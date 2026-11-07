@@ -1,11 +1,11 @@
 {
-  "title": "Tech & Sun Round by Greenpill Nigeria",
+  "title": "Tech & Sun: Greenpill Nigeria's Solar Hub in Awka",
   "status": "published",
   "category": "field-report",
-  "publishDate": "2026-03-08",
-  "updatedDate": "",
-  "dek": "Greenpill Nigeria's Localism Fund thread gives the website a current source for solar-powered public goods infrastructure and builder education.",
-  "excerpt": "A source-backed field report for Tech & Sun: solar, internet, campus infrastructure, and hands-on builder education in Nigeria.",
+  "publishDate": "2026-03-14",
+  "updatedDate": "2026-11-06",
+  "dek": "Greenpill Nigeria built a solar-powered hub with Starlink internet at Nnamdi Azikiwe University in Awka and opened it on March 14, 2026.",
+  "excerpt": "Funded through the Localism Fund's first round, the Tech & Sun hub gives students power, internet and a place to learn and build.",
   "region": "africa",
   "tag": "Energy Infrastructure",
   "tags": [
@@ -14,23 +14,23 @@
     "nigeria",
     "localism-fund"
   ],
-  "body": "The Tech & Sun Round thread is the strongest new Greenpill Nigeria update from the live Hub pass.\n\nThe public source frames the work as solar-powered public goods infrastructure for Nigerian universities. Follow-up posts document the build moving through site setting, foundation work, container fabrication, solar and smart-meter installation, furniture, internet readiness, and staking infrastructure preparation.\n\nThis should read as a current field report and chapter initiative, not as a completed impact-metrics claim. Use the Hub thread as the public source until steward review adds final activation, usage, or learner counts.\n\n## Sources\n\n- S049: https://hub.regencoordination.xyz/t/tech-sun-round-by-greenpill-nigeria/393",
+  "body": "Greenpill Nigeria introduced the Tech & Sun (TAS) Round on the Regen Coordination Hub on February 23, 2026: a community grant program to bring reliable electricity, internet and digital education to two Nigerian universities, the University of Nigeria, Nsukka, and Nnamdi Azikiwe University (UNIZIK) in Awka. Each hub is a solar-powered container with Starlink internet, Ethereum staking infrastructure and space for workshops on blockchain, ReFi and Web3. The idea builds on a solar-powered pilot the chapter had deployed in Owerri.\n\nThe chapter set a total budget of $21,000. At the time of the post it had raised $7,000 and received $7,840 in matching funds, enough to fully deploy the Awka hub and partly deploy the Nsukka hub. Partners named in the thread include Greenpill Network, the Greenpill Dev Guild, Switch Electric and Nodebridge Africa, and the chapter planned to track impact with Karma GAP and Green Goods.\n\n## Building the Awka hub\n\nOn March 8, 2026, Amio posted the build log: site mapping, a concrete foundation, fabrication of the shipping container, wood cladding and insulation, an off-grid solar system with seven 600 W panels, a 6 kVA inverter, lithium battery storage and a smart meter from Switch, then furniture, a Starlink kit and two mini PCs prepared by Nodebridge. The last update read \"TAS HUB Unizik Ready for Activation.\"\n\n## Open since March 14, 2026\n\nGreenpill Nigeria activated the hub on March 14, 2026, with an event that included a remembrance of Izzy, who helped build bridges between Nigeria and the wider world through initiatives like Tech & Sun. The chapter credited the Localism Fund's first round and support from Greenpill Network, the Dev Guild and Switch.\n\nSince March, the chapter reports, the hub has hosted weekly learning days of 8 to 10 hours with about 24 people a day: introductions to Web3 and blockchain, climate education, ReFi discussions, product design and peer mentoring. From June 14 to 19, it ran TAS Creative Series 1.0, a five-day, in-person bootcamp on content creation with AI.\n\nIn a March 5, 2026 essay, writer Heenal described how the chapter moved from its Take the Greenpill education series to physical infrastructure on campus.",
   "image": "/images/stories/greenpill-nigeria-tech-sun.jpeg",
-  "author": "Greenpill Network research",
-  "authorRole": "Source-backed seed copy",
+  "author": "",
+  "authorRole": "",
   "authorBio": "",
   "authorSlug": "",
   "authorAvatar": "",
   "relatedChapter": "nigeria",
-  "relatedGuild": "",
+  "relatedGuild": "dev-guild",
   "relatedStorySlugs": [
-    "greenpill-nigeria-water-cup",
-    "take-the-greenpill-nigeria-refi-education"
-  ],
-  "continueReadingStorySlugs": [
-    "greenpill-nigeria-water-cup",
     "take-the-greenpill-nigeria-refi-education",
     "greenpill-earth-week"
+  ],
+  "continueReadingStorySlugs": [
+    "greenpill-nigeria-global-pizza-party-2026",
+    "greenpill-nigeria-water-cup",
+    "take-the-greenpill-nigeria-refi-education"
   ],
   "themeSlugs": [
     "energy",
@@ -41,28 +41,58 @@
   "translations": [],
   "proofSignals": [
     {
-      "label": "Localism Fund thread",
-      "value": "Tech & Sun",
-      "source": "S049",
+      "label": "Proposal and build log, February 23 to March 8, 2026",
+      "value": "Tech & Sun Round by Greenpill Nigeria",
+      "source": "Regen Coordination Hub",
       "href": "https://hub.regencoordination.xyz/t/tech-sun-round-by-greenpill-nigeria/393"
     },
     {
-      "label": "Build updates",
-      "value": "Solar hub readiness",
-      "source": "S049",
-      "href": "https://hub.regencoordination.xyz/t/tech-sun-round-by-greenpill-nigeria/393"
+      "label": "Greenpill Nigeria, March 14, 2026",
+      "value": "Tech & Sun (T.A.S) Hub Activation @ Unizik",
+      "source": "Luma",
+      "href": "https://luma.com/au47b6cr"
+    },
+    {
+      "label": "@Greenpill9ja, March 15, 2026",
+      "value": "TAS Hub UNIZIK activated",
+      "source": "X",
+      "href": "https://x.com/Greenpill9ja/status/2033066010517938325"
+    },
+    {
+      "label": "Greenpill Nigeria report, September 19, 2026",
+      "value": "Tech and Sun (TAS) Hubs: 8-10 Hour Learning Gatherings",
+      "source": "Regen Coordination Hub",
+      "href": "https://hub.regencoordination.xyz/t/464/8"
+    },
+    {
+      "label": "@techandsunhubs, June 12, 2026",
+      "value": "TAS Creative Series 1.0",
+      "source": "X",
+      "href": "https://x.com/techandsunhubs/status/2065360898831548810"
+    },
+    {
+      "label": "Heenal, March 5, 2026",
+      "value": "Greenpill Nigeria: Solar Panels, Staking Nodes, and the Quiet Revolution Happening on Nigerian Campuses",
+      "source": "Substack",
+      "href": "https://heenalr.substack.com/p/greenpill-nigeria-solar-panels-staking"
+    },
+    {
+      "label": "Afolabi, June 26, 2026",
+      "value": "See you when I see you",
+      "source": "Regen Coordination Hub",
+      "href": "https://hub.regencoordination.xyz/t/see-you-when-i-see-you/453"
     }
   ],
   "featuredWeight": 98,
-  "readTime": "3 min read",
+  "readTime": "",
   "media": {
     "image": "/images/stories/greenpill-nigeria-tech-sun.jpeg",
-    "imageAlt": "Greenpill Nigeria community member preparing a local Tech and Sun site.",
+    "imageAlt": "A person in an orange cap clearing dry grass at a work site.",
     "ogImage": "/images/stories/greenpill-nigeria-tech-sun.jpeg"
   },
   "seo": {
-    "title": "Tech & Sun Round by Greenpill Nigeria · Greenpill Stories",
-    "description": "Source-backed story for Greenpill Nigeria's solar-powered public goods infrastructure and builder education work.",
+    "title": "Tech & Sun: Greenpill Nigeria's Solar Hub in Awka · Greenpill Stories",
+    "description": "Greenpill Nigeria's Tech & Sun hub at Nnamdi Azikiwe University in Awka: solar power, Starlink internet and weekly learning days since March 14, 2026.",
     "ogImage": "/images/stories/greenpill-nigeria-tech-sun.jpeg",
     "canonicalPath": "/stories/greenpill-nigeria-tech-and-sun-round",
     "noindex": false

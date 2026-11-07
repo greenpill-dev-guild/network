@@ -37,6 +37,75 @@ export function normalizeMapLongitude(value: unknown): number | null {
   return Number.isFinite(number) && number >= -180 && number <= 180 ? number : null;
 }
 
+// Reads a coordinate without the `Number('')` / `Number(null)` trap: blank,
+// null, boolean and non-numeric values are missing, never 0.
+export function parseMapCoordinate(value: unknown): number | null {
+  if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) return null;
+  const number = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+// Map coordinates are stored as numeric(9, 6), and PostgreSQL rounds anything
+// finer: (89.9999999, 10) is saved as (90, 10) and (0, 0.0000001) as (0, 0).
+// The rules below judge the stored value, and writers save the rounded value
+// they judged, so the database never holds a point the rules did not see.
+export const MAP_COORDINATE_DECIMAL_PLACES = 6;
+
+export function toStoredMapCoordinate(value: number): number {
+  const stored = Number(value.toFixed(MAP_COORDINATE_DECIMAL_PLACES));
+  return stored === 0 ? 0 : stored;
+}
+
+export function parseStoredMapCoordinate(value: unknown): number | null {
+  const number = parseMapCoordinate(value);
+  return number === null ? null : toStoredMapCoordinate(number);
+}
+
+// Why a latitude/longitude pair can never be a map node's location: missing or
+// non-numeric, out of range, or exactly 0,0 (an empty field read as 0, never a
+// place someone gave). Refused with an explicit error, never clamped.
+export type MapCoordinateProblem =
+  | 'missing'
+  | 'latitude_out_of_range'
+  | 'longitude_out_of_range'
+  | 'null_island';
+
+export const MAP_COORDINATE_PROBLEM_MESSAGES: Readonly<Record<MapCoordinateProblem, string>> = Object.freeze({
+  missing: 'Enter both a latitude and a longitude.',
+  latitude_out_of_range: 'Latitude must be between -90 and 90.',
+  longitude_out_of_range: 'Longitude must be between -180 and 180.',
+  null_island: 'Latitude 0, longitude 0 is a placeholder, not a place. Find and confirm the place again.',
+});
+
+export function getMapCoordinateProblem(lat: unknown, long: unknown): MapCoordinateProblem | null {
+  const latitude = parseStoredMapCoordinate(lat);
+  const longitude = parseStoredMapCoordinate(long);
+  if (latitude === null || longitude === null) return 'missing';
+  if (Math.abs(latitude) > 90) return 'latitude_out_of_range';
+  if (Math.abs(longitude) > 180) return 'longitude_out_of_range';
+  if (latitude === 0 && longitude === 0) return 'null_island';
+  return null;
+}
+
+export function isPublicMapCoordinate(lat: unknown, long: unknown): boolean {
+  return getMapCoordinateProblem(lat, long) === null;
+}
+
+// A point exactly on the map's edge: latitude ±90 or longitude ±180. Real
+// places sit there (Fiji spans the 180th meridian), and so does every pin a
+// broken client clamped to the edge. Only a confirmed geocoder result can tell
+// the two apart, so an edge point is accepted from a confirmation and refused
+// from raw coordinates.
+export function isMapEdgeCoordinate(lat: unknown, long: unknown): boolean {
+  const latitude = parseStoredMapCoordinate(lat);
+  const longitude = parseStoredMapCoordinate(long);
+  if (latitude === null || longitude === null) return false;
+  return Math.abs(latitude) === 90 || Math.abs(longitude) === 180;
+}
+
+export const MAP_EDGE_COORDINATE_MESSAGE =
+  'A point on the edge of the map needs a confirmed place. Find and confirm your place.';
+
 export function containsPrivateMapLocationField(value: unknown, seen: Set<object> = new Set()): boolean {
   if (!value || typeof value !== 'object') return false;
   if (seen.has(value as object)) return false;
@@ -63,9 +132,7 @@ export function assertPublicMapLocationPayload<T>(payload: T): T {
   for (const candidate of candidates) {
     const confirmationId = cleanString(candidate?.confirmationId);
     const label = cleanString(candidate?.label);
-    const lat = normalizeMapLatitude(candidate?.lat);
-    const long = normalizeMapLongitude(candidate?.long);
-    if (!confirmationId || !label || lat === null || long === null) {
+    if (!confirmationId || !label || !isPublicMapCoordinate(candidate?.lat, candidate?.long)) {
       throw new Error('Public map-location payload contains an invalid location');
     }
   }

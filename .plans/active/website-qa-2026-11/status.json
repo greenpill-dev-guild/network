@@ -9,8 +9,8 @@
   "workflow": {
     "overall_status": "active",
     "priority": "p1",
-    "created_at": "2026-11-06T23:30:00Z",
-    "updated_at": "2026-11-07T00:15:00Z"
+    "created_at": "2026-11-06T22:51:19Z",
+    "updated_at": "2026-11-07T03:12:13Z"
   },
   "links": {
     "brief": "brief.md",
@@ -23,7 +23,9 @@
     ".plans carries planning truth; packages carry runtime contracts.",
     "Source: Afo's 2026-11-06 website review, the 2026-07-16 call decisions, the 2026-09-24 audit, and open P-PRD-19 issues PRD-739 and PRD-625.",
     "Sessions are listed in plan.todo.md. Lanes map as ui = qa-home-garden, qa-assessment, qa-library, qa-guilds (template), qa-brand-shell, qa-map-polish; content = qa-stories, qa-guilds (research), qa-chapters; platform = qa-map-data, podcast feed refresh; qa_pass_1 = qa-system-pass; qa_pass_2 = Codex and CodeRabbit PR review plus post-deploy checks.",
-    "2026-11-06: Afo approved the launch. D1 keep and fix the assessment; D2 remove the ecoregion layer; batch A (qa-map-data, qa-home-garden, qa-guilds, qa-stories) started; batch B follows."
+    "2026-11-06: Afo approved the launch. D1 keep and fix the assessment; D2 remove the ecoregion layer; batch A (qa-map-data, qa-home-garden, qa-guilds, qa-stories) started.",
+    "2026-11-07: D3 decided (Paragraph subscriptions). Open PRs: #33 hub, #34 qa-home-garden (waits on the new Telegram invite), #35 qa-map-data (its coordinate repair waits on Afo's approval in that session). Batch B rolls in as batch A sessions reach their PRs: qa-library started (PRD-1413); qa-assessment ready as a start card (PRD-1414); qa-brand-shell and qa-chapters to follow.",
+    "2026-11-07 later: all batch B sessions except qa-assessment have started. Open PRs #34 to #39; Afo changed D4 to keep the illustrated background with its seams fixed (PR #39). Only conflict among open PRs: #35 and #39 in SiteFooter.astro; merge #35 first."
   ],
   "taxonomy": {
     "initiative": "public-experience",
@@ -66,18 +68,25 @@
   },
   "history": [
     {
-      "timestamp": "2026-11-06T23:30:00Z",
+      "timestamp": "2026-11-06T22:51:19Z",
       "actor": "claude",
       "lane": "system",
       "status": "scaffolded",
-      "note": "Scaffolded from Afo's 2026-11-06 QA review with findings, session roster, decisions and acceptance checks."
+      "note": "Scaffolded from Afo's 2026-11-06 QA review with findings, session roster, decisions and acceptance checks, and moved to active in the same commit on his launch approval."
     },
     {
-      "timestamp": "2026-11-07T00:15:00Z",
+      "timestamp": "2026-11-06T22:54:28Z",
       "actor": "claude",
       "lane": "system",
       "status": "activated",
-      "note": "Moved to active on Afo's launch approval; batch A sessions started."
+      "note": "Linear mirror recorded (PRD-1408 to PRD-1412); batch A sessions (qa-map-data, qa-home-garden, qa-guilds, qa-stories) started right after this commit."
+    },
+    {
+      "timestamp": "2026-11-07T00:32:48Z",
+      "actor": "claude",
+      "lane": "system",
+      "status": "in_progress",
+      "note": "PRs #34 (qa-home-garden) and #35 (qa-map-data) open; D3 decided; qa-library started as PRD-1413; qa-assessment ready as PRD-1414."
     }
   ]
 }

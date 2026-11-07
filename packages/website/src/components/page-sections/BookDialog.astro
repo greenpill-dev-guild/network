@@ -1,0 +1,383 @@
+---
+/*
+ * BookDialog: the focused view of one Library book (QA finding 10,
+ * 2026-11-06). It shows a larger cover, the description, the English PDF,
+ * every translation and every store or edition link from the book's content
+ * file.
+ *
+ * The Library renders one closed <dialog> per book. The book's cover is a
+ * plain link to the English PDF; the script below turns a plain click on it
+ * into showModal(). Without JavaScript, or with a modifier key held, the link
+ * still opens the PDF, so nothing here is required to read a book.
+ */
+import { statSync } from 'node:fs';
+import { join } from 'node:path';
+import ArrowLink from '../ui/ArrowLink.astro';
+import Button from '../ui/Button.astro';
+import Chip from '../ui/Chip.astro';
+import Overline from '../ui/Overline.astro';
+import Text from '../ui/Text.astro';
+
+interface BookFormat {
+  label: string;
+  link: string;
+}
+
+interface BookTranslation {
+  language: string;
+  link: string;
+}
+
+interface Props {
+  id: string;
+  title: string;
+  description?: string;
+  author?: string;
+  publishYear?: string;
+  image: string;
+  imageAlt: string;
+  imageWidth: number;
+  imageHeight: number;
+  ebookLink: string;
+  formats?: BookFormat[];
+  translations?: BookTranslation[];
+}
+
+const {
+  id,
+  title,
+  description = '',
+  author = '',
+  publishYear = '',
+  image,
+  imageAlt,
+  imageWidth,
+  imageHeight,
+  ebookLink,
+  formats = [],
+  translations = [],
+} = Astro.props;
+
+const titleId = `${id}-title`;
+const descriptionId = `${id}-description`;
+const byline = [author, publishYear].filter(Boolean).join(' · ');
+
+// Builds run from packages/website; the second root covers a build started
+// from the repository root.
+const publicRoots = [join(process.cwd(), 'public'), join(process.cwd(), 'packages/website/public')];
+
+function isSiteFile(link: string) {
+  return link.startsWith('/') && !link.startsWith('//');
+}
+
+// Size of a PDF that ships with the site, for example "45 MB". Empty when the
+// file is not found here; the content contract test fails on a missing file.
+function pdfSize(link: string) {
+  if (!isSiteFile(link)) return '';
+  for (const root of publicRoots) {
+    try {
+      const megabytes = statSync(join(root, decodeURI(link))).size / 1_000_000;
+      return `${new Intl.NumberFormat('en', { maximumFractionDigits: megabytes < 10 ? 1 : 0 }).format(megabytes)} MB`;
+    } catch {
+      // Try the next root.
+    }
+  }
+  return '';
+}
+
+// Where a format link goes, so readers know before they leave the site.
+function formatDestination(link: string) {
+  if (isSiteFile(link)) {
+    const size = pdfSize(link);
+    return size ? `PDF, ${size}` : 'PDF';
+  }
+  try {
+    return new URL(link).hostname.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+}
+
+const ebookSize = pdfSize(ebookLink);
+const readLabel = translations.length > 0 ? 'Read in English' : 'Read the PDF';
+const downloadLabel = ebookSize ? `Download PDF (${ebookSize})` : 'Download PDF';
+const formatLinks = formats
+  .filter((format) => format.label && format.link)
+  .map((format) => {
+    const destination = formatDestination(format.link);
+    return { href: format.link, label: destination ? `${format.label} (${destination})` : format.label };
+  });
+const translationLinks = translations.filter((translation) => translation.language && translation.link);
+---
+
+<dialog
+  id={id}
+  class="gp-book-dialog"
+  aria-labelledby={titleId}
+  aria-describedby={description ? descriptionId : undefined}
+  closedby="any"
+  data-book-dialog
+>
+  <div class="gp-book-dialog-surface">
+    <form method="dialog" class="gp-book-dialog-bar">
+      <Overline tone="muted">Book</Overline>
+      <Button type="submit" variant="ghost" class="gp-book-dialog-close">Close</Button>
+    </form>
+
+    <div class="gp-book-dialog-layout">
+      <div class="gp-book-dialog-cover">
+        <img
+          src={image}
+          alt={imageAlt}
+          width={imageWidth}
+          height={imageHeight}
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
+
+      <div class="gp-book-dialog-copy">
+        <div class="gp-book-dialog-head">
+          <div id={titleId}>
+            <Text as="h2" variant="h3">{title}</Text>
+          </div>
+          {byline && <Text variant="caption">{byline}</Text>}
+        </div>
+
+        {description && (
+          <div id={descriptionId}>
+            <Text variant="body">{description}</Text>
+          </div>
+        )}
+
+        <div class="gp-book-dialog-actions">
+          <Button href={ebookLink}>{readLabel}</Button>
+          <a class="gp-book-dialog-download" href={ebookLink} download>{downloadLabel}</a>
+        </div>
+
+        {translationLinks.length > 0 && (
+          <div class="gp-book-dialog-group">
+            <Overline as="h3" tone="muted">Translations (PDF)</Overline>
+            <ul class="gp-book-dialog-chips" role="list">
+              {translationLinks.map((translation) => (
+                <li>
+                  <Chip href={translation.link} size="md">{translation.language}</Chip>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {formatLinks.length > 0 && (
+          <div class="gp-book-dialog-group">
+            <Overline as="h3" tone="muted">Also available</Overline>
+            <ul class="gp-book-dialog-formats" role="list">
+              {formatLinks.map((format) => (
+                <li>
+                  <ArrowLink href={format.href}>{format.label}</ArrowLink>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+  // Opens each book's dialog from its cover link and returns focus there on
+  // close. Esc closes natively; clicking the backdrop closes through
+  // closedby="any", with a fallback for browsers that lack it.
+  const supportsClosedBy = 'closedBy' in HTMLDialogElement.prototype;
+
+  function isPlainPrimaryClick(event: MouseEvent) {
+    return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+  }
+
+  function closeOnBackdropClick(dialog: HTMLDialogElement) {
+    dialog.addEventListener('click', (event) => {
+      // A click on the backdrop targets the dialog element itself, outside
+      // its box; clicks on the content target a descendant.
+      if (event.target !== dialog) return;
+      const box = dialog.getBoundingClientRect();
+      const insideBox =
+        event.clientX >= box.left &&
+        event.clientX <= box.right &&
+        event.clientY >= box.top &&
+        event.clientY <= box.bottom;
+      if (!insideBox) dialog.close();
+    });
+  }
+
+  for (const trigger of document.querySelectorAll<HTMLAnchorElement>('a[data-book-dialog-trigger]')) {
+    const dialog = document.getElementById(trigger.dataset.bookDialogTrigger ?? '');
+    if (!(dialog instanceof HTMLDialogElement) || typeof dialog.showModal !== 'function') continue;
+
+    trigger.setAttribute('aria-haspopup', 'dialog');
+    trigger.addEventListener('click', (event) => {
+      if (event.defaultPrevented || !isPlainPrimaryClick(event)) return;
+      event.preventDefault();
+      dialog.showModal();
+    });
+    dialog.addEventListener('close', () => trigger.focus());
+    if (!supportsClosedBy) closeOnBackdropClick(dialog);
+  }
+</script>
+
+<style>
+  .gp-book-dialog {
+    /* The dialog sits in the top layer, so it reflows on its own width. */
+    container: book-dialog / inline-size;
+    box-sizing: border-box;
+    inline-size: min(100% - 2 * var(--gp-space-md), 880px);
+    max-inline-size: none;
+    max-block-size: min(100dvh - 2 * var(--gp-space-md), 760px);
+    margin: auto;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--gp-secondary) 22%, transparent);
+    border-radius: var(--gp-radius-lg);
+    background: var(--gp-surface);
+    color: var(--gp-fg);
+    box-shadow: var(--gp-shadow-card-lg);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .gp-book-dialog::backdrop {
+    background: color-mix(in srgb, var(--gp-green-950) 84%, transparent);
+    backdrop-filter: blur(4px);
+  }
+
+  /* Keep the page behind an open book dialog from scrolling. */
+  :global(html:has(dialog.gp-book-dialog[open])) {
+    overflow: hidden;
+  }
+
+  .gp-book-dialog-surface {
+    --gp-book-dialog-pad: var(--gp-space-xl);
+    padding: 0 var(--gp-book-dialog-pad) var(--gp-book-dialog-pad);
+  }
+
+  /* Stays in view while a long dialog scrolls, so Close is always reachable. */
+  .gp-book-dialog-bar {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gp-space-md);
+    margin-block-end: var(--gp-space-lg);
+    margin-inline: calc(var(--gp-book-dialog-pad) * -1);
+    padding: var(--gp-space-md) var(--gp-book-dialog-pad);
+    background: var(--gp-surface);
+    border-block-end: 1px solid var(--gp-border-soft);
+  }
+
+  .gp-book-dialog-bar :global(.gp-book-dialog-close) {
+    inline-size: auto;
+    min-block-size: 44px;
+    padding-inline: var(--gp-space-lg);
+  }
+
+  .gp-book-dialog-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+    gap: var(--gp-space-xl);
+    align-items: start;
+  }
+
+  .gp-book-dialog-cover {
+    display: grid;
+    place-items: center;
+    padding: var(--gp-space-sm);
+    border: 1px solid color-mix(in srgb, var(--gp-secondary) 14%, transparent);
+    border-radius: var(--gp-radius-md);
+    background: var(--gp-bg);
+  }
+
+  .gp-book-dialog-cover img {
+    inline-size: 100%;
+    block-size: auto;
+    border-radius: var(--gp-radius-sm);
+  }
+
+  .gp-book-dialog-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-lg);
+    min-inline-size: 0;
+  }
+
+  .gp-book-dialog-head {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-sm);
+  }
+
+  .gp-book-dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--gp-space-md) var(--gp-space-lg);
+  }
+
+  .gp-book-dialog-download {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 44px;
+    color: var(--gp-primary);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-label-md);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    white-space: nowrap;
+  }
+
+  .gp-book-dialog-download:hover {
+    color: var(--gp-primary-hover);
+  }
+
+  .gp-book-dialog-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-sm);
+    padding-block-start: var(--gp-space-md);
+    border-block-start: 1px solid var(--gp-border-soft);
+  }
+
+  .gp-book-dialog-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gp-space-sm);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .gp-book-dialog-formats {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  @container book-dialog (max-width: 560px) {
+    .gp-book-dialog-surface {
+      --gp-book-dialog-pad: var(--gp-space-md);
+    }
+
+    .gp-book-dialog-layout {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--gp-space-lg);
+    }
+
+    .gp-book-dialog-cover {
+      justify-self: center;
+      inline-size: min(100%, 220px);
+    }
+  }
+</style>

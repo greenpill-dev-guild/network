@@ -1,0 +1,67 @@
+[
+ {
+  "case": "latitude exactly 90 (Ash pattern)",
+  "sent": {
+   "lat": 90,
+   "long": 97.76261
+  },
+  "status": 400,
+  "error": "invalid_coordinates",
+  "message": "A point on the edge of the map needs a confirmed place. Find and confirm your place."
+ },
+ {
+  "case": "longitude exactly -180 (Amio pattern)",
+  "sent": {
+   "lat": 56.462976,
+   "long": -180
+  },
+  "status": 400,
+  "error": "invalid_coordinates",
+  "message": "A point on the edge of the map needs a confirmed place. Find and confirm your place."
+ },
+ {
+  "case": "0,0 (Emmanuel Jacobson pattern)",
+  "sent": {
+   "lat": 0,
+   "long": 0
+  },
+  "status": 400,
+  "error": "invalid_coordinates",
+  "message": "Latitude 0, longitude 0 is a placeholder, not a place. Find and confirm the place again."
+ },
+ {
+  "case": "empty strings (old client sent Number(\"\") = 0)",
+  "sent": {
+   "lat": "",
+   "long": ""
+  },
+  "status": 400,
+  "error": "invalid_coordinates",
+  "message": "A valid place, latitude, and longitude are required during the rollout window."
+ },
+ {
+  "case": "out of range control",
+  "sent": {
+   "lat": 90.5,
+   "long": 10
+  },
+  "status": 400,
+  "error": "invalid_coordinates",
+  "message": "Latitude must be between -90 and 90."
+ },
+ {
+  "case": "real place just inside the 180th meridian",
+  "sent": {
+   "lat": -16.8,
+   "long": 179.99
+  },
+  "status": 201,
+  "stored": {
+   "lat": -16.8,
+   "long": 179.99,
+   "status": "pending"
+  }
+ }
+]
+rows in local DB: [{"name":"QA repro real place just inside the 180th meridian","lat":-16.8,"long":179.99,"status":"pending"}]
+cleanup: deleted 1 QA rows
