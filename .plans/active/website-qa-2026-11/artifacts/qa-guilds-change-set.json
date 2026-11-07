@@ -2,8 +2,8 @@
   "version": 1,
   "session": "qa-guilds",
   "linear": "PRD-1411",
-  "status": "proposed, not approved",
-  "note": "One entry per record field. `current` is the production value from https://agent.greenpill.network/content/public-snapshot read on 2026-11-06 (generatedAt 2026-11-06T23:42:53Z); it matched the committed fallback snapshot field for field. publication_status is not in the public snapshot; every listed record is published today. Apply only after Afo approves, in Directus or through the admin API, then update the seed files to match. Entries with needsAfo wait for that confirmation.",
+  "status": "approved by Afo on 2026-11-06 in the qa-guilds session; apply after PR #36 merges",
+  "note": "One entry per record field. `current` is the production value from https://agent.greenpill.network/content/public-snapshot read on 2026-11-06 (generatedAt 2026-11-06T23:42:53Z); it matched the committed fallback snapshot field for field. publication_status is not in the public snapshot; every listed record is published today. Apply only after Afo approves, in Directus or through the admin API, then update the seed files to match. Rows with afoDecision were changed or settled by Afo's answers that day; the rest were approved as drafted.",
   "changes": [
     {
       "collection": "guilds",
@@ -173,7 +173,7 @@
         "https://www.karmahq.org/project/greenpill-dev-guild",
         "https://www.linkedin.com/company/greenpilldevguild"
       ],
-      "needsAfo": "Confirm the LinkedIn page, and which unmaintained website link it replaces (input I2)."
+      "afoDecision": "Afo, 2026-11-06: add LinkedIn (\"Yes, add it\"). The unmaintained website is hub.greenpill.network, which is not a guild link (footer: qa-brand-shell)."
     },
     {
       "collection": "guilds",
@@ -402,42 +402,61 @@
         },
         {
           "group": "Guild stewardship",
-          "role": "Lead",
-          "name": "Caue Tomaz",
-          "personSlug": "coi"
-        },
-        {
-          "group": "Guild stewardship",
           "role": "Lead and treasury manager",
           "name": "Matt Strachman",
           "personSlug": "matt-mattycompost"
         },
         {
-          "group": "Project leads",
-          "role": "Public Goods Staking",
+          "group": "Work areas",
+          "role": "Product",
           "holders": [
             "Afolabi Aiyeloja",
             "Matt Strachman",
-            "Trinity Morphy"
+            "Gui"
           ]
         },
         {
-          "group": "Project leads",
-          "role": "Greenpill Impact Framework",
+          "group": "Work areas",
+          "role": "Research",
           "holders": [
             "Afolabi Aiyeloja",
-            "Wasabi",
-            "Irthu"
+            "Matt Strachman"
+          ]
+        },
+        {
+          "group": "Work areas",
+          "role": "Funding and partnerships",
+          "holders": [
+            "Afolabi Aiyeloja",
+            "Matt Strachman",
+            "Kit"
+          ]
+        },
+        {
+          "group": "Work areas",
+          "role": "Community",
+          "holders": [
+            "Afolabi Aiyeloja",
+            "Matt Strachman",
+            "Nansel"
+          ]
+        },
+        {
+          "group": "Work areas",
+          "role": "Marketing",
+          "holders": [
+            "Afolabi Aiyeloja",
+            "Nansel",
+            "Kit"
           ]
         }
       ],
-      "reason": "Hats and roles list. No public Hats tree ID was found (the 2024 recap says Hats integration was initiated on Optimism), so this draft uses the roles the people state publicly in November 2025.",
+      "reason": "Hats list from the guild's core team as recorded in its Linear workspace, at Afo's direction: each work area is one of the guild's Linear teams (Product, Research, Growth for funding and partnerships, Community, Marketing) with its members. The two stewardship roles are the ones Afolabi and Matt state publicly. Names only; no emails.",
       "sources": [
-        "https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363",
-        "https://hub.regencoordination.xyz/t/regen-protocols/364",
-        "https://hub.regencoordination.xyz/t/greenpill-dev-guild-2024-recap/162"
+        "Linear workspace, team membership (internal, read 2026-11-06)",
+        "https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363"
       ],
-      "needsAfo": "Confirm these roles or send the Optimism Hats tree link; do not apply without one or the other."
+      "afoDecision": "Afo, 2026-11-06: \"Use the team details you can find on linear, there's Afolabi, Matt, Nanse, Kit and Gui\"."
     },
     {
       "collection": "guilds",
@@ -581,7 +600,7 @@
         "https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0",
         "https://discuss.octant.app/t/greenpill-dev-guild-regeneration-through-collaboration/456"
       ],
-      "needsAfo": "Confirm names and current roles; the 2024 roles may be out of date."
+      "afoDecision": "Afo, 2026-11-06: \"Yes, as drafted\"."
     },
     {
       "collection": "guilds",
@@ -626,34 +645,16 @@
           "action": "Follow",
           "icon": "x",
           "kind": "social"
-        },
-        {
-          "label": "Regen Hub",
-          "url": "https://hub.regencoordination.xyz/t/greenpill-writers-guild/159",
-          "subtext": "Guild updates on the Regen Coordination Hub",
-          "handle": "Regen Hub",
-          "action": "Read",
-          "icon": "hub",
-          "kind": "external"
-        },
-        {
-          "label": "Karma GAP",
-          "url": "https://www.karmahq.org/project/greenpill-writers-guild",
-          "subtext": "Grants and project updates",
-          "handle": "Karma",
-          "action": "Visit",
-          "icon": "karma",
-          "kind": "external"
         }
       ],
-      "reason": "July key links for the Writers Guild minus the Greenpill Podcast, which is not guild work: the newsletter the guild restarted, its X account, its Hub thread and its Karma profile.",
+      "reason": "Key links: the newsletter the guild restarted on the network's Paragraph, and its X account. Drops the Greenpill Podcast, which is not guild work.",
       "sources": [
         "https://hub.regencoordination.xyz/t/greenpill-writers-guild/159",
-        "https://x.com/GreenpillWrites",
-        "https://www.karmahq.org/project/greenpill-writers-guild",
         "https://paragraph.com/@greenpill",
-        "docs/design/claude-design-wireframe-prompts.md (Prompt 3 and appendix)"
-      ]
+        "https://x.com/GreenpillWrites",
+        "https://www.karmahq.org/project/greenpill-writers-guild"
+      ],
+      "afoDecision": "Afo, 2026-11-06: the guild has no website, only the Paragraph; link \"Paragraph and X\"."
     },
     {
       "collection": "guilds",
@@ -698,23 +699,15 @@
           "action": "Follow",
           "icon": "x",
           "kind": "social"
-        },
-        {
-          "label": "Regen Hub",
-          "url": "https://hub.regencoordination.xyz/t/greenpill-writers-guild/159",
-          "subtext": "Guild updates",
-          "handle": "Regen Hub",
-          "action": "Read",
-          "icon": "hub",
-          "kind": "external"
         }
       ],
-      "reason": "Removes the Greenpill Podcast; adds the guild's own channels.",
+      "reason": "Removes the Greenpill Podcast; the guild's channels are its Paragraph newsletter and X.",
       "sources": [
         "https://hub.regencoordination.xyz/t/greenpill-writers-guild/159",
-        "https://x.com/GreenpillWrites",
-        "https://paragraph.com/@greenpill"
-      ]
+        "https://paragraph.com/@greenpill",
+        "https://x.com/GreenpillWrites"
+      ],
+      "afoDecision": "Afo, 2026-11-06: \"Paragraph and X\"."
     },
     {
       "collection": "guilds",
@@ -983,7 +976,7 @@
         "https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363",
         "https://hub.regencoordination.xyz/t/greenpill-writers-guild/159"
       ],
-      "needsAfo": "Confirm the names and that each person is happy to be listed. Izzy has died (Hub, December 2024: \"our late friend Izzy who helped lead the Writers Guild\"); please choose how Izzy is credited. The handbook prints \"Izzy Lawrence\", On-Chain Impact Networks \"Izzy Lawernce-Onwuzurike\"."
+      "afoDecision": "Afo, 2026-11-06: \"Yes, as drafted\" (Izzy credited as \"Helped lead the guild\")."
     },
     {
       "collection": "guilds",
@@ -1071,13 +1064,13 @@
       "directusField": "founded_year",
       "snapshotField": "foundedYear",
       "current": 2024,
-      "proposed": null,
-      "reason": "No public source states when the guild was founded. Earliest dated evidence: a Hub mention in May 2024 and the guild's 2024 book; its Karma profile dates newsletter work from October 2023. The hero drops \"Founded\" when this is empty.",
+      "proposed": 2023,
+      "reason": "No public page states the founding year. Afo confirmed 2023, which matches the guild's Karma profile dating its newsletter work from October 2023 (earliest public mention found: May 2024).",
       "sources": [
-        "https://hub.regencoordination.xyz/t/welcome-to-greenpill-network/5",
-        "https://greenpill.network/pdf/onchain-impact-networks.pdf (credits page)"
+        "https://gapapi.karmahq.xyz/projects/greenpill-writers-guild",
+        "https://hub.regencoordination.xyz/t/welcome-to-greenpill-network/5"
       ],
-      "needsAfo": "Keep 2024 instead if you can confirm the founding year."
+      "afoDecision": "Afo, 2026-11-06: \"Use 2023\"."
     },
     {
       "collection": "guilds",

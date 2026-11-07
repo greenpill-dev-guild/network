@@ -568,8 +568,10 @@ const projects = (await getOperationalProjects())
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  /* Hat groups differ in length; each card keeps its own height. */
   .gp-guild-grid.is-auto {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+    align-items: start;
   }
 
   .gp-guild-grid > li {
