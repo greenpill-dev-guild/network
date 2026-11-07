@@ -26,7 +26,7 @@
     "2026-11-06: Afo approved the launch. D1 keep and fix the assessment; D2 remove the ecoregion layer; batch A (qa-map-data, qa-home-garden, qa-guilds, qa-stories) started.",
     "2026-11-07: D3 decided (Paragraph subscriptions). Open PRs: #33 hub, #34 qa-home-garden (waits on the new Telegram invite), #35 qa-map-data (its coordinate repair waits on Afo's approval in that session). Batch B rolls in as batch A sessions reach their PRs: qa-library started (PRD-1413); qa-assessment ready as a start card (PRD-1414); qa-brand-shell and qa-chapters to follow.",
     "2026-11-07 later: all batch B sessions except qa-assessment have started. Open PRs #34 to #39; Afo changed D4 to keep the illustrated background with its seams fixed (PR #39). Only conflict among open PRs: #35 and #39 in SiteFooter.astro; merge #35 first.",
-    "2026-11-07 final: PRs #33 to #44 are merged and verified live; every session sub-issue is Done, and PRD-1408 is closed. PRD-739 (P0 shipped in #41; P1 and P2 open) and PRD-1417 stay open as their own issues. The em-dash check runs in agentic:check; its pull-request workflow (finding 18) waits on Afo's OK and is tracked in PRD-1419. Follow-ups are listed in plan.todo.md, Final state."
+    "2026-11-07 final: PRs #33 to #44 are merged and verified live; every session sub-issue is Done, and PRD-1408 is closed. PRD-739 (P0 shipped in #41; P1 and P2 open) and PRD-1417 stay open as their own issues. The em-dash check runs in agentic:check; its pull-request workflow (finding 18) waits on Afo's OK and is tracked in PRD-1419. Afo's account checks (revoke the old Telegram invite, test a real Paragraph signup) are in PRD-1420, and the chapter seed sync from qa-chapters is in PRD-1421. Follow-ups are listed in plan.todo.md, Final state."
   ],
   "taxonomy": {
     "initiative": "public-experience",
@@ -122,7 +122,7 @@
       "actor": "claude",
       "lane": "system",
       "status": "archived",
-      "note": "All lanes complete; PRD-1418 and PRD-1408 Done; finding 18's pull-request workflow moved to PRD-1419; hub moved active -> archive."
+      "note": "All lanes complete; PRD-1418 and PRD-1408 Done; finding 18's pull-request workflow moved to PRD-1419, Afo's Telegram and Paragraph checks to PRD-1420, the chapter seed sync to PRD-1421; hub moved active -> archive."
     }
   ]
 }

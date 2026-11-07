@@ -12,7 +12,7 @@ Every session's pull request is merged into `main`, and each change was checked 
 | `qa-stories` | #37 | 11-07 06:53 | PRD-1412: Done | |
 | `qa-library` | #38 | 11-07 06:53 | PRD-1413: Done | |
 | `qa-chapters` | #40; change set applied 11-07 03:24 | 11-07 07:05 | PRD-625: Done | |
-| `qa-home-garden` | #34 | 11-07 19:41 | PRD-1410: Done | No real Paragraph signup tested yet; Afo revokes the old Telegram invites |
+| `qa-home-garden` | #34 | 11-07 19:41 | PRD-1410: Done | No real Paragraph signup tested yet, and the old plain-join Telegram invite still opened the group at 22:40 UTC: both tracked in PRD-1420 (Afo) |
 | `qa-brand-shell` | #39 | 11-07 19:42 | PRD-1415: Done | |
 | `qa-map-polish` | #41 | 11-07 19:42 | PRD-739: Backlog (P0 shipped) | P1 and P2 below |
 | `qa-assessment` | #42 | 11-07 19:54 | PRD-1414: Done | |
@@ -24,6 +24,8 @@ Open follow-ups:
 - **PRD-739 P1, information layout** (one redesign, best designed together first): hover as a compact tooltip with rich content in a docked side inspector on desktop and a bottom sheet on mobile; themes as a chip strip with Clear and All, the panel only for editing; the list as a non-modal drawer with compact grouped rows, map highlight on hover and search; a single-row compact chrome with the map at 60svh or more, and the 520 versus 720/480 breakpoint reconciled with DESIGN.md; chapter labels at rest, 44px targets, and deduplicated node data.
 - **PRD-739 P2, polish and live trust:** theme tags on chapters so theme filters apply to them; a live status line, a fetch error state and polling backoff; thread clipping; the walkthrough title and close button at 375; roles on overlay wrappers; pressed versus focus styling on pills; the two walkthrough buttons that lift 1px on hover (found by `qa-system-pass`).
 - **From `qa-system-pass`:** the em-dash pull-request workflow (PRD-1419, waits on Afo's OK); the CTA strips on `/chapters`, chapter and guild pages, which keep their own panels (a design call, since `ui/CtaStrip.astro` looks different); `/map/edit` and `/map/moderate`, which sit outside the site shell with their own card styles; the steward booking link kept in four places.
+- **PRD-1420 (Todo, Afo):** revoke the old plain-join Telegram invite, which still opened the group at 22:40 UTC on 11-07 (the other old link is dead), and test a real Paragraph signup (eval checks 5 and 6).
+- **PRD-1421 (Backlog):** the chapter, chapter-initiative and people seed files still hold the copy from before the `qa-chapters` change set, so `bun run content:snapshot` would write it back into the fallback snapshot; bring them in line with the approved values, as `qa-guilds` did for guilds (`handoffs/qa-chapters.md`, "Seed files").
 - **Optional tidiness:** clear the ecoregion names stored in `intake.map_node_submissions.bioregion`, which are no longer published.
 
 ## Session roster
@@ -71,7 +73,7 @@ Open with Afo for the map: confirm `MAP_LOCATION_CONFIRMATION_REQUIRED` is `true
 
 ### `qa-home-garden` (findings 2, 3, 5, 6, 20)
 
-- [ ] Subscribe follows D3 (decided 2026-11-06: Paragraph). Step 1 on home and `/garden` links to `https://paragraph.com/@greenpill` and says what subscribers get; the Resend route stays in the agent, unused. Describe the Paragraph flow accurately (email, wallet or both) after opening it without submitting; a real signup is tested by Afo or with an address he names. (Done in #34 except the real signup, which has not been tested.)
+- [ ] Subscribe follows D3 (decided 2026-11-06: Paragraph). Step 1 on home and `/garden` links to `https://paragraph.com/@greenpill` and says what subscribers get; the Resend route stays in the agent, unused. Describe the Paragraph flow accurately (email, wallet or both) after opening it without submitting; a real signup is tested by Afo or with an address he names. (Done in #34 except the real signup, which has not been tested; tracked in PRD-1420 when the hub closed.)
 - [x] Read the Telegram link from `content/social-links.json` everywhere you own; remove hard-coded copies.
 - [x] Remove the "Knowledge map · In design" and "Open the toolkit" tiles from the home commons bento.
 - [x] Ecosystem: verify each listed organization is a current, real relationship with a public source; find missing ones; group into partners and tools rows as decided in July. Move the list into `home-page.json` so it is editable.
@@ -162,6 +164,8 @@ One parent issue in P-PRD-19 for this hub, and one child per session, created wh
 | PRD-1417 | Follow-up from `qa-map-data`: Directus approvals at bad coordinates |
 | PRD-1418 | `qa-system-pass` |
 | PRD-1419 | Follow-up from `qa-system-pass`: run the em-dash check on pull requests (finding 18) |
+| PRD-1420 | Follow-up for Afo: revoke the old Telegram invite, test a real Paragraph signup (eval checks 5 and 6) |
+| PRD-1421 | Follow-up from `qa-chapters`: bring the chapter seed files in line with the approved Directus copy |
 
 States on 2026-11-07 are in the Final state table at the top. When the hub closed, PRD-739 and PRD-1417 were moved out from under PRD-1408 and linked to it as related issues, so the parent could close while they stay open.
 
