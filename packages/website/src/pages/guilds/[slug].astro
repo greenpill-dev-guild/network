@@ -126,6 +126,9 @@ const connectLinks = list(data.connectLinks).filter((link) => text(link?.url) &&
 const mandate = list(data.mandateParagraphs).map(text).filter(Boolean);
 const principles = list(data.principles).filter((principle) => text(principle?.title));
 const publishedWork = list(data.outputs).filter((work) => text(work?.label));
+// Outputs written before the November 2026 guild content update carry no `kind`:
+// they describe surfaces, not published work, so they keep the older heading.
+const workHeading = publishedWork.every((work) => text(work.kind)) ? 'Published by the guild' : 'Public outputs';
 const appearances = list(data.media?.appearances).filter((a) => text(a?.title) && text(a?.href));
 const [leadAppearance, ...moreAppearances] = appearances;
 const contributors = list(data.publicMembers).filter((member) => text(member?.name));
@@ -239,7 +242,7 @@ const projects = (await getOperationalProjects())
       <section class="gp-guild-section">
         <Container size="2xl">
           <div class="gp-guild-section-head">
-            <Overline as="h2" text="Published by the guild" />
+            <Overline as="h2" text={workHeading} />
           </div>
           <ul class="gp-guild-grid is-two">
             {publishedWork.map((work) => {
