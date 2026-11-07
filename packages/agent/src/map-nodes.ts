@@ -1,9 +1,16 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { isIP } from 'node:net';
 import {
+  getMapCoordinateProblem,
+  isMapEdgeCoordinate,
+  MAP_COORDINATE_PROBLEM_MESSAGES,
+  MAP_EDGE_COORDINATE_MESSAGE,
+  type MapCoordinateProblem,
+  parseStoredMapCoordinate,
+} from '@greenpill-network/shared/map-locations';
+import {
   containsPrivateMapNodeField,
   createOptimisticPendingNode,
-  derivePublicBioregionFromCoordinates,
   normalizePublicMapThemeSlugs,
   toEditablePublicMapNode,
   toPublicMapNode,
@@ -151,13 +158,31 @@ const cleanIpAddress = (value: unknown): string => {
   return isIP(candidate) ? candidate : '';
 };
 
-const normalizeNumber = (value: unknown): number | null => {
-  if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) return null;
-  const number = typeof value === 'number' ? value : Number(value);
-  return Number.isFinite(number) ? number : null;
-};
+// Coordinates are rounded to the stored six decimal places as they are read, so
+// every check below judges exactly the value the insert saves.
+const normalizeCoordinate = parseStoredMapCoordinate;
 
 const normalizeThemes = normalizePublicMapThemeSlugs;
+
+// Every write path checks the final pair: out of range, non-numeric or 0,0 is
+// refused with an explicit error, never clamped. The June 2026 add-node client
+// saved 0,0 and pins clamped to the map edge (PRD-1409).
+function assertPublicMapCoordinates(lat: unknown, long: unknown): void {
+  const problem = getMapCoordinateProblem(lat, long);
+  if (problem) {
+    throw new PublicInputError('invalid_coordinates', MAP_COORDINATE_PROBLEM_MESSAGES[problem]);
+  }
+}
+
+// Raw coordinates (the rollout-window path) carry no geocoder result, so an
+// exact edge point cannot be told from a clamped pin. It needs a confirmed
+// place, which still saves real edge locations such as Fiji's.
+function assertRawMapCoordinates(lat: unknown, long: unknown): void {
+  assertPublicMapCoordinates(lat, long);
+  if (isMapEdgeCoordinate(lat, long)) {
+    throw new PublicInputError('invalid_coordinates', MAP_EDGE_COORDINATE_MESSAGE);
+  }
+}
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -310,8 +335,8 @@ function normalizeSubmissionInput(
   }
 
   const legacyPlaceName = cleanString(input.placeName ?? input.place);
-  const legacyLat = normalizeNumber(input.lat ?? input.latitude);
-  const legacyLong = normalizeNumber(input.long ?? input.lng ?? input.longitude);
+  const legacyLat = normalizeCoordinate(input.lat ?? input.latitude);
+  const legacyLong = normalizeCoordinate(input.long ?? input.lng ?? input.longitude);
   const legacyLocation = !locationConfirmationId && !requireLocationConfirmation
     ? {
       placeName: legacyPlaceName,
@@ -327,10 +352,10 @@ function normalizeSubmissionInput(
     throw new PublicInputError('location_confirmation_required', 'Find and confirm your place before submitting.');
   }
 
-  if (!locationConfirmationId && (!legacyLocation?.placeName || legacyLocation.lat === null || legacyLocation.long === null
-    || legacyLocation.lat < -90 || legacyLocation.lat > 90 || legacyLocation.long < -180 || legacyLocation.long > 180)) {
+  if (!locationConfirmationId && (!legacyLocation?.placeName || legacyLocation.lat === null || legacyLocation.long === null)) {
     throw new PublicInputError('invalid_coordinates', 'A valid place, latitude, and longitude are required during the rollout window.');
   }
+  if (legacyLocation) assertRawMapCoordinates(legacyLocation.lat, legacyLocation.long);
 
   if (!isValidOwnerEmail(email)) {
     throw new PublicInputError('invalid_email', 'A valid email is required.');
@@ -425,6 +450,7 @@ export async function createMapNodeSubmission(
     if (!location || location.lat === null || location.long === null) {
       throw new PublicInputError('location_confirmation_required', 'Find and confirm your place before submitting.');
     }
+    assertPublicMapCoordinates(location.lat, location.long);
     const intakeMode = await getMapNodeIntakeMode(tx);
     const liveOnboarding = intakeMode === 'live';
     if (!liveOnboarding) {
@@ -445,7 +471,6 @@ export async function createMapNodeSubmission(
         role,
         chapter_slug,
         themes,
-        bioregion,
         public_note,
         raw_note,
         rate_limit_key,
@@ -465,7 +490,6 @@ export async function createMapNodeSubmission(
         ${normalized.role || null},
         ${normalized.chapterSlug || null},
         ${normalized.themes},
-        ${derivePublicBioregionFromCoordinates(location.lat, location.long) || null},
         ${normalized.publicNote || null},
         ${normalized.rawNote || null},
         ${meta.rateLimitKey || null},
@@ -574,15 +598,17 @@ function normalizeUpdateText(input: UnknownRecord, keys: string[]): string | und
   return undefined;
 }
 
+// Parses one coordinate field. Whether the pair is a usable map location is
+// checked once the stored half is known (createMapNodeUpdateRequest).
 function normalizeUpdateNumber(
   input: UnknownRecord,
   keys: string[],
-  { min, max, label }: { min: number; max: number; label: string }
+  { label }: { label: string }
 ): number | undefined {
   for (const key of keys) {
     if (!Object.hasOwn(input, key)) continue;
-    const value = normalizeNumber(input[key]);
-    if (value === null || value < min || value > max) {
+    const value = normalizeCoordinate(input[key]);
+    if (value === null) {
       throw new PublicInputError('invalid_update_field', `${label} is invalid.`);
     }
     return value;
@@ -653,17 +679,9 @@ function normalizeUpdateRequestInput(
       const value = normalizeUpdateText(source, [field]);
       if (value !== undefined) proposed[field] = value;
     }
-    const latitude = normalizeUpdateNumber(source, ['latitude', 'lat'], {
-      min: -90,
-      max: 90,
-      label: 'Latitude',
-    });
+    const latitude = normalizeUpdateNumber(source, ['latitude', 'lat'], { label: 'Latitude' });
     if (latitude !== undefined) proposed.latitude = latitude;
-    const longitude = normalizeUpdateNumber(source, ['longitude', 'long', 'lng'], {
-      min: -180,
-      max: 180,
-      label: 'Longitude',
-    });
+    const longitude = normalizeUpdateNumber(source, ['longitude', 'long', 'lng'], { label: 'Longitude' });
     if (longitude !== undefined) proposed.longitude = longitude;
   }
 
@@ -704,8 +722,8 @@ function buildCurrentPublicFields(row: UnknownRecord) {
     city: cleanString(row.city),
     region: cleanString(row.region),
     country: cleanString(row.country),
-    latitude: normalizeNumber(row.lat),
-    longitude: normalizeNumber(row.long),
+    latitude: normalizeCoordinate(row.lat),
+    longitude: normalizeCoordinate(row.long),
     themes: normalizeThemes(row.themes),
     public_note: cleanString(row.publicNote),
   };
@@ -1482,6 +1500,16 @@ export async function createMapNodeUpdateRequest(
       proposal.proposedLatitude = confirmedLocation.lat;
       proposal.proposedLongitude = confirmedLocation.long;
     }
+    const proposedFields = proposal.proposedPublicFields;
+    if (Object.hasOwn(proposedFields, 'latitude') || Object.hasOwn(proposedFields, 'longitude')) {
+      // Check the pair the node would end up with, so changing one half cannot
+      // keep a bad stored other half. A confirmed place may sit on the edge;
+      // raw coordinates may not (see assertRawMapCoordinates).
+      const nextLat = Object.hasOwn(proposedFields, 'latitude') ? proposedFields.latitude : tokenRow.lat;
+      const nextLong = Object.hasOwn(proposedFields, 'longitude') ? proposedFields.longitude : tokenRow.long;
+      if (proposal.locationConfirmationId) assertPublicMapCoordinates(nextLat, nextLong);
+      else assertRawMapCoordinates(nextLat, nextLong);
+    }
     const existingPending = await tx`
       select id
       from intake.map_node_update_requests
@@ -1639,7 +1667,19 @@ async function listPublicMapNodeRowsWithoutDirectus(sql: SqlLike): Promise<Unkno
   `;
 }
 
-export async function listPublicMapNodes(sql: SqlLike): Promise<PublicMapNode[]> {
+export type HiddenMapNode = { id: string; problem: MapCoordinateProblem };
+
+function reportHiddenMapNodes(hidden: HiddenMapNode[]): void {
+  console.warn('map_node_hidden_invalid_coordinates', { count: hidden.length, nodes: hidden });
+}
+
+// Approved rows at 0,0 or out-of-range coordinates are left off the public list
+// (see toPublicMapNode) and reported by public id and problem only, so
+// operators can repair them; nothing private is logged.
+export async function listPublicMapNodes(
+  sql: SqlLike,
+  { reportHiddenNodes = reportHiddenMapNodes }: { reportHiddenNodes?: (hidden: HiddenMapNode[]) => void } = {}
+): Promise<PublicMapNode[]> {
   let rows: UnknownRecord[];
   try {
     rows = await sql`
@@ -1670,6 +1710,12 @@ export async function listPublicMapNodes(sql: SqlLike): Promise<PublicMapNode[]>
     if (!isDirectusStewardSourceUnavailable(error)) throw error;
     rows = await listPublicMapNodeRowsWithoutDirectus(sql);
   }
+
+  const hidden = rows.flatMap((row) => {
+    const problem = getMapCoordinateProblem(row.lat, row.long);
+    return problem ? [{ id: cleanString(row.id), problem }] : [];
+  });
+  if (hidden.length > 0) reportHiddenNodes(hidden);
 
   return rows
     .map((row) => toPublicMapNode(row))

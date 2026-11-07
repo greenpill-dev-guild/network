@@ -628,9 +628,15 @@ test('map-location repository rejects non-HTTPS provider configuration and ocean
       osm_id: '999',
     }),
   });
+  // An open-ocean pin far from the provider's nearest place is not confirmed.
+  await assert.rejects(
+    () => repository.reverse(1, 1),
+    (error) => error instanceof PublicInputError && error.code === 'location_not_confirmed'
+  );
+  // 0,0 is refused as a placeholder before any lookup (PRD-1409).
   await assert.rejects(
     () => repository.reverse(0, 0),
-    (error) => error instanceof PublicInputError && error.code === 'location_not_confirmed'
+    (error) => error instanceof PublicInputError && error.code === 'invalid_coordinates'
   );
 });
 

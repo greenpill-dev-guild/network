@@ -1,9 +1,13 @@
 import { createHash } from 'node:crypto';
 import {
   assertPublicMapLocationPayload,
+  getMapCoordinateProblem,
+  isPublicMapCoordinate,
+  MAP_COORDINATE_PROBLEM_MESSAGES,
   normalizeMapLatitude,
   normalizeMapLocationQuery,
   normalizeMapLongitude,
+  parseStoredMapCoordinate,
   type PublicMapLocation,
   type PublicMapLocationKind,
   type PublicMapLocationReversePayload,
@@ -151,8 +155,10 @@ function locationKind(raw: UnknownRecord): PublicMapLocationKind | null {
 function normalizeCandidate(raw: unknown): NormalizedLocationCandidate | null {
   const record = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw as UnknownRecord : {};
   const label = cleanString(record.display_name ?? record.name ?? record.label);
-  const lat = normalizeMapLatitude(record.lat);
-  const long = normalizeMapLongitude(record.lon ?? record.long);
+  // Rounded to the stored six decimal places, so the confirmation saves, and
+  // the browser shows, exactly the point judged below.
+  const lat = parseStoredMapCoordinate(record.lat);
+  const long = parseStoredMapCoordinate(record.lon ?? record.long);
   const cachedKind = cleanString(record.kind);
   const kind = (cachedKind === 'settlement' || cachedKind === 'region' || cachedKind === 'country')
     ? cachedKind as PublicMapLocationKind
@@ -164,6 +170,9 @@ function normalizeCandidate(raw: unknown): NormalizedLocationCandidate | null {
   // inventing an id for a response we cannot trace in the audit record.
   const providerId = cleanString(record.providerId) || (osmType && osmId ? `${osmType}:${osmId}` : '');
   if (!label || lat === null || long === null || !kind || !providerId) return null;
+  // A provider point stored as 0,0 or out of range is never offered as a place
+  // a person can confirm. An exact edge point (Fiji's meridian) is a real place.
+  if (!isPublicMapCoordinate(lat, long)) return null;
   return {
     label,
     lat,
@@ -519,6 +528,11 @@ export async function consumeMapLocationConfirmation(sql: SqlLike, confirmationI
   if (!row || lat === null || long === null || !label) {
     throw new PublicInputError('invalid_location_confirmation', 'This place confirmation has expired. Find and confirm the place again.');
   }
+  // Callers consume inside their write transaction, so refusing here also
+  // leaves the confirmation unconsumed.
+  if (!isPublicMapCoordinate(lat, long)) {
+    throw new PublicInputError('invalid_location_confirmation', 'This place cannot be shown on the map. Find and confirm the place again.');
+  }
 
   return {
     label,
@@ -587,8 +601,12 @@ export function createMapLocationRepository({
     async reverse(lat, long, requestMeta) {
       const latitude = normalizeMapLatitude(lat);
       const longitude = normalizeMapLongitude(long);
-      if (latitude === null || longitude === null) {
-        throw new PublicInputError('invalid_coordinates', 'Choose a valid point on the map.');
+      // Blank, out-of-range and 0,0 pins are refused before any lookup. A pin
+      // on the map's edge goes to the geocoder: it confirms a real place there
+      // (Fiji's meridian) and finds nothing near a pin clamped to the edge.
+      const problem = getMapCoordinateProblem(lat, long);
+      if (problem || latitude === null || longitude === null) {
+        throw new PublicInputError('invalid_coordinates', MAP_COORDINATE_PROBLEM_MESSAGES[problem ?? 'missing']);
       }
       let candidates: NormalizedLocationCandidate[];
       try {

@@ -1,16 +1,35 @@
 import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 import { test } from 'node:test';
+import * as sharedMapNodes from '@greenpill-network/shared/map-nodes';
 import {
   containsPrivateMapNodeField,
-  derivePublicBioregionFromCoordinates,
-  lookupPublicBioregionFromCoordinates,
   EDITABLE_MAP_NODE_UPDATE_FIELDS,
   normalizePublicMapThemeSlugs,
   PRIVATE_MAP_NODE_FIELDS,
   toEditablePublicMapNode,
   toPublicMapNode,
 } from '@greenpill-network/shared/map-nodes';
+import {
+  getMapCoordinateProblem,
+  isMapEdgeCoordinate,
+  isPublicMapCoordinate,
+  MAP_COORDINATE_PROBLEM_MESSAGES,
+  MAP_EDGE_COORDINATE_MESSAGE,
+  parseStoredMapCoordinate,
+  toStoredMapCoordinate,
+} from '@greenpill-network/shared/map-locations';
+import { toPublicOperationalLocations } from '@greenpill-network/shared/public-content';
+import {
+  createMapNodeSubmission,
+  createMapNodeUpdateRequest,
+  listPublicMapNodes,
+  PublicInputError,
+} from '@greenpill-network/agent/map-nodes';
+import {
+  consumeMapLocationConfirmation,
+  createMapLocationRepository,
+} from '@greenpill-network/agent/map-locations';
 import {
   loadLocalPendingNodes as loadStoredLocalPendingNodes,
   localPendingNodeSignature as storedLocalPendingNodeSignature,
@@ -79,9 +98,10 @@ test('approved public projection removes private submission fields', () => {
 
   assert.equal(publicNode.status, 'approved');
   assert.equal(publicNode.name, 'Afo');
-  assert.equal(publicNode.bioregion, 'California interior chaparral and woodlands');
-  assert.equal(publicNode.bioregionId, '423');
-  assert.equal(publicNode.bioregionSource, 'resolve-ecoregions-2017');
+  // D2 (2026-11-06): no ecoregion is derived or published for a node.
+  assert.equal(publicNode.bioregion, '');
+  assert.equal(Object.hasOwn(publicNode, 'bioregionId'), false);
+  assert.equal(Object.hasOwn(publicNode, 'bioregionSource'), false);
   assert.equal(containsPrivateMapNodeField(publicNode), false);
   for (const field of PRIVATE_MAP_NODE_FIELDS) {
     assert.equal(Object.hasOwn(publicNode, field), false);
@@ -319,9 +339,12 @@ test('public map-state combines chapter anchors and approved submitted nodes saf
   assert.equal(payload.nodes.some((node) => node.type === 'chapter'), true);
   assert.equal(payload.nodes.some((node) => node.type === 'steward'), true);
   assert.equal(payload.nodes.some((node) => String(node.source) === 'generated-density'), false);
-  assert.equal(payload.nodes.find((node) => node.type === 'steward')?.bioregion, 'Nigerian lowland forests');
-  assert.equal(payload.nodes.find((node) => node.type === 'steward')?.bioregionId, '23');
-  assert.equal(payload.nodes.find((node) => node.type === 'steward')?.bioregionSource, 'resolve-ecoregions-2017');
+  // D2 (2026-11-06): neither people nor chapters carry ecoregion data.
+  for (const node of payload.nodes) {
+    assert.equal(node.bioregion ?? '', '');
+    assert.equal(Object.hasOwn(node, 'bioregionId'), false);
+    assert.equal(Object.hasOwn(node, 'bioregionSource'), false);
+  }
   assert.equal(payload.counts.chapterNodes, 1);
   assert.equal(payload.counts.approvedSubmittedNodes, 1);
   assert.equal(payload.counts.byType.steward, 1);
@@ -419,10 +442,12 @@ test('public map-state generates person-first relationship edges', () => {
     edge.kind === 'shared-theme' &&
     [edge.from, edge.to].sort().join(':') === 'submission:member-1:submission:member-2'
   )), true);
-  assert.equal(payload.edges.find((edge) => (
-    edge.kind === 'shared-theme' &&
-    [edge.from, edge.to].sort().join(':') === 'submission:member-1:submission:member-2'
-  ))?.bioregion, 'West African Coast');
+  // D2 (2026-11-06): a stored region label is not published, so threads carry
+  // no region either, even when both people share one.
+  assert.equal(payload.edges.some((edge) => (
+    Object.hasOwn(edge, 'bioregion') || Object.hasOwn(edge, 'bioregionId') || Object.hasOwn(edge, 'bioregionSource')
+  )), false);
+  assert.equal(JSON.stringify(payload).includes('West African Coast'), false);
 
   const typeByNodeId = new Map(payload.nodes.map((node) => [node.id, node.type]));
   assert.equal(payload.edges.some((edge) => (
@@ -449,8 +474,8 @@ test('public map-state includes real opt-in stewards without anonymous density',
     chapterLocations: [{
       id: 'anchor-chapter',
       name: 'Anchor Chapter',
-      lat: 0,
-      long: 0,
+      lat: 5.6037,
+      long: -0.187,
       link: '/chapters/anchor-chapter',
       status: 'active',
       themes: ['public'],
@@ -469,14 +494,39 @@ test('public map-state includes real opt-in stewards without anonymous density',
   )), false);
 });
 
-test('public bioregion field resolves from checked-in RESOLVE polygons', () => {
-  assert.deepEqual(lookupPublicBioregionFromCoordinates(37.8044, -122.2712), {
-    id: '423',
-    name: 'California interior chaparral and woodlands',
-    source: 'resolve-ecoregions-2017',
+test('D2: the shared package no longer ships or looks up ecoregions', async () => {
+  const sharedSourceFiles = await readdir(new URL('../packages/shared/src/', import.meta.url));
+  assert.equal(sharedSourceFiles.some((file) => file.startsWith('public-ecoregions')), false);
+
+  const sharedPackage = JSON.parse(await readFile(new URL('../packages/shared/package.json', import.meta.url), 'utf8'));
+  assert.equal(Object.hasOwn(sharedPackage.exports, './public-ecoregions'), false);
+  const sharedIndex = await readFile(new URL('../packages/shared/src/index.ts', import.meta.url), 'utf8');
+  assert.doesNotMatch(sharedIndex, /public-ecoregions/);
+
+  for (const removed of [
+    'PUBLIC_ECOREGIONS',
+    'findPublicEcoregionById',
+    'lookupPublicBioregionFromCoordinates',
+    'derivePublicBioregionMetadataFromCoordinates',
+    'derivePublicBioregionFromCoordinates',
+  ]) {
+    assert.equal(Object.hasOwn(sharedMapNodes, removed), false, `${removed} should be gone`);
+  }
+
+  // A region label already stored on a row (the agent wrote ecoregion names at
+  // intake until this change) is not published either.
+  const node = toPublicMapNode({
+    id: 'stored-region',
+    status: 'approved',
+    displayName: 'Stored Region',
+    placeName: 'Rio de Janeiro',
+    lat: -22.9068,
+    long: -43.1729,
+    bioregion: 'Serra do Mar coastal forests',
+    bioregion_id: '500',
   });
-  assert.equal(derivePublicBioregionFromCoordinates(37.8044, -122.2712), 'California interior chaparral and woodlands');
-  assert.equal(derivePublicBioregionFromCoordinates(37.8044, -122.2712, 'Bay Delta'), 'Bay Delta');
+  assert.equal(node?.bioregion, '');
+  assert.equal(JSON.stringify(node).includes('Serra do Mar'), false);
 });
 
 test('public content seed map nodes are approved-only projection fixtures', async () => {
@@ -536,9 +586,9 @@ test('public map-state guard rejects pending and private route payloads', () => 
 
 test('public map-state guard rejects non-person relationship edge endpoints', () => {
   const nodes = [
-    { id: 'chapter:nigeria', type: 'chapter', status: 'approved', source: 'chapter-content' },
-    { id: 'submission:member-1', type: 'member', status: 'approved', source: 'approved-submission' },
-    { id: 'submission:member-2', type: 'member', status: 'approved', source: 'approved-submission' },
+    { id: 'chapter:nigeria', type: 'chapter', status: 'approved', source: 'chapter-content', lat: 9.082, long: 8.6753 },
+    { id: 'submission:member-1', type: 'member', status: 'approved', source: 'approved-submission', lat: 6.5244, long: 3.3792 },
+    { id: 'submission:member-2', type: 'member', status: 'approved', source: 'approved-submission', lat: 5.6037, long: -0.187 },
   ];
 
   assert.throws(
@@ -1564,4 +1614,641 @@ test('home map uses exact-overlap fan-out instead of broad cluster bubbles', asy
   assert.match(component, /@keyframes gpMapClusterPop/);
   assert.doesNotMatch(component, /gpMapClusterPop[^;]*infinite/);
   assert.match(component, /reducedMotionPref\(\)/);
+});
+
+// ---------------------------------------------------------------------------
+// PRD-1409 (qa-map-data): nodes saved at impossible coordinates.
+// Live /map/state on 2026-11-06 held these public points. The June 2026
+// add-node client produced them: a pin drag clamped to the mini-map edge gave
+// latitude 90 or longitude -180, and a place typed with no pin read the empty
+// latitude and longitude fields as 0. Out-of-range, non-numeric and 0,0 points
+// are always refused. An exact edge point is refused from raw coordinates but
+// accepted from a confirmed place, because real places sit on the 180th
+// meridian (Fiji). Evidence: .plans/active/website-qa-2026-11/handoffs/qa-map-data.md
+// ---------------------------------------------------------------------------
+const LIVE_EDGE_POINTS = Object.freeze([
+  { place: 'Florida', lat: 90, long: 97.76261 },
+  { place: 'Taiwan', lat: 90, long: 176.912492 },
+  { place: 'Awka', lat: 56.462976, long: -180 },
+]);
+const LIVE_NULL_ISLAND_POINTS = Object.freeze([
+  { place: 'Port Harcourt', lat: 0, long: 0 },
+  { place: 'Rotterdam, Netherlands', lat: 0, long: 0 },
+]);
+// A real place on the 180th meridian, as a geocoder would confirm it.
+const FIJI_MERIDIAN_POINT = Object.freeze({ place: 'Taveuni, Fiji', lat: -16.8, long: 180 });
+const LEGACY_LOCATION_ENV = Object.freeze({ MAP_LOCATION_CONFIRMATION_REQUIRED: 'false' });
+const TEST_CONFIRMATION_ID = '11111111-1111-4111-8111-111111111111';
+const EM_DASH = String.fromCharCode(0x2014);
+
+function createRecordingSql(respond: (text: string, values: unknown[]) => unknown[] | undefined = () => []) {
+  const statements: Array<{ text: string; values: unknown[] }> = [];
+  const sql: any = async (strings: TemplateStringsArray, ...values: unknown[]) => {
+    const text = strings.join('?').replace(/\s+/g, ' ').trim();
+    statements.push({ text, values });
+    return respond(text, values) ?? [];
+  };
+  sql.json = (value: unknown) => value;
+  sql.begin = async (callback: (tx: any) => unknown) => callback(sql);
+  sql.end = async () => {};
+  return { sql, statements };
+}
+
+const wroteTo = (statements: Array<{ text: string }>, table: string) => (
+  statements.some((statement) => statement.text.includes(`insert into ${table}`))
+);
+
+const insertedInto = (statements: Array<{ text: string; values: unknown[] }>, table: string) => (
+  statements.find((statement) => statement.text.includes(`insert into ${table}`))
+);
+
+const approvedRow = (point: { place: string; lat: unknown; long: unknown }, index: number) => ({
+  id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+  status: 'approved',
+  displayName: `Person ${index}`,
+  placeName: point.place,
+  lat: point.lat,
+  long: point.long,
+  themes: ['public'],
+});
+
+test('map coordinates refuse out-of-range, non-numeric and 0,0 values, and flag exact edge points', () => {
+  const cases: Array<[unknown, unknown, string | null]> = [
+    [90.5, 10, 'latitude_out_of_range'],
+    [-91, 10, 'latitude_out_of_range'],
+    [10, 180.5, 'longitude_out_of_range'],
+    [10, -181, 'longitude_out_of_range'],
+    [0, 0, 'null_island'],
+    ['0', '0.000000', 'null_island'],
+    [null, 3.3792, 'missing'],
+    ['', '', 'missing'],
+    ['   ', 3.3792, 'missing'],
+    [true, 3.3792, 'missing'],
+    ['north', 3.3792, 'missing'],
+    [Number.NaN, 3.3792, 'missing'],
+    [Number.POSITIVE_INFINITY, 3.3792, 'missing'],
+    // In range: the edges themselves, the equator and the prime meridian.
+    [90, 97.76261, null],
+    [-90, 0, null],
+    [56.462976, -180, null],
+    [-16.8, 180, null],
+    [0, 3.3792, null],
+    [51.4779, 0, null],
+    ['6.5244', '3.3792', null],
+  ];
+  for (const [lat, long, expected] of cases) {
+    assert.equal(getMapCoordinateProblem(lat, long), expected, `${String(lat)}, ${String(long)}`);
+    assert.equal(isPublicMapCoordinate(lat, long), expected === null, `${String(lat)}, ${String(long)}`);
+  }
+
+  const edgeCases: Array<[unknown, unknown, boolean]> = [
+    [90, 97.76261, true],
+    [-90, 0, true],
+    [56.462976, -180, true],
+    [-16.8, 180, true],
+    [89.999999, 179.999999, false],
+    [6.5244, 3.3792, false],
+    ['', '', false],
+  ];
+  for (const [lat, long, edge] of edgeCases) {
+    assert.equal(isMapEdgeCoordinate(lat, long), edge, `${String(lat)}, ${String(long)}`);
+  }
+
+  for (const message of [...Object.values(MAP_COORDINATE_PROBLEM_MESSAGES), MAP_EDGE_COORDINATE_MESSAGE]) {
+    assert.equal(message.includes(EM_DASH), false);
+  }
+});
+
+test('nodes at 0,0 or out of range stay off the public map, while edge points and Fiji stay on', () => {
+  for (const [index, point] of LIVE_NULL_ISLAND_POINTS.entries()) {
+    assert.equal(toPublicMapNode(approvedRow(point, index)), null, point.place);
+  }
+  // Null and blank values used to read as 0 and project to 0,0.
+  assert.equal(toPublicMapNode(approvedRow({ place: 'Port Harcourt', lat: null, long: null }, 7)), null);
+  assert.equal(toPublicMapNode(approvedRow({ place: 'Port Harcourt', lat: '', long: '' }, 8)), null);
+  assert.equal(toPublicMapNode(approvedRow({ place: 'Nowhere', lat: 95, long: 10 }, 9)), null);
+  // An edge point may be a real place, so the projection keeps it. The
+  // clamped live rows are fixed by the approved data repair, not hidden.
+  for (const [index, point] of [...LIVE_EDGE_POINTS, FIJI_MERIDIAN_POINT].entries()) {
+    assert.ok(toPublicMapNode(approvedRow(point, 20 + index)), point.place);
+  }
+
+  const payload = toPublicMapStatePayload({
+    generatedAt: '2026-11-06T22:58:27.831Z',
+    chapterLocations: [
+      { id: 'brasil', name: 'Greenpill Brasil', lat: -22.9068, long: -43.1729, status: 'active' },
+      { id: 'placeholder', name: 'Placeholder Chapter', lat: 0, long: 0, status: 'active' },
+    ],
+    publicMapNodes: [...LIVE_NULL_ISLAND_POINTS.map(approvedRow), approvedRow(FIJI_MERIDIAN_POINT, 30)],
+    sourceStatus: [
+      { source: 'chapter-locations', status: 'ok', count: 2 },
+      { source: 'approved-map-nodes', status: 'ok', count: 3 },
+    ],
+  });
+  assert.deepEqual(payload.nodes.map((node) => node.name).sort(), ['Greenpill Brasil', 'Person 30']);
+  assert.equal(payload.nodes.find((node) => node.name === 'Person 30')?.long, 180);
+  assert.equal(payload.counts.chapterNodes, 1);
+  assert.equal(payload.counts.approvedSubmittedNodes, 1);
+
+  // The payload guard refuses a payload that still carries 0,0 or an
+  // out-of-range point, and accepts the meridian.
+  for (const bad of [{ lat: 0, long: 0 }, { lat: 95, long: 10 }]) {
+    assert.throws(
+      () => assertPublicMapStatePayload({
+        ...payload,
+        nodes: [...payload.nodes, { ...payload.nodes[0], id: 'chapter:bad', ...bad }],
+      }),
+      /impossible coordinates/
+    );
+  }
+  assert.doesNotThrow(() => assertPublicMapStatePayload(payload));
+});
+
+test('the agent lists edge nodes, leaves 0,0 rows off the public list and reports only their ids', async () => {
+  const row = (point: { place: string; lat: number; long: number }, id: string) => ({
+    id,
+    name: `Person ${id.slice(-2)}`,
+    place: point.place,
+    city: '',
+    region: '',
+    country: '',
+    lat: point.lat,
+    long: point.long,
+    role: 'member',
+    chapterSlug: '',
+    themes: ['public'],
+    bioregion: 'Serra do Mar coastal forests',
+    publicNote: '',
+    status: 'approved',
+  });
+  const rows = [
+    ...LIVE_EDGE_POINTS.map((point, index) => row(point, `00000000-0000-4000-8000-00000000002${index}`)),
+    ...LIVE_NULL_ISLAND_POINTS.map((point, index) => row(point, `00000000-0000-4000-8000-00000000003${index}`)),
+    row({ place: 'Toronto', lat: 43.6532, long: -79.3832 }, '00000000-0000-4000-8000-000000000099'),
+  ];
+  const { sql } = createRecordingSql((text) => (text.includes('from intake.public_map_nodes') ? rows : []));
+  const reports: Array<Array<{ id: string; problem: string }>> = [];
+  const nodes = await listPublicMapNodes(sql, { reportHiddenNodes: (hidden) => reports.push(hidden) });
+
+  assert.deepEqual(nodes.map((node) => node.place), ['Florida', 'Taiwan', 'Awka', 'Toronto']);
+  assert.equal(nodes.every((node) => node.bioregion === ''), true);
+  assert.equal(reports.length, 1);
+  assert.deepEqual(reports[0], [
+    { id: '00000000-0000-4000-8000-000000000030', problem: 'null_island' },
+    { id: '00000000-0000-4000-8000-000000000031', problem: 'null_island' },
+  ]);
+});
+
+test('raw coordinates: out-of-range and 0,0 are refused, and an edge point needs a confirmed place', async () => {
+  const refused = [
+    ...LIVE_EDGE_POINTS.map((point) => ({ ...point, message: MAP_EDGE_COORDINATE_MESSAGE })),
+    { ...FIJI_MERIDIAN_POINT, message: MAP_EDGE_COORDINATE_MESSAGE },
+    ...LIVE_NULL_ISLAND_POINTS.map((point) => ({ ...point, message: MAP_COORDINATE_PROBLEM_MESSAGES.null_island })),
+    { place: 'Port Harcourt', lat: '0', long: '0', message: MAP_COORDINATE_PROBLEM_MESSAGES.null_island },
+    { place: 'Nowhere', lat: 90.5, long: 10, message: MAP_COORDINATE_PROBLEM_MESSAGES.latitude_out_of_range },
+  ];
+  for (const point of refused) {
+    const { sql, statements } = createRecordingSql((text) => (
+      text.includes('from intake.map_node_intake_settings') ? [{ liveOnboardingEnabled: false }] : []
+    ));
+    await assert.rejects(
+      () => createMapNodeSubmission(sql, {
+        name: 'Legacy Browser Member',
+        place: point.place,
+        lat: point.lat,
+        long: point.long,
+        themes: ['public'],
+        email: 'legacy@example.org',
+      }, {}, { env: LEGACY_LOCATION_ENV }),
+      (error) => error instanceof PublicInputError
+        && error.code === 'invalid_coordinates'
+        && error.status === 400
+        && error.message === point.message,
+      `${point.place} ${String(point.lat)}, ${String(point.long)}`
+    );
+    assert.equal(wroteTo(statements, 'intake.map_node_submissions'), false);
+  }
+
+  // A raw point just inside the meridian is an ordinary location.
+  const { sql, statements } = createRecordingSql((text) => {
+    if (text.includes('from intake.map_node_intake_settings')) return [{ liveOnboardingEnabled: false }];
+    if (text.includes('insert into intake.map_node_submissions')) {
+      return [{ id: '00000000-0000-4000-8000-000000000124', status: 'pending', displayName: 'Raw Fiji', placeName: 'Taveuni, Fiji', lat: -16.8, long: 179.99, themes: ['public'], createdAt: '2026-11-06T12:00:00.000Z' }];
+    }
+    if (text.includes('insert into intake.map_node_moderation_notifications')) return [{ id: 'notification-1' }];
+    return [];
+  });
+  await createMapNodeSubmission(sql, {
+    name: 'Raw Fiji',
+    place: 'Taveuni, Fiji',
+    lat: -16.8,
+    long: 179.99,
+    themes: ['public'],
+    email: 'raw@example.org',
+  }, {}, { env: LEGACY_LOCATION_ENV, deferProviderSend: true });
+  assert.equal(wroteTo(statements, 'intake.map_node_submissions'), true);
+});
+
+test('D2: the agent no longer stores a derived ecoregion name at intake', async () => {
+  const { sql, statements } = createRecordingSql((text) => {
+    if (text.includes('from intake.map_node_intake_settings')) return [{ liveOnboardingEnabled: false }];
+    if (text.includes('insert into intake.map_node_submissions')) {
+      return [{
+        id: '00000000-0000-4000-8000-000000000123',
+        status: 'pending',
+        displayName: 'Legacy Browser Member',
+        placeName: 'Oakland',
+        lat: 37.8044,
+        long: -122.2712,
+        themes: ['public'],
+        createdAt: '2026-11-06T12:00:00.000Z',
+      }];
+    }
+    if (text.includes('insert into intake.map_node_moderation_notifications')) return [{ id: 'notification-1' }];
+    return [];
+  });
+  await createMapNodeSubmission(sql, {
+    name: 'Legacy Browser Member',
+    place: 'Oakland',
+    lat: 37.8044,
+    long: -122.2712,
+    themes: ['public'],
+    email: 'legacy@example.org',
+  }, {}, { env: LEGACY_LOCATION_ENV, deferProviderSend: true });
+  const insert = insertedInto(statements, 'intake.map_node_submissions');
+  assert.ok(insert);
+  assert.equal(insert.values.includes('California interior chaparral and woodlands'), false);
+  assert.doesNotMatch(insert.text.split('returning')[0], /bioregion/);
+});
+
+test('a confirmed place on the 180th meridian saves, and a confirmation at 0,0 is refused before anything is written', async () => {
+  const submissionSql = (confirmation: { label: string; lat: number; long: number }) => createRecordingSql((text) => {
+    if (text.includes('update intake.map_location_confirmations')) {
+      return [{ ...confirmation, kind: 'settlement', provider: 'nominatim', providerPlaceId: 'node:1' }];
+    }
+    if (text.includes('from intake.map_node_intake_settings')) return [{ liveOnboardingEnabled: false }];
+    if (text.includes('insert into intake.map_node_submissions')) {
+      return [{ id: '00000000-0000-4000-8000-000000000125', status: 'pending', displayName: 'Confirmed Member', placeName: confirmation.label, lat: confirmation.lat, long: confirmation.long, themes: ['public'], createdAt: '2026-11-06T12:00:00.000Z' }];
+    }
+    if (text.includes('insert into intake.map_node_moderation_notifications')) return [{ id: 'notification-1' }];
+    return [];
+  });
+  const input = { name: 'Confirmed Member', locationConfirmationId: TEST_CONFIRMATION_ID, themes: ['public'], email: 'member@example.org' };
+
+  const fiji = submissionSql({ label: FIJI_MERIDIAN_POINT.place, lat: FIJI_MERIDIAN_POINT.lat, long: FIJI_MERIDIAN_POINT.long });
+  await createMapNodeSubmission(fiji.sql, input, {}, { deferProviderSend: true });
+  const insert = insertedInto(fiji.statements, 'intake.map_node_submissions');
+  assert.ok(insert);
+  assert.equal(insert.values.includes(180), true);
+
+  const zero = submissionSql({ label: 'Null Island', lat: 0, long: 0 });
+  await assert.rejects(
+    () => createMapNodeSubmission(zero.sql, input, {}, { deferProviderSend: true }),
+    (error) => error instanceof PublicInputError && error.code === 'invalid_location_confirmation'
+  );
+  assert.equal(wroteTo(zero.statements, 'intake.map_node_submissions'), false);
+  await assert.rejects(
+    () => consumeMapLocationConfirmation(zero.sql, TEST_CONFIRMATION_ID),
+    (error) => error instanceof PublicInputError && error.code === 'invalid_location_confirmation'
+  );
+});
+
+test('owner edits: raw coordinates cannot create or keep an edge or 0,0 point, and a confirmed edge place can', async () => {
+  const nodeId = '33333333-3333-4333-8333-333333333333';
+  const tokenRow = {
+    tokenId: '22222222-2222-4222-8222-222222222222',
+    normalizedEmail: 'owner@example.org',
+    submissionId: nodeId,
+    displayName: 'Owner',
+    placeName: 'Awka',
+    city: '',
+    region: '',
+    country: '',
+    lat: 56.462976,
+    long: -180,
+    themes: ['public'],
+    publicNote: '',
+    currentSubmissionUpdatedAt: '2026-06-17T12:00:00.000Z',
+  };
+  const updateSql = () => createRecordingSql((text) => {
+    if (text.includes('update intake.map_location_confirmations')) {
+      return [{ label: FIJI_MERIDIAN_POINT.place, lat: FIJI_MERIDIAN_POINT.lat, long: FIJI_MERIDIAN_POINT.long, kind: 'settlement', provider: 'nominatim', providerPlaceId: 'node:2' }];
+    }
+    if (text.includes('from intake.map_node_edit_tokens')) return [tokenRow];
+    if (text.includes('insert into intake.map_node_update_requests')) return [{ id: 'update-request-1', status: 'pending' }];
+    if (text.includes('update intake.map_node_edit_tokens')) return [{ id: tokenRow.tokenId }];
+    return [];
+  });
+  const refused: Array<[Record<string, unknown>, string]> = [
+    [{ lat: 90, long: 7.0661 }, MAP_EDGE_COORDINATE_MESSAGE],
+    [{ lat: 0, long: 0 }, MAP_COORDINATE_PROBLEM_MESSAGES.null_island],
+    // Only latitude changes, so the stored longitude of -180 would remain.
+    [{ lat: 6.2104 }, MAP_EDGE_COORDINATE_MESSAGE],
+  ];
+  for (const [change, message] of refused) {
+    const { sql, statements } = updateSql();
+    await assert.rejects(
+      () => createMapNodeUpdateRequest(sql, nodeId, { token: 'valid-token', ...change }, {}, { env: LEGACY_LOCATION_ENV }),
+      (error) => error instanceof PublicInputError && error.code === 'invalid_coordinates' && error.message === message,
+      JSON.stringify(change)
+    );
+    assert.equal(wroteTo(statements, 'intake.map_node_update_requests'), false);
+  }
+
+  const raw = updateSql();
+  await createMapNodeUpdateRequest(raw.sql, nodeId, { token: 'valid-token', lat: 6.2104, long: 7.0661 }, {}, {
+    env: LEGACY_LOCATION_ENV,
+  });
+  assert.equal(wroteTo(raw.statements, 'intake.map_node_update_requests'), true);
+
+  const confirmed = updateSql();
+  await createMapNodeUpdateRequest(confirmed.sql, nodeId, { token: 'valid-token', locationConfirmationId: TEST_CONFIRMATION_ID });
+  const insert = insertedInto(confirmed.statements, 'intake.map_node_update_requests');
+  assert.ok(insert);
+  assert.equal(insert.values.includes(180), true);
+});
+
+function createLocationSql() {
+  const cache = new Map();
+  const limits = new Map();
+  let confirmations = 0;
+  return createRecordingSql((text, values) => {
+    if (text.includes('from intake.map_location_geocode_cache')) {
+      const row = cache.get(values[0]);
+      return row ? [row] : [];
+    }
+    if (text.includes('insert into intake.map_location_request_limits')) {
+      if (!limits.has(values[0])) limits.set(values[0], { windowStartedAt: values[1], requestCount: 0 });
+      return [];
+    }
+    if (text.includes('from intake.map_location_request_limits')) {
+      const state = limits.get(values[0]);
+      return state ? [state] : [];
+    }
+    if (text.includes('select next_request_at')) return [{ nextRequestAt: new Date(0) }];
+    if (text.includes('insert into intake.map_location_geocode_cache')) {
+      cache.set(values[0], { payload: values[2], expiresAt: values[3] });
+      return [];
+    }
+    if (text.includes('insert into intake.map_location_confirmations')) {
+      confirmations += 1;
+      return [{ confirmationId: `00000000-0000-4000-8000-${String(confirmations).padStart(12, '0')}` }];
+    }
+    return [];
+  });
+}
+
+test('place search keeps a place on the 180th meridian and drops 0,0; reverse refuses bad pins before the provider and lets it judge edge pins', async () => {
+  const providerCalls: string[] = [];
+  const nullIsland = { display_name: 'Null Island', lat: '0', lon: '0', addresstype: 'island', osm_type: 'node', osm_id: 1 };
+  const taveuni = { display_name: 'Taveuni, Fiji', lat: '-16.8', lon: '180', addresstype: 'island', osm_type: 'relation', osm_id: 2 };
+  const awka = { display_name: 'Awka, Anambra, Nigeria', lat: '6.2104', lon: '7.0661', addresstype: 'city', osm_type: 'relation', osm_id: 3 };
+  const svalbard = { display_name: 'Longyearbyen, Svalbard', lat: '78.2232', lon: '15.6267', addresstype: 'town', osm_type: 'node', osm_id: 4 };
+  const { sql } = createLocationSql();
+  const repository = createMapLocationRepository({
+    createSql: () => sql,
+    env: { MAP_GEOCODER_BASE_URL: 'https://geocoder.example.test' },
+    now: () => new Date('2026-11-06T12:00:00.000Z'),
+    fetchImpl: async (url) => {
+      const href = String(url);
+      providerCalls.push(href);
+      if (href.includes('/search')) return Response.json([nullIsland, taveuni, awka]);
+      return Response.json(new URL(href).searchParams.get('lat') === '-16.8' ? taveuni : svalbard);
+    },
+  });
+
+  const search = await repository.search('Taveuni', { rateLimitKey: '198.51.100.20' });
+  assert.deepEqual(search.results.map((result) => result.label), ['Taveuni, Fiji', 'Awka, Anambra, Nigeria']);
+
+  const callsBeforeReverse = providerCalls.length;
+  const refusedPins: Array<[unknown, unknown, string]> = [
+    [0, 0, MAP_COORDINATE_PROBLEM_MESSAGES.null_island],
+    [95, 10, MAP_COORDINATE_PROBLEM_MESSAGES.latitude_out_of_range],
+    ['', '', MAP_COORDINATE_PROBLEM_MESSAGES.missing],
+  ];
+  for (const [lat, long, message] of refusedPins) {
+    await assert.rejects(
+      () => repository.reverse(lat, long, { rateLimitKey: '198.51.100.20' }),
+      (error) => error instanceof PublicInputError && error.code === 'invalid_coordinates' && error.message === message
+    );
+  }
+  assert.equal(providerCalls.length, callsBeforeReverse);
+
+  // A pin clamped to the top edge reaches the geocoder, which finds nothing near.
+  await assert.rejects(
+    () => repository.reverse(90, 10, { rateLimitKey: '198.51.100.20' }),
+    (error) => error instanceof PublicInputError && error.code === 'location_not_confirmed'
+  );
+  // A pin on the meridian in Fiji confirms the real place.
+  const fiji = await repository.reverse(-16.8, 180, { rateLimitKey: '198.51.100.20' });
+  assert.equal(fiji.confirmation.label, 'Taveuni, Fiji');
+  assert.equal(fiji.confirmation.long, 180);
+});
+
+test('local pending nodes the June client left at 0,0 or with empty fields are dropped on load', () => {
+  const storage = new MemoryStorage();
+  storage.setItem('greenpill.pendingMapNodes.v1', JSON.stringify([
+    { id: 'local-1', name: 'Pasted Place', place: 'Port Harcourt', lat: 0, long: 0, createdAt: '2026-06-17T12:00:00.000Z' },
+    { id: 'local-3', name: 'Empty Fields', place: 'Rotterdam', lat: '', long: '', createdAt: '2026-06-17T12:00:00.000Z' },
+    { id: 'local-4', name: 'Real Place', place: 'Lagos', lat: 6.5244, long: 3.3792, createdAt: '2026-06-17T12:00:00.000Z' },
+    { id: 'local-5', name: 'Meridian Place', place: 'Taveuni, Fiji', lat: -16.8, long: 180, createdAt: '2026-11-06T12:00:00.000Z' },
+  ]));
+  assert.deepEqual(loadStoredLocalPendingNodes(storage).map((node) => node.id), ['local-4', 'local-5']);
+  assert.deepEqual(sharedMapNodes.loadLocalPendingNodes(storage).map((node) => node.id), ['local-4', 'local-5']);
+});
+
+test('D2: the home map and footer drop the ecoregion layer and its credit', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  assert.doesNotMatch(component, /public-ecoregions/);
+  assert.doesNotMatch(component, /Ecoregion/);
+  assert.doesNotMatch(component, /bioregion-outline|BioregionOutline/);
+  assert.doesNotMatch(component, /derivePublicBioregion/);
+
+  const footer = await readFile(
+    new URL('../packages/website/src/components/shell/SiteFooter.astro', import.meta.url),
+    'utf8'
+  );
+  assert.doesNotMatch(footer, /Ecoregion|RESOLVE/);
+
+  const scriptFiles = await readdir(new URL('./', import.meta.url));
+  assert.equal(scriptFiles.includes('generate-public-ecoregions.ts'), false);
+});
+
+// PRD-1409 review follow-ups: PostgreSQL rounding and chapter anchors.
+// ---------------------------------------------------------------------------
+
+test('coordinates are judged at the six decimal places PostgreSQL stores', () => {
+  // numeric(9, 6) rounds anything finer, so the rule judges the rounded value.
+  assert.equal(toStoredMapCoordinate(89.9999999), 90);
+  assert.equal(toStoredMapCoordinate(-179.9999996), -180);
+  assert.equal(toStoredMapCoordinate(51.9244424), 51.924442);
+  assert.equal(Object.is(toStoredMapCoordinate(-0.0000004), 0), true);
+  assert.equal(parseStoredMapCoordinate('0.0000001'), 0);
+  assert.equal(parseStoredMapCoordinate(''), null);
+
+  const cases: Array<[unknown, unknown, string | null, boolean]> = [
+    // [latitude, longitude, problem, edge point once stored]
+    [0, 0.0000001, 'null_island', false],
+    ['-0.0000004', '0.0000004', 'null_island', false],
+    [0.000001, 0, null, false],
+    [89.9999999, 10, null, true],
+    [10, -179.9999996, null, true],
+    [90.0000004, 10, null, true],
+    [90.000001, 10, 'latitude_out_of_range', false],
+    [10, 180.000001, 'longitude_out_of_range', false],
+  ];
+  for (const [lat, long, problem, edge] of cases) {
+    assert.equal(getMapCoordinateProblem(lat, long), problem, `${String(lat)}, ${String(long)}`);
+    assert.equal(isMapEdgeCoordinate(lat, long), edge, `${String(lat)}, ${String(long)}`);
+  }
+});
+
+test('the agent saves the six-decimal point it judged, so rounding cannot turn a raw point into an edge or 0,0', async () => {
+  const refused = [
+    { place: 'Longyearbyen', lat: 89.9999999, long: 10, message: MAP_EDGE_COORDINATE_MESSAGE },
+    { place: 'Port Harcourt', lat: 0, long: 0.0000001, message: MAP_COORDINATE_PROBLEM_MESSAGES.null_island },
+  ];
+  for (const point of refused) {
+    const { sql, statements } = createRecordingSql((text) => (
+      text.includes('from intake.map_node_intake_settings') ? [{ liveOnboardingEnabled: false }] : []
+    ));
+    await assert.rejects(
+      () => createMapNodeSubmission(sql, {
+        name: 'Legacy Browser Member',
+        place: point.place,
+        lat: point.lat,
+        long: point.long,
+        themes: ['public'],
+        email: 'legacy@example.org',
+      }, {}, { env: LEGACY_LOCATION_ENV }),
+      (error) => error instanceof PublicInputError
+        && error.code === 'invalid_coordinates'
+        && error.message === point.message,
+      point.place
+    );
+    assert.equal(wroteTo(statements, 'intake.map_node_submissions'), false);
+  }
+
+  const { sql, statements } = createRecordingSql((text) => {
+    if (text.includes('from intake.map_node_intake_settings')) return [{ liveOnboardingEnabled: false }];
+    if (text.includes('insert into intake.map_node_submissions')) {
+      return [{ id: '00000000-0000-4000-8000-000000000126', status: 'pending', displayName: 'Rotterdam Member', placeName: 'Rotterdam, Netherlands', lat: 51.924442, long: 4.47775, themes: ['public'], createdAt: '2026-11-07T12:00:00.000Z' }];
+    }
+    if (text.includes('insert into intake.map_node_moderation_notifications')) return [{ id: 'notification-1' }];
+    return [];
+  });
+  await createMapNodeSubmission(sql, {
+    name: 'Rotterdam Member',
+    place: 'Rotterdam, Netherlands',
+    lat: 51.9244424,
+    long: '4.4777504',
+    themes: ['public'],
+    email: 'member@example.org',
+  }, {}, { env: LEGACY_LOCATION_ENV, deferProviderSend: true });
+  const insert = insertedInto(statements, 'intake.map_node_submissions');
+  assert.ok(insert);
+  assert.equal(insert.values.includes(51.924442), true);
+  assert.equal(insert.values.includes(4.47775), true);
+  assert.equal(insert.values.includes(51.9244424), false);
+
+  // Owner edits round the same way before the pair is judged.
+  const nodeId = '44444444-4444-4444-8444-444444444444';
+  const tokenRow = {
+    tokenId: '55555555-5555-4555-8555-555555555555',
+    normalizedEmail: 'owner@example.org',
+    submissionId: nodeId,
+    displayName: 'Owner',
+    placeName: 'Awka',
+    city: '',
+    region: '',
+    country: '',
+    lat: 6.2104,
+    long: 7.0661,
+    themes: ['public'],
+    publicNote: '',
+    currentSubmissionUpdatedAt: '2026-06-17T12:00:00.000Z',
+  };
+  const updateSql = () => createRecordingSql((text) => {
+    if (text.includes('from intake.map_node_edit_tokens')) return [tokenRow];
+    if (text.includes('insert into intake.map_node_update_requests')) return [{ id: 'update-request-2', status: 'pending' }];
+    if (text.includes('update intake.map_node_edit_tokens')) return [{ id: tokenRow.tokenId }];
+    return [];
+  });
+  const nearNullIsland = updateSql();
+  await assert.rejects(
+    () => createMapNodeUpdateRequest(nearNullIsland.sql, nodeId, { token: 'valid-token', lat: 0.0000001, long: -0.0000004 }, {}, {
+      env: LEGACY_LOCATION_ENV,
+    }),
+    (error) => error instanceof PublicInputError
+      && error.code === 'invalid_coordinates'
+      && error.message === MAP_COORDINATE_PROBLEM_MESSAGES.null_island
+  );
+  assert.equal(wroteTo(nearNullIsland.statements, 'intake.map_node_update_requests'), false);
+
+  const finer = updateSql();
+  await createMapNodeUpdateRequest(finer.sql, nodeId, { token: 'valid-token', lat: 6.21040049, long: 7.06610049 }, {}, {
+    env: LEGACY_LOCATION_ENV,
+  });
+  const update = insertedInto(finer.statements, 'intake.map_node_update_requests');
+  assert.ok(update);
+  assert.equal(update.values.includes(6.2104), true);
+  assert.equal(update.values.includes(7.0661), true);
+});
+
+test('place search confirms the six-decimal point it stores, and a pin that rounds to 0,0 never reaches the provider', async () => {
+  const providerCalls: string[] = [];
+  const nearNullIsland = { display_name: 'Null Island', lat: '0.0000001', lon: '-0.0000004', addresstype: 'island', osm_type: 'node', osm_id: 1 };
+  const nearEquator = { display_name: 'Equator Marker', lat: '0.000002', lon: '0.0000004', addresstype: 'island', osm_type: 'node', osm_id: 5 };
+  const rotterdam = { display_name: 'Rotterdam, South Holland, Netherlands', lat: '51.9244424', lon: '4.4777500', addresstype: 'city', osm_type: 'relation', osm_id: 1411101 };
+  const { sql, statements } = createLocationSql();
+  const repository = createMapLocationRepository({
+    createSql: () => sql,
+    env: { MAP_GEOCODER_BASE_URL: 'https://geocoder.example.test' },
+    now: () => new Date('2026-11-07T12:00:00.000Z'),
+    fetchImpl: async (url) => {
+      providerCalls.push(String(url));
+      return Response.json([nearNullIsland, nearEquator, rotterdam]);
+    },
+  });
+
+  const search = await repository.search('Rotterdam', { rateLimitKey: '198.51.100.21' });
+  assert.deepEqual(search.results.map((result) => [result.label, result.lat, result.long]), [
+    ['Equator Marker', 0.000002, 0],
+    ['Rotterdam, South Holland, Netherlands', 51.924442, 4.47775],
+  ]);
+  const confirmations = statements.filter((statement) => statement.text.includes('insert into intake.map_location_confirmations'));
+  assert.equal(confirmations.some((statement) => statement.values.includes(51.924442) && statement.values.includes(4.47775)), true);
+  assert.equal(confirmations.some((statement) => statement.values.includes(51.9244424)), false);
+
+  const callsBeforeReverse = providerCalls.length;
+  await assert.rejects(
+    () => repository.reverse(0.0000001, -0.0000004, { rateLimitKey: '198.51.100.21' }),
+    (error) => error instanceof PublicInputError
+      && error.code === 'invalid_coordinates'
+      && error.message === MAP_COORDINATE_PROBLEM_MESSAGES.null_island
+  );
+  assert.equal(providerCalls.length, callsBeforeReverse);
+});
+
+test('chapter anchors follow the map rule on the server-rendered home map and in /locations.json', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  const projectionStart = component.indexOf('const chapterNodes');
+  const chapterFilter = component.slice(projectionStart, component.indexOf('.map((c) =>', projectionStart));
+  assert.match(chapterFilter, /isPublicMapCoordinate\(c\.data\.lat, c\.data\.long\)/);
+
+  const locations = toPublicOperationalLocations([
+    { slug: 'greenpill-brasil', name: 'Greenpill Brasil', lat: -22.9068, long: -43.1729 },
+    { slug: 'placeholder', name: 'Placeholder Chapter', lat: 0, long: 0 },
+    // Null used to read as 0, which published this chapter at 0,0.
+    { slug: 'blank', name: 'Blank Chapter', latitude: null, longitude: null },
+    { slug: 'nowhere', name: 'Nowhere Chapter', lat: 95, long: 10 },
+    { slug: 'greenpill-fiji', name: 'Greenpill Fiji', lat: -16.8, long: 180 },
+  ]);
+  assert.deepEqual(locations.map((location) => location.id), ['greenpill-brasil', 'greenpill-fiji']);
 });
