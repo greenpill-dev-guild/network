@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -31,6 +31,7 @@ import {
 import {
   loadOperationalEnrichment,
 } from './directus-operational-enrichment.ts';
+import { readOperationalSeedCollection } from './operational-content-seed.ts';
 import {
   minimumRecentEpisodes,
   parseFeed,
@@ -1202,6 +1203,46 @@ test('the committed fallback snapshot projects to itself', async () => {
   assert.ok(committed.chapters.some((chapter) => chapter.media?.imageAlt), 'the snapshot has described images');
   for (const collection of ['themes', 'people', 'chapters', 'chapterInitiatives', 'guilds', 'projects', 'locations']) {
     assert.deepEqual(projected[collection], committed[collection], collection);
+  }
+});
+
+test('seed files and the agent write the same fallback snapshot for the same content', async () => {
+  // content:snapshot (seed files) and content:snapshot:from-agent write the
+  // same file, so for the same content they must write the same bytes,
+  // whatever key order a seed file uses (PRD-1421).
+  const committed = JSON.parse(await readFile(snapshotPath, 'utf8'));
+  const reversed = (value) => {
+    if (Array.isArray(value)) return value.map(reversed);
+    if (!value || typeof value !== 'object') return value;
+    return Object.fromEntries(Object.entries(value).reverse().map(([key, nested]) => [key, reversed(nested)]));
+  };
+  const folders = {
+    themes: 'themes',
+    people: 'people',
+    chapters: 'chapters',
+    chapterInitiatives: 'chapter-initiatives',
+    guilds: 'guilds',
+    projects: 'projects',
+  };
+  const seedDir = await mkdtemp(join(tmpdir(), 'operational-seed-'));
+  try {
+    const input = {};
+    for (const [collection, folder] of Object.entries(folders)) {
+      await mkdir(join(seedDir, folder));
+      for (const { slug, id: _id, ...record } of committed[collection]) {
+        await writeFile(join(seedDir, folder, `${slug}.json`), `${JSON.stringify(reversed(record), null, 2)}\n`);
+      }
+      input[collection] = await readOperationalSeedCollection(seedDir, folder);
+    }
+    const rebuilt = toPublicOperationalContentSnapshot({ ...input, generatedAt: committed.generatedAt });
+    // Compared as lines of the written file, so key order counts.
+    const actual = JSON.stringify(rebuilt, null, 2).split('\n');
+    const expected = JSON.stringify(committed, null, 2).split('\n');
+    const line = expected.findIndex((text, index) => actual[index] !== text);
+    assert.equal(line, -1, `line ${line + 1}: expected ${expected[line]?.trim()}, got ${actual[line]?.trim()}`);
+    assert.equal(actual.length, expected.length);
+  } finally {
+    await rm(seedDir, { recursive: true, force: true });
   }
 });
 
