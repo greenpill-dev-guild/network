@@ -80,7 +80,7 @@ function guildHref(guild: typeof guilds[number]) {
     publicGuildPath(guild.id || guild.slug) ||
     (guild.data.links ?? []).find((link: any) => link.url)?.url ||
     (guild.data.connectLinks ?? []).find((link: any) => link.url)?.url ||
-    '#'
+    ''
   );
 }
 
@@ -292,22 +292,29 @@ function guildFootLabel(guild: typeof guilds[number]) {
           </div>
 
           <div class="gp-library-guild-grid">
-            {guilds.map((guild, index) => (
-              <Card
-                href={guildHref(guild)}
-                padded="lg"
-                stack="md"
-                class={guilds.length === 3 && index === 2 ? 'gp-library-guild-card is-bento-wide' : 'gp-library-guild-card'}
-              >
-                <span class="gp-library-status">{guild.data.status || 'active'}</span>
-                <Text variant="h3">{guild.data.name}</Text>
-                <Text variant="body-sm">{guild.data.summary || guild.data.oneliner || guild.data.description}</Text>
-                <span class="gp-library-guild-foot">
-                  <span>{guildFootLabel(guild)}</span>
-                  <span aria-hidden="true">→</span>
-                </span>
-              </Card>
-            ))}
+            {guilds.map((guild, index) => {
+              // A guild with neither a page nor a link gets a card that is not a link.
+              const href = guildHref(guild);
+              return (
+                <Card
+                  href={href || undefined}
+                  as="article"
+                  padded="lg"
+                  stack="md"
+                  class={guilds.length === 3 && index === 2 ? 'gp-library-guild-card is-bento-wide' : 'gp-library-guild-card'}
+                >
+                  <span class="gp-library-status">{guild.data.status || 'active'}</span>
+                  <Text variant="h3">{guild.data.name}</Text>
+                  <Text variant="body-sm">{guild.data.summary || guild.data.oneliner || guild.data.description}</Text>
+                  {href && (
+                    <span class="gp-library-guild-foot">
+                      <span>{guildFootLabel(guild)}</span>
+                      <span aria-hidden="true">→</span>
+                    </span>
+                  )}
+                </Card>
+              );
+            })}
           </div>
         </Container>
       </section>

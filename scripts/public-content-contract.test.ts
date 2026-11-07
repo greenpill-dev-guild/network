@@ -605,11 +605,14 @@ test('footer links come from social-links.json, with Keystatic fields to edit th
   const socialLinks = JSON.parse(socialLinksSource);
   const frontmatter = footer.slice(0, footer.indexOf('<footer'));
 
-  // Outside links live in content/social-links.json; the footer keeps none.
-  assert.doesNotMatch(frontmatter, /href: '(?:https?:)?\/\//);
-  for (const key of ['twitter', 'farcaster', 'telegram', 'linkedin', 'youtube', 'hub', 'codeOfConduct', 'events']) {
+  // Outside links live in content/social-links.json; the footer keeps none,
+  // and leaves out a link whose URL an editor removed.
+  assert.doesNotMatch(footer, /https?:\/\//);
+  assert.match(footer, /\.filter\(\(item\) => item\.href\)/);
+  const footerKeys = ['twitter', 'farcaster', 'telegram', 'linkedin', 'youtube', 'hub', 'codeOfConduct', 'events', 'github'];
+  for (const key of footerKeys) {
     assert.match(socialLinks[key], /^https:\/\//, `social-links.json ${key}`);
-    assert.match(frontmatter, new RegExp(`socialLinks\\.${key}\\b`), `footer reads ${key}`);
+    assert.match(footer, new RegExp(`socialLinks\\.${key}\\b`), `footer reads ${key}`);
   }
   // hub.greenpill.network does not load; the footer's Hub is the Regen Coordination Hub.
   assert.equal(socialLinks.hub, 'https://hub.regencoordination.xyz');
@@ -618,6 +621,17 @@ test('footer links come from social-links.json, with Keystatic fields to edit th
   for (const key of Object.keys(socialLinks)) {
     assert.match(schemaBlock, new RegExp(`\\b${key}: fields\\.`), `Keystatic socialLinks field ${key}`);
   }
+  for (const key of footerKeys) {
+    assert.match(schemaBlock, new RegExp(`\\b${key}: fields\\.url\\(\\{[^}]*validation: \\{ isRequired: true \\}`), `Keystatic requires ${key}`);
+  }
+});
+
+test('the steward booking link follows the steward-call step, wherever it sits', () => {
+  const call = { surfaceType: 'steward-call', level: 2, cta: { href: 'https://example.org/book' } };
+  const community = { surfaceType: 'telegram', level: 4, cta: { href: 'https://example.org/community' } };
+  assert.equal(gardenStewardCallHref([community, call]), 'https://example.org/book');
+  assert.equal(gardenStewardCallHref([{ level: 4, cta: { href: 'https://example.org/level-4' } }]), 'https://example.org/level-4');
+  assert.equal(gardenStewardCallHref([]), DEFAULT_STEWARD_CALL_HREF);
 });
 
 test('library podcast section uses RSS snapshot and in-page audio', async () => {

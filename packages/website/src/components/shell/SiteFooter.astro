@@ -4,9 +4,11 @@ import garden from '../../content/garden.json';
 import { gardenRampSteps, gardenStewardCallHref } from '../../lib/garden-ramp';
 
 // Footer links follow the July 16 call (Farcaster, LinkedIn, YouTube, Luma,
-// Code of Conduct, "Join the map"). Every outside link comes from
-// content/social-links.json, so an editor changes it in one place; the steward
-// booking link comes from the Garden ramp's step 4, as on /garden.
+// Code of Conduct, "Join the map"). Outside links, the GitHub one in the
+// bottom row included, come from content/social-links.json, so an editor
+// changes each in one place. The steward booking link comes from the Garden
+// ramp's steward-call step, as on /garden. A link left without a URL is not
+// shown (Keystatic also requires these fields).
 const columns = [
   {
     heading: 'Network',
@@ -57,7 +59,7 @@ const year = new Date().getFullYear();
       <div class="gp-footer-column">
         <div class="gp-footer-heading">{column.heading}</div>
         <nav aria-label={column.heading}>
-          {column.items.map((item) => (
+          {column.items.filter((item) => item.href).map((item) => (
             <a href={item.href}>{item.label}</a>
           ))}
         </nav>
@@ -67,7 +69,7 @@ const year = new Date().getFullYear();
 
   <div class="gp-footer-bottom">
     <span>© {year} Greenpill Network</span>
-    <a href="https://github.com/greenpill-dev-guild/network">Built in the open on GitHub</a>
+    {socialLinks.github && <a href={socialLinks.github}>Built in the open on GitHub</a>}
   </div>
 </footer>
 
