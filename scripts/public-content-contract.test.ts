@@ -723,6 +723,86 @@ test('scheduled Pages builds refresh the podcast snapshot without blocking the p
   );
 });
 
+test('Garden assessment counts every pick and restores answers saved in either shape', async () => {
+  const { scoreAssessment, assessmentPicks } = await import('../packages/website/src/lib/garden-assessment.ts');
+
+  // Single choices score as they did before any question took several answers.
+  assert.deepEqual(
+    scoreAssessment({ q1: ['build'], q2: ['build'], q3: ['story'], q4: ['story'], q5: ['local'], q6: ['learn'], q7: ['steward'] }),
+    { primary: 'build', secondary: 'story', score: 2 },
+  );
+
+  // Every ticked box counts. Without the two checkbox groups these single
+  // choices would tie all five paths; with them, Build leads on 3 of 7.
+  assert.deepEqual(
+    scoreAssessment({ q1: ['build', 'story'], q2: ['local'], q3: ['build', 'steward'], q4: ['build'], q5: ['story'], q6: ['steward'], q7: ['learn'] }),
+    { primary: 'build', secondary: null, score: 3 },
+  );
+
+  // A question adds at most one point to a path: ticking every box lifts all
+  // five paths equally, and a repeated pick counts once.
+  assert.deepEqual(
+    scoreAssessment({
+      q1: ['learn', 'local', 'build', 'story', 'steward'],
+      q2: ['local'],
+      q3: ['story', 'story'],
+      q4: ['story'],
+      q5: ['learn'],
+      q6: ['story'],
+      q7: ['local'],
+    }),
+    { primary: 'story', secondary: null, score: 4 },
+  );
+
+  // Answers saved before this change held one path string per question.
+  assert.deepEqual(assessmentPicks('learn', true), ['learn']);
+  assert.deepEqual(assessmentPicks(['local', 'unknown', 'local', 'build'], true), ['local', 'build']);
+  assert.deepEqual(assessmentPicks(['story', 'build'], false), ['story']);
+  assert.deepEqual(assessmentPicks(undefined, false), []);
+  assert.deepEqual(assessmentPicks({ path: 'learn' }, true), []);
+});
+
+test('Garden assessment keeps answers picked before its script restores saved ones', async () => {
+  const { restoreAssessmentAnswers } = await import('../packages/website/src/lib/garden-assessment.ts');
+  const questions = [
+    { id: 'q1', multiple: true },
+    { id: 'q2', multiple: false },
+    { id: 'q3', multiple: true },
+  ];
+
+  // Nothing picked on the page yet: saved answers come back in either shape.
+  assert.deepEqual(restoreAssessmentAnswers(questions, {}, { q1: ['local', 'build'], q2: 'learn' }), {
+    answers: { q1: ['local', 'build'], q2: ['learn'] },
+    changed: false,
+  });
+
+  // A slow load: the visitor picked q3 before the script ran, and the saved
+  // payload has no q3. The pick stays, and the merged answers need saving.
+  assert.deepEqual(restoreAssessmentAnswers(questions, { q3: ['story'] }, { q1: ['local'] }), {
+    answers: { q1: ['local'], q3: ['story'] },
+    changed: true,
+  });
+
+  // A pick already on the page wins over a saved answer to the same question.
+  assert.deepEqual(restoreAssessmentAnswers(questions, { q2: ['steward'] }, { q2: ['learn'] }), {
+    answers: { q2: ['steward'] },
+    changed: true,
+  });
+
+  // The browser put back the same picks that were saved: nothing new to save.
+  assert.deepEqual(restoreAssessmentAnswers(questions, { q1: ['build', 'local'] }, { q1: ['local', 'build'] }), {
+    answers: { q1: ['build', 'local'] },
+    changed: false,
+  });
+
+  // No saved payload, or one that is not an object.
+  assert.deepEqual(restoreAssessmentAnswers(questions, {}, undefined), { answers: {}, changed: false });
+  assert.deepEqual(restoreAssessmentAnswers(questions, { q2: ['local'] }, 'not an object'), {
+    answers: { q2: ['local'] },
+    changed: true,
+  });
+});
+
 test('operational content snapshot generation quarantines unsafe records and rejects non-published input', () => {
   const quarantined = [];
   const snapshot = toPublicOperationalContentSnapshot({
