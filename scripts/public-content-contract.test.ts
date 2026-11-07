@@ -21,7 +21,7 @@ import {
 import {
   loadOperationalEnrichment,
 } from './directus-operational-enrichment.ts';
-import { hasChapterPage } from '../packages/website/src/lib/chapter-pages.ts';
+import { chapterPageSlugs, hasChapterPage } from '../packages/website/src/lib/chapter-pages.ts';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const editorialContentDir = join(rootDir, 'packages/website/src/content');
@@ -365,6 +365,32 @@ test('inactive and archived chapters get no page anywhere; forming and active ch
   assert.match(
     librarySource,
     /getOperationalChapterPages\(\)[\s\S]*?getOperationalCollection\('chapters'\)[\s\S]*?hasChapterPage\(item\.data\)/
+  );
+});
+
+test('locations and impact-source feeds only list chapters that get a page', async () => {
+  assert.deepEqual(
+    [...chapterPageSlugs([
+      { slug: 'open', status: 'active' },
+      { slug: 'starting', status: 'forming' },
+      { slug: 'paused', status: 'inactive' },
+      { slug: 'closed', status: 'archived' },
+      { status: 'active' },
+    ])].sort(),
+    ['open', 'starting']
+  );
+
+  // The snapshot's precomputed locations and impact-source bindings leave out
+  // only noindex chapters, and both link to /chapters/<slug>, so the website
+  // filters them against the chapters that get a page.
+  const librarySource = await readFile(operationalContentLibraryPath, 'utf8');
+  assert.match(
+    librarySource,
+    /getOperationalLocations\(\)[\s\S]*?chapterPageSlugs\(snapshot\.chapters\)[\s\S]*?locations\.filter\(/
+  );
+  assert.match(
+    librarySource,
+    /getOperationalImpactSourceBindings\(\)[\s\S]*?chapterPageSlugs\(snapshot\.chapters\)[\s\S]*?bindings\.chapters\.filter\(/
   );
 });
 
