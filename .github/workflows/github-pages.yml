@@ -56,8 +56,9 @@ jobs:
 
       # Pull the newest podcast episodes and the episode count from the RSS
       # feed on every build, including the hourly one. If the feed cannot be
-      # fetched the script leaves the committed snapshot in place, and this
-      # step must not block the publish, so its failure only warns.
+      # fetched or fails the script's snapshot checks, the script leaves the
+      # committed snapshot in place, and this step must not block the publish,
+      # so its failure only warns.
       - name: Refresh podcast feed snapshot
         continue-on-error: true
         timeout-minutes: 2

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -21,6 +22,12 @@ import {
 import {
   loadOperationalEnrichment,
 } from './directus-operational-enrichment.ts';
+import {
+  minimumRecentEpisodes,
+  parseFeed,
+  snapshotProblems,
+  writeSnapshotFromFeed,
+} from './podcast-feed-snapshot.ts';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const editorialContentDir = join(rootDir, 'packages/website/src/content');
@@ -466,8 +473,8 @@ test('library podcast section uses RSS snapshot and in-page audio', async () => 
   // Pages build refreshes it, so pin its shape rather than a number.
   assert.equal(Number.isInteger(podcastSnapshot.episodeCount), true);
   assert.equal(podcastSnapshot.episodeCount >= podcastSnapshot.episodes.length, true);
-  assert.equal(podcastSnapshot.episodes.length >= 8, true);
-  assert.equal(podcastSnapshot.episodes.every((episode) => episode.title && episode.audioUrl), true);
+  // The committed fallback meets the same checks a refresh must pass.
+  assert.deepEqual(snapshotProblems(podcastSnapshot), []);
 
   assert.match(libraryPage, /import podcastFeed/);
   assert.match(libraryPage, /podcastFeed\.episodeCount/);
@@ -478,11 +485,98 @@ test('library podcast section uses RSS snapshot and in-page audio', async () => 
   assert.doesNotMatch(libraryPage, /gp-library-play/);
 });
 
+function podcastFeedItem(title: string, urls: { link?: string; audioUrl?: string; image?: string } = {}) {
+  const slug = title.toLowerCase().replace(/\W+/g, '-');
+  return [
+    '<item>',
+    `<title>${title}</title>`,
+    `<link>${urls.link ?? `https://example.com/episodes/${slug}`}</link>`,
+    `<enclosure url="${urls.audioUrl ?? `https://example.com/audio/${slug}.mp3`}" type="audio/mpeg" length="1000"/>`,
+    urls.image ? `<itunes:image href="${urls.image}"/>` : '',
+    '</item>',
+  ].join('');
+}
+
+function podcastFeedXml(items: string[], channel: { link?: string; image?: string } = {}) {
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<rss version="2.0">',
+    '<channel>',
+    '<title>Test feed</title>',
+    `<link>${channel.link ?? 'https://example.com/'}</link>`,
+    '<description>A feed for tests.</description>',
+    `<itunes:image href="${channel.image ?? 'https://example.com/cover.jpg'}"/>`,
+    ...items,
+    '</channel>',
+    '</rss>',
+  ].join('\n');
+}
+
+test('podcast refresh publishes only https links and media from the feed', () => {
+  const { snapshot } = parseFeed(podcastFeedXml([
+    podcastFeedItem('Safe episode'),
+    podcastFeedItem('Script image', { image: 'javascript:alert(1)' }),
+    podcastFeedItem('Script link', { link: 'javascript:alert(document.domain)' }),
+    // unwrap() decodes entities twice, so this becomes javascript: too.
+    podcastFeedItem('Encoded script link', { link: '&amp;#106;avascript:alert(1)' }),
+    podcastFeedItem('Hidden script link', { link: '<![CDATA[ JaVa\tScRiPt:alert(1)]]>' }),
+    podcastFeedItem('Relative link', { link: '/episodes/relative' }),
+    podcastFeedItem('Data audio', { audioUrl: 'data:audio/mpeg;base64,AAAA' }),
+    podcastFeedItem('Plain http audio', { audioUrl: 'http://example.com/audio.mp3' }),
+  ]));
+
+  assert.deepEqual(snapshot.episodes.map((episode) => episode.title), ['Safe episode', 'Script image']);
+  // A bad episode image falls back to the channel cover instead of dropping the episode.
+  assert.equal(snapshot.episodes[1].image, 'https://example.com/cover.jpg');
+  assert.doesNotMatch(JSON.stringify(snapshot), /javascript:|data:|http:\/\//i);
+
+  const { snapshot: hostileChannel } = parseFeed(podcastFeedXml(
+    [podcastFeedItem('Safe episode')],
+    { link: 'javascript:alert(1)', image: 'javascript:alert(2)' },
+  ));
+
+  assert.equal(hostileChannel.siteUrl, '');
+  assert.equal(hostileChannel.image, '');
+  assert.equal(hostileChannel.episodes[0].image, '');
+});
+
+test('podcast refresh keeps the existing snapshot when the feed is short', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'podcast-snapshot-'));
+  const targetPath = join(directory, 'podcast-feed-snapshot.json');
+  const playable = (count: number) => Array.from({ length: count }, (_, index) => podcastFeedItem(`Episode ${index + 1}`));
+
+  try {
+    await writeFile(targetPath, '{"committed":true}\n');
+    // Skipped items do not count toward the minimum.
+    const shortFeed = podcastFeedXml([
+      ...playable(minimumRecentEpisodes - 1),
+      podcastFeedItem('Script link', { link: 'javascript:alert(1)' }),
+    ]);
+
+    await assert.rejects(writeSnapshotFromFeed(shortFeed, targetPath), /snapshot checks/);
+    assert.equal(await readFile(targetPath, 'utf8'), '{"committed":true}\n');
+
+    await writeSnapshotFromFeed(podcastFeedXml(playable(minimumRecentEpisodes)), targetPath);
+    const written = JSON.parse(await readFile(targetPath, 'utf8'));
+    assert.equal(written.episodes.length, minimumRecentEpisodes);
+    assert.deepEqual(snapshotProblems(written), []);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test('library lists guilds under the anchor that guild breadcrumbs link to, without the retired Knowledge Garden block', async () => {
-  const libraryPage = await readFile(libraryPagePath, 'utf8');
+  const [libraryPage, libraryContentSource] = await Promise.all([
+    readFile(libraryPagePath, 'utf8'),
+    readFile(join(editorialContentDir, 'library.json'), 'utf8'),
+  ]);
+  const libraryContent = JSON.parse(libraryContentSource);
 
   assert.match(libraryPage, /id="guilds"/);
   assert.doesNotMatch(libraryPage, /Knowledge Garden|gardenGuides|gp-library-garden/);
+  // Search results and link previews describe only what the page holds.
+  assert.doesNotMatch(libraryPage, /Garden onboarding/);
+  assert.doesNotMatch(libraryContent.seo.description, /Garden/);
 });
 
 test('every book links to files that ship with the site and opens a detail dialog', async () => {
