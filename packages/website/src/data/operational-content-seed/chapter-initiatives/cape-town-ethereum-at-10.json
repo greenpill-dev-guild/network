@@ -1,9 +1,9 @@
 {
   "chapterSlug": "cape-town",
   "title": "Ethereum 10Y Cape Town",
-  "status": "active",
-  "summary": "Local Ethereum 10Y celebration and livestream activation with Greenpill listed as a partner on the public event page.",
-  "description": "The Luma event page names Greenpill as a partner and notes that Greenpill Cape Town would show the global livestream at the Cape Town celebration venue. Keep this as an event activation until the chapter adds post-event outcomes.",
+  "status": "inactive",
+  "summary": "Ethereum's tenth anniversary celebration at Rooftop on Bree on July 30, 2025. Greenpill Cape Town was an event partner and planned to show the global livestream at the venue.",
+  "description": "ETHGlobal, Silhouette and Envio hosted the celebration, with Greenpill listed among the partners.",
   "themeSlugs": [
     "events",
     "education",
@@ -13,7 +13,7 @@
     {
       "label": "Ethereum 10Y Cape Town",
       "url": "https://luma.com/ethereum-10y-capetown",
-      "subtext": "Public event page",
+      "subtext": "Event page",
       "handle": "Luma",
       "action": "Open",
       "icon": "calendar",
@@ -21,7 +21,7 @@
     },
     {
       "label": "Greenpill Cape Town calendar",
-      "url": "https://luma.com/greenpill.capetown?k=c",
+      "url": "https://luma.com/greenpill.capetown",
       "subtext": "Chapter event calendar",
       "handle": "Luma",
       "action": "Follow",
@@ -37,7 +37,10 @@
       "href": "https://luma.com/ethereum-10y-capetown"
     }
   ],
-  "impactSources": {},
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "relatedStorySlugs": [],
   "relatedResourceSlugs": [
     "ethereum-localism"

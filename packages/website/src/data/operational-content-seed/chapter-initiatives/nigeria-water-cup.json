@@ -2,8 +2,8 @@
   "chapterSlug": "nigeria",
   "title": "Water Cup",
   "status": "active",
-  "summary": "Source-backed local water and impact-mapping effort with public Regen Hub updates and a Water Cup Mapping Hypercert.",
-  "description": "The current Nigeria chapter record links the public Water Cup update thread and Hypercert. Keep downstream impact claims source-bound until steward review adds verified counts.",
+  "summary": "Water Cup is Greenpill Nigeria's water access project with Atlantisp2p. In June and July 2025, teams surveyed drinking water, tap access, used water disposal and sanitation in 15 communities across Anambra, Enugu and Imo States.",
+  "description": "Water Cup has three stages: mapping, implementing and maintaining. The mapping stage ran through the Greenpill dNFT campaign, and in July 2025 the chapter opened the implementation stage for funding on Impact Landscapes.",
   "themeSlugs": [
     "water",
     "impact",
@@ -22,7 +22,7 @@
     {
       "label": "Water Cup Mapping Hypercert",
       "url": "https://app.hypercerts.org/hypercerts/42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-86091438830997431256233775680237357498368",
-      "subtext": "Public proof artifact",
+      "subtext": "Impact certificate",
       "handle": "Hypercerts",
       "action": "Open",
       "icon": "impact",
@@ -33,17 +33,14 @@
     {
       "label": "Water Cup Mapping",
       "value": "Hypercert",
-      "source": "S046",
+      "source": "Hypercerts",
       "href": "https://app.hypercerts.org/hypercerts/42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-86091438830997431256233775680237357498368"
     }
   ],
   "impactSources": {
     "impactEnabled": true,
     "greenGoodsGardenAddress": "0x35722eEdf3F7566A23FA871f0a04267AEe78E0dB",
-    "greenGoodsChainId": 42161,
-    "karmaProjectUID": "",
-    "karmaProjectSlug": "",
-    "karmaCommunitySlug": ""
+    "greenGoodsChainId": 42161
   },
   "relatedStorySlugs": [
     "greenpill-nigeria-water-cup"

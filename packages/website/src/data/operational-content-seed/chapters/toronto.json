@@ -4,7 +4,7 @@
   "country": "Canada",
   "region": "americas",
   "status": "active",
-  "summary": "A Toronto hub for regenerative cryptoeconomics, public-goods builders, local impact projects, and Greenpill programming.",
+  "summary": "GreenPill TO is a network of hackers, dreamers and doers in Toronto building Web3-for-good projects. It hosts a weekly online hangout and, during Consensus 2025, held a gathering on Web3 and local impact.",
   "introQuote": "",
   "introQuoteAttribution": "",
   "image": "/images/chapters/greenpill-toronto-web3-solutions.jpg",
@@ -44,13 +44,13 @@
       "kind": "external"
     },
     {
-      "label": "Consensus 2025 sponsor page",
-      "url": "https://consensus2025.coindesk.com/agenda/sponsor/-greenpill-toronto",
-      "subtext": "Public sponsor proof",
-      "handle": "CoinDesk",
-      "action": "Open",
-      "icon": "external",
-      "kind": "external"
+      "label": "X",
+      "url": "https://x.com/GreenPillTO",
+      "subtext": "Chapter account",
+      "handle": "@GreenPillTO",
+      "action": "Follow",
+      "icon": "x",
+      "kind": "social"
     }
   ],
   "connectLinks": [
@@ -62,6 +62,15 @@
       "action": "Open",
       "icon": "external",
       "kind": "external"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/GreenPillTO",
+      "subtext": "Chapter account",
+      "handle": "@GreenPillTO",
+      "action": "Follow",
+      "icon": "x",
+      "kind": "social"
     }
   ],
   "relatedChapterSlugs": [
@@ -69,15 +78,20 @@
     "london-ontario",
     "new-york-city"
   ],
+  "featuredStory": {},
   "featuredStorySlugs": [],
   "authoredResourceSlugs": [],
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "featuredWeight": 50,
   "proofSignals": [
     {
-      "label": "Consensus 2025",
-      "value": "Sponsor page",
-      "source": "S032",
-      "href": "https://consensus2025.coindesk.com/agenda/sponsor/-greenpill-toronto"
+      "label": "Gathering during Consensus 2025",
+      "value": "Web3 Solutions for Local Impact",
+      "source": "Luma",
+      "href": "https://luma.com/tgie0ose"
     }
   ],
   "media": {
@@ -90,7 +104,7 @@
   },
   "seo": {
     "title": "Greenpill Toronto · Greenpill Network",
-    "description": "Greenpill Toronto is a source-backed chapter with public website and Consensus 2025 sponsor context.",
+    "description": "GreenPill TO is a Toronto network building Web3-for-good projects, with a weekly online hangout and events such as its Consensus 2025 gathering on local impact.",
     "ogImage": "/images/chapters/greenpill-toronto-web3-solutions.jpg",
     "canonicalPath": "/chapters/toronto",
     "noindex": false

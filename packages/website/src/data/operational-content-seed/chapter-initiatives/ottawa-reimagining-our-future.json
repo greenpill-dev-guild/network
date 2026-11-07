@@ -1,9 +1,9 @@
 {
   "chapterSlug": "ottawa",
   "title": "Reimagining Our Future Meetups",
-  "status": "active",
-  "summary": "GreenPill Ottawa meetup series introducing regen philosophy, web3 coordination, and positive-sum local action.",
-  "description": "The public Luma page frames the meetup as a monthly Green Pill community gathering for people exploring regenerative finance, web3 coordination, and local/global positive impact. It is launch-safe as an event/community initiative, not yet an outcomes report.",
+  "status": "inactive",
+  "summary": "A monthly GreenPill Ottawa meetup in 2023 about regenerative finance, web3 coordination and positive local and global impact.",
+  "description": "The last listed meetup, Reimagining Our Future, took place on July 17, 2023, at 70 Beech St in Ottawa.",
   "themeSlugs": [
     "events",
     "education",
@@ -38,7 +38,10 @@
       "href": "https://luma.com/pdtn6mhh"
     }
   ],
-  "impactSources": {},
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "relatedStorySlugs": [],
   "relatedResourceSlugs": [
     "regen-coordination-hub"

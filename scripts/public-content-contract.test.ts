@@ -79,10 +79,14 @@ const activeChapterEnrichmentSlugs = [
   'toronto',
 ];
 const requiredEnrichedInitiativeSlugs = [
-  'cape-town-ethereum-at-10',
-  'germany-refi-community-activation',
   'greensofa-ethereum-localism-public-goods-tooling',
   'kenya-regenerative-agriculture-hub',
+];
+// Initiatives the qa-chapters change set (PRD-625) marked inactive because
+// they finished. They stay published, and the enrichment leaves them alone.
+const inactiveInitiativeSlugs = [
+  'cape-town-ethereum-at-10',
+  'germany-refi-community-activation',
   'ottawa-reimagining-our-future',
   'toronto-local-impact-web3-solutions',
 ];
@@ -1334,6 +1338,9 @@ test('Directus operational enrichment targets public guilds and visible initiati
   assert.deepEqual(guildImageStatuses.sort(), ['dev-guild:approved', 'writers-guild:approved']);
   for (const slug of requiredEnrichedInitiativeSlugs) {
     assert.equal(initiativeSlugs.has(slug), true);
+  }
+  for (const slug of inactiveInitiativeSlugs) {
+    assert.equal(initiativeSlugs.has(slug), false);
   }
   assert.equal(enrichment.chapterInitiatives.some((initiative) => initiative.chapterSlug === 'uncommons'), false);
   assert.equal(emailLike.test(JSON.stringify(enrichment)), false);

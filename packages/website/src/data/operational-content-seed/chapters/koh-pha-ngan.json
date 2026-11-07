@@ -4,7 +4,7 @@
   "country": "Thailand",
   "region": "asia",
   "status": "active",
-  "summary": "Island ReFi coordination across Greenpill, ReFi Phangan, recycling efforts, quadratic funding, and Ethereum gatherings.",
+  "summary": "Greenpill Koh Phangan develops local regeneration infrastructure on the island. It joins the Clean Phangan community for weekly cleanups, started the Decentralized Cleanup initiative, and has placed air quality sensors around the island for community monitoring.",
   "introQuote": "",
   "introQuoteAttribution": "",
   "image": "/images/chapters/greenpill-phangan-ethereum10.jpg",
@@ -15,8 +15,8 @@
   "stewards": [
     {
       "name": "Paul Burg",
-      "role": "Public steward reference",
-      "bio": "Named publicly on the GreenPill Phangan Giveth source.",
+      "role": "Founder",
+      "bio": "",
       "location": "Koh Phangan",
       "personSlug": "paul-burg",
       "chapterSlug": "koh-pha-ngan",
@@ -56,9 +56,9 @@
       "kind": "external"
     },
     {
-      "label": "Crypto Altruism episode",
-      "url": "https://www.cryptoaltruism.org/blog/crypto-altruism-podcast-episode-138-refi-phangan-regenerative-finance-quadratic-funding-and-local-impact",
-      "subtext": "ReFi Phangan context",
+      "label": "Crypto Altruists episode 138",
+      "url": "https://www.cryptoaltruists.com/blog/crypto-altruists-episode-138-refi-phangan-regenerative-finance-quadratic-funding-and-local-impact",
+      "subtext": "Paul Burg on ReFi Phangan",
       "handle": "Episode 138",
       "action": "Listen",
       "icon": "podcast",
@@ -104,18 +104,22 @@
   "authoredResourceSlugs": [
     "crypto-altruism-ep138-refi-phangan"
   ],
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "featuredWeight": 80,
   "proofSignals": [
     {
       "label": "Public project profile",
       "value": "Giveth",
-      "source": "S036",
+      "source": "Giveth",
       "href": "https://giveth.io/project/greenpill-phangan"
     },
     {
       "label": "Public event",
       "value": "10 Years of Ethereum",
-      "source": "S038",
+      "source": "Luma",
       "href": "https://luma.com/k057yjjx"
     }
   ],
@@ -129,7 +133,7 @@
   },
   "seo": {
     "title": "Greenpill Koh Phangan · Greenpill Network",
-    "description": "Greenpill Koh Phangan connects ReFi Phangan, local impact, PhanganQF, recycling context, and public events.",
+    "description": "Greenpill Koh Phangan runs cleanups, community air quality monitoring and public goods funding work on Koh Phangan, Thailand.",
     "ogImage": "/images/chapters/greenpill-phangan-ethereum10.jpg",
     "canonicalPath": "/chapters/koh-pha-ngan",
     "noindex": false

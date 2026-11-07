@@ -1,9 +1,9 @@
 {
   "chapterSlug": "nigeria",
   "title": "Take the Greenpill with Greenpill Nigeria",
-  "status": "active",
-  "summary": "A 10-week public ReFi education program supported by the current Nigeria chapter seed and Regen Hub source.",
-  "description": "The current Nigeria chapter record links the public 10-week education program thread and treats it as chapter-owned education work.",
+  "status": "inactive",
+  "summary": "A 10-week ReFi education program delivered online to eight communities from May to July 2025. It closed with Ethereum at 10 meetups in Awka and Enugu.",
+  "description": "Greenpill Nigeria ran the program online, four hours over two days in each community, and shared a recap on the Regen Hub in August 2025.",
   "themeSlugs": [
     "education",
     "public",
@@ -24,11 +24,14 @@
     {
       "label": "Education program",
       "value": "10 weeks",
-      "source": "S016",
+      "source": "Regen Hub",
       "href": "https://hub.regencoordination.xyz/t/take-the-greenpill-with-greenpill-nigeria-10-weeks-of-refi-education/324"
     }
   ],
-  "impactSources": {},
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "relatedStorySlugs": [
     "take-the-greenpill-nigeria-refi-education"
   ],

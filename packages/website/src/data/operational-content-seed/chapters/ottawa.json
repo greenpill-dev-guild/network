@@ -4,7 +4,7 @@
   "country": "Canada",
   "region": "americas",
   "status": "active",
-  "summary": "Local regenerative coordination, public-goods conversations, steward-led events, and active community channels in Ottawa.",
+  "summary": "GreenPill Ottawa turns regen philosophy into real-world action. The chapter runs OperationWebTree, planting white pine seedlings with local partners, and has hosted meetups, workshops and talks in Ottawa.",
   "introQuote": "",
   "introQuoteAttribution": "",
   "image": "/images/chapters/greenpill-ottawa-reimagining-future.jpg",
@@ -17,7 +17,7 @@
       "name": "Lana Dingwall",
       "role": "Chapter steward",
       "bio": "",
-      "location": "Ottawa, Canada",
+      "location": "Ontario, Canada",
       "personSlug": "lana-dingwall",
       "chapterSlug": "ottawa",
       "avatar": "",
@@ -59,15 +59,20 @@
     "london-ontario",
     "new-york-city"
   ],
+  "featuredStory": {},
   "featuredStorySlugs": [],
   "authoredResourceSlugs": [],
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "featuredWeight": 30,
   "proofSignals": [
     {
-      "label": "Public account",
-      "value": "X",
-      "source": "S031",
-      "href": "https://x.com/greenpillottawa"
+      "label": "OperationWebTree",
+      "value": "160 white pine seedlings in 2024",
+      "source": "Regen Hub",
+      "href": "https://hub.regencoordination.xyz/t/greenpill-ottawa/46"
     }
   ],
   "media": {
@@ -80,7 +85,7 @@
   },
   "seo": {
     "title": "Greenpill Ottawa · Greenpill Network",
-    "description": "Greenpill Ottawa has a public account, with deeper chapter activity needing steward backfill.",
+    "description": "GreenPill Ottawa turns regen philosophy into real-world action through OperationWebTree tree planting, meetups, workshops and talks.",
     "ogImage": "/images/chapters/greenpill-ottawa-reimagining-future.jpg",
     "canonicalPath": "/chapters/ottawa",
     "noindex": false

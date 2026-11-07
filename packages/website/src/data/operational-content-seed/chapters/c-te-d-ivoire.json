@@ -1,10 +1,10 @@
 {
-  "name": "Greenpill Cote d'Ivoire",
+  "name": "Greenpill Côte d'Ivoire",
   "city": "Abidjan",
-  "country": "Cote d'Ivoire",
+  "country": "Côte d'Ivoire",
   "region": "africa",
   "status": "active",
-  "summary": "A local Green Mission effort focused on environmental education, collection, and waste valorization.",
+  "summary": "Greenpill Côte d'Ivoire is building La Ligne Verte, a Telegram chatbot where residents report trash-filled areas and earn points, with a bonus for cleaning them up. Reports feed an open data map, and the project won a UNDP Côte d'Ivoire hackathon on AI and biodiversity protection.",
   "introQuote": "",
   "introQuoteAttribution": "",
   "image": "/images/chapters/greenpill-civ-mission.jpg",
@@ -17,7 +17,7 @@
       "name": "Abraham Coulibaly",
       "role": "Chapter steward",
       "bio": "",
-      "location": "Cote d'Ivoire",
+      "location": "Côte d'Ivoire",
       "personSlug": "abraham-coulibaly",
       "chapterSlug": "c-te-d-ivoire",
       "avatar": "",
@@ -49,7 +49,7 @@
       "label": "Regen Hub",
       "url": "https://hub.regencoordination.xyz/t/greenpill-civ-chapter-update-the-beginning-of-la-ligne-verte/333",
       "subtext": "La Ligne Verte chapter update",
-      "handle": "Greenpill Cote d'Ivoire",
+      "handle": "Greenpill Côte d'Ivoire",
       "action": "Read",
       "icon": "hub",
       "kind": "external"
@@ -62,26 +62,30 @@
   "featuredStory": {},
   "featuredStorySlugs": [],
   "authoredResourceSlugs": [],
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "featuredWeight": 70,
   "proofSignals": [
     {
-      "label": "Green Mission targets",
-      "value": "2025-2026 goals",
-      "source": "S022",
+      "label": "UNDP Côte d'Ivoire hackathon",
+      "value": "Winning project",
+      "source": "Regen Hub",
       "href": "https://hub.regencoordination.xyz/t/greenpill-civ-chapter-update-the-beginning-of-la-ligne-verte/333"
     }
   ],
   "media": {
     "image": "/images/chapters/greenpill-civ-mission.jpg",
-    "imageAlt": "GreenPill Cote d'Ivoire community members gathered with chapter flags after a local activity.",
+    "imageAlt": "GreenPill Côte d'Ivoire community members gathered with chapter flags after a local activity.",
     "imageSourceUrl": "https://hub.regencoordination.xyz/t/building-a-more-regen-cote-d-ivoire-through-disruptive-technologies/167",
     "imageCredit": "GreenPill CIV via Regen Hub",
     "ogImage": "/images/chapters/greenpill-civ-mission.jpg",
     "reviewStatus": "approved"
   },
   "seo": {
-    "title": "Greenpill Cote d'Ivoire · Greenpill Network",
-    "description": "Greenpill Cote d'Ivoire is building La Ligne Verte, a public environmental action and coordination platform.",
+    "title": "Greenpill Côte d'Ivoire · Greenpill Network",
+    "description": "Greenpill Côte d'Ivoire is building La Ligne Verte, a Telegram chatbot for reporting and cleaning up trash-filled areas, backed by an open data map.",
     "ogImage": "/images/chapters/greenpill-civ-mission.jpg",
     "canonicalPath": "/chapters/c-te-d-ivoire",
     "noindex": false

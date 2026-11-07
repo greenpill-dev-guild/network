@@ -4,17 +4,17 @@
   "country": "South Africa",
   "region": "africa",
   "status": "active",
-  "summary": "Public-goods gatherings and Ethereum community events connecting regenerative builders in South Africa.",
+  "summary": "Greenpill Cape Town connects grassroots stewards in Cape Town with tools, education and funding. The team meets weekly online and monthly in person, and in June 2026 brought art, music and circular economy projects from Muizenberg and Vrygrond together at Trash to Treasure.",
   "introQuote": "",
   "introQuoteAttribution": "",
   "image": "/images/chapters/greenpill-cape-town-eth10-venue.jpg",
   "founded": "",
   "lat": -33.9249,
   "long": 18.4241,
-  "link": "https://luma.com/greenpill.capetown?k=c",
+  "link": "https://luma.com/greenpill.capetown",
   "stewards": [
     {
-      "name": "Alwyn Anwyk",
+      "name": "Alwyn van Wyk",
       "role": "Chapter steward",
       "bio": "",
       "location": "Cape Town, South Africa",
@@ -36,8 +36,8 @@
   "links": [
     {
       "label": "Greenpill Cape Town Luma",
-      "url": "https://luma.com/greenpill.capetown?k=c",
-      "subtext": "Public chapter calendar; steward photo source still needed",
+      "url": "https://luma.com/greenpill.capetown",
+      "subtext": "Events calendar",
       "handle": "Luma",
       "action": "Open",
       "icon": "calendar",
@@ -47,12 +47,21 @@
   "connectLinks": [
     {
       "label": "Luma",
-      "url": "https://luma.com/greenpill.capetown?k=c",
-      "subtext": "Public chapter calendar",
+      "url": "https://luma.com/greenpill.capetown",
+      "subtext": "Events calendar",
       "handle": "Greenpill Cape Town",
       "action": "Open",
       "icon": "calendar",
       "kind": "external"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/greenpillcpt",
+      "subtext": "Chapter account",
+      "handle": "@greenpillcpt",
+      "action": "Follow",
+      "icon": "x",
+      "kind": "social"
     }
   ],
   "relatedChapterSlugs": [
@@ -60,15 +69,20 @@
     "kenya",
     "c-te-d-ivoire"
   ],
+  "featuredStory": {},
   "featuredStorySlugs": [],
   "authoredResourceSlugs": [],
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "featuredWeight": 0,
   "proofSignals": [
     {
-      "label": "Public-footprint gap",
-      "value": "Needs steward review",
-      "source": "Research artifact gap",
-      "href": "https://luma.com/greenpill-network"
+      "label": "Artizen Season 6 report",
+      "value": "Trash to Treasure and The Dignity Project",
+      "source": "Regen Hub",
+      "href": "https://hub.regencoordination.xyz/t/464/9"
     }
   ],
   "media": {
@@ -81,7 +95,7 @@
   },
   "seo": {
     "title": "Greenpill Cape Town · Greenpill Network",
-    "description": "Greenpill Cape Town is an active chapter in South Africa, with public source links and detailed program notes being backfilled with stewards.",
+    "description": "Greenpill Cape Town connects grassroots stewards in Cape Town with tools, education and funding for social and environmental action.",
     "ogImage": "/images/chapters/greenpill-cape-town-eth10-venue.jpg",
     "canonicalPath": "/chapters/cape-town",
     "noindex": false

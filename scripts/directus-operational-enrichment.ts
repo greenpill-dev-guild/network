@@ -27,6 +27,7 @@ function usage() {
     '',
     'Applies checked-in public guild and visible chapter initiative enrichment to Directus.',
     'Inactive/noindex chapters are ignored so hidden chapter initiatives are not re-published.',
+    'Inactive initiatives are ignored too.',
   ].join('\n');
 }
 
@@ -230,10 +231,13 @@ export async function loadOperationalEnrichment() {
     validateGuild(guild.slug, guild);
   }
 
+  // Finished initiatives stay published with status inactive; like inactive
+  // chapters, they are left alone.
   const initiatives = [...(await readCollection('chapter-initiatives')).values()]
     .filter((initiative) => {
       const chapter = chapters.get(cleanString(initiative.chapterSlug));
-      return chapter?.status === 'active' && !chapter.seo?.noindex;
+      const initiativeActive = !initiative.status || initiative.status === 'active';
+      return initiativeActive && chapter?.status === 'active' && !chapter.seo?.noindex;
     })
     .sort((a, b) => cleanString(a.slug).localeCompare(cleanString(b.slug)));
 

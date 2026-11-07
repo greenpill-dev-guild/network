@@ -2,8 +2,8 @@
   "chapterSlug": "brasil",
   "title": "Agroforestry Task Force and Living Center",
   "status": "active",
-  "summary": "Greenpill Brasil's 2024 agroforestry and living-center work, sourced from the public Greenpill Year in Review.",
-  "description": "The public 2024 Year in Review names Greenpill Brasil's agroforestry task force and community living-center work as a concrete chapter effort. Keep this initiative qualitative until a chapter-owned follow-up source adds precise completion, attendance, food-sovereignty, or biodiversity metrics.",
+  "summary": "Greenpill Brasil's agroforestry task force in Rio de Janeiro and the Living Center, a community hub for education, agroecology and culture in Tijuca.",
+  "description": "In 2024 the agroforestry task force held an event on food sovereignty and biodiversity, and the chapter ran the AgroforestDAO Journey, a training program that introduced agroforesters to quadratic funding, POAPs and decentralized governance. The first phase of the Living Center, foundations and roofing, was completed on November 30, 2024.",
   "themeSlugs": [
     "trees",
     "food",
@@ -13,9 +13,18 @@
   ],
   "links": [
     {
+      "label": "Greenpill Brasil Q4 2024 update",
+      "url": "https://hub.regencoordination.xyz/t/greenpill-brasil-q4-updates/160",
+      "subtext": "Living Center and AgroforestDAO Journey",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "hub",
+      "kind": "external"
+    },
+    {
       "label": "Greenpill 2024 Year in Review",
       "url": "https://paragraph.com/@greenpill/2024-a-year-in-review",
-      "subtext": "Public Paragraph source",
+      "subtext": "Greenpill Network recap",
       "handle": "@greenpill",
       "action": "Read",
       "icon": "article",
@@ -24,13 +33,22 @@
   ],
   "proofSignals": [
     {
+      "label": "Living Center",
+      "value": "First phase completed Nov 30, 2024",
+      "source": "Regen Hub",
+      "href": "https://hub.regencoordination.xyz/t/greenpill-brasil-q4-updates/160"
+    },
+    {
       "label": "Brasil agroforestry and living center",
       "value": "Year in Review mention",
-      "source": "S069",
+      "source": "Paragraph",
       "href": "https://paragraph.com/@greenpill/2024-a-year-in-review"
     }
   ],
-  "impactSources": {},
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "relatedStorySlugs": [
     "greenpill-2024-year-in-review",
     "greenpill-brasil-gg20-climate-milestones"
