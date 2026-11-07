@@ -10,8 +10,13 @@
  * browser scripts and helpers) and the text files under packages/website/public.
  * Code comments are not copy, so `//` and block comments in scripts, CSS
  * comments, HTML comments and `{/* *\/}` template comments are skipped.
- * An escaped em dash (`—`, `\u{2014}`) and the HTML entities (`&mdash;`,
- * `&#8212;`, `&#x2014;`) count as one.
+ * Every spelling that renders as an em dash counts: the character, the
+ * JavaScript and JSON escapes (`\u2014`, `\u{2014}`), the CSS escape (`\2014`)
+ * and the HTML references (`&mdash;`, `&#8212;`, `&#x2014;`, with or without
+ * leading zeros or the closing semicolon).
+ *
+ * JSX text is not parsed, so .jsx and .tsx files are scanned whole: an em dash
+ * there fails the check even inside a comment. The site has none today.
  *
  * Not scanned, because the text is owned elsewhere and is cleaned at its source:
  * - src/data/operational-content-snapshot.json: the fallback copy of the
@@ -20,6 +25,8 @@
  * - src/data/podcast-feed-snapshot.json: episode text from the podcast's RSS feed.
  * - Guides about the website (DESIGN.md, CLAUDE.md) and keystatic.config.ts,
  *   which sit outside src and public.
+ *
+ * A folder that cannot be read fails the check instead of being skipped.
  *
  * Run from the repository root: `bun run check:em-dashes`.
  */
@@ -33,13 +40,27 @@ export const SKIPPED_FILES = new Set([
   'packages/website/src/data/podcast-feed-snapshot.json',
 ]);
 
-const SCRIPT_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.mts', '.cts']);
-const MARKUP_EXTENSIONS = new Set(['.md', '.mdx', '.mdoc', '.html', '.htm', '.svg', '.xml']);
+const SCRIPT_EXTENSIONS = new Set(['.ts', '.js', '.mjs', '.cjs', '.mts', '.cts']);
+const JSX_EXTENSIONS = new Set(['.tsx', '.jsx']);
+const TEMPLATE_EXTENSIONS = new Set(['.mdx']);
+const MARKUP_EXTENSIONS = new Set(['.md', '.mdoc', '.html', '.htm', '.svg', '.xml']);
 const PLAIN_EXTENSIONS = new Set(['.json', '.txt', '.webmanifest', '.yaml', '.yml', '.csv']);
 const SKIPPED_DIRECTORIES = new Set(['node_modules', 'dist', '.astro']);
 
 // One pattern for the character and every spelling of it that renders as one.
-const EM_DASH = /—|\\u2014|\\u\{2014\}|&mdash;|&#8212;|&#x2014;/gi;
+// The lookaheads keep a longer number (`&#82120;`, `\20140`) from matching.
+const EM_DASH = new RegExp(
+  [
+    '\\u2014',
+    '\\\\u2014',
+    '\\\\u\\{0*2014\\}',
+    '\\\\0{0,2}2014(?![0-9a-f])',
+    '&mdash;',
+    '&#0*8212(?![0-9])',
+    '&#x0*2014(?![0-9a-f])',
+  ].join('|'),
+  'gi',
+);
 
 export interface EmDashHit {
   file: string;
@@ -57,6 +78,8 @@ const REGEX_KEYWORDS = new Set([
   'return', 'typeof', 'instanceof', 'in', 'of', 'new', 'delete', 'void', 'throw',
   'case', 'do', 'else', 'yield', 'await',
 ]);
+// After the closing parenthesis of these, a slash starts a regular expression.
+const CONDITION_KEYWORDS = new Set(['if', 'while', 'for', 'with']);
 
 /**
  * JavaScript or TypeScript source with its comments blanked out. Strings,
@@ -70,6 +93,8 @@ export function stripScriptComments(source: string): string {
   // For each open template literal, the brace depth at which its `${` opened.
   const templates: number[] = [];
   let depth = 0;
+  // For each open parenthesis, whether it holds an if/while/for/with condition.
+  const parens: boolean[] = [];
   // The last code token seen, to tell a regular expression from a division.
   let previous = '';
 
@@ -149,6 +174,20 @@ export function stripScriptComments(source: string): string {
       previous = ')';
       continue;
     }
+    if (ch === '(') {
+      parens.push(CONDITION_KEYWORDS.has(previous));
+      previous = '(';
+      out += ch;
+      i += 1;
+      continue;
+    }
+    if (ch === ')') {
+      // `if (x) /re/` holds a regular expression; `(a + b) / 2` a division.
+      previous = parens.pop() ? '(' : ')';
+      out += ch;
+      i += 1;
+      continue;
+    }
     if (ch === '{') {
       depth += 1;
     } else if (ch === '}') {
@@ -179,43 +218,71 @@ export function stripScriptComments(source: string): string {
   return out;
 }
 
-/** CSS with its comments blanked out. */
+/** CSS with its comments blanked out. Strings are kept, even when they hold a `/*`. */
 export function stripStyleComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?(\*\/|$)/g, blank);
+  let out = '';
+  let i = 0;
+  const n = source.length;
+  while (i < n) {
+    const ch = source[i];
+    if (ch === '/' && source[i + 1] === '*') {
+      const end = source.indexOf('*/', i + 2);
+      const stop = end === -1 ? n : end + 2;
+      out += blank(source.slice(i, stop));
+      i = stop;
+      continue;
+    }
+    if (ch === '"' || ch === '\'') {
+      const start = i;
+      i += 1;
+      while (i < n && source[i] !== ch && source[i] !== '\n') {
+        i += source[i] === '\\' ? 2 : 1;
+      }
+      i += 1;
+      out += source.slice(start, i);
+      continue;
+    }
+    out += ch;
+    i += 1;
+  }
+  return out;
 }
 
-/** Markup with its HTML comments blanked out. */
-export function stripMarkupComments(source: string): string {
-  return source.replace(/<!--[\s\S]*?(-->|$)/g, blank);
-}
+// In source order: an HTML comment, a `{/* */}` template comment, a script
+// element or a style element. Browsers also end the elements at
+// `</script >` and `</script foo>`, and a comment that holds a `<script>`
+// hides it, so one pass that takes whichever comes first.
+const MARKUP_PARTS = /(<!--[\s\S]*?(?:-->|$))|(\{\s*\/\*[\s\S]*?\*\/\s*\})|(<script\b[^>]*>)([\s\S]*?)(<\/script[^>]*>|$)|(<style\b[^>]*>)([\s\S]*?)(<\/style[^>]*>|$)/gi;
 
 /**
- * An .astro file with its comments blanked out: the frontmatter and each
- * `<script>` as scripts, each `<style>` as CSS, and the template's HTML
- * comments and `{/* *\/}` comments. A `//` comment inside a template
- * expression is not recognised, so an em dash there is reported.
+ * Markup (HTML, SVG, Markdown, an .astro template) with its comments blanked
+ * out: HTML comments, comments inside `<script>` and `<style>`, and, where
+ * `templateComments` is set (.astro and .mdx), `{/* *\/}` comments. A `//`
+ * comment inside an .astro template expression is not recognised, so an em
+ * dash there is reported.
  */
-export function stripAstroComments(source: string): string {
-  let rest = source;
+export function stripMarkupComments(source: string, { templateComments = false } = {}): string {
   let out = '';
-  const frontmatter = /^(\s*---\r?\n)([\s\S]*?)(\r?\n---)/.exec(rest);
-  if (frontmatter) {
-    out += frontmatter[1] + stripScriptComments(frontmatter[2]) + frontmatter[3];
-    rest = rest.slice(frontmatter[0].length);
-  }
-  // Browsers end these elements at `</script >` and `</script foo>` too.
-  const blocks = /(<script\b[^>]*>)([\s\S]*?)(<\/script[^>]*>)|(<style\b[^>]*>)([\s\S]*?)(<\/style[^>]*>)/gi;
   let last = 0;
-  let match: RegExpExecArray | null;
-  const template = (text: string) => stripMarkupComments(text).replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, blank);
-  while ((match = blocks.exec(rest))) {
-    out += template(rest.slice(last, match.index));
-    out += match[1]
-      ? match[1] + stripScriptComments(match[2]) + match[3]
-      : match[4] + stripStyleComments(match[5]) + match[6];
-    last = match.index + match[0].length;
+  for (const match of source.matchAll(MARKUP_PARTS)) {
+    const at = match.index ?? 0;
+    out += source.slice(last, at);
+    if (match[1] !== undefined) out += blank(match[1]);
+    else if (match[2] !== undefined) out += templateComments ? blank(match[2]) : match[2];
+    else if (match[3] !== undefined) out += match[3] + stripScriptComments(match[4]) + match[5];
+    else out += match[6] + stripStyleComments(match[7]) + match[8];
+    last = at + match[0].length;
+    if (match[0].length === 0) break;
   }
-  return out + template(rest.slice(last));
+  return out + source.slice(last);
+}
+
+/** An .astro file with its comments blanked out: the frontmatter as a script, the rest as a template. */
+export function stripAstroComments(source: string): string {
+  const frontmatter = /^(\s*---\r?\n)([\s\S]*?)(\r?\n---)/.exec(source);
+  if (!frontmatter) return stripMarkupComments(source, { templateComments: true });
+  return frontmatter[1] + stripScriptComments(frontmatter[2]) + frontmatter[3]
+    + stripMarkupComments(source.slice(frontmatter[0].length), { templateComments: true });
 }
 
 /** The text of `file` that counts as copy, with comments blanked, or null for a file type that is not text. */
@@ -224,8 +291,9 @@ export function copyText(file: string, source: string): string | null {
   if (extension === '.astro') return stripAstroComments(source);
   if (SCRIPT_EXTENSIONS.has(extension)) return stripScriptComments(source);
   if (extension === '.css') return stripStyleComments(source);
+  if (TEMPLATE_EXTENSIONS.has(extension)) return stripMarkupComments(source, { templateComments: true });
   if (MARKUP_EXTENSIONS.has(extension)) return stripMarkupComments(source);
-  if (PLAIN_EXTENSIONS.has(extension)) return source;
+  if (JSX_EXTENSIONS.has(extension) || PLAIN_EXTENSIONS.has(extension)) return source;
   return null;
 }
 
@@ -247,14 +315,9 @@ export function emDashHits(file: string, source: string): EmDashHit[] {
   return hits;
 }
 
+/** Every file under `directory`, as paths relative to `root`. A folder that cannot be read throws. */
 function listFiles(directory: string, root: string): string[] {
-  let entries;
-  try {
-    entries = readdirSync(directory, { withFileTypes: true });
-  } catch {
-    return [];
-  }
-  return entries.flatMap((entry) => {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) return SKIPPED_DIRECTORIES.has(entry.name) ? [] : listFiles(path, root);
     return entry.isFile() ? [relative(root, path).split(sep).join('/')] : [];
@@ -272,7 +335,14 @@ export function scanWebsiteCopy(root: string): { hits: EmDashHit[]; files: numbe
 }
 
 if (import.meta.main) {
-  const { hits, files } = scanWebsiteCopy(process.cwd());
+  let result: { hits: EmDashHit[]; files: number };
+  try {
+    result = scanWebsiteCopy(process.cwd());
+  } catch (error) {
+    console.error(`website-em-dashes: could not read the website files: ${(error as Error).message}`);
+    process.exit(2);
+  }
+  const { hits, files } = result;
   if (hits.length > 0) {
     console.error(`website-em-dashes: ${hits.length} em dash(es) in website copy:`);
     for (const hit of hits) console.error(`- ${hit.file}:${hit.line}: ${hit.excerpt}`);
