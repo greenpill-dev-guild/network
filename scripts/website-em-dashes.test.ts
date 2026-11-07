@@ -1,8 +1,9 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, test } from 'node:test';
+import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { emDashHits, scanWebsiteCopy, stripScriptComments } from './website-em-dashes';
+import { emDashHits, scanWebsiteCopy, stripScriptComments } from './website-em-dashes.ts';
 
 // Built from its code point so this file never holds the character itself.
 const DASH = String.fromCodePoint(0x2014);
@@ -17,7 +18,7 @@ describe('scripts: copy counts, comments do not', () => {
       'const c = "Escaped \\u2014 dash";',
       'const d = "Braced \\u{2014} dash";',
     ].join('\n');
-    expect(lines(emDashHits('src/a.ts', source))).toEqual([1, 2, 3, 4]);
+    assert.deepEqual(lines(emDashHits('src/a.ts', source)), [1, 2, 3, 4]);
   });
 
   test('line and block comments are skipped', () => {
@@ -28,7 +29,7 @@ describe('scripts: copy counts, comments do not', () => {
       `const x = 1; // trailing ${DASH} note`,
       'const ok = "clean";',
     ].join('\n');
-    expect(emDashHits('src/a.ts', source)).toEqual([]);
+    assert.deepEqual(emDashHits('src/a.ts', source), []);
   });
 
   test('a comment inside a template expression is skipped and the template text is still copy', () => {
@@ -36,7 +37,7 @@ describe('scripts: copy counts, comments do not', () => {
       'const label = `Shared ${count /* ' + DASH + ' note */} themes',
       `and more ${DASH} copy\`;`,
     ].join('\n');
-    expect(lines(emDashHits('src/a.ts', source))).toEqual([2]);
+    assert.deepEqual(lines(emDashHits('src/a.ts', source)), [2]);
   });
 
   test('a regular expression with slashes does not start a comment', () => {
@@ -45,7 +46,7 @@ describe('scripts: copy counts, comments do not', () => {
       `const copy = 'After the regex ${DASH} still copy';`,
       'const half = total / 2; // ' + DASH + ' a comment after division',
     ].join('\n');
-    expect(lines(emDashHits('src/a.ts', source))).toEqual([2]);
+    assert.deepEqual(lines(emDashHits('src/a.ts', source)), [2]);
   });
 
   test('quotes inside comments do not open strings', () => {
@@ -53,12 +54,12 @@ describe('scripts: copy counts, comments do not', () => {
       "// Don't treat this apostrophe as a string",
       `const copy = 'Real copy ${DASH} here';`,
     ].join('\n');
-    expect(lines(emDashHits('src/a.ts', source))).toEqual([2]);
+    assert.deepEqual(lines(emDashHits('src/a.ts', source)), [2]);
   });
 
   test('stripping keeps line breaks so line numbers stay true', () => {
     const source = '/* one\ntwo */\nconst x = 1;';
-    expect(stripScriptComments(source).split('\n')).toHaveLength(3);
+    assert.equal(stripScriptComments(source).split('\n').length, 3);
   });
 });
 
@@ -85,30 +86,31 @@ describe('.astro files', () => {
   ].join('\n');
 
   test('copy in frontmatter, template, scripts and CSS content is reported; comments are not', () => {
-    expect(lines(emDashHits('src/pages/x.astro', page))).toEqual([3, 8, 9, 13, 17]);
+    assert.deepEqual(lines(emDashHits('src/pages/x.astro', page)), [3, 8, 9, 13, 17]);
   });
 });
 
 describe('other file types', () => {
   test('a JSON value is reported at its line', () => {
     const json = ['{', '  "title": "Clean",', `  "dek": "Field notes ${DASH} from the network"`, '}'].join('\n');
-    expect(lines(emDashHits('src/content/x.json', json))).toEqual([3]);
+    assert.deepEqual(lines(emDashHits('src/content/x.json', json)), [3]);
   });
 
   test('an escaped dash in JSON counts', () => {
-    expect(lines(emDashHits('src/content/x.json', '{ "a": "x \\u2014 y" }'))).toEqual([1]);
+    assert.deepEqual(lines(emDashHits('src/content/x.json', '{ "a": "x \\u2014 y" }')), [1]);
   });
 
   test('CSS comments are skipped', () => {
-    expect(emDashHits('src/styles/x.css', `/* Base layer ${DASH} defaults */\n.a { color: red; }`)).toEqual([]);
+    const css = `/* Base layer ${DASH} defaults */\n.a { color: red; }`;
+    assert.deepEqual(emDashHits('src/styles/x.css', css), []);
   });
 
   test('HTML comments in markdown are skipped and prose is reported', () => {
-    expect(lines(emDashHits('src/content/x.md', `<!-- note ${DASH} -->\nProse ${DASH} here`))).toEqual([2]);
+    assert.deepEqual(lines(emDashHits('src/content/x.md', `<!-- note ${DASH} -->\nProse ${DASH} here`)), [2]);
   });
 
   test('binary and unknown file types are ignored', () => {
-    expect(emDashHits('public/images/x.png', DASH)).toEqual([]);
+    assert.deepEqual(emDashHits('public/images/x.png', DASH), []);
   });
 });
 
@@ -128,11 +130,11 @@ describe('scanWebsiteCopy', () => {
       write('packages/website/DESIGN.md', `Guide ${DASH} prose`);
 
       const { hits, files } = scanWebsiteCopy(root);
-      expect(hits.map((hit) => hit.file)).toEqual([
+      assert.deepEqual(hits.map((hit) => hit.file), [
         'packages/website/public/llms.txt',
         'packages/website/src/content/home.json',
       ]);
-      expect(files).toBe(2);
+      assert.equal(files, 2);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
