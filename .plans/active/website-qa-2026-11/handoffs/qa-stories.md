@@ -27,7 +27,8 @@ No changes to `package.json`, the lockfile, workflows, `CLAUDE.md`, `AGENTS.md` 
 
 - `bun install --frozen-lockfile` (approved by Afo for every QA session on 2026-11-06).
 - `bun run agentic:guidance`: ran before UI work.
-- `bun run ui:check`: 0 hard, 0 warn.
+- AGENTS.md gate: `bun run typecheck` exit 0; `bun run test:content` 33 pass, 0 fail; `bun run agentic:check` exit 0 (guidance, 11 plan hubs valid, `ui:check` 0 hard, 0 warn); `bun run build` passes.
+- `bun run ui:check`: 0 hard, 0 warn. No baseline rows for the story pages went stale, and the PR touches neither `scripts/data/ui-source-baseline.tsv` nor the schema files (`keystatic.config.ts`, `content.config.ts`).
 - `bun run test:content`: 33 pass, 0 fail. This suite requires every published story to have a local image with alt text and every story reference to point at a published story.
 - `bun run build:website`: passes, 50 pages, 21 published stories.
 - `bun run ui:verify` **did not run**: inside the isolated dev machine it prints "No Chrome/Chromium binary found ... Skipping" and exits 0. CI does not run it either.
@@ -104,7 +105,7 @@ All sources opened in Afo's Brave profile through Claude in Chrome on 2026-11-06
 
 - Announcement 2025-11-12, the lesson about money alone, teaching and support across forms of capital, launch 2025-11-21 at DevConnect, target end 2026-04-03, $24,000 budget, operators Afolabi Aiyeloja, Caue Tomaz and Matt Strachman, every phase and date, ETHDenver check-in: Hub thread 363 post 1, https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363
 - Durgadas (GravityDAO) workshops and worksheet feedback, SuperBenefit cell structures session, MetaGov and OpenGrants on DAO-IP, "clearer shared language and sharper questions", Glocal VR ReRe workshop planned for early March, Regen Reservoir inventory: thread 363 post 4 by Coi, 2026-02-11.
-- Removed: the unpublished thesis preview as a source, and with it "five-month incubation" and "summer 2026 harvest" (the Hub thread gives November 21 to April 3 and a harvest check-in at ETHDenver); Knowledge Garden, Sarafu and Regen Reservoir framing; the Regen Protocols paragraph (Afo's review asked to drop inactive protocols); "Internal Garden Guide details should stay out of launch content"; the Writers Guild link (no source ties the story to the guild).
+- Removed: the unpublished thesis preview as a source, and with it "five-month incubation" and "summer 2026 harvest" (the Hub thread gives November 21 to April 3 and a harvest check-in at ETHDenver); Knowledge Garden, Sarafu and Regen Reservoir framing; the Regen Protocols paragraph (Afo's review asked to drop inactive protocols); "Internal Garden Guide details should stay out of launch content"; the Writers Guild link (the thread only plans a Writers Guild season recap article, and I found no published recap; `qa-guilds` reads the plan as enough support, so this is a judgment call Afo can reverse by setting `relatedGuild` back).
 
 ### growing-greenpill-impact-framework
 
@@ -189,6 +190,7 @@ For `qa-chapters` (Directus, needs Afo's approval, no visible effect today): the
 ## Open items and decisions needed
 
 - **Afo:** publish the 2025 Year in Review and the 2026 Thesis on Paragraph when ready; then set both stories back to `published` with the published URLs.
+- **One more story candidate, not offered to Afo before he picked:** `qa-guilds` found the Writers Guild's Web3 Tooling Series with CARBON Copy, three parts dated January 26, February 2 and February 9, 2026, each bylined "Greenpill Writers Guild" (https://carboncopy.news/content/web3-tooling-series). It falls in the Nov 2025 to Nov 2026 window. Not drafted, since Afo has not picked it.
 - **Images (decision for Afo):** the contract test requires an image on every published story, and I had no event photos I clearly have the right to use. The two podcast stories use the Greenpill podcast cover already on the site. The Pizza Party, Cape Town, cacao school and London Ontario stories use the site's own green texture (`/images/hifi/topo-bg.png`, the library's default resource image), which reads as a placeholder in the grid. Better: event photos from the stewards, with permission. The alternative, a chapter's existing photo from a different event, looks finished but suggests it shows the event.
 - **`qa-brand-shell` (`components/shell/Breadcrumb.astro`):** at container widths of 520 px or less, a first crumb without `href` renders as a `<span>` that never truncates, so it overlaps the next crumb (seen at 375 as "Field repoTech & Sun"). The truncation rule only targets `li:first-child:not(:last-child) a`. Story pages no longer pass a non-link crumb; other pages with non-link crumbs may still overlap.
 - **`qa-home-garden` (`pages/index.astro`, `content/home-page.json`):** the home story bento still prints raw category slugs (`Meta items={[story.data.category ...]}`); import `storyCategoryLabel` and `formatStoryDate` from `pages/stories/_story-format.ts`. `home-page.json` `featuredStorySlugs` pins four 2025 stories ahead of everything newer; consider `greenpill-irl-building-a-coordi-nation` and `greenpill-nigeria-tech-and-sun-round`.
