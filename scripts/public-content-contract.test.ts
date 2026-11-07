@@ -450,7 +450,10 @@ test('site shell keeps the graphic page background visible', async () => {
 
   assert.match(header, /background:\s*none|rgba\(7,\s*24,\s*15,\s*0\.[0-6]/);
   assert.doesNotMatch(header, /var\(--gp-bg\)\s*92%/);
-  assert.match(footer, /rgba\(7,\s*24,\s*15,\s*0\)/);
+  // The footer paints no background of its own, so the page background shows through.
+  const footerRule = footer.match(/\.gp-site-footer\s*\{([^}]*)\}/)?.[1] ?? '';
+  assert.notEqual(footerRule, '');
+  assert.doesNotMatch(footerRule, /background/);
   assert.doesNotMatch(footer, /background:\s*var\(--gp-green-950\)/);
 });
 

@@ -15,7 +15,7 @@ const navItems = [
 
 <header class="gp-site-header">
   <a class="gp-brand" href="/" aria-label="Greenpill Network home">
-    <img src="/images/greenpill-logo.svg" alt="" width="32" height="32" />
+    <img src="/images/brand/greenpill-mark.png" alt="" width="32" height="32" />
     <span>Greenpill Network</span>
   </a>
 
@@ -85,10 +85,11 @@ const navItems = [
     white-space: nowrap;
   }
 
+  /* The brand-kit capsule is a lit 3D render with its own shading, so it
+     needs no added glow. */
   .gp-brand img {
-    width: 28px;
-    height: 28px;
-    filter: drop-shadow(0 0 14px rgba(184, 232, 53, 0.32));
+    inline-size: 32px;
+    block-size: 32px;
   }
 
   .gp-desktop-nav {
