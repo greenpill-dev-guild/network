@@ -9,6 +9,7 @@ import Overline from '../../components/ui/Overline.astro';
 import Text from '../../components/ui/Text.astro';
 import Meta from '../../components/ui/Meta.astro';
 import storiesIndex from '../../content/stories-index.json';
+import { storyMetaItems } from './_story-format';
 
 const allStories = await getCollection('stories');
 const featuredStoryRank = new Map((storiesIndex.featuredStorySlugs ?? []).map((slug, index) => [slug, index]));
@@ -63,7 +64,7 @@ function storyImageAlt(story: typeof published[number]) {
           <Text variant="display" class="gp-stories-hero-title">{hero.title || 'Field notes from the network.'}</Text>
 
           <Text variant="body-lg" class="gp-stories-hero-dek">
-            {hero.dek || 'Source-backed chapter updates, guild reports, event recaps, and public program notes.'}
+            {hero.dek || 'Chapter updates, guild reports, event recaps and program notes from across the network.'}
           </Text>
 
           <div class="gp-stories-hero-actions">
@@ -79,11 +80,11 @@ function storyImageAlt(story: typeof published[number]) {
         <Container size="2xl">
           <Card padded="lg" class="gp-stories-empty-card">
             <div class="gp-stories-empty-copy">
-              <Meta items={['Coming soon', 'Editorial review']} accentIndex={0} />
-              <Text variant="h2">Field stories ship after steward review.</Text>
+              <Meta items={['Coming soon']} accentIndex={0} />
+              <Text variant="h2">New stories are on the way.</Text>
               <Text variant="body" class="gp-stories-section-dek">
-                {draftCount > 0 ? `${draftCount} draft ${draftCount === 1 ? 'story is' : 'stories are'} in the editorial queue. ` : ''}
-                Each story cites a public source and links to the chapter or guild behind it. When the public story list is empty, Paragraph and the Regen Coordination Hub carry the live conversations.
+                {draftCount > 0 ? `${draftCount} ${draftCount === 1 ? 'story is' : 'stories are'} being prepared. ` : ''}
+                Each story links to its public sources and to the chapter or guild behind it. Until the next one lands, Paragraph and the Regen Coordination Hub carry the live conversations.
               </Text>
               <div class="gp-stories-empty-actions">
                 <Button href="https://paragraph.com/@greenpill">Follow on Paragraph</Button>
@@ -100,7 +101,6 @@ function storyImageAlt(story: typeof published[number]) {
             <Container size="2xl">
               <div class="gp-stories-section-head">
                 <Overline>Featured</Overline>
-                <Text variant="caption">Featured source-backed story.</Text>
               </div>
               <a class:list={['gp-stories-feature', { 'has-media': Boolean(featuredImage) }]} href={`/stories/${featured.id}`}>
                 {featuredImage && (
@@ -109,7 +109,7 @@ function storyImageAlt(story: typeof published[number]) {
                   </figure>
                 )}
                 <div class="gp-stories-feature-copy">
-                  <Meta items={[featured.data.category || 'story', featured.data.region || 'global', featured.data.publishDate || '']} accentIndex={0} />
+                  <Meta items={storyMetaItems(featured.data)} accentIndex={0} />
                   <Text variant="h2" class="gp-stories-feature-title">{featured.data.title}</Text>
                   {featured.data.dek && <Text variant="body-lg">{featured.data.dek}</Text>}
                   {featured.data.excerpt && !featured.data.dek && <Text variant="body-lg">{featured.data.excerpt}</Text>}
@@ -128,7 +128,7 @@ function storyImageAlt(story: typeof published[number]) {
             <Container size="2xl">
               <div class="gp-stories-section-head">
                 <Overline>All stories</Overline>
-                <Text variant="caption">{rest.length} story{rest.length === 1 ? '' : 'ies'}</Text>
+                <Text variant="caption">{rest.length} {rest.length === 1 ? 'story' : 'stories'}</Text>
               </div>
               <div class="gp-stories-grid">
                 {rest.map((story) => (
@@ -138,7 +138,7 @@ function storyImageAlt(story: typeof published[number]) {
                         <img src={storyImage(story)} alt={storyImageAlt(story)} loading="lazy" decoding="async" />
                       </figure>
                     )}
-                    <Meta items={[story.data.category || 'story', story.data.region || 'global', story.data.publishDate || '']} accentIndex={0} />
+                    <Meta items={storyMetaItems(story.data)} accentIndex={0} />
                     <Text variant="h3" class="gp-stories-card-title">{story.data.title}</Text>
                     {story.data.excerpt && <Text variant="body-sm">{story.data.excerpt}</Text>}
                     <footer class="gp-stories-card-foot">
@@ -159,10 +159,10 @@ function storyImageAlt(story: typeof published[number]) {
         <Card padded="lg" class="gp-stories-submit">
           <div class="gp-stories-submit-copy">
             <Overline>Contribute</Overline>
-            <Text variant="h2">Publish a chapter or guild update.</Text>
+            <Text variant="h2">Share a chapter or guild update.</Text>
             <Text variant="body" class="gp-stories-section-dek">
-              Submission data flows into a private moderation queue. Keystatic only stores approved public stories,
-              and stewards review each draft for source-backed claims before it goes live.
+              Post your update on the Regen Coordination Hub. Stories on this page are written from public posts
+              like these, and each one links back to its sources.
             </Text>
             <div class="gp-stories-submit-actions">
               <Button href="https://hub.regencoordination.xyz">Open the Hub</Button>
