@@ -10,7 +10,7 @@
     "overall_status": "active",
     "priority": "p1",
     "created_at": "2026-11-06T22:51:19Z",
-    "updated_at": "2026-11-07T03:12:13Z"
+    "updated_at": "2026-11-07T21:45:00Z"
   },
   "links": {
     "brief": "brief.md",
@@ -25,7 +25,8 @@
     "Sessions are listed in plan.todo.md. Lanes map as ui = qa-home-garden, qa-assessment, qa-library, qa-guilds (template), qa-brand-shell, qa-map-polish; content = qa-stories, qa-guilds (research), qa-chapters; platform = qa-map-data, podcast feed refresh; qa_pass_1 = qa-system-pass; qa_pass_2 = Codex and CodeRabbit PR review plus post-deploy checks.",
     "2026-11-06: Afo approved the launch. D1 keep and fix the assessment; D2 remove the ecoregion layer; batch A (qa-map-data, qa-home-garden, qa-guilds, qa-stories) started.",
     "2026-11-07: D3 decided (Paragraph subscriptions). Open PRs: #33 hub, #34 qa-home-garden (waits on the new Telegram invite), #35 qa-map-data (its coordinate repair waits on Afo's approval in that session). Batch B rolls in as batch A sessions reach their PRs: qa-library started (PRD-1413); qa-assessment ready as a start card (PRD-1414); qa-brand-shell and qa-chapters to follow.",
-    "2026-11-07 later: all batch B sessions except qa-assessment have started. Open PRs #34 to #39; Afo changed D4 to keep the illustrated background with its seams fixed (PR #39). Only conflict among open PRs: #35 and #39 in SiteFooter.astro; merge #35 first."
+    "2026-11-07 later: all batch B sessions except qa-assessment have started. Open PRs #34 to #39; Afo changed D4 to keep the illustrated background with its seams fixed (PR #39). Only conflict among open PRs: #35 and #39 in SiteFooter.astro; merge #35 first.",
+    "2026-11-07 final: PRs #33 to #43 are merged and verified live; every session sub-issue is Done except PRD-739 (Backlog, P0 shipped in #41, P1 and P2 open). qa-system-pass (PRD-1418) is open as #QA_PR: one card treatment, the em-dash check (its pull-request workflow waits on Afo's OK), the fallback snapshot refreshed from the live agent, and the footer links in social-links.json. Production Directus holds no em dashes, so no change set. Open follow-ups: PRD-1417 and PRD-739 P1/P2 (plan.todo.md, Final state)."
   ],
   "taxonomy": {
     "initiative": "public-experience",
@@ -37,31 +38,31 @@
   "lanes": {
     "ui": {
       "owner": "claude",
-      "status": "in_progress",
+      "status": "completed",
       "depends_on": [],
       "handoff": "handoffs/README.md"
     },
     "content": {
       "owner": "claude",
-      "status": "in_progress",
+      "status": "completed",
       "depends_on": [],
       "handoff": "handoffs/README.md"
     },
     "platform": {
       "owner": "claude",
-      "status": "in_progress",
+      "status": "completed",
       "depends_on": [],
       "handoff": "handoffs/README.md"
     },
     "qa_pass_1": {
       "owner": "claude",
-      "status": "blocked",
+      "status": "in_progress",
       "depends_on": ["ui", "content", "platform"],
       "handoff": "handoffs/README.md"
     },
     "qa_pass_2": {
       "owner": "codex",
-      "status": "blocked",
+      "status": "todo",
       "depends_on": ["qa_pass_1"],
       "handoff": "handoffs/README.md"
     }
@@ -87,6 +88,20 @@
       "lane": "system",
       "status": "in_progress",
       "note": "PRs #34 (qa-home-garden) and #35 (qa-map-data) open; D3 decided; qa-library started as PRD-1413; qa-assessment ready as PRD-1414."
+    },
+    {
+      "timestamp": "2026-11-07T19:54:00Z",
+      "actor": "claude",
+      "lane": "system",
+      "status": "completed",
+      "note": "Wave 1 and qa-map-polish merged (#33 to #43) and verified live; the ui, content and platform lanes are complete."
+    },
+    {
+      "timestamp": "2026-11-07T21:45:00Z",
+      "actor": "claude",
+      "lane": "qa_pass_1",
+      "status": "in_progress",
+      "note": "qa-system-pass opened #QA_PR (PRD-1418): one card treatment, the em-dash check, the refreshed fallback snapshot, footer links in social-links.json. Gate passed and Brave QA with axe recorded in handoffs/qa-system-pass.md. Waiting on Afo's OK for the em-dash pull-request workflow, then merge and post-deploy checks."
     }
   ]
 }
