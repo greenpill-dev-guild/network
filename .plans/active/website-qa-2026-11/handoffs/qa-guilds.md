@@ -175,7 +175,7 @@ Notes on specific rows:
 
 Afo's answers (2026-11-06):
 
-1. Change set: approved as drafted, with the seven rows marked † settled by the answers below. Apply after PR #36 merges.
+1. Change set: approved as drafted, with the nine rows marked † settled by the answers below. Apply after PR #36 merges.
 2. LinkedIn: add the Dev Guild page `https://www.linkedin.com/company/greenpilldevguild` to its Connect links. The unmaintained website link is `hub.greenpill.network`, which no longer exists; it is not a guild link (see the `qa-brand-shell` request below). GreenSci keeps its direct link to its site. No network-level LinkedIn URL was named, so the footer LinkedIn is still open for `qa-brand-shell`.
 3. Hats: built from the Linear team (Afolabi, Matt, Nansel, Kit, Gui).
 4. Contributors: both lists approved as drafted, including Izzy's credit.
@@ -184,6 +184,7 @@ Afo's answers (2026-11-06):
 
 Still open:
 
+- **Before merge, Afo's call on `ui:verify`.** `packages/website/CLAUDE.md` asks for `bun run ui:verify` before rendered UI is called done. It cannot run here: the dev machine has no Chrome, and CI does not run it. Its channels were run by hand in Brave instead (see Evidence: `ui:verify`'s own `DOM_ASSERTIONS` script, axe and layout shift on both pages at 375, 1024 and 1440, 0 findings). On 2026-11-06 Afo was asked whether those checks stand in for `ui:verify` on this PR, or whether it should first run somewhere with Chrome. Record his answer here before merging.
 - Coop (`greenpill-dev-guild/coop`, last push 2026-06-19) is not a project row. Asked Afo whether to add it to the Dev Guild.
 - Applying the change set after PR #36 merges (production write, approved). Then `qa-system-pass` refreshes the fallback snapshot from the agent.
 
@@ -198,7 +199,6 @@ Requests to other sessions:
 
 Other notes:
 
-- `ui:verify` was not run (no Chrome in the dev machine, not in CI). Brave QA covered its layout checks by hand.
 - No embedded YouTube player: no Builder Space recording exists, and an embed would add third-party requests. The lead card links out instead. Revisit if a recording is published.
 - The external-link rule (new tab, `rel`, hint) is `qa-brand-shell`'s. This PR removed the hand-set `target` and `rel` attributes from the guild cards, so until that rule lands those links open in the same tab, like most links on the site today.
 - Process note: a dev server started with `NETWORK_WEBSITE_PORT=3324` bound 3301, because the dev-machine shim does not pass environment variables (see the shared notes). It was stopped. Pass `--port` to `astro dev`, and run dev servers in a Terminal tab so Ctrl-C reaches the process in the machine.
