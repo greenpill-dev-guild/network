@@ -90,6 +90,7 @@ Batch A starts first because it covers the broken interactions and the accuracy 
 - [ ] Decide with Afo how dormant and forming chapters should read.
 - [ ] Directus change set; stop for approval.
 - [ ] Carried from `qa-home-garden`: `checker.gitcoin.co` no longer resolves (DNS failure on 2026-11-06); the Kenya and Brasil chapter rows link it.
+- [ ] Carried from `qa-stories`: the Uncommons chapter row (`featuredStorySlugs`) and the `uncommons-publications-learning-series` initiative (`relatedStorySlugs`) point at `greenpill-2025-year-in-review`, which PR #37 makes a draft. Neither field renders today; drop the reference in your change set.
 
 ### `qa-map-polish` (PRD-739)
 
@@ -122,8 +123,9 @@ One parent issue in P-PRD-19 for this hub, and one child per session, created wh
 | PRD-1412 | `qa-stories` |
 | PRD-1413 | `qa-library` (batch B, started 2026-11-07) |
 | PRD-1414 | `qa-assessment` (batch B, ready to start) |
+| PRD-1415 | `qa-brand-shell` (batch B, ready to start) |
 
-Pull requests so far: #33 this hub, #34 `qa-home-garden`, #35 `qa-map-data`.
+Pull requests so far: #33 this hub, #34 `qa-home-garden`, #35 `qa-map-data` (its nine-row coordinate repair is approved by Afo and runs after #35 deploys), #37 `qa-stories`.
 | PRD-625 | `qa-chapters` (reused) |
 | PRD-739 | `qa-map-polish` (reused) |
 
