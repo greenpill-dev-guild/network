@@ -5,6 +5,7 @@ import {
   markExternalLinks,
   NEW_TAB_HINT_ID,
   NEW_TAB_HINT_TEXT,
+  opensNewContext,
   siteHostsFor,
   withToken,
 } from '../packages/website/src/lib/external-links.ts';
@@ -49,6 +50,20 @@ describe('isExternalHref', () => {
       '',
     ]) {
       assert.equal(isExternalHref(href, SITE_HOSTS), false, href);
+    }
+  });
+});
+
+describe('opensNewContext', () => {
+  test('treats _blank and named targets as able to open a new tab', () => {
+    for (const target of ['_blank', '_BLANK', ' _blank ', 'podcast-player', '_new']) {
+      assert.equal(opensNewContext(target), true, target);
+    }
+  });
+
+  test('treats empty targets and same-context keywords as the same tab', () => {
+    for (const target of ['', '  ', '_self', '_parent', '_top', '_TOP', '_unfencedTop']) {
+      assert.equal(opensNewContext(target), false, target);
     }
   });
 });
@@ -114,6 +129,19 @@ describe('markExternalLinks', () => {
       html,
       new RegExp(`<a href="/pdf/greenpill.pdf" target="_blank" rel="noopener" aria-describedby="${NEW_TAB_HINT_ID}">`),
     );
+  });
+
+  test('describes a link with a named target, which can open a new tab', async () => {
+    const html = await render(page('<a href="/library#podcast" target="podcast-player">Listen</a>'));
+    assert.match(
+      html,
+      new RegExp(`<a href="/library#podcast" target="podcast-player" rel="noopener" aria-describedby="${NEW_TAB_HINT_ID}">`),
+    );
+  });
+
+  test('leaves links that target an existing context alone', async () => {
+    const body = '<a href="https://example.org" target="_top">Top</a><a href="https://example.org" target="_parent">Parent</a>';
+    assert.equal(await render(page(body)), page(body));
   });
 
   test('treats an empty target as unset', async () => {

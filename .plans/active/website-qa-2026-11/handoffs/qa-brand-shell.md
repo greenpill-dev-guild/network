@@ -66,7 +66,14 @@ Old files left in place: `images/greenpill-logo.svg` (the Garden page hero still
 - New files the rule needs: `packages/website/src/middleware.ts`, `packages/website/src/lib/external-links.ts`, `scripts/external-links.test.ts`. No `package.json` script was added; run the test with `bun test scripts/external-links.test.ts`.
 - `packages/website/src/pages/chapters/[slug].astro`: the impact-events script describes its runtime links as opening in a new tab (Codex review fix; no open PR touches this file).
 - `packages/website/src/components/page-sections/GardenAssessment.astro` (owned by `qa-assessment`, which has no branch or PR yet): the "Close second" link copies the new-tab attributes along with its `href`, one block in `showResult` (Codex review fix). `qa-assessment` should keep that block when it reworks the results.
-- No change to `package.json`, the lockfile, `.github/workflows/**`, `CLAUDE.md`, `AGENTS.md` or `.claude/**`. `social-links.json` and `keystatic.config.ts` are unchanged (PR #34 has not merged).
+- Root `package.json` (security-sensitive): the `astro` script is now `bun --bun run --cwd packages/website astro`, matching `dev:website`, `build:website` and `preview:website`. Without `--bun`, `bun run astro build` ran Astro on Node, where the link rule's HTMLRewriter is missing, so the build stopped on the first page with the rule's error (CodeRabbit review). No dependency or lockfile change.
+- No change to the lockfile, `.github/workflows/**`, `CLAUDE.md`, `AGENTS.md` or `.claude/**`. `social-links.json` and `keystatic.config.ts` are unchanged (PR #34 has not merged).
+
+### Review follow-ups (CodeRabbit, 2026-11-07)
+
+- Applied: header mark sized with `--gp-space-xl` (32px) instead of literal pixels; named link targets (anything but `_self`, `_parent`, `_top`, `_unfencedTop`) count as able to open a new tab and get `noopener` and the description; the footer test checks every `.gp-site-footer` rule, including the mobile one; the root `astro` script runs on Bun.
+- Kept: the "Code of Conduct" label (Afo chose this link on 2026-11-06 after being told it is an unratified 2024 proposal; the thread itself is titled "Code of Conduct"); the background's `lvh` overscan and `vmax` glow radii (no tokens exist for viewport-relative background geometry, and `DESIGN.md` says not to invent tokens).
+- Not done here, needs Afo's OK: run `scripts/external-links.test.ts` in the Pages workflow (workflows are security-sensitive; `qa-system-pass` plans a pull-request workflow for website checks).
 
 ## Evidence
 

@@ -2,9 +2,9 @@
  * The site-wide rule for links (November 2026 QA, finding 7):
  *
  * - A link to another site opens in a new tab (`target="_blank"`).
- * - Every link that opens in a new tab, whether this rule or a template set
- *   its target, gets `rel="noopener"` and the accessible description
- *   "Opens in a new tab" through `aria-describedby`.
+ * - Every link that can open a new tab, whether this rule or a template set
+ *   its target (`_blank` or a named target), gets `rel="noopener"` and the
+ *   accessible description "Opens in a new tab" through `aria-describedby`.
  * - Links within greenpill.network stay in the same tab.
  * - A link whose template already sets `target` keeps it, so a page can keep
  *   an external link in the same tab with `target="_self"`.
@@ -86,13 +86,23 @@ function htmlRewriter(): Rewriter {
   const Constructor = (globalThis as { HTMLRewriter?: RewriterConstructor }).HTMLRewriter;
   if (!Constructor) {
     throw new Error(
-      'The external link rule needs Bun\'s HTMLRewriter. Run Astro on Bun (`bun --bun astro build`), as the website package scripts do.',
+      'The external link rule needs Bun\'s HTMLRewriter. Run Astro on Bun, as the repo scripts do (`bun run build:website`, `bun run dev:website`, `bun run astro ...`).',
     );
   }
   return new Constructor();
 }
 
-/** Applies the rule to one link; returns true when the link opens in a new tab. */
+// Target keywords that keep the navigation in an existing browsing context.
+// Any other non-empty target, `_blank` or a name, can open a new tab.
+const SAME_CONTEXT_TARGETS = new Set(['_self', '_parent', '_top', '_unfencedtop']);
+
+/** True when a link with this `target` can open a new tab or window. */
+export function opensNewContext(target: string): boolean {
+  const value = target.trim().toLowerCase();
+  return value !== '' && !SAME_CONTEXT_TARGETS.has(value);
+}
+
+/** Applies the rule to one link; returns true when the link can open a new tab. */
 function applyLinkRule(link: RewriterElement, siteHosts: ReadonlySet<string>): boolean {
   const authoredTarget = link.getAttribute('target')?.trim() ?? '';
   let target = authoredTarget;
@@ -100,7 +110,7 @@ function applyLinkRule(link: RewriterElement, siteHosts: ReadonlySet<string>): b
     target = '_blank';
     link.setAttribute('target', target);
   }
-  if (target.toLowerCase() !== '_blank') return false;
+  if (!opensNewContext(target)) return false;
 
   link.setAttribute('rel', withToken(link.getAttribute('rel'), 'noopener', { ignoreCase: true }));
   link.setAttribute('aria-describedby', withToken(link.getAttribute('aria-describedby'), NEW_TAB_HINT_ID));
