@@ -35,7 +35,7 @@ Gate (AGENTS.md), on the final commit:
 - `bun run agentic:check`: exit 0 (Modern Web Guidance, browser-verification policy, `plans:validate` 11 hubs, `ui:check` 0 hard and 0 warn).
 - `bun run build` (`build:website`): 47 pages. `astro check`: 0 errors, 0 warnings, 5 hints (none in this file).
 - `bun run test:agent`: not needed; the agent's guild projection is unchanged.
-- `bun run ui:verify`: **not run**. Bun runs inside the network dev machine, which has no Chrome or Chromium, so the command skips every channel, and CI does not run it. The rendered proof is the Brave check below.
+- `bun run ui:verify`: **not run**. Bun runs inside the network dev machine, which has no Chrome or Chromium, so the command skips every channel, and CI does not run it. The QA hub's rules count it as not run and make the Brave check below the rendered proof (spec rule 3 and the eval proof list, as updated in d736e47 on the hub branch).
 - The other `ui:verify` channels, run by hand in Brave instead: the site was built in the machine with the approved change set applied to a temporary copy of the snapshot (restored afterwards), exported with `dm-export`, served on the Mac with `python3 -I -m http.server` on 127.0.0.1:3324, and checked in same-origin iframes at 375, 1024 and 1440. On both guild pages, at every width:
   - axe-core (`runOnly: ['wcag2a', 'wcag2aa', 'best-practice']`, the same rules `ui:verify` uses): 0 violations.
   - Cumulative layout shift over load: 0.
@@ -184,7 +184,6 @@ Afo's answers (2026-11-06):
 
 Still open:
 
-- **Before merge, Afo's call on `ui:verify`.** `packages/website/CLAUDE.md` asks for `bun run ui:verify` before rendered UI is called done. It cannot run here: the dev machine has no Chrome, and CI does not run it. Its channels were run by hand in Brave instead (see Evidence: `ui:verify`'s own `DOM_ASSERTIONS` script, axe and layout shift on both pages at 375, 1024 and 1440, 0 findings). On 2026-11-06 Afo was asked whether those checks stand in for `ui:verify` on this PR, or whether it should first run somewhere with Chrome. Record his answer here before merging.
 - Coop (`greenpill-dev-guild/coop`, last push 2026-06-19) is not a project row. Asked Afo whether to add it to the Dev Guild.
 - Applying the change set after PR #36 merges (production write, approved). Then `qa-system-pass` refreshes the fallback snapshot from the agent.
 
