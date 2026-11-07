@@ -1,8 +1,11 @@
-// Operational content dates are "YYYY", "YYYY-MM" or "YYYY-MM-DD" strings.
-// Pages show them as words, never raw. A part that is not on the calendar
-// (month 13, February 31) is dropped, so a bad value reads coarser, never wrong.
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+/**
+ * Formats an operational content date ("YYYY", "YYYY-MM" or "YYYY-MM-DD") as
+ * words for display: "2026", "Mar 2026", "Mar 5, 2026". A part that is not on
+ * the calendar (month 13, February 31) is dropped, so a bad value reads
+ * coarser, never wrong. Any other value, including a non-string, returns "".
+ */
 export function formatContentDate(value: unknown): string {
   const match = /^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?$/.exec(typeof value === 'string' ? value.trim() : '');
   if (!match) return '';
