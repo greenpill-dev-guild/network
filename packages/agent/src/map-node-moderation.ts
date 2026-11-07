@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { getMapCoordinateProblem } from '@greenpill-network/shared/map-locations';
 import {
   toAuthenticatedMapNodeModerationNode,
 } from '@greenpill-network/shared/map-nodes';
@@ -1112,6 +1113,17 @@ export async function moderateMapNode(
         'moderation_already_resolved',
         'This map node has already been reviewed.',
         409
+      );
+    }
+
+    // An approval has to put the node on the public map. A row saved at 0,0 or
+    // out of range (the June 2026 client, PRD-1409) would be approved and still
+    // hidden, so it must be declined or have its location corrected first.
+    if (decision === 'approved' && getMapCoordinateProblem(row.lat, row.long)) {
+      throw new PublicInputError(
+        'moderation_invalid_location',
+        "This node's saved location is missing, out of range, or 0,0, so the map can't show it. Decline it, or correct the location in Directus before approving.",
+        422
       );
     }
 

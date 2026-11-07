@@ -1,0 +1,44 @@
+placeIndex: 12 chapter anchors + 53 bundled cities
+first labels containing "br": Greenpill Brasil
+first labels containing "as": Greenpill Brasil, Casablanca
+typed one key at a time instead: "Port Harcourt" -> {"placeName":"Port Harcourt","lat":1.3521,"long":103.8198}
+typed one key at a time instead: "Rotterdam, Netherlands" -> {"placeName":"Rotterdam, Netherlands","lat":41.9028,"long":12.4964}
+a dragged pin at 9.045151, 9.049479 auto-labels as "Lagos" (stored place: "Lagos")
+a dragged pin at -20.157804, -48.541667 auto-labels as "Sao Paulo" (stored place: "Campinas")
+
+live:   Eve | Brooklyn, new york | -22.9068, -43.1729
+input:  type "Brooklyn, new york" one key at a time
+posted: {"placeName":"Brooklyn, new york","lat":-22.9068,"long":-43.1729}
+
+live:   Victor Porton (2 rows) | Ashkelon, Israel | -22.9068, -43.1729
+input:  type "Ashkelon, Israel" one key at a time
+posted: {"placeName":"Ashkelon, Israel","lat":-22.9068,"long":-43.1729}
+
+live:   Emmanuel Jacobson | Port Harcourt | 0, 0
+input:  paste or autofill "Port Harcourt" (one input event)
+posted: {"placeName":"Port Harcourt","lat":0,"long":0}
+
+live:   kitblake | Rotterdam, Netherlands | 0, 0
+input:  paste or autofill "Rotterdam, Netherlands" (one input event)
+posted: {"placeName":"Rotterdam, Netherlands","lat":0,"long":0}
+
+live:   Ash | Florida | 90, 97.76261
+input:  type "Florida", then drag the pin up past the top edge of the mini-map
+posted: {"placeName":"Florida","lat":90,"long":97.76261}
+
+live:   Swift Evo | Taiwan | 90, 176.912492
+input:  type "Taiwan", then drag the pin up past the top edge near the right side
+posted: {"placeName":"Taiwan","lat":90,"long":176.912492}
+
+live:   Amio | Awka | 56.462976, -180
+input:  type "Awka", then drag the pin out past the left edge of the mini-map
+posted: {"placeName":"Awka","lat":56.462976,"long":-180}
+
+live:   kitblake | Amsterdam | 52.3676, 4.9041 (control: correct)
+input:  type "Amsterdam" one key at a time
+posted: {"placeName":"Amsterdam","lat":52.3676,"long":4.9041}
+
+live:   Kaz | Toronto | 43.6532, -79.3832 (control: correct)
+input:  type "Toronto" one key at a time
+posted: {"placeName":"Toronto","lat":43.6532,"long":-79.3832}
+

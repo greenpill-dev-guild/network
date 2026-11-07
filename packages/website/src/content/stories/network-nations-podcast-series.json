@@ -1,0 +1,79 @@
+{
+  "title": "Network Nations: A Greenpill Podcast Mini-Series",
+  "status": "published",
+  "category": "program",
+  "publishDate": "2025-10-24",
+  "updatedDate": "",
+  "dek": "From October 2025 to February 2026, hosts Primavera De Filippi and Felix Beer explored how online communities can organize like nations, in 15 episodes of the Greenpill podcast.",
+  "excerpt": "Fifteen episodes on trust, identity, sovereignty and governance, with guests including Vitalik Buterin, Audrey Tang and Kevin Owocki.",
+  "region": "global",
+  "tag": "Podcast",
+  "tags": [
+    "podcast",
+    "network-nations",
+    "governance"
+  ],
+  "body": "Network Nations is a Greenpill podcast mini-series hosted by Primavera De Filippi and Felix Beer. It explores network nations: translocal communities that use technology, shared culture and bottom-up governance to organize. The first episode, \"Building Trust at Scale\", came out on October 24, 2025, and the fifteenth on February 6, 2026.\n\n## Episodes and guests\n\n- Memes and narratives, with Douglas Rushkoff and Jordan Hall (October 31, 2025)\n- What makes a nation, with Liav Orgad, Rainer Bauböck and Yancey Strickler (November 21, 2025)\n- Regen: toward a network nation identity, with Kevin Owocki, Austin Wade Smith of Regen Network and Monty Merlin of ReFi DAO (November 28, 2025)\n- Meta-politics and civic power, with Audrey Tang and Nathan Schneider (December 6, 2025)\n- Burning Man as a seed for a network nation, with Erika Blair (January 2, 2026)\n- Zuzalu and \"Let a Thousand Societies Bloom\", with Vitalik Buterin (January 9, 2026)\n- From politics to protocols, with Santiago Siri (January 16, 2026)\n- SeeDAO as a networked diaspora, with Helena Rong (January 30, 2026)\n- Movement building, with Benjamin Life and Patricia Parkinson of the OpenCivics project (February 6, 2026)\n\nOther episodes cover commons and mutualism, voluntary interdependence, sovereignty without land, the political landscape of the digital age, and intentional communities and new jurisdictions. All 15 episodes are in the Greenpill podcast feed.",
+  "image": "/images/podcast-cover.png",
+  "author": "",
+  "authorRole": "",
+  "authorBio": "",
+  "authorSlug": "",
+  "authorAvatar": "",
+  "relatedChapter": "",
+  "relatedGuild": "",
+  "relatedStorySlugs": [
+    "greenpill-irl-building-a-coordi-nation"
+  ],
+  "continueReadingStorySlugs": [
+    "greenpill-irl-building-a-coordi-nation",
+    "greenpill-garden-season-one",
+    "greenpill-2024-year-in-review"
+  ],
+  "themeSlugs": [
+    "gov",
+    "stories",
+    "coordination-tools"
+  ],
+  "translations": [],
+  "proofSignals": [
+    {
+      "label": "October 24, 2025",
+      "value": "Network Nations Ep. 1: Building Trust at Scale",
+      "source": "Greenpill podcast",
+      "href": "https://128c3f4a-6136-477c-8898-83d022a2d198.libsyn.com/network-nations-ep1-building-trust-at-scale-a-new-season-with-primavera-felix-beer"
+    },
+    {
+      "label": "January 9, 2026",
+      "value": "NN Ep. 11: Let a Thousand Societies Bloom with Vitalik Buterin",
+      "source": "Greenpill podcast",
+      "href": "https://128c3f4a-6136-477c-8898-83d022a2d198.libsyn.com/nn-ep11-let-a-thousand-societies-bloom-with-vitalik-buterin"
+    },
+    {
+      "label": "February 6, 2026",
+      "value": "NN Ep. 15: Catalysing Network Nations: Movement Building with Benjamin Life & Patricia Parkinson",
+      "source": "Greenpill podcast",
+      "href": "https://128c3f4a-6136-477c-8898-83d022a2d198.libsyn.com/nn-ep15-catalysing-network-nations-community-building-with-benjamin-life-patricia-parkinson"
+    },
+    {
+      "label": "All episodes",
+      "value": "Greenpill podcast feed",
+      "source": "Greenpill podcast",
+      "href": "https://rss.libsyn.com/shows/400481/destinations/3304589.xml"
+    }
+  ],
+  "featuredWeight": 70,
+  "readTime": "",
+  "media": {
+    "image": "/images/podcast-cover.png",
+    "imageAlt": "Greenpill podcast cover art: the words Green Pill and Kevin Owocki beside a green pill.",
+    "ogImage": "/images/podcast-cover.png"
+  },
+  "seo": {
+    "title": "Network Nations: A Greenpill Podcast Mini-Series · Greenpill Stories",
+    "description": "Network Nations, a 15-episode Greenpill podcast mini-series from October 2025 to February 2026, hosted by Primavera De Filippi and Felix Beer.",
+    "ogImage": "/images/podcast-cover.png",
+    "canonicalPath": "/stories/network-nations-podcast-series",
+    "noindex": false
+  }
+}

@@ -13,7 +13,7 @@ Each finding in `reports/2026-11-06-qa-findings.md` is closed when its check bel
 | 5 | Subscribe on the home page leads to a working signup, or is replaced as decided in D3. A real signup reaches the chosen list (tested by Afo or with his approval). |
 | 6 | One Telegram invite link, read from `content/social-links.json`, requires admin approval, and opens in a new tab. |
 | 7 | On the home, Library, a guild, a chapter and a story page, every external link opens in a new tab with `rel="noopener"` and an accessible hint; internal links do not. |
-| 8 | Every page uses the plain background; no seams at 375, 1024, 1440 or 1920. |
+| 8 | Pages with the illustrated background show no seams, hard edges or clipped glow at 375, 1024, 1440 or 1920 (D4 as changed on 2026-11-07); the home page stays plain. |
 | 9 | Cards on every page use `Card` with the home treatment; no page-local card classes remain. |
 | 10 | Each book opens a dialog with the larger cover, the English PDF, every translation and every store or edition link; works with keyboard and screen reader; the cover still works without JavaScript. |
 | 11 | The Library shows the newest episodes the feed held at the last build, and they play on the site; the scheduled build refreshes the feed; the episode count comes from the feed. |

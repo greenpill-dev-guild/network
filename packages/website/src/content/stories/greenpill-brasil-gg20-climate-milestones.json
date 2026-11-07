@@ -2,10 +2,10 @@
   "title": "Greenpill Brasil GG20 Climate Round Milestones",
   "status": "published",
   "category": "chapter",
-  "publishDate": "2026-03-28",
-  "updatedDate": "",
-  "dek": "KarmaGAP marks Greenpill Brasil's GG20 Climate Round milestones complete for biodiversity restoration and native bee pollination.",
-  "excerpt": "A source-backed Brasil story for the chapter, Library, and future impact surfaces.",
+  "publishDate": "2025-02-12",
+  "updatedDate": "2026-11-06",
+  "dek": "Karma GAP shows all four of Greenpill Brasil's GG20 Climate Round milestones as complete, from ReFi education to native bee traps.",
+  "excerpt": "Greenpill Brasil's first climate grant funded education, onboarding, mapping of protected areas and native bee traps.",
   "region": "americas",
   "tag": "Impact Tracking",
   "tags": [
@@ -14,22 +14,23 @@
     "climate",
     "karma-gap"
   ],
-  "body": "Greenpill Brasil has strong public proof through KarmaGAP, Gitcoin, and the Regen Coordination Hub.\n\nThe seed should use the completed GG20 Climate Round milestones as the launch-safe proof point. The research artifact also mentions meeting-hour and contributor-count claims from Gitcoin self-reporting, but those should receive steward signoff before being promoted as launch copy.\n\n## Sources\n\n- S018: https://www.karmahq.xyz/project/greenpill-brasil\n- S019: https://hub.regencoordination.xyz/t/greenpill-brasil/44\n- S020: https://checker.gitcoin.co/public/project/show/greenpill-brazil",
+  "body": "Greenpill Brasil received its GG20 Climate Round grant on April 24, 2024, and tracked the work on Karma GAP. All four milestones are marked complete there, and the grant itself was marked complete on February 12, 2025.\n\n## The four milestones\n\n- Educational initiatives and ReFi education: sessions and learning materials on climate solutions and regenerative finance, completed in June 2024.\n- Web3 onboarding: the chapter reported 10 onboarding sessions, 10 new wallets, 10 Gitcoin Passports with at least 20 points and 5 projects created on Giveth and Gitcoin, completed in June 2024.\n- Biodiversity restoration: the chapter reported mapping 20 protected areas to plan invasive species control and native planting, completed in August 2024.\n- Pollination: the chapter reported distributing 51 native bee traps and monitoring the health of the bee colonies, completed in August 2024.\n\nIn its completion summary, Greenpill Brasil called the grant its introduction to climate coordination: it set the chapter's first climate metrics and started its campaigns on community-led agroforestry and waste management.",
   "image": "/images/chapters/greenpill-brasil-community.jpg",
-  "author": "Greenpill Network research",
-  "authorRole": "Source-backed seed copy",
+  "author": "",
+  "authorRole": "",
   "authorBio": "",
   "authorSlug": "",
   "authorAvatar": "",
   "relatedChapter": "brasil",
-  "relatedGuild": "dev-guild",
+  "relatedGuild": "",
   "relatedStorySlugs": [
-    "regenmeetup-rio"
+    "regenmeetup-rio",
+    "escola-da-regeneracao-do-cacau"
   ],
   "continueReadingStorySlugs": [
     "regenmeetup-rio",
-    "greenpill-nigeria-water-cup",
-    "greensofa-taiwan-public-goods-tooling"
+    "escola-da-regeneracao-do-cacau",
+    "greenpill-2024-year-in-review"
   ],
   "themeSlugs": [
     "trees",
@@ -40,28 +41,28 @@
   "translations": [],
   "proofSignals": [
     {
-      "label": "KarmaGAP milestones",
-      "value": "Completed",
-      "source": "S018",
-      "href": "https://www.karmahq.xyz/project/greenpill-brasil"
+      "label": "Greenpill Brasil, 4 of 4 complete",
+      "value": "GG20 Climate Round milestones",
+      "source": "Karma GAP",
+      "href": "https://www.karmahq.org/project/greenpill-brasil/funding/0xb1dcd95cbb1a9252a8a7447b870fded9cda968e194d317dc672106426e85f153/milestones-and-updates"
     },
     {
-      "label": "Gitcoin project",
-      "value": "Greenpill Brazil",
-      "source": "S020",
-      "href": "https://checker.gitcoin.co/public/project/show/greenpill-brazil"
+      "label": "Project profile, grants and activity",
+      "value": "GreenPill Brasil",
+      "source": "Karma GAP",
+      "href": "https://www.karmahq.org/project/greenpill-brasil"
     }
   ],
   "featuredWeight": 95,
-  "readTime": "3 min read",
+  "readTime": "",
   "media": {
     "image": "/images/chapters/greenpill-brasil-community.jpg",
-    "imageAlt": "Greenpill Brasil community members gathered around a table.",
+    "imageAlt": "Members of the Greenpill Brasil community seated in a circle indoors.",
     "ogImage": "/images/chapters/greenpill-brasil-community.jpg"
   },
   "seo": {
-    "title": "Greenpill Brasil GG20 Climate Milestones · Greenpill Stories",
-    "description": "Source-backed Greenpill Brasil story based on KarmaGAP GG20 Climate Round milestones and public grant context.",
+    "title": "Greenpill Brasil GG20 Climate Round Milestones · Greenpill Stories",
+    "description": "Greenpill Brasil's GG20 Climate Round milestones on Karma GAP: ReFi education, Web3 onboarding, mapping of protected areas and 51 native bee traps.",
     "ogImage": "/images/chapters/greenpill-brasil-community.jpg",
     "canonicalPath": "/stories/greenpill-brasil-gg20-climate-milestones",
     "noindex": false
