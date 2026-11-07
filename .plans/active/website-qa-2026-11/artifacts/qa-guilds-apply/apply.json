@@ -1,0 +1,674 @@
+{
+  "session": "qa-guilds-apply",
+  "linear": "PRD-1411",
+  "phase": "2: apply",
+  "trigger": "Orchestrator message: PR #34 merged (483aae8, 2026-11-07T19:41:53Z, confirmed with gh). Afo's Phase 1 choices: no steward pause; patch only the 4 guild field notes.",
+  "changeSet": {
+    "path": ".plans/active/website-qa-2026-11/artifacts/qa-guilds-change-set.json",
+    "sha256": "70baf8a94802add3827d3228c86bd346e1d6ce7f746603f2e6028c908ed3d93e",
+    "changes": 42
+  },
+  "preflight": {
+    "at": "2026-11-07T19:42:54Z",
+    "where": "Afo's signed-in Brave tab on https://admin.greenpill.network/admin/content/guilds (Claude in Chrome), same-origin fetch with the session cookie",
+    "serverPing": "200 pong in 816 ms",
+    "role": "Administrator",
+    "payloadInPageSha256Matches": true,
+    "directusFlows": "none configured (GET /flows returned an empty list), so no Flow can fire on these updates"
+  },
+  "fieldWrites": {
+    "method": "For each change in file order: GET /items/<collection>/<slug>?fields=<field>; skip if it already equals proposed or no longer equals current; otherwise PATCH /items/<collection>/<slug> with that one field; GET again and require it to equal proposed. projects.tech_stack is sent as a Postgres array literal string; every other value as JSON.",
+    "startedAt": "2026-11-07T19:43:41.654Z",
+    "finishedAt": "2026-11-07T19:44:01.837Z",
+    "result": "42 written, 0 skipped, 0 failed; every read before the write still equalled the recorded current value",
+    "fields": [
+      {
+        "n": 1,
+        "record": "guilds/dev-guild",
+        "field": "links",
+        "readAt": "2026-11-07T19:43:41.835Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:42.216Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "f7c2cfabe170",
+        "proposedSha256_12": "f7c2cfabe170"
+      },
+      {
+        "n": 2,
+        "record": "guilds/dev-guild",
+        "field": "connect_links",
+        "readAt": "2026-11-07T19:43:42.537Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:42.745Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "0c95b53408a2",
+        "proposedSha256_12": "0c95b53408a2"
+      },
+      {
+        "n": 3,
+        "record": "guilds/dev-guild",
+        "field": "summary",
+        "readAt": "2026-11-07T19:43:43.070Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:43.266Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "3389b1bd0cfd",
+        "proposedSha256_12": "3389b1bd0cfd"
+      },
+      {
+        "n": 4,
+        "record": "guilds/dev-guild",
+        "field": "mandate_paragraphs",
+        "readAt": "2026-11-07T19:43:43.586Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:43.794Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "b064732395a8",
+        "proposedSha256_12": "b064732395a8"
+      },
+      {
+        "n": 5,
+        "record": "guilds/dev-guild",
+        "field": "description",
+        "readAt": "2026-11-07T19:43:44.103Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:44.390Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "cbfde0b69e0e",
+        "proposedSha256_12": "cbfde0b69e0e"
+      },
+      {
+        "n": 6,
+        "record": "guilds/dev-guild",
+        "field": "cadence",
+        "readAt": "2026-11-07T19:43:44.769Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:44.924Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "55704fc534fa",
+        "proposedSha256_12": "55704fc534fa"
+      },
+      {
+        "n": 7,
+        "record": "guilds/dev-guild",
+        "field": "outputs",
+        "readAt": "2026-11-07T19:43:45.203Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:45.404Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "4f53cda18c2b",
+        "proposedSha256_12": "4f53cda18c2b"
+      },
+      {
+        "n": 8,
+        "record": "guilds/dev-guild",
+        "field": "proof_signals",
+        "readAt": "2026-11-07T19:43:45.670Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:45.881Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "4f53cda18c2b",
+        "proposedSha256_12": "4f53cda18c2b"
+      },
+      {
+        "n": 9,
+        "record": "guilds/dev-guild",
+        "field": "media",
+        "readAt": "2026-11-07T19:43:46.154Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:46.404Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "b951ed381a56",
+        "proposedSha256_12": "b951ed381a56"
+      },
+      {
+        "n": 10,
+        "record": "guilds/dev-guild",
+        "field": "stewards",
+        "readAt": "2026-11-07T19:43:46.703Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:46.879Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "1ab2b4cc3253",
+        "proposedSha256_12": "1ab2b4cc3253"
+      },
+      {
+        "n": 11,
+        "record": "guilds/dev-guild",
+        "field": "public_members",
+        "readAt": "2026-11-07T19:43:47.203Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:47.390Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "ff58bce483f0",
+        "proposedSha256_12": "ff58bce483f0"
+      },
+      {
+        "n": 12,
+        "record": "guilds/writers-guild",
+        "field": "links",
+        "readAt": "2026-11-07T19:43:47.669Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:47.828Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "8eaf179fa136",
+        "proposedSha256_12": "8eaf179fa136"
+      },
+      {
+        "n": 13,
+        "record": "guilds/writers-guild",
+        "field": "connect_links",
+        "readAt": "2026-11-07T19:43:48.137Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:48.314Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "c574ee3cd65f",
+        "proposedSha256_12": "c574ee3cd65f"
+      },
+      {
+        "n": 14,
+        "record": "guilds/writers-guild",
+        "field": "proof_signals",
+        "readAt": "2026-11-07T19:43:48.587Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:48.764Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "4f53cda18c2b",
+        "proposedSha256_12": "4f53cda18c2b"
+      },
+      {
+        "n": 15,
+        "record": "guilds/writers-guild",
+        "field": "outputs",
+        "readAt": "2026-11-07T19:43:49.036Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:49.224Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "ebc2e945c5ed",
+        "proposedSha256_12": "ebc2e945c5ed"
+      },
+      {
+        "n": 16,
+        "record": "guilds/writers-guild",
+        "field": "public_members",
+        "readAt": "2026-11-07T19:43:49.537Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:49.730Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "fad9f8dea01d",
+        "proposedSha256_12": "fad9f8dea01d"
+      },
+      {
+        "n": 17,
+        "record": "guilds/writers-guild",
+        "field": "mandate_paragraphs",
+        "readAt": "2026-11-07T19:43:50.053Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:50.247Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "8abd7aeb9c8d",
+        "proposedSha256_12": "8abd7aeb9c8d"
+      },
+      {
+        "n": 18,
+        "record": "guilds/writers-guild",
+        "field": "principles",
+        "readAt": "2026-11-07T19:43:50.503Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:50.693Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "4f53cda18c2b",
+        "proposedSha256_12": "4f53cda18c2b"
+      },
+      {
+        "n": 19,
+        "record": "guilds/writers-guild",
+        "field": "summary",
+        "readAt": "2026-11-07T19:43:51.003Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:51.160Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "20516fc31852",
+        "proposedSha256_12": "20516fc31852"
+      },
+      {
+        "n": 20,
+        "record": "guilds/writers-guild",
+        "field": "oneliner",
+        "readAt": "2026-11-07T19:43:51.420Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:51.595Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "28961f07e843",
+        "proposedSha256_12": "28961f07e843"
+      },
+      {
+        "n": 21,
+        "record": "guilds/writers-guild",
+        "field": "description",
+        "readAt": "2026-11-07T19:43:51.887Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:52.060Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "212873852917",
+        "proposedSha256_12": "212873852917"
+      },
+      {
+        "n": 22,
+        "record": "guilds/writers-guild",
+        "field": "founded_year",
+        "readAt": "2026-11-07T19:43:52.320Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:52.495Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "d398b29d3dbb",
+        "proposedSha256_12": "d398b29d3dbb"
+      },
+      {
+        "n": 23,
+        "record": "guilds/writers-guild",
+        "field": "cadence",
+        "readAt": "2026-11-07T19:43:52.770Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:52.933Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "c155d6d53385",
+        "proposedSha256_12": "c155d6d53385"
+      },
+      {
+        "n": 24,
+        "record": "guilds/writers-guild",
+        "field": "seo",
+        "readAt": "2026-11-07T19:43:53.203Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:53.381Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "fc9098fecc8f",
+        "proposedSha256_12": "fc9098fecc8f"
+      },
+      {
+        "n": 25,
+        "record": "projects/greenpill-podcast",
+        "field": "publication_status",
+        "readAt": "2026-11-07T19:43:53.687Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:53.876Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "755fa0b108c8",
+        "proposedSha256_12": "755fa0b108c8"
+      },
+      {
+        "n": 26,
+        "record": "projects/greenwill",
+        "field": "summary",
+        "readAt": "2026-11-07T19:43:54.186Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:54.340Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "edaa62086f4d",
+        "proposedSha256_12": "edaa62086f4d"
+      },
+      {
+        "n": 27,
+        "record": "projects/greenwill",
+        "field": "description",
+        "readAt": "2026-11-07T19:43:54.603Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:54.761Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "358a35145ab1",
+        "proposedSha256_12": "358a35145ab1"
+      },
+      {
+        "n": 28,
+        "record": "projects/greenwill",
+        "field": "repo_url",
+        "readAt": "2026-11-07T19:43:55.069Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:55.254Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "12ae32cb1ec0",
+        "proposedSha256_12": "12ae32cb1ec0"
+      },
+      {
+        "n": 29,
+        "record": "projects/greenwill",
+        "field": "live_url",
+        "readAt": "2026-11-07T19:43:55.553Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:55.727Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "7b14bf670774",
+        "proposedSha256_12": "7b14bf670774"
+      },
+      {
+        "n": 30,
+        "record": "projects/greenwill",
+        "field": "tech_stack",
+        "readAt": "2026-11-07T19:43:56.003Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:56.223Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "15dcfb0b23b0",
+        "proposedSha256_12": "15dcfb0b23b0"
+      },
+      {
+        "n": 31,
+        "record": "projects/impact-reef",
+        "field": "entity_status",
+        "readAt": "2026-11-07T19:43:56.520Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:56.698Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "755fa0b108c8",
+        "proposedSha256_12": "755fa0b108c8"
+      },
+      {
+        "n": 32,
+        "record": "projects/grant-ships",
+        "field": "entity_status",
+        "readAt": "2026-11-07T19:43:56.970Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:57.126Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "a5714161636f",
+        "proposedSha256_12": "a5714161636f"
+      },
+      {
+        "n": 33,
+        "record": "projects/grant-ships",
+        "field": "live_url",
+        "readAt": "2026-11-07T19:43:57.403Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:57.559Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "12ae32cb1ec0",
+        "proposedSha256_12": "12ae32cb1ec0"
+      },
+      {
+        "n": 34,
+        "record": "projects/grant-ships",
+        "field": "proof_signals",
+        "readAt": "2026-11-07T19:43:57.837Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:57.997Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "f6a135bc7563",
+        "proposedSha256_12": "f6a135bc7563"
+      },
+      {
+        "n": 35,
+        "record": "projects/green-goods",
+        "field": "live_url",
+        "readAt": "2026-11-07T19:43:58.270Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:58.442Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "1b6a5f16fd6b",
+        "proposedSha256_12": "1b6a5f16fd6b"
+      },
+      {
+        "n": 36,
+        "record": "projects/public-goods-staking-protocol",
+        "field": "description",
+        "readAt": "2026-11-07T19:43:58.720Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:58.903Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "ac7bf745fc27",
+        "proposedSha256_12": "ac7bf745fc27"
+      },
+      {
+        "n": 37,
+        "record": "projects/greenpill-impact-framework",
+        "field": "description",
+        "readAt": "2026-11-07T19:43:59.187Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:59.344Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "5792f4700c3b",
+        "proposedSha256_12": "5792f4700c3b"
+      },
+      {
+        "n": 38,
+        "record": "projects/greenpill-v2-website",
+        "field": "name",
+        "readAt": "2026-11-07T19:43:59.620Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:43:59.792Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "0df70553776d",
+        "proposedSha256_12": "0df70553776d"
+      },
+      {
+        "n": 39,
+        "record": "projects/greenpill-v2-website",
+        "field": "summary",
+        "readAt": "2026-11-07T19:44:00.053Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:44:00.230Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "282bf64218c6",
+        "proposedSha256_12": "282bf64218c6"
+      },
+      {
+        "n": 40,
+        "record": "projects/greenpill-v2-website",
+        "field": "repo_url",
+        "readAt": "2026-11-07T19:44:00.520Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:44:00.698Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "88f14e0793d5",
+        "proposedSha256_12": "88f14e0793d5"
+      },
+      {
+        "n": 41,
+        "record": "projects/greenpill-v2-website",
+        "field": "live_url",
+        "readAt": "2026-11-07T19:44:00.971Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:44:01.139Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "c4589a82429a",
+        "proposedSha256_12": "c4589a82429a"
+      },
+      {
+        "n": 42,
+        "record": "projects/greenpill-v2-website",
+        "field": "tech_stack",
+        "readAt": "2026-11-07T19:44:01.536Z",
+        "patchStatus": 200,
+        "writtenAt": "2026-11-07T19:44:01.718Z",
+        "result": "written, read back equal",
+        "productionSha256_12AfterApply": "9479c52a5c62",
+        "proposedSha256_12": "9479c52a5c62"
+      }
+    ]
+  },
+  "finalReread": {
+    "at": "2026-11-07T19:44:20.613Z to 19:44:23.886Z",
+    "result": "42 of 42 production values equal proposed (browser comparison and Python hash of each proposed value agree)",
+    "publicationStatus": {
+      "projects/greenpill-podcast": "archived",
+      "other 9 records": "published"
+    }
+  },
+  "fieldNotes": {
+    "method": "GET /fields/guilds/<field>; require the old note; PATCH /fields/guilds/<field> with {meta: {note}} only; GET again and require the new note. Note text from scripts/directus-studio-setup.ts (PR #36), checked by SHA-256 before the write.",
+    "results": [
+      {
+        "field": "guilds.stewards",
+        "result": "written, read back equal",
+        "at": "2026-11-07T19:44:54.987Z",
+        "noteSha256_16": "657c48ed5f40b7a8"
+      },
+      {
+        "field": "guilds.outputs",
+        "result": "written, read back equal",
+        "at": "2026-11-07T19:44:55.619Z",
+        "noteSha256_16": "a1099b10f9eaec0d"
+      },
+      {
+        "field": "guilds.proof_signals",
+        "result": "written, read back equal",
+        "at": "2026-11-07T19:44:56.470Z",
+        "noteSha256_16": "6437d36780410103"
+      },
+      {
+        "field": "guilds.media",
+        "result": "written, read back equal",
+        "at": "2026-11-07T19:44:57.137Z",
+        "noteSha256_16": "66f44959eaa91281"
+      }
+    ],
+    "otherMetaUnchanged": "For each field, all 20 meta keys were compared with the copy read during the dry run: only `note` differs (interface, options, display and the rest unchanged; types stay json)."
+  },
+  "activityLog": {
+    "window": "2026-11-07T19:30:00Z onward, read at about 19:47Z",
+    "entries": 46,
+    "breakdown": {
+      "update guilds": {
+        "dev-guild": 11,
+        "writers-guild": 13
+      },
+      "update projects": {
+        "greenpill-podcast": 1,
+        "greenwill": 5,
+        "impact-reef": 1,
+        "grant-ships": 3,
+        "green-goods": 1,
+        "public-goods-staking-protocol": 1,
+        "greenpill-impact-framework": 1,
+        "greenpill-v2-website": 5
+      },
+      "update directus_fields": 4
+    },
+    "otherUsers": "none; every entry is from the account this session used"
+  },
+  "liveSnapshotAfterApply": {
+    "url": "https://agent.greenpill.network/content/public-snapshot",
+    "generatedAt": "2026-11-07T19:45:55.600Z",
+    "counts": {
+      "guilds": 3,
+      "projects": 8
+    },
+    "recordHashes": "All 12 guild and project records equal the hashes precomputed in Phase 1 from the fallback snapshot plus the proposed values; greenpill-podcast is absent; greensci and cookie-jar unchanged; no extra records.",
+    "expected": {
+      "guilds/greensci": "5076555ab63a",
+      "guilds/writers-guild": "403f879492bd",
+      "guilds/dev-guild": "596e19c4223f",
+      "projects/impact-reef": "4d12bd1185e3",
+      "projects/greenpill-v2-website": "e77e487f41ab",
+      "projects/grant-ships": "6ad9a20cc8ce",
+      "projects/cookie-jar": "796ae9a91ec0",
+      "projects/greenpill-impact-framework": "0dc025bc0783",
+      "projects/greenpill-podcast": "ABSENT",
+      "projects/greenwill": "7c526ce39eda",
+      "projects/public-goods-staking-protocol": "613f9acfee02",
+      "projects/green-goods": "db28599d0f25"
+    }
+  },
+  "pagesDeploy": {
+    "agentDispatch": "operational-content-updated repository_dispatch at 2026-11-07T19:44:04Z (run 42407637306), cancelled by the scheduled run below",
+    "run": "https://github.com/greenpill-dev-guild/network/actions/runs/42407648895",
+    "event": "schedule",
+    "headSha": "e44a678",
+    "build": "success, 2026-11-07T19:45:37Z to 19:47:24Z",
+    "deploy": "success, 2026-11-07T19:47:27Z to 19:47:59Z",
+    "buildMetadata": {
+      "builtAt": "2026-11-07T19:46:52.954Z",
+      "operationalSnapshot.generatedAt": "2026-11-07T19:46:53.108Z"
+    }
+  },
+  "pagesCheck": {
+    "where": "Afo's Brave (Claude in Chrome), live https://greenpill.network with a cache-busting query string, DOM read after load, about 19:48 to 19:50 UTC",
+    "devGuild": {
+      "url": "https://greenpill.network/guilds/dev-guild/",
+      "sectionHeadings": [
+        "Mandate",
+        "Principles",
+        "Projects",
+        "See the guild in motion.",
+        "Hats · How the guild is organized",
+        "People · Public contributors",
+        "Connect",
+        "Bring your craft into the guild."
+      ],
+      "mediaAndAppearances": "present: Media · Appearances, 5 appearance links (lead card plus 4)",
+      "hats": "present: 7 hats in 2 groups (Guild stewardship, Work areas), no open hats",
+      "projects": [
+        {
+          "name": "Green Goods",
+          "links": [
+            "github.com/greenpill-dev-guild/green-goods",
+            "greengoods.app"
+          ]
+        },
+        {
+          "name": "Public Goods Staking Protocol",
+          "links": [
+            "paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0"
+          ]
+        },
+        {
+          "name": "GreenWill",
+          "links": [
+            "hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411"
+          ]
+        },
+        {
+          "name": "Greenpill Impact Framework",
+          "links": [
+            "hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411"
+          ]
+        },
+        {
+          "name": "Cookie Jar",
+          "links": [
+            "github.com/greenpill-dev-guild/cookie-jar"
+          ]
+        },
+        {
+          "name": "Greenpill Network website",
+          "links": [
+            "github.com/greenpill-dev-guild/network",
+            "greenpill.network"
+          ]
+        }
+      ],
+      "absent": [
+        "Public proof copy",
+        "outputs section (Published by the guild / Public outputs)",
+        "Grant Ships and Impact Reef cards (inactive and archived)"
+      ]
+    },
+    "writersGuild": {
+      "url": "https://greenpill.network/guilds/writers-guild/",
+      "sectionHeadings": [
+        "Mandate",
+        "Published by the guild",
+        "People · Public contributors",
+        "Connect",
+        "Bring your craft into the guild."
+      ],
+      "publishedByTheGuild": [
+        "On-Chain Impact Networks",
+        "Onchain Capital Allocation Handbook: Explorers Edition",
+        "Greenpill Network newsletter",
+        "Web3 Tooling Series"
+      ],
+      "hero": "Founded 2023",
+      "metaDescription": "The Greenpill Writers Guild writes books, newsletters and research about the regenerative web3 ecosystem.",
+      "absent": [
+        "Public proof copy",
+        "Projects section (the podcast row was the guild's only project)",
+        "any podcast text inside <main>; the only 'Podcast' on the page is the site nav link to /library#podcast"
+      ]
+    },
+    "home": {
+      "devGuildTile": "new summary, mono line 'Open-source coordination tools' (PR #34), no 'public outputs' count anywhere on the page",
+      "writersGuildTile": "new summary; its mono line 'Stories, translations, longform' is hard-coded in packages/website/src/pages/index.astro and still uses the old framing (follow-up, not part of this change set)"
+    }
+  }
+}
