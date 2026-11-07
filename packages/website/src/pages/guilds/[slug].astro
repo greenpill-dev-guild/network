@@ -366,7 +366,7 @@ const projects = (await getOperationalProjects())
                           <ul class="gp-guild-hat-holders">
                             {hat.holders.map((holder: string) => (
                               <li class="gp-guild-person is-compact">
-                                <Avatar name={avatarName(holder)} size={32} />
+                                <span class="gp-guild-avatar" aria-hidden="true"><Avatar name={avatarName(holder)} size={32} /></span>
                                 <span>{holder}</span>
                               </li>
                             ))}
@@ -395,7 +395,7 @@ const projects = (await getOperationalProjects())
           <ul class="gp-guild-members">
             {contributors.map((member) => (
               <li class="gp-guild-person">
-                <Avatar name={avatarName(member.name)} size={56} />
+                <span class="gp-guild-avatar" aria-hidden="true"><Avatar name={avatarName(member.name)} size={56} /></span>
                 <span class="gp-guild-stack is-tight">
                   <Text variant="title-md" as="span">{member.name}</Text>
                   {member.role && <Text variant="body-sm" as="span">{member.role}</Text>}
@@ -707,6 +707,12 @@ const projects = (await getOperationalProjects())
     align-items: center;
     gap: var(--gp-space-md);
     min-width: 0;
+  }
+
+  /* Initials repeat the name beside them, so the avatar is hidden from assistive tech. */
+  .gp-guild-avatar {
+    display: inline-flex;
+    flex: none;
   }
 
   .gp-guild-person.is-compact {

@@ -15,10 +15,12 @@ Template, `packages/website/src/pages/guilds/[slug].astro` (both guild pages):
 - **Projects**: active projects only (`status` = `active`), highest featured weight first, with tech stack and links named by destination ("GitHub", "greengoods.app"). No `href="#"` cards.
 - **Media and appearances** replaces "Public proof". It reads `media.appearances` (`kind`, `source`, `title`, `href`, `date`, `people`): the first item is a lead card ("Listen on Libsyn"), the rest are rows. Renders only when there is at least one item.
 - **Hats**: a grouped list from the guild's `stewards` field (`group`, `role`, `name` or `holders`, optional `href`); "Open hat" when nobody holds a role. Renders only when data exists.
-- **People**: `publicMembers` as an initials-avatar grid with name and role, 4 / 3 / 2 columns at 1440 / 1024 / 375 (the DESIGN.md guild row). Bios are no longer shown.
+- **People**: `publicMembers` as an initials-avatar grid with name and role, 4 / 3 / 2 columns at 1440 / 1024 / 375 (the DESIGN.md guild row). Bios are no longer shown. The initials are hidden from assistive technology here and in the Hats list, so screen readers announce each name once (Codex review).
 - **Body text**: every reading paragraph uses the `--gp-body-lg` token (18px), as the July call asked.
 - Dates print as words ("Jan 2026"), never raw. No em dashes. No hand-set `target` or `rel` attributes (the old output and proof cards had them; the site-wide rule is `qa-brand-shell`'s).
 - The call-to-action band uses `color-mix()` from tokens instead of raw rgba and a gradient, so the six `scripts/data/ui-source-baseline.tsv` rows for this file were pruned (guild rows only).
+
+Directus field notes, `scripts/directus-studio-setup.ts` (guild fields only): `stewards`, `outputs` and `media` now describe the shapes the page reads, and `proof_signals` says it is not shown on the guild page (Codex review). They reach Data Studio only when `bun run directus:studio:setup` runs against production.
 
 Hub files: this handoff, `artifacts/qa-guilds-change-set.json`, and three preview screenshots in `artifacts/qa-guilds/`.
 
@@ -187,7 +189,7 @@ Requests to other sessions:
 - `qa-library` (sent, done in its branch per its reply): `id="guilds"` on the guild cards; a guild card label that doesn't count `proofSignals`; the Carbon Copy resource now links the published series; `writers-guild` removed from the podcast resource's `relatedGuildSlugs`.
 - `qa-stories`: done in PR #37. `greenpill-2026-thesis` is now a draft, as Afo decided, because its only source was the unpublished Paragraph preview. qa-stories also removed the Garden Season One story's `relatedGuild: writers-guild` (the Hub thread only plans a Writers Guild recap); its handoff records that as a judgment call Afo can reverse. The Web3 Tooling Series is listed there as a story candidate.
 - `qa-system-pass`: after the change set is applied, refresh the fallback snapshot with `bun run content:snapshot:from-agent`, then confirm its `projects` no longer include `greenpill-podcast` and that the Dev Guild record has empty `outputs` and `proofSignals`. The project seeds are already in step (done here after the CodeRabbit review, since no session owned them).
-- Whoever owns `scripts/directus-studio-setup.ts`: the guild `stewards` field note says "Public steward cards"; it now also drives the Hats list (`group`, `role`, `name` or `holders`, optional `href`), and `media` now holds `appearances` (`kind`, `source`, `title`, `href`, `date`, `people`). Field notes would help stewards.
+- Data Studio field notes: updated in this PR (no session owned `scripts/directus-studio-setup.ts`). To show them to stewards, run `bun run directus:studio:setup` against production together with the change set; it is a production write, so it needs Afo's OK at that time.
 
 Other notes:
 
