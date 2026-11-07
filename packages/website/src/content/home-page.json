@@ -153,12 +153,6 @@
   },
   "proofSignals": [
     {
-      "label": "Podcast archive",
-      "value": "296 episodes",
-      "source": "Libsyn RSS snapshot 2026-06-11",
-      "href": "https://rss.libsyn.com/shows/400481/destinations/3304589.xml"
-    },
-    {
       "label": "Dev Guild grant",
       "value": "2.5 ETH",
       "source": "S013 Crypto Altruists",

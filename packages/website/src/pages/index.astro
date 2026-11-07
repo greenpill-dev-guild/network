@@ -12,6 +12,7 @@ import HomeMap from '../components/page-sections/HomeMap.astro';
 import homePage from '../content/home-page.json';
 import garden from '../content/garden.json';
 import podcast from '../content/podcast.json';
+import podcastFeed from '../data/podcast-feed-snapshot.json';
 import socialLinks from '../content/social-links.json';
 import { getOperationalChapters, getOperationalGuilds } from '../lib/operational-content';
 import { publicGuildPath } from '../lib/public-routes';
@@ -43,9 +44,9 @@ const writersGuild = guilds.find((g) => g.id === 'writers-guild');
 const devGuildPath = publicGuildPath(devGuild?.id);
 const writersGuildPath = publicGuildPath(writersGuild?.id);
 
-const proofSignal = homePage.proofSignals?.find((s) => s.label === 'Podcast archive');
-const podcastEpisodeCount = proofSignal?.value ?? '296 episodes';
-const podcastHref = proofSignal?.href ?? 'https://podcasts.apple.com/us/podcast/greenpill/id1609313639';
+// Same source as the Library: the RSS feed snapshot, refreshed at build time.
+const podcastEpisodeCount = `${podcastFeed.episodeCount} episodes`;
+const applePodcastsHref = 'https://podcasts.apple.com/us/podcast/greenpill/id1609313639';
 
 const activeChapterCount = chapters.length;
 
@@ -232,7 +233,7 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
                   <Text variant="body-sm">{podcast.secondaryDescription}</Text>
                 )}
                 <div class="gp-home-podcast-cta">
-                  <Button href={podcastHref} variant="ghost">Listen on Apple Podcasts</Button>
+                  <Button href={applePodcastsHref} variant="ghost">Listen on Apple Podcasts</Button>
                   <ArrowLink href={podcast.youtubeLink || 'https://www.youtube.com/@Green_Pill_Podcast'} size="sm">Watch on YouTube</ArrowLink>
                 </div>
               </div>
