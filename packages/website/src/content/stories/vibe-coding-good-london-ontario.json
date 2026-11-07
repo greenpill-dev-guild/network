@@ -14,7 +14,7 @@
     "open-source"
   ],
   "body": "On Tuesday, April 28, 2026, Greenpill London Ontario presented Vibe Coding for Good, a collaborative build night at Reimagine Co, 206 Piccadilly Street in London, Ontario. The evening ran from 6:00 to 8:30 PM and was listed on the events calendar of TechAlliance of Southwestern Ontario.\n\nReimagine Co describes itself as more than a maker of plant-based prepared meals: it calls itself London, Ontario's hub for community action and environmental activism.\n\nGreenpill London Ontario joined the network in early 2025. Greenpill's Q1 2025 update introduced it as one of the first chapters onboarded after the network revamped its onboarding, led by the Institute for Community Sustainability, whose work includes a Repair Café program and a Thing Library.",
-  "image": "",
+  "image": "/images/hifi/topo-bg.png",
   "author": "",
   "authorRole": "",
   "authorBio": "",
@@ -53,14 +53,14 @@
   "featuredWeight": 70,
   "readTime": "",
   "media": {
-    "image": "",
-    "imageAlt": "",
-    "ogImage": ""
+    "image": "/images/hifi/topo-bg.png",
+    "imageAlt": "Green gradient texture.",
+    "ogImage": "/images/hifi/topo-bg.png"
   },
   "seo": {
     "title": "Vibe Coding for Good in London, Ontario · Greenpill Stories",
     "description": "Greenpill London Ontario presented Vibe Coding for Good, a collaborative build night at Reimagine Co, on April 28, 2026.",
-    "ogImage": "",
+    "ogImage": "/images/hifi/topo-bg.png",
     "canonicalPath": "/stories/vibe-coding-good-london-ontario",
     "noindex": false
   }
