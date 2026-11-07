@@ -35,6 +35,8 @@ The hint is a description rather than part of the link name, following the repo'
 
 Links that page scripts build in the browser are created after the rule has run. Codex review on #39 flagged the chapter impact events (`chapters/[slug].astro`, `renderEvents`): they now get the same description, with the hint's id and text passed from `lib/external-links.ts` through `define:vars`, and the script adds the hint element if a page lacks it. The impact panel is off site-wide today (`CHAPTER_IMPACT_UI_ENABLED = false` in `packages/shared`), so this was checked on a local build with the flag on (not committed): with a stubbed impact response, both event links carry `target="_blank"`, `rel="noopener"` and the description, the hint is recreated once when removed, and axe reports 0 violations. HomeMap's runtime links already say "in a new tab" in their `aria-label`, so they are left alone; a site-wide runtime hook would have made screen readers say it twice there.
 
+A second Codex finding: the Garden assessment's "Close second" link copies its `href` from a result panel in the browser, so with Steward as the tied second result it became the external steward-calendar link without the new-tab attributes. `GardenAssessment.astro` now copies `target`, `rel` and `aria-describedby` from the same panel link, which the rule already processed, and removes them when the destination is internal. Checked in Brave on the exported build: three Learn, three Steward and one Local answer gives Steward as the second result with `target="_blank"`, `rel="noopener noreferrer"` and the description; three Learn, three Local and one Build gives `/chapters` with none of them. The test answers were cleared from local storage afterwards.
+
 ### Footer (findings 6, 16, 20)
 
 `SiteFooter.astro`, following the July 16 footer spec:
@@ -63,6 +65,7 @@ Old files left in place: `images/greenpill-logo.svg` (the Garden page hero still
 - `scripts/public-content-contract.test.ts`: the "site shell keeps the graphic page background visible" test pinned the footer to the literal `rgba(7, 24, 15, 0)` (a fully transparent background, removed here as a no-op). It now checks the intent: the `.gp-site-footer` rule sets no background. One assertion at line 453; PR #38 edits the same file only at the imports and from line 462 down, so the two merge cleanly.
 - New files the rule needs: `packages/website/src/middleware.ts`, `packages/website/src/lib/external-links.ts`, `scripts/external-links.test.ts`. No `package.json` script was added; run the test with `bun test scripts/external-links.test.ts`.
 - `packages/website/src/pages/chapters/[slug].astro`: the impact-events script describes its runtime links as opening in a new tab (Codex review fix; no open PR touches this file).
+- `packages/website/src/components/page-sections/GardenAssessment.astro` (owned by `qa-assessment`, which has no branch or PR yet): the "Close second" link copies the new-tab attributes along with its `href`, one block in `showResult` (Codex review fix). `qa-assessment` should keep that block when it reworks the results.
 - No change to `package.json`, the lockfile, `.github/workflows/**`, `CLAUDE.md`, `AGENTS.md` or `.claude/**`. `social-links.json` and `keystatic.config.ts` are unchanged (PR #34 has not merged).
 
 ## Evidence

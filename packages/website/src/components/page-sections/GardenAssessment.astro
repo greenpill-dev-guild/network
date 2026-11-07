@@ -352,8 +352,19 @@ const questionCount = QUESTIONS.length;
           : undefined;
         if (secondaryPanel) {
           secondaryLink.textContent = secondaryPanel.dataset.gaSecondaryLabel || secondaryPanel.dataset.gaName || '';
-          const href = (secondaryPanel.querySelector('a') as HTMLAnchorElement | null)?.getAttribute('href');
-          if (href) secondaryLink.setAttribute('href', href);
+          const source = secondaryPanel.querySelector('a') as HTMLAnchorElement | null;
+          const href = source?.getAttribute('href');
+          if (source && href) {
+            secondaryLink.setAttribute('href', href);
+            // The panel's link went through the site-wide link rule when the
+            // page was built; copy its new-tab attributes too, so an external
+            // destination (the steward call) opens and is described the same way.
+            for (const name of ['target', 'rel', 'aria-describedby']) {
+              const value = source.getAttribute(name);
+              if (value === null) secondaryLink.removeAttribute(name);
+              else secondaryLink.setAttribute(name, value);
+            }
+          }
           secondaryEl.hidden = false;
         } else {
           secondaryEl.hidden = true;
