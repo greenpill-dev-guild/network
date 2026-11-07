@@ -3,6 +3,7 @@ import {
   normalizeImpactSources,
 } from './chapter-impact.js';
 import type { PublicImpactSourceBinding } from './chapter-impact.js';
+import { isPublicMapCoordinate, parseMapCoordinate } from './map-locations.js';
 
 type UnknownRecord = Record<string, any>;
 
@@ -140,11 +141,6 @@ const getPublicationStatus = (record: UnknownRecord): string => cleanString(
   record?.data?.publication_status
 );
 
-const normalizeNumber = (value: unknown): number | null => {
-  const number = typeof value === 'number' ? value : Number(value);
-  return Number.isFinite(number) ? number : null;
-};
-
 const normalizeSlug = (record: UnknownRecord): string => (
   cleanString(record?.slug) ||
   cleanString(record?.id) ||
@@ -281,9 +277,11 @@ export function toPublicOperationalLocations(chapters: UnknownRecord[] = []): Pu
   return normalizeCollection(chapters, 'chapters')
     .filter((chapter) => !chapter.seo?.noindex)
     .map((chapter) => {
-      const lat = normalizeNumber(chapter.lat ?? chapter.latitude);
-      const long = normalizeNumber(chapter.long ?? chapter.lng ?? chapter.longitude);
-      if (lat === null || long === null) return null;
+      const lat = parseMapCoordinate(chapter.lat ?? chapter.latitude);
+      const long = parseMapCoordinate(chapter.long ?? chapter.lng ?? chapter.longitude);
+      // The map's rule: a chapter with a blank, 0,0 or out-of-range point is
+      // left out rather than published somewhere false.
+      if (lat === null || long === null || !isPublicMapCoordinate(lat, long)) return null;
 
       return {
         id: chapter.slug,

@@ -16,7 +16,10 @@ import {
   isPublicMapCoordinate,
   MAP_COORDINATE_PROBLEM_MESSAGES,
   MAP_EDGE_COORDINATE_MESSAGE,
+  parseStoredMapCoordinate,
+  toStoredMapCoordinate,
 } from '@greenpill-network/shared/map-locations';
+import { toPublicOperationalLocations } from '@greenpill-network/shared/public-content';
 import {
   createMapNodeSubmission,
   createMapNodeUpdateRequest,
@@ -2072,4 +2075,180 @@ test('D2: the home map and footer drop the ecoregion layer and its credit', asyn
 
   const scriptFiles = await readdir(new URL('./', import.meta.url));
   assert.equal(scriptFiles.includes('generate-public-ecoregions.ts'), false);
+});
+
+// PRD-1409 review follow-ups: PostgreSQL rounding and chapter anchors.
+// ---------------------------------------------------------------------------
+
+test('coordinates are judged at the six decimal places PostgreSQL stores', () => {
+  // numeric(9, 6) rounds anything finer, so the rule judges the rounded value.
+  assert.equal(toStoredMapCoordinate(89.9999999), 90);
+  assert.equal(toStoredMapCoordinate(-179.9999996), -180);
+  assert.equal(toStoredMapCoordinate(51.9244424), 51.924442);
+  assert.equal(Object.is(toStoredMapCoordinate(-0.0000004), 0), true);
+  assert.equal(parseStoredMapCoordinate('0.0000001'), 0);
+  assert.equal(parseStoredMapCoordinate(''), null);
+
+  const cases: Array<[unknown, unknown, string | null, boolean]> = [
+    // [latitude, longitude, problem, edge point once stored]
+    [0, 0.0000001, 'null_island', false],
+    ['-0.0000004', '0.0000004', 'null_island', false],
+    [0.000001, 0, null, false],
+    [89.9999999, 10, null, true],
+    [10, -179.9999996, null, true],
+    [90.0000004, 10, null, true],
+    [90.000001, 10, 'latitude_out_of_range', false],
+    [10, 180.000001, 'longitude_out_of_range', false],
+  ];
+  for (const [lat, long, problem, edge] of cases) {
+    assert.equal(getMapCoordinateProblem(lat, long), problem, `${String(lat)}, ${String(long)}`);
+    assert.equal(isMapEdgeCoordinate(lat, long), edge, `${String(lat)}, ${String(long)}`);
+  }
+});
+
+test('the agent saves the six-decimal point it judged, so rounding cannot turn a raw point into an edge or 0,0', async () => {
+  const refused = [
+    { place: 'Longyearbyen', lat: 89.9999999, long: 10, message: MAP_EDGE_COORDINATE_MESSAGE },
+    { place: 'Port Harcourt', lat: 0, long: 0.0000001, message: MAP_COORDINATE_PROBLEM_MESSAGES.null_island },
+  ];
+  for (const point of refused) {
+    const { sql, statements } = createRecordingSql((text) => (
+      text.includes('from intake.map_node_intake_settings') ? [{ liveOnboardingEnabled: false }] : []
+    ));
+    await assert.rejects(
+      () => createMapNodeSubmission(sql, {
+        name: 'Legacy Browser Member',
+        place: point.place,
+        lat: point.lat,
+        long: point.long,
+        themes: ['public'],
+        email: 'legacy@example.org',
+      }, {}, { env: LEGACY_LOCATION_ENV }),
+      (error) => error instanceof PublicInputError
+        && error.code === 'invalid_coordinates'
+        && error.message === point.message,
+      point.place
+    );
+    assert.equal(wroteTo(statements, 'intake.map_node_submissions'), false);
+  }
+
+  const { sql, statements } = createRecordingSql((text) => {
+    if (text.includes('from intake.map_node_intake_settings')) return [{ liveOnboardingEnabled: false }];
+    if (text.includes('insert into intake.map_node_submissions')) {
+      return [{ id: '00000000-0000-4000-8000-000000000126', status: 'pending', displayName: 'Rotterdam Member', placeName: 'Rotterdam, Netherlands', lat: 51.924442, long: 4.47775, themes: ['public'], createdAt: '2026-11-07T12:00:00.000Z' }];
+    }
+    if (text.includes('insert into intake.map_node_moderation_notifications')) return [{ id: 'notification-1' }];
+    return [];
+  });
+  await createMapNodeSubmission(sql, {
+    name: 'Rotterdam Member',
+    place: 'Rotterdam, Netherlands',
+    lat: 51.9244424,
+    long: '4.4777504',
+    themes: ['public'],
+    email: 'member@example.org',
+  }, {}, { env: LEGACY_LOCATION_ENV, deferProviderSend: true });
+  const insert = insertedInto(statements, 'intake.map_node_submissions');
+  assert.ok(insert);
+  assert.equal(insert.values.includes(51.924442), true);
+  assert.equal(insert.values.includes(4.47775), true);
+  assert.equal(insert.values.includes(51.9244424), false);
+
+  // Owner edits round the same way before the pair is judged.
+  const nodeId = '44444444-4444-4444-8444-444444444444';
+  const tokenRow = {
+    tokenId: '55555555-5555-4555-8555-555555555555',
+    normalizedEmail: 'owner@example.org',
+    submissionId: nodeId,
+    displayName: 'Owner',
+    placeName: 'Awka',
+    city: '',
+    region: '',
+    country: '',
+    lat: 6.2104,
+    long: 7.0661,
+    themes: ['public'],
+    publicNote: '',
+    currentSubmissionUpdatedAt: '2026-06-17T12:00:00.000Z',
+  };
+  const updateSql = () => createRecordingSql((text) => {
+    if (text.includes('from intake.map_node_edit_tokens')) return [tokenRow];
+    if (text.includes('insert into intake.map_node_update_requests')) return [{ id: 'update-request-2', status: 'pending' }];
+    if (text.includes('update intake.map_node_edit_tokens')) return [{ id: tokenRow.tokenId }];
+    return [];
+  });
+  const nearNullIsland = updateSql();
+  await assert.rejects(
+    () => createMapNodeUpdateRequest(nearNullIsland.sql, nodeId, { token: 'valid-token', lat: 0.0000001, long: -0.0000004 }, {}, {
+      env: LEGACY_LOCATION_ENV,
+    }),
+    (error) => error instanceof PublicInputError
+      && error.code === 'invalid_coordinates'
+      && error.message === MAP_COORDINATE_PROBLEM_MESSAGES.null_island
+  );
+  assert.equal(wroteTo(nearNullIsland.statements, 'intake.map_node_update_requests'), false);
+
+  const finer = updateSql();
+  await createMapNodeUpdateRequest(finer.sql, nodeId, { token: 'valid-token', lat: 6.21040049, long: 7.06610049 }, {}, {
+    env: LEGACY_LOCATION_ENV,
+  });
+  const update = insertedInto(finer.statements, 'intake.map_node_update_requests');
+  assert.ok(update);
+  assert.equal(update.values.includes(6.2104), true);
+  assert.equal(update.values.includes(7.0661), true);
+});
+
+test('place search confirms the six-decimal point it stores, and a pin that rounds to 0,0 never reaches the provider', async () => {
+  const providerCalls: string[] = [];
+  const nearNullIsland = { display_name: 'Null Island', lat: '0.0000001', lon: '-0.0000004', addresstype: 'island', osm_type: 'node', osm_id: 1 };
+  const nearEquator = { display_name: 'Equator Marker', lat: '0.000002', lon: '0.0000004', addresstype: 'island', osm_type: 'node', osm_id: 5 };
+  const rotterdam = { display_name: 'Rotterdam, South Holland, Netherlands', lat: '51.9244424', lon: '4.4777500', addresstype: 'city', osm_type: 'relation', osm_id: 1411101 };
+  const { sql, statements } = createLocationSql();
+  const repository = createMapLocationRepository({
+    createSql: () => sql,
+    env: { MAP_GEOCODER_BASE_URL: 'https://geocoder.example.test' },
+    now: () => new Date('2026-11-07T12:00:00.000Z'),
+    fetchImpl: async (url) => {
+      providerCalls.push(String(url));
+      return Response.json([nearNullIsland, nearEquator, rotterdam]);
+    },
+  });
+
+  const search = await repository.search('Rotterdam', { rateLimitKey: '198.51.100.21' });
+  assert.deepEqual(search.results.map((result) => [result.label, result.lat, result.long]), [
+    ['Equator Marker', 0.000002, 0],
+    ['Rotterdam, South Holland, Netherlands', 51.924442, 4.47775],
+  ]);
+  const confirmations = statements.filter((statement) => statement.text.includes('insert into intake.map_location_confirmations'));
+  assert.equal(confirmations.some((statement) => statement.values.includes(51.924442) && statement.values.includes(4.47775)), true);
+  assert.equal(confirmations.some((statement) => statement.values.includes(51.9244424)), false);
+
+  const callsBeforeReverse = providerCalls.length;
+  await assert.rejects(
+    () => repository.reverse(0.0000001, -0.0000004, { rateLimitKey: '198.51.100.21' }),
+    (error) => error instanceof PublicInputError
+      && error.code === 'invalid_coordinates'
+      && error.message === MAP_COORDINATE_PROBLEM_MESSAGES.null_island
+  );
+  assert.equal(providerCalls.length, callsBeforeReverse);
+});
+
+test('chapter anchors follow the map rule on the server-rendered home map and in /locations.json', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  const projectionStart = component.indexOf('const chapterNodes');
+  const chapterFilter = component.slice(projectionStart, component.indexOf('.map((c) =>', projectionStart));
+  assert.match(chapterFilter, /isPublicMapCoordinate\(c\.data\.lat, c\.data\.long\)/);
+
+  const locations = toPublicOperationalLocations([
+    { slug: 'greenpill-brasil', name: 'Greenpill Brasil', lat: -22.9068, long: -43.1729 },
+    { slug: 'placeholder', name: 'Placeholder Chapter', lat: 0, long: 0 },
+    // Null used to read as 0, which published this chapter at 0,0.
+    { slug: 'blank', name: 'Blank Chapter', latitude: null, longitude: null },
+    { slug: 'nowhere', name: 'Nowhere Chapter', lat: 95, long: 10 },
+    { slug: 'greenpill-fiji', name: 'Greenpill Fiji', lat: -16.8, long: 180 },
+  ]);
+  assert.deepEqual(locations.map((location) => location.id), ['greenpill-brasil', 'greenpill-fiji']);
 });

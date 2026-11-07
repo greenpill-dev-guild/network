@@ -6,6 +6,7 @@ import {
   MAP_COORDINATE_PROBLEM_MESSAGES,
   MAP_EDGE_COORDINATE_MESSAGE,
   type MapCoordinateProblem,
+  parseStoredMapCoordinate,
 } from '@greenpill-network/shared/map-locations';
 import {
   containsPrivateMapNodeField,
@@ -157,11 +158,9 @@ const cleanIpAddress = (value: unknown): string => {
   return isIP(candidate) ? candidate : '';
 };
 
-const normalizeNumber = (value: unknown): number | null => {
-  if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) return null;
-  const number = typeof value === 'number' ? value : Number(value);
-  return Number.isFinite(number) ? number : null;
-};
+// Coordinates are rounded to the stored six decimal places as they are read, so
+// every check below judges exactly the value the insert saves.
+const normalizeCoordinate = parseStoredMapCoordinate;
 
 const normalizeThemes = normalizePublicMapThemeSlugs;
 
@@ -336,8 +335,8 @@ function normalizeSubmissionInput(
   }
 
   const legacyPlaceName = cleanString(input.placeName ?? input.place);
-  const legacyLat = normalizeNumber(input.lat ?? input.latitude);
-  const legacyLong = normalizeNumber(input.long ?? input.lng ?? input.longitude);
+  const legacyLat = normalizeCoordinate(input.lat ?? input.latitude);
+  const legacyLong = normalizeCoordinate(input.long ?? input.lng ?? input.longitude);
   const legacyLocation = !locationConfirmationId && !requireLocationConfirmation
     ? {
       placeName: legacyPlaceName,
@@ -608,7 +607,7 @@ function normalizeUpdateNumber(
 ): number | undefined {
   for (const key of keys) {
     if (!Object.hasOwn(input, key)) continue;
-    const value = normalizeNumber(input[key]);
+    const value = normalizeCoordinate(input[key]);
     if (value === null) {
       throw new PublicInputError('invalid_update_field', `${label} is invalid.`);
     }
@@ -723,8 +722,8 @@ function buildCurrentPublicFields(row: UnknownRecord) {
     city: cleanString(row.city),
     region: cleanString(row.region),
     country: cleanString(row.country),
-    latitude: normalizeNumber(row.lat),
-    longitude: normalizeNumber(row.long),
+    latitude: normalizeCoordinate(row.lat),
+    longitude: normalizeCoordinate(row.long),
     themes: normalizeThemes(row.themes),
     public_note: cleanString(row.publicNote),
   };

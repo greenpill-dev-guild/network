@@ -1,5 +1,6 @@
 ---
 import { getOperationalChapters } from '../../lib/operational-content';
+import { isPublicMapCoordinate } from '@greenpill-network/shared/map-locations';
 import { PUBLIC_MAP_THEMES } from '@greenpill-network/shared/map-state';
 import { WORLD_LAND_RINGS, type WorldLandRing } from '../../data/world-land-rings';
 
@@ -96,8 +97,15 @@ type ChapterNode = {
 
 const chapters = await getOperationalChapters();
 
+// Chapter anchors follow the /map/state rule: a chapter saved at 0,0 or out of
+// range is left off rather than drawn somewhere false. The live refresh never
+// redraws chapters, so this is the only place that can leave one off.
 const chapterNodes: ChapterNode[] = chapters
-  .filter((c) => typeof c.data.lat === 'number' && typeof c.data.long === 'number')
+  .filter((c) => (
+    typeof c.data.lat === 'number' &&
+    typeof c.data.long === 'number' &&
+    isPublicMapCoordinate(c.data.lat, c.data.long)
+  ))
   .map((c) => {
     const size = 1.38;
     const chapterNodeId = `chapter:${c.id}`;

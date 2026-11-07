@@ -45,6 +45,22 @@ export function parseMapCoordinate(value: unknown): number | null {
   return Number.isFinite(number) ? number : null;
 }
 
+// Map coordinates are stored as numeric(9, 6), and PostgreSQL rounds anything
+// finer: (89.9999999, 10) is saved as (90, 10) and (0, 0.0000001) as (0, 0).
+// The rules below judge the stored value, and writers save the rounded value
+// they judged, so the database never holds a point the rules did not see.
+export const MAP_COORDINATE_DECIMAL_PLACES = 6;
+
+export function toStoredMapCoordinate(value: number): number {
+  const stored = Number(value.toFixed(MAP_COORDINATE_DECIMAL_PLACES));
+  return stored === 0 ? 0 : stored;
+}
+
+export function parseStoredMapCoordinate(value: unknown): number | null {
+  const number = parseMapCoordinate(value);
+  return number === null ? null : toStoredMapCoordinate(number);
+}
+
 // Why a latitude/longitude pair can never be a map node's location: missing or
 // non-numeric, out of range, or exactly 0,0 (an empty field read as 0, never a
 // place someone gave). Refused with an explicit error, never clamped.
@@ -62,8 +78,8 @@ export const MAP_COORDINATE_PROBLEM_MESSAGES: Readonly<Record<MapCoordinateProbl
 });
 
 export function getMapCoordinateProblem(lat: unknown, long: unknown): MapCoordinateProblem | null {
-  const latitude = parseMapCoordinate(lat);
-  const longitude = parseMapCoordinate(long);
+  const latitude = parseStoredMapCoordinate(lat);
+  const longitude = parseStoredMapCoordinate(long);
   if (latitude === null || longitude === null) return 'missing';
   if (Math.abs(latitude) > 90) return 'latitude_out_of_range';
   if (Math.abs(longitude) > 180) return 'longitude_out_of_range';
@@ -81,8 +97,8 @@ export function isPublicMapCoordinate(lat: unknown, long: unknown): boolean {
 // the two apart, so an edge point is accepted from a confirmation and refused
 // from raw coordinates.
 export function isMapEdgeCoordinate(lat: unknown, long: unknown): boolean {
-  const latitude = parseMapCoordinate(lat);
-  const longitude = parseMapCoordinate(long);
+  const latitude = parseStoredMapCoordinate(lat);
+  const longitude = parseStoredMapCoordinate(long);
   if (latitude === null || longitude === null) return false;
   return Math.abs(latitude) === 90 || Math.abs(longitude) === 180;
 }

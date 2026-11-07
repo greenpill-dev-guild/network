@@ -7,6 +7,7 @@ import {
   normalizeMapLatitude,
   normalizeMapLocationQuery,
   normalizeMapLongitude,
+  parseStoredMapCoordinate,
   type PublicMapLocation,
   type PublicMapLocationKind,
   type PublicMapLocationReversePayload,
@@ -154,8 +155,10 @@ function locationKind(raw: UnknownRecord): PublicMapLocationKind | null {
 function normalizeCandidate(raw: unknown): NormalizedLocationCandidate | null {
   const record = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw as UnknownRecord : {};
   const label = cleanString(record.display_name ?? record.name ?? record.label);
-  const lat = normalizeMapLatitude(record.lat);
-  const long = normalizeMapLongitude(record.lon ?? record.long);
+  // Rounded to the stored six decimal places, so the confirmation saves, and
+  // the browser shows, exactly the point judged below.
+  const lat = parseStoredMapCoordinate(record.lat);
+  const long = parseStoredMapCoordinate(record.lon ?? record.long);
   const cachedKind = cleanString(record.kind);
   const kind = (cachedKind === 'settlement' || cachedKind === 'region' || cachedKind === 'country')
     ? cachedKind as PublicMapLocationKind
@@ -167,8 +170,8 @@ function normalizeCandidate(raw: unknown): NormalizedLocationCandidate | null {
   // inventing an id for a response we cannot trace in the audit record.
   const providerId = cleanString(record.providerId) || (osmType && osmId ? `${osmType}:${osmId}` : '');
   if (!label || lat === null || long === null || !kind || !providerId) return null;
-  // A provider point at 0,0 or out of range is never offered as a place a
-  // person can confirm. An exact edge point (Fiji's meridian) is a real place.
+  // A provider point stored as 0,0 or out of range is never offered as a place
+  // a person can confirm. An exact edge point (Fiji's meridian) is a real place.
   if (!isPublicMapCoordinate(lat, long)) return null;
   return {
     label,
