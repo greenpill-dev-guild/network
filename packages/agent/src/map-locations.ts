@@ -167,8 +167,8 @@ function normalizeCandidate(raw: unknown): NormalizedLocationCandidate | null {
   // inventing an id for a response we cannot trace in the audit record.
   const providerId = cleanString(record.providerId) || (osmType && osmId ? `${osmType}:${osmId}` : '');
   if (!label || lat === null || long === null || !kind || !providerId) return null;
-  // A provider point at a pole, the antimeridian or 0,0 is never offered as a
-  // place a person can confirm.
+  // A provider point at 0,0 or out of range is never offered as a place a
+  // person can confirm. An exact edge point (Fiji's meridian) is a real place.
   if (!isPublicMapCoordinate(lat, long)) return null;
   return {
     label,
@@ -598,8 +598,9 @@ export function createMapLocationRepository({
     async reverse(lat, long, requestMeta) {
       const latitude = normalizeMapLatitude(lat);
       const longitude = normalizeMapLongitude(long);
-      // Refused before any lookup: a pin dragged past the map edge arrives as a
-      // pole or the antimeridian, and an empty field must not read as 0.
+      // Blank, out-of-range and 0,0 pins are refused before any lookup. A pin
+      // on the map's edge goes to the geocoder: it confirms a real place there
+      // (Fiji's meridian) and finds nothing near a pin clamped to the edge.
       const problem = getMapCoordinateProblem(lat, long);
       if (problem || latitude === null || longitude === null) {
         throw new PublicInputError('invalid_coordinates', MAP_COORDINATE_PROBLEM_MESSAGES[problem ?? 'missing']);

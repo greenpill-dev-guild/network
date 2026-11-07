@@ -2,7 +2,9 @@ import { createHash, randomBytes } from 'node:crypto';
 import { isIP } from 'node:net';
 import {
   getMapCoordinateProblem,
+  isMapEdgeCoordinate,
   MAP_COORDINATE_PROBLEM_MESSAGES,
+  MAP_EDGE_COORDINATE_MESSAGE,
   type MapCoordinateProblem,
 } from '@greenpill-network/shared/map-locations';
 import {
@@ -163,13 +165,23 @@ const normalizeNumber = (value: unknown): number | null => {
 
 const normalizeThemes = normalizePublicMapThemeSlugs;
 
-// Every write path checks the final pair: a pole, the antimeridian or 0,0 is
+// Every write path checks the final pair: out of range, non-numeric or 0,0 is
 // refused with an explicit error, never clamped. The June 2026 add-node client
-// saved such points (PRD-1409).
+// saved 0,0 and pins clamped to the map edge (PRD-1409).
 function assertPublicMapCoordinates(lat: unknown, long: unknown): void {
   const problem = getMapCoordinateProblem(lat, long);
   if (problem) {
     throw new PublicInputError('invalid_coordinates', MAP_COORDINATE_PROBLEM_MESSAGES[problem]);
+  }
+}
+
+// Raw coordinates (the rollout-window path) carry no geocoder result, so an
+// exact edge point cannot be told from a clamped pin. It needs a confirmed
+// place, which still saves real edge locations such as Fiji's.
+function assertRawMapCoordinates(lat: unknown, long: unknown): void {
+  assertPublicMapCoordinates(lat, long);
+  if (isMapEdgeCoordinate(lat, long)) {
+    throw new PublicInputError('invalid_coordinates', MAP_EDGE_COORDINATE_MESSAGE);
   }
 }
 
@@ -344,7 +356,7 @@ function normalizeSubmissionInput(
   if (!locationConfirmationId && (!legacyLocation?.placeName || legacyLocation.lat === null || legacyLocation.long === null)) {
     throw new PublicInputError('invalid_coordinates', 'A valid place, latitude, and longitude are required during the rollout window.');
   }
-  if (legacyLocation) assertPublicMapCoordinates(legacyLocation.lat, legacyLocation.long);
+  if (legacyLocation) assertRawMapCoordinates(legacyLocation.lat, legacyLocation.long);
 
   if (!isValidOwnerEmail(email)) {
     throw new PublicInputError('invalid_email', 'A valid email is required.');
@@ -1492,11 +1504,12 @@ export async function createMapNodeUpdateRequest(
     const proposedFields = proposal.proposedPublicFields;
     if (Object.hasOwn(proposedFields, 'latitude') || Object.hasOwn(proposedFields, 'longitude')) {
       // Check the pair the node would end up with, so changing one half cannot
-      // leave the stored other half at a pole, the antimeridian or 0,0.
-      assertPublicMapCoordinates(
-        Object.hasOwn(proposedFields, 'latitude') ? proposedFields.latitude : tokenRow.lat,
-        Object.hasOwn(proposedFields, 'longitude') ? proposedFields.longitude : tokenRow.long,
-      );
+      // keep a bad stored other half. A confirmed place may sit on the edge;
+      // raw coordinates may not (see assertRawMapCoordinates).
+      const nextLat = Object.hasOwn(proposedFields, 'latitude') ? proposedFields.latitude : tokenRow.lat;
+      const nextLong = Object.hasOwn(proposedFields, 'longitude') ? proposedFields.longitude : tokenRow.long;
+      if (proposal.locationConfirmationId) assertPublicMapCoordinates(nextLat, nextLong);
+      else assertRawMapCoordinates(nextLat, nextLong);
     }
     const existingPending = await tx`
       select id
@@ -1661,9 +1674,9 @@ function reportHiddenMapNodes(hidden: HiddenMapNode[]): void {
   console.warn('map_node_hidden_invalid_coordinates', { count: hidden.length, nodes: hidden });
 }
 
-// Approved rows at impossible coordinates are left off the public list (see
-// toPublicMapNode) and reported by public id and problem only, so operators can
-// repair them; nothing private is logged.
+// Approved rows at 0,0 or out-of-range coordinates are left off the public list
+// (see toPublicMapNode) and reported by public id and problem only, so
+// operators can repair them; nothing private is logged.
 export async function listPublicMapNodes(
   sql: SqlLike,
   { reportHiddenNodes = reportHiddenMapNodes }: { reportHiddenNodes?: (hidden: HiddenMapNode[]) => void } = {}

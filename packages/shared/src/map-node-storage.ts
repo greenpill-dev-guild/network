@@ -99,7 +99,7 @@ export function loadLocalPendingNodes(storage?: PendingMapNodeStorage | null): O
     if (!Array.isArray(parsed)) return [];
 
     // Browsers that used the June 2026 add-node step can still hold a pending
-    // node at 0,0 or a pole; it is dropped rather than drawn.
+    // node at 0,0; it is dropped rather than drawn.
     return parsed
       .map((node) => createLocalPendingMapNode(node, node.createdAt || new Date()))
       .filter((node) => isPublicMapCoordinate(node.lat, node.long));

@@ -290,8 +290,8 @@ export function toPublicMapTheme(theme: Partial<PublicMapTheme> & UnknownRecord)
 export function toPublicMapStateChapterNode(location: UnknownRecord): PublicMapStateNode | null {
   const lat = parseMapCoordinate(location?.lat ?? location?.latitude);
   const long = parseMapCoordinate(location?.long ?? location?.lng ?? location?.longitude);
-  // A chapter anchor at a pole, the antimeridian or 0,0 is a content error;
-  // leave it off the map rather than draw it at an edge.
+  // A chapter anchor at 0,0 or out of range is a content error; leave it off
+  // the map rather than draw it somewhere false.
   if (lat === null || long === null || !isPublicMapCoordinate(lat, long)) return null;
 
   const slug = cleanString(location?.slug ?? location?.id);

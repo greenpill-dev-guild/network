@@ -45,10 +45,9 @@ export function parseMapCoordinate(value: unknown): number | null {
   return Number.isFinite(number) ? number : null;
 }
 
-// Why a latitude/longitude pair cannot be a map node's location. Poles, the
-// antimeridian and 0,0 are what broken clients produce (a drag clamped to the
-// map edge, an empty field read as 0), never a place someone gave. They are
-// rejected with an explicit error, not clamped and not drawn.
+// Why a latitude/longitude pair can never be a map node's location: missing or
+// non-numeric, out of range, or exactly 0,0 (an empty field read as 0, never a
+// place someone gave). Refused with an explicit error, never clamped.
 export type MapCoordinateProblem =
   | 'missing'
   | 'latitude_out_of_range'
@@ -57,8 +56,8 @@ export type MapCoordinateProblem =
 
 export const MAP_COORDINATE_PROBLEM_MESSAGES: Readonly<Record<MapCoordinateProblem, string>> = Object.freeze({
   missing: 'Enter both a latitude and a longitude.',
-  latitude_out_of_range: 'Latitude must be between -90 and 90, not at a pole.',
-  longitude_out_of_range: 'Longitude must be between -180 and 180, not on the edge of the map.',
+  latitude_out_of_range: 'Latitude must be between -90 and 90.',
+  longitude_out_of_range: 'Longitude must be between -180 and 180.',
   null_island: 'Latitude 0, longitude 0 is a placeholder, not a place. Find and confirm the place again.',
 });
 
@@ -66,8 +65,8 @@ export function getMapCoordinateProblem(lat: unknown, long: unknown): MapCoordin
   const latitude = parseMapCoordinate(lat);
   const longitude = parseMapCoordinate(long);
   if (latitude === null || longitude === null) return 'missing';
-  if (Math.abs(latitude) >= 90) return 'latitude_out_of_range';
-  if (Math.abs(longitude) >= 180) return 'longitude_out_of_range';
+  if (Math.abs(latitude) > 90) return 'latitude_out_of_range';
+  if (Math.abs(longitude) > 180) return 'longitude_out_of_range';
   if (latitude === 0 && longitude === 0) return 'null_island';
   return null;
 }
@@ -75,6 +74,21 @@ export function getMapCoordinateProblem(lat: unknown, long: unknown): MapCoordin
 export function isPublicMapCoordinate(lat: unknown, long: unknown): boolean {
   return getMapCoordinateProblem(lat, long) === null;
 }
+
+// A point exactly on the map's edge: latitude ±90 or longitude ±180. Real
+// places sit there (Fiji spans the 180th meridian), and so does every pin a
+// broken client clamped to the edge. Only a confirmed geocoder result can tell
+// the two apart, so an edge point is accepted from a confirmation and refused
+// from raw coordinates.
+export function isMapEdgeCoordinate(lat: unknown, long: unknown): boolean {
+  const latitude = parseMapCoordinate(lat);
+  const longitude = parseMapCoordinate(long);
+  if (latitude === null || longitude === null) return false;
+  return Math.abs(latitude) === 90 || Math.abs(longitude) === 180;
+}
+
+export const MAP_EDGE_COORDINATE_MESSAGE =
+  'A point on the edge of the map needs a confirmed place. Find and confirm your place.';
 
 export function containsPrivateMapLocationField(value: unknown, seen: Set<object> = new Set()): boolean {
   if (!value || typeof value !== 'object') return false;

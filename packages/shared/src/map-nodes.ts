@@ -262,9 +262,10 @@ export function containsPrivateMapNodeField(value: unknown, seen: Set<object> = 
   });
 }
 
-// Approved nodes reach the public map only at a plausible point. A stored pole,
-// antimeridian or 0,0 is left off rather than drawn at the map's edge; the row
-// itself is untouched so a repair or an owner edit can still fix it.
+// Approved nodes reach the public map only at a possible point. A stored 0,0
+// or out-of-range point is left off rather than drawn; the row itself is
+// untouched so a repair or an owner edit can still fix it. An exact edge point
+// (latitude ±90, longitude ±180) stays: it may be a real place.
 export function toPublicMapNode(submission: UnknownRecord): PublicMapNode | null {
   if (!submission || submission.status !== 'approved') return null;
 
@@ -392,7 +393,7 @@ export function loadLocalPendingNodes(storage?: PendingMapNodeStorage | null): O
     if (!Array.isArray(parsed)) return [];
 
     // Browsers that used the June 2026 add-node step can still hold a pending
-    // node at 0,0 or a pole; it is dropped rather than drawn.
+    // node at 0,0; it is dropped rather than drawn.
     return parsed
       .map((node) => createOptimisticPendingNode(node, node.createdAt || new Date()))
       .filter((node) => isPublicMapCoordinate(node.lat, node.long));

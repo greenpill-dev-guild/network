@@ -12,8 +12,10 @@ import {
 } from '@greenpill-network/shared/map-nodes';
 import {
   getMapCoordinateProblem,
+  isMapEdgeCoordinate,
   isPublicMapCoordinate,
   MAP_COORDINATE_PROBLEM_MESSAGES,
+  MAP_EDGE_COORDINATE_MESSAGE,
 } from '@greenpill-network/shared/map-locations';
 import {
   createMapNodeSubmission,
@@ -1616,18 +1618,25 @@ test('home map uses exact-overlap fan-out instead of broad cluster bubbles', asy
 // Live /map/state on 2026-11-06 held these public points. The June 2026
 // add-node client produced them: a pin drag clamped to the mini-map edge gave
 // latitude 90 or longitude -180, and a place typed with no pin read the empty
-// latitude and longitude fields as 0. The agent and the shared contract now
-// refuse them. Evidence: .plans/active/website-qa-2026-11/handoffs/qa-map-data.md
+// latitude and longitude fields as 0. Out-of-range, non-numeric and 0,0 points
+// are always refused. An exact edge point is refused from raw coordinates but
+// accepted from a confirmed place, because real places sit on the 180th
+// meridian (Fiji). Evidence: .plans/active/website-qa-2026-11/handoffs/qa-map-data.md
 // ---------------------------------------------------------------------------
-const LIVE_IMPOSSIBLE_POINTS = Object.freeze([
-  { place: 'Florida', lat: 90, long: 97.76261, problem: 'latitude_out_of_range' },
-  { place: 'Taiwan', lat: 90, long: 176.912492, problem: 'latitude_out_of_range' },
-  { place: 'Awka', lat: 56.462976, long: -180, problem: 'longitude_out_of_range' },
-  { place: 'Port Harcourt', lat: 0, long: 0, problem: 'null_island' },
-  { place: 'Rotterdam, Netherlands', lat: 0, long: 0, problem: 'null_island' },
+const LIVE_EDGE_POINTS = Object.freeze([
+  { place: 'Florida', lat: 90, long: 97.76261 },
+  { place: 'Taiwan', lat: 90, long: 176.912492 },
+  { place: 'Awka', lat: 56.462976, long: -180 },
 ]);
+const LIVE_NULL_ISLAND_POINTS = Object.freeze([
+  { place: 'Port Harcourt', lat: 0, long: 0 },
+  { place: 'Rotterdam, Netherlands', lat: 0, long: 0 },
+]);
+// A real place on the 180th meridian, as a geocoder would confirm it.
+const FIJI_MERIDIAN_POINT = Object.freeze({ place: 'Taveuni, Fiji', lat: -16.8, long: 180 });
 const LEGACY_LOCATION_ENV = Object.freeze({ MAP_LOCATION_CONFIRMATION_REQUIRED: 'false' });
 const TEST_CONFIRMATION_ID = '11111111-1111-4111-8111-111111111111';
+const EM_DASH = String.fromCharCode(0x2014);
 
 function createRecordingSql(respond: (text: string, values: unknown[]) => unknown[] | undefined = () => []) {
   const statements: Array<{ text: string; values: unknown[] }> = [];
@@ -1646,6 +1655,10 @@ const wroteTo = (statements: Array<{ text: string }>, table: string) => (
   statements.some((statement) => statement.text.includes(`insert into ${table}`))
 );
 
+const insertedInto = (statements: Array<{ text: string; values: unknown[] }>, table: string) => (
+  statements.find((statement) => statement.text.includes(`insert into ${table}`))
+);
+
 const approvedRow = (point: { place: string; lat: unknown; long: unknown }, index: number) => ({
   id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
   status: 'approved',
@@ -1656,13 +1669,11 @@ const approvedRow = (point: { place: string; lat: unknown; long: unknown }, inde
   themes: ['public'],
 });
 
-test('map coordinates reject poles, the antimeridian, 0,0 and non-numbers instead of clamping', () => {
+test('map coordinates refuse out-of-range, non-numeric and 0,0 values, and flag exact edge points', () => {
   const cases: Array<[unknown, unknown, string | null]> = [
-    [90, 97.76261, 'latitude_out_of_range'],
-    [-90, 10, 'latitude_out_of_range'],
     [90.5, 10, 'latitude_out_of_range'],
-    [56.462976, -180, 'longitude_out_of_range'],
-    [10, 180, 'longitude_out_of_range'],
+    [-91, 10, 'latitude_out_of_range'],
+    [10, 180.5, 'longitude_out_of_range'],
     [10, -181, 'longitude_out_of_range'],
     [0, 0, 'null_island'],
     ['0', '0.000000', 'null_island'],
@@ -1673,8 +1684,11 @@ test('map coordinates reject poles, the antimeridian, 0,0 and non-numbers instea
     ['north', 3.3792, 'missing'],
     [Number.NaN, 3.3792, 'missing'],
     [Number.POSITIVE_INFINITY, 3.3792, 'missing'],
-    [89.999999, 179.999999, null],
-    [-89.999999, -179.999999, null],
+    // In range: the edges themselves, the equator and the prime meridian.
+    [90, 97.76261, null],
+    [-90, 0, null],
+    [56.462976, -180, null],
+    [-16.8, 180, null],
     [0, 3.3792, null],
     [51.4779, 0, null],
     ['6.5244', '3.3792', null],
@@ -1683,101 +1697,114 @@ test('map coordinates reject poles, the antimeridian, 0,0 and non-numbers instea
     assert.equal(getMapCoordinateProblem(lat, long), expected, `${String(lat)}, ${String(long)}`);
     assert.equal(isPublicMapCoordinate(lat, long), expected === null, `${String(lat)}, ${String(long)}`);
   }
-  for (const message of Object.values(MAP_COORDINATE_PROBLEM_MESSAGES)) {
-    assert.doesNotMatch(message, /\u2014/);
+
+  const edgeCases: Array<[unknown, unknown, boolean]> = [
+    [90, 97.76261, true],
+    [-90, 0, true],
+    [56.462976, -180, true],
+    [-16.8, 180, true],
+    [89.999999, 179.999999, false],
+    [6.5244, 3.3792, false],
+    ['', '', false],
+  ];
+  for (const [lat, long, edge] of edgeCases) {
+    assert.equal(isMapEdgeCoordinate(lat, long), edge, `${String(lat)}, ${String(long)}`);
+  }
+
+  for (const message of [...Object.values(MAP_COORDINATE_PROBLEM_MESSAGES), MAP_EDGE_COORDINATE_MESSAGE]) {
+    assert.equal(message.includes(EM_DASH), false);
   }
 });
 
-test('nodes saved at impossible coordinates stay off the public map instead of being drawn at an edge', () => {
-  for (const [index, point] of LIVE_IMPOSSIBLE_POINTS.entries()) {
+test('nodes at 0,0 or out of range stay off the public map, while edge points and Fiji stay on', () => {
+  for (const [index, point] of LIVE_NULL_ISLAND_POINTS.entries()) {
     assert.equal(toPublicMapNode(approvedRow(point, index)), null, point.place);
   }
   // Null and blank values used to read as 0 and project to 0,0.
   assert.equal(toPublicMapNode(approvedRow({ place: 'Port Harcourt', lat: null, long: null }, 7)), null);
   assert.equal(toPublicMapNode(approvedRow({ place: 'Port Harcourt', lat: '', long: '' }, 8)), null);
+  assert.equal(toPublicMapNode(approvedRow({ place: 'Nowhere', lat: 95, long: 10 }, 9)), null);
+  // An edge point may be a real place, so the projection keeps it. The
+  // clamped live rows are fixed by the approved data repair, not hidden.
+  for (const [index, point] of [...LIVE_EDGE_POINTS, FIJI_MERIDIAN_POINT].entries()) {
+    assert.ok(toPublicMapNode(approvedRow(point, 20 + index)), point.place);
+  }
 
-  const toronto = approvedRow({ place: 'Toronto', lat: 43.6532, long: -79.3832 }, 9);
   const payload = toPublicMapStatePayload({
     generatedAt: '2026-11-06T22:58:27.831Z',
     chapterLocations: [
       { id: 'brasil', name: 'Greenpill Brasil', lat: -22.9068, long: -43.1729, status: 'active' },
       { id: 'placeholder', name: 'Placeholder Chapter', lat: 0, long: 0, status: 'active' },
     ],
-    publicMapNodes: [...LIVE_IMPOSSIBLE_POINTS.map(approvedRow), toronto],
+    publicMapNodes: [...LIVE_NULL_ISLAND_POINTS.map(approvedRow), approvedRow(FIJI_MERIDIAN_POINT, 30)],
     sourceStatus: [
       { source: 'chapter-locations', status: 'ok', count: 2 },
-      { source: 'approved-map-nodes', status: 'ok', count: 6 },
+      { source: 'approved-map-nodes', status: 'ok', count: 3 },
     ],
   });
-  assert.deepEqual(payload.nodes.map((node) => node.name).sort(), ['Greenpill Brasil', 'Person 9']);
+  assert.deepEqual(payload.nodes.map((node) => node.name).sort(), ['Greenpill Brasil', 'Person 30']);
+  assert.equal(payload.nodes.find((node) => node.name === 'Person 30')?.long, 180);
   assert.equal(payload.counts.chapterNodes, 1);
   assert.equal(payload.counts.approvedSubmittedNodes, 1);
-  assert.equal(payload.nodes.every((node) => isPublicMapCoordinate(node.lat, node.long)), true);
 
-  // The payload guard refuses a payload that still carries one.
-  assert.throws(
-    () => assertPublicMapStatePayload({
-      ...payload,
-      nodes: [...payload.nodes, { ...payload.nodes[0], id: 'chapter:edge', lat: 90 }],
-    }),
-    /impossible coordinates/
-  );
+  // The payload guard refuses a payload that still carries 0,0 or an
+  // out-of-range point, and accepts the meridian.
+  for (const bad of [{ lat: 0, long: 0 }, { lat: 95, long: 10 }]) {
+    assert.throws(
+      () => assertPublicMapStatePayload({
+        ...payload,
+        nodes: [...payload.nodes, { ...payload.nodes[0], id: 'chapter:bad', ...bad }],
+      }),
+      /impossible coordinates/
+    );
+  }
+  assert.doesNotThrow(() => assertPublicMapStatePayload(payload));
 });
 
-test('the agent leaves impossible nodes out of the public list and reports only their ids', async () => {
+test('the agent lists edge nodes, leaves 0,0 rows off the public list and reports only their ids', async () => {
+  const row = (point: { place: string; lat: number; long: number }, id: string) => ({
+    id,
+    name: `Person ${id.slice(-2)}`,
+    place: point.place,
+    city: '',
+    region: '',
+    country: '',
+    lat: point.lat,
+    long: point.long,
+    role: 'member',
+    chapterSlug: '',
+    themes: ['public'],
+    bioregion: 'Serra do Mar coastal forests',
+    publicNote: '',
+    status: 'approved',
+  });
   const rows = [
-    ...LIVE_IMPOSSIBLE_POINTS.map((point, index) => ({
-      id: `00000000-0000-4000-8000-00000000001${index}`,
-      name: `Person ${index}`,
-      place: point.place,
-      city: '',
-      region: '',
-      country: '',
-      lat: point.lat,
-      long: point.long,
-      role: 'member',
-      chapterSlug: '',
-      themes: ['public'],
-      bioregion: null,
-      publicNote: '',
-      status: 'approved',
-    })),
-    {
-      id: '00000000-0000-4000-8000-000000000099',
-      name: 'Toronto Person',
-      place: 'Toronto',
-      city: '',
-      region: '',
-      country: '',
-      lat: 43.6532,
-      long: -79.3832,
-      role: 'member',
-      chapterSlug: '',
-      themes: ['public'],
-      bioregion: 'Southern Great Lakes forests',
-      publicNote: '',
-      status: 'approved',
-    },
+    ...LIVE_EDGE_POINTS.map((point, index) => row(point, `00000000-0000-4000-8000-00000000002${index}`)),
+    ...LIVE_NULL_ISLAND_POINTS.map((point, index) => row(point, `00000000-0000-4000-8000-00000000003${index}`)),
+    row({ place: 'Toronto', lat: 43.6532, long: -79.3832 }, '00000000-0000-4000-8000-000000000099'),
   ];
   const { sql } = createRecordingSql((text) => (text.includes('from intake.public_map_nodes') ? rows : []));
-  const reports: Array<{ id: string; problem: string }[]> = [];
+  const reports: Array<Array<{ id: string; problem: string }>> = [];
   const nodes = await listPublicMapNodes(sql, { reportHiddenNodes: (hidden) => reports.push(hidden) });
 
-  assert.deepEqual(nodes.map((node) => node.name), ['Toronto Person']);
-  assert.equal(nodes[0].bioregion, '');
+  assert.deepEqual(nodes.map((node) => node.place), ['Florida', 'Taiwan', 'Awka', 'Toronto']);
+  assert.equal(nodes.every((node) => node.bioregion === ''), true);
   assert.equal(reports.length, 1);
-  assert.deepEqual(reports[0].map((node) => node.problem), LIVE_IMPOSSIBLE_POINTS.map((point) => point.problem));
-  assert.deepEqual(reports[0].map((node) => node.id), rows.slice(0, 5).map((row) => row.id));
-  assert.equal(JSON.stringify(reports).includes('Person'), false);
+  assert.deepEqual(reports[0], [
+    { id: '00000000-0000-4000-8000-000000000030', problem: 'null_island' },
+    { id: '00000000-0000-4000-8000-000000000031', problem: 'null_island' },
+  ]);
 });
 
-test('the agent rejects impossible legacy submission coordinates with an explicit error and writes nothing', async () => {
-  const cases = [
-    ...LIVE_IMPOSSIBLE_POINTS,
-    { place: 'Port Harcourt', lat: '0', long: '0', problem: 'null_island' },
-    { place: 'Nowhere', lat: 90.5, long: 10, problem: 'latitude_out_of_range' },
+test('raw coordinates: out-of-range and 0,0 are refused, and an edge point needs a confirmed place', async () => {
+  const refused = [
+    ...LIVE_EDGE_POINTS.map((point) => ({ ...point, message: MAP_EDGE_COORDINATE_MESSAGE })),
+    { ...FIJI_MERIDIAN_POINT, message: MAP_EDGE_COORDINATE_MESSAGE },
+    ...LIVE_NULL_ISLAND_POINTS.map((point) => ({ ...point, message: MAP_COORDINATE_PROBLEM_MESSAGES.null_island })),
+    { place: 'Port Harcourt', lat: '0', long: '0', message: MAP_COORDINATE_PROBLEM_MESSAGES.null_island },
+    { place: 'Nowhere', lat: 90.5, long: 10, message: MAP_COORDINATE_PROBLEM_MESSAGES.latitude_out_of_range },
   ];
-  for (const point of cases) {
+  for (const point of refused) {
     const { sql, statements } = createRecordingSql((text) => (
       text.includes('from intake.map_node_intake_settings') ? [{ liveOnboardingEnabled: false }] : []
     ));
@@ -1793,11 +1820,30 @@ test('the agent rejects impossible legacy submission coordinates with an explici
       (error) => error instanceof PublicInputError
         && error.code === 'invalid_coordinates'
         && error.status === 400
-        && error.message === MAP_COORDINATE_PROBLEM_MESSAGES[point.problem],
+        && error.message === point.message,
       `${point.place} ${String(point.lat)}, ${String(point.long)}`
     );
     assert.equal(wroteTo(statements, 'intake.map_node_submissions'), false);
   }
+
+  // A raw point just inside the meridian is an ordinary location.
+  const { sql, statements } = createRecordingSql((text) => {
+    if (text.includes('from intake.map_node_intake_settings')) return [{ liveOnboardingEnabled: false }];
+    if (text.includes('insert into intake.map_node_submissions')) {
+      return [{ id: '00000000-0000-4000-8000-000000000124', status: 'pending', displayName: 'Raw Fiji', placeName: 'Taveuni, Fiji', lat: -16.8, long: 179.99, themes: ['public'], createdAt: '2026-11-06T12:00:00.000Z' }];
+    }
+    if (text.includes('insert into intake.map_node_moderation_notifications')) return [{ id: 'notification-1' }];
+    return [];
+  });
+  await createMapNodeSubmission(sql, {
+    name: 'Raw Fiji',
+    place: 'Taveuni, Fiji',
+    lat: -16.8,
+    long: 179.99,
+    themes: ['public'],
+    email: 'raw@example.org',
+  }, {}, { env: LEGACY_LOCATION_ENV, deferProviderSend: true });
+  assert.equal(wroteTo(statements, 'intake.map_node_submissions'), true);
 });
 
 test('D2: the agent no longer stores a derived ecoregion name at intake', async () => {
@@ -1826,37 +1872,45 @@ test('D2: the agent no longer stores a derived ecoregion name at intake', async 
     themes: ['public'],
     email: 'legacy@example.org',
   }, {}, { env: LEGACY_LOCATION_ENV, deferProviderSend: true });
-  const insert = statements.find((statement) => statement.text.includes('insert into intake.map_node_submissions'));
+  const insert = insertedInto(statements, 'intake.map_node_submissions');
   assert.ok(insert);
   assert.equal(insert.values.includes('California interior chaparral and woodlands'), false);
   assert.doesNotMatch(insert.text.split('returning')[0], /bioregion/);
 });
 
-test('a place confirmation that resolves to an impossible point is refused before anything is written', async () => {
-  const { sql, statements } = createRecordingSql((text) => {
+test('a confirmed place on the 180th meridian saves, and a confirmation at 0,0 is refused before anything is written', async () => {
+  const submissionSql = (confirmation: { label: string; lat: number; long: number }) => createRecordingSql((text) => {
     if (text.includes('update intake.map_location_confirmations')) {
-      return [{ label: 'Null Island', lat: 0, long: 0, kind: 'settlement', provider: 'nominatim', providerPlaceId: 'node:1' }];
+      return [{ ...confirmation, kind: 'settlement', provider: 'nominatim', providerPlaceId: 'node:1' }];
     }
     if (text.includes('from intake.map_node_intake_settings')) return [{ liveOnboardingEnabled: false }];
+    if (text.includes('insert into intake.map_node_submissions')) {
+      return [{ id: '00000000-0000-4000-8000-000000000125', status: 'pending', displayName: 'Confirmed Member', placeName: confirmation.label, lat: confirmation.lat, long: confirmation.long, themes: ['public'], createdAt: '2026-11-06T12:00:00.000Z' }];
+    }
+    if (text.includes('insert into intake.map_node_moderation_notifications')) return [{ id: 'notification-1' }];
     return [];
   });
+  const input = { name: 'Confirmed Member', locationConfirmationId: TEST_CONFIRMATION_ID, themes: ['public'], email: 'member@example.org' };
+
+  const fiji = submissionSql({ label: FIJI_MERIDIAN_POINT.place, lat: FIJI_MERIDIAN_POINT.lat, long: FIJI_MERIDIAN_POINT.long });
+  await createMapNodeSubmission(fiji.sql, input, {}, { deferProviderSend: true });
+  const insert = insertedInto(fiji.statements, 'intake.map_node_submissions');
+  assert.ok(insert);
+  assert.equal(insert.values.includes(180), true);
+
+  const zero = submissionSql({ label: 'Null Island', lat: 0, long: 0 });
   await assert.rejects(
-    () => createMapNodeSubmission(sql, {
-      name: 'Confirmed Member',
-      locationConfirmationId: TEST_CONFIRMATION_ID,
-      themes: ['public'],
-      email: 'member@example.org',
-    }),
+    () => createMapNodeSubmission(zero.sql, input, {}, { deferProviderSend: true }),
     (error) => error instanceof PublicInputError && error.code === 'invalid_location_confirmation'
   );
-  assert.equal(wroteTo(statements, 'intake.map_node_submissions'), false);
+  assert.equal(wroteTo(zero.statements, 'intake.map_node_submissions'), false);
   await assert.rejects(
-    () => consumeMapLocationConfirmation(sql, TEST_CONFIRMATION_ID),
+    () => consumeMapLocationConfirmation(zero.sql, TEST_CONFIRMATION_ID),
     (error) => error instanceof PublicInputError && error.code === 'invalid_location_confirmation'
   );
 });
 
-test('owner edits cannot move a node to an impossible point, including by changing one half of the pair', async () => {
+test('owner edits: raw coordinates cannot create or keep an edge or 0,0 point, and a confirmed edge place can', async () => {
   const nodeId = '33333333-3333-4333-8333-333333333333';
   const tokenRow = {
     tokenId: '22222222-2222-4222-8222-222222222222',
@@ -1874,34 +1928,41 @@ test('owner edits cannot move a node to an impossible point, including by changi
     currentSubmissionUpdatedAt: '2026-06-17T12:00:00.000Z',
   };
   const updateSql = () => createRecordingSql((text) => {
+    if (text.includes('update intake.map_location_confirmations')) {
+      return [{ label: FIJI_MERIDIAN_POINT.place, lat: FIJI_MERIDIAN_POINT.lat, long: FIJI_MERIDIAN_POINT.long, kind: 'settlement', provider: 'nominatim', providerPlaceId: 'node:2' }];
+    }
     if (text.includes('from intake.map_node_edit_tokens')) return [tokenRow];
     if (text.includes('insert into intake.map_node_update_requests')) return [{ id: 'update-request-1', status: 'pending' }];
     if (text.includes('update intake.map_node_edit_tokens')) return [{ id: tokenRow.tokenId }];
     return [];
   });
-  const cases: Array<[Record<string, unknown>, string]> = [
-    [{ lat: 90, long: 7.0661 }, 'latitude_out_of_range'],
-    [{ lat: 0, long: 0 }, 'null_island'],
+  const refused: Array<[Record<string, unknown>, string]> = [
+    [{ lat: 90, long: 7.0661 }, MAP_EDGE_COORDINATE_MESSAGE],
+    [{ lat: 0, long: 0 }, MAP_COORDINATE_PROBLEM_MESSAGES.null_island],
     // Only latitude changes, so the stored longitude of -180 would remain.
-    [{ lat: 6.2104 }, 'longitude_out_of_range'],
+    [{ lat: 6.2104 }, MAP_EDGE_COORDINATE_MESSAGE],
   ];
-  for (const [change, problem] of cases) {
+  for (const [change, message] of refused) {
     const { sql, statements } = updateSql();
     await assert.rejects(
       () => createMapNodeUpdateRequest(sql, nodeId, { token: 'valid-token', ...change }, {}, { env: LEGACY_LOCATION_ENV }),
-      (error) => error instanceof PublicInputError
-        && error.code === 'invalid_coordinates'
-        && error.message === MAP_COORDINATE_PROBLEM_MESSAGES[problem],
+      (error) => error instanceof PublicInputError && error.code === 'invalid_coordinates' && error.message === message,
       JSON.stringify(change)
     );
     assert.equal(wroteTo(statements, 'intake.map_node_update_requests'), false);
   }
 
-  const { sql, statements } = updateSql();
-  await createMapNodeUpdateRequest(sql, nodeId, { token: 'valid-token', lat: 6.2104, long: 7.0661 }, {}, {
+  const raw = updateSql();
+  await createMapNodeUpdateRequest(raw.sql, nodeId, { token: 'valid-token', lat: 6.2104, long: 7.0661 }, {}, {
     env: LEGACY_LOCATION_ENV,
   });
-  assert.equal(wroteTo(statements, 'intake.map_node_update_requests'), true);
+  assert.equal(wroteTo(raw.statements, 'intake.map_node_update_requests'), true);
+
+  const confirmed = updateSql();
+  await createMapNodeUpdateRequest(confirmed.sql, nodeId, { token: 'valid-token', locationConfirmationId: TEST_CONFIRMATION_ID });
+  const insert = insertedInto(confirmed.statements, 'intake.map_node_update_requests');
+  assert.ok(insert);
+  assert.equal(insert.values.includes(180), true);
 });
 
 function createLocationSql() {
@@ -1934,52 +1995,66 @@ function createLocationSql() {
   });
 }
 
-test('place search drops provider results at impossible points, and reverse refuses them before asking the provider', async () => {
+test('place search keeps a place on the 180th meridian and drops 0,0; reverse refuses bad pins before the provider and lets it judge edge pins', async () => {
   const providerCalls: string[] = [];
-  const results = [
-    { display_name: 'Null Island', lat: '0', lon: '0', addresstype: 'island', osm_type: 'node', osm_id: 1 },
-    { display_name: 'North Pole', lat: '90', lon: '0', addresstype: 'locality', osm_type: 'node', osm_id: 2 },
-    { display_name: 'Awka, Anambra, Nigeria', lat: '6.2104', lon: '7.0661', addresstype: 'city', osm_type: 'relation', osm_id: 3 },
-  ];
+  const nullIsland = { display_name: 'Null Island', lat: '0', lon: '0', addresstype: 'island', osm_type: 'node', osm_id: 1 };
+  const taveuni = { display_name: 'Taveuni, Fiji', lat: '-16.8', lon: '180', addresstype: 'island', osm_type: 'relation', osm_id: 2 };
+  const awka = { display_name: 'Awka, Anambra, Nigeria', lat: '6.2104', lon: '7.0661', addresstype: 'city', osm_type: 'relation', osm_id: 3 };
+  const svalbard = { display_name: 'Longyearbyen, Svalbard', lat: '78.2232', lon: '15.6267', addresstype: 'town', osm_type: 'node', osm_id: 4 };
   const { sql } = createLocationSql();
   const repository = createMapLocationRepository({
     createSql: () => sql,
     env: { MAP_GEOCODER_BASE_URL: 'https://geocoder.example.test' },
     now: () => new Date('2026-11-06T12:00:00.000Z'),
     fetchImpl: async (url) => {
-      providerCalls.push(String(url));
-      return Response.json(String(url).includes('/search') ? results : results[1]);
+      const href = String(url);
+      providerCalls.push(href);
+      if (href.includes('/search')) return Response.json([nullIsland, taveuni, awka]);
+      return Response.json(new URL(href).searchParams.get('lat') === '-16.8' ? taveuni : svalbard);
     },
   });
 
-  const search = await repository.search('Awka', { rateLimitKey: '198.51.100.20' });
-  assert.deepEqual(search.results.map((result) => result.label), ['Awka, Anambra, Nigeria']);
+  const search = await repository.search('Taveuni', { rateLimitKey: '198.51.100.20' });
+  assert.deepEqual(search.results.map((result) => result.label), ['Taveuni, Fiji', 'Awka, Anambra, Nigeria']);
 
   const callsBeforeReverse = providerCalls.length;
-  for (const [lat, long, problem] of [[90, 10, 'latitude_out_of_range'], [56.462976, -180, 'longitude_out_of_range'], [0, 0, 'null_island']] as const) {
+  const refusedPins: Array<[unknown, unknown, string]> = [
+    [0, 0, MAP_COORDINATE_PROBLEM_MESSAGES.null_island],
+    [95, 10, MAP_COORDINATE_PROBLEM_MESSAGES.latitude_out_of_range],
+    ['', '', MAP_COORDINATE_PROBLEM_MESSAGES.missing],
+  ];
+  for (const [lat, long, message] of refusedPins) {
     await assert.rejects(
       () => repository.reverse(lat, long, { rateLimitKey: '198.51.100.20' }),
-      (error) => error instanceof PublicInputError
-        && error.code === 'invalid_coordinates'
-        && error.message === MAP_COORDINATE_PROBLEM_MESSAGES[problem]
+      (error) => error instanceof PublicInputError && error.code === 'invalid_coordinates' && error.message === message
     );
   }
   assert.equal(providerCalls.length, callsBeforeReverse);
+
+  // A pin clamped to the top edge reaches the geocoder, which finds nothing near.
+  await assert.rejects(
+    () => repository.reverse(90, 10, { rateLimitKey: '198.51.100.20' }),
+    (error) => error instanceof PublicInputError && error.code === 'location_not_confirmed'
+  );
+  // A pin on the meridian in Fiji confirms the real place.
+  const fiji = await repository.reverse(-16.8, 180, { rateLimitKey: '198.51.100.20' });
+  assert.equal(fiji.confirmation.label, 'Taveuni, Fiji');
+  assert.equal(fiji.confirmation.long, 180);
 });
 
-test('local pending nodes saved by the June client at 0,0 or a pole are dropped on load', () => {
+test('local pending nodes the June client left at 0,0 or with empty fields are dropped on load', () => {
   const storage = new MemoryStorage();
   storage.setItem('greenpill.pendingMapNodes.v1', JSON.stringify([
     { id: 'local-1', name: 'Pasted Place', place: 'Port Harcourt', lat: 0, long: 0, createdAt: '2026-06-17T12:00:00.000Z' },
-    { id: 'local-2', name: 'Dragged Up', place: 'Taiwan', lat: 90, long: 176.912492, createdAt: '2026-06-17T12:00:00.000Z' },
     { id: 'local-3', name: 'Empty Fields', place: 'Rotterdam', lat: '', long: '', createdAt: '2026-06-17T12:00:00.000Z' },
     { id: 'local-4', name: 'Real Place', place: 'Lagos', lat: 6.5244, long: 3.3792, createdAt: '2026-06-17T12:00:00.000Z' },
+    { id: 'local-5', name: 'Meridian Place', place: 'Taveuni, Fiji', lat: -16.8, long: 180, createdAt: '2026-11-06T12:00:00.000Z' },
   ]));
-  assert.deepEqual(loadStoredLocalPendingNodes(storage).map((node) => node.id), ['local-4']);
-  assert.deepEqual(sharedMapNodes.loadLocalPendingNodes(storage).map((node) => node.id), ['local-4']);
+  assert.deepEqual(loadStoredLocalPendingNodes(storage).map((node) => node.id), ['local-4', 'local-5']);
+  assert.deepEqual(sharedMapNodes.loadLocalPendingNodes(storage).map((node) => node.id), ['local-4', 'local-5']);
 });
 
-test('D2: the home map no longer loads ecoregions or draws a region boundary', async () => {
+test('D2: the home map and footer drop the ecoregion layer and its credit', async () => {
   const component = await readFile(
     new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
     'utf8'
@@ -1988,6 +2063,12 @@ test('D2: the home map no longer loads ecoregions or draws a region boundary', a
   assert.doesNotMatch(component, /Ecoregion/);
   assert.doesNotMatch(component, /bioregion-outline|BioregionOutline/);
   assert.doesNotMatch(component, /derivePublicBioregion/);
+
+  const footer = await readFile(
+    new URL('../packages/website/src/components/shell/SiteFooter.astro', import.meta.url),
+    'utf8'
+  );
+  assert.doesNotMatch(footer, /Ecoregion|RESOLVE/);
 
   const scriptFiles = await readdir(new URL('./', import.meta.url));
   assert.equal(scriptFiles.includes('generate-public-ecoregions.ts'), false);
