@@ -6,7 +6,7 @@ Findings 2, 3, 5, 6 and 20 from `reports/2026-11-06-qa-findings.md`.
 
 Pull request: https://github.com/greenpill-dev-guild/network/pull/34 (not merged)
 
-- **Subscribe (finding 5).** The Garden's step 1 CTA is now `/garden#step-1`, so the home ramp's Subscribe card opens the Garden signup form (clicked in Brave: it lands on `/garden/#step-1` with the email field in view). On `/garden` the step still renders the form itself.
+- **Subscribe (finding 5, D3).** Afo chose Paragraph ("Paragraph subscribe", 2026-11-06). Step 1 on home and `/garden` is now "Get Greenpill's posts by email" with a "Subscribe on Paragraph" button to `https://paragraph.com/@greenpill/subscribe`, the publication's signup page. The copy promises no cadence, and the Garden summary matches. The Garden page's Resend form, its script and its CSS are gone; the agent's `POST /newsletter/subscribe` route stays, unused. Nothing was written to production.
 - **Telegram (finding 6).** Home and Garden take the invite from `content/social-links.json` (`telegram`). The Telegram step's own `cta.href` in `garden.json` is empty, and so is the unused `telegramPreview` copy. The Garden page's fallback step list, which held a third copy, is gone. This also repairs the buttons today: the `social-links.json` invite (`t.me/+g9TM…`) opens the "Greenpill.network" group (1,037 members on 2026-11-06), while the old hard-coded one (`t.me/+e-aa…`) opens a generic t.me page with no group name, which suggests it was revoked. The footer still uses the old one (see requests below).
 - **Commons bento (finding 2).** The "Knowledge map · In design" and "Open the toolkit" tiles are removed. The grid is two rows: books on the left spanning both, podcast over the guild pair on the right. At 1440 the heights match (books 609px; podcast 322px, 20px gap, guild pair 267px). The dek no longer mentions field guides, since no guide tile remains.
 - **Ecosystem (finding 3).** Two labeled rows read from `home-page.json` (`ecosystem.partners`, `ecosystem.tools`), each tile linking to the organization's own site. Partners and collaborators: Regen Coordination, ReFi DAO, Bloom Network, Bread Cooperative, Gitcoin, Artizen, VDAO, Network Nations, JournoDAO. Tools we build with: Gardens, Hypercerts, Karma. Every entry has a public source from 2025 or 2026 (below). Octant and Giveth were dropped (latest sourced joint activity is 2024); Bloom Network and Artizen are new. The page skips any entry without a name or an `https://` link.
@@ -22,12 +22,15 @@ No change to `package.json`, the lockfile, `.github/workflows/**`, `CLAUDE.md`, 
 
 ## Evidence
 
-AGENTS.md pre-PR gate, rerun on commit `7c6f552`:
+AGENTS.md pre-PR gate, rerun on commit `1255293` (after the D3 change):
 
 - `bun run typecheck`: exit 0, no diagnostics.
 - `bun run test:content`: 33 pass, 0 fail.
 - `bun run agentic:check`: exit 0. Guidance retrieved; "Authenticated browser QA policy check passed for 3 guidance file(s)"; 11 plan hubs valid; `ui:check` 0 hard, 0 warn.
 - `bun run build`: exit 0, 47 pages.
+- `astro check`: 0 errors, 0 warnings.
+
+Brave QA of the D3 change (the window was 1014px wide by then and still ignored resizing; 1440 and 375 via the iframe harness): home step 1 shows the new title, body and "Subscribe on Paragraph" link with no clamped copy at 375, 1014 and 1440; on `/garden`, step 1 has no form or email field, the button links to the signup page, there is no horizontal overflow at any width, and the 375 button is 327 x 48px.
 
 Other commands (run in this worktree; `bun` runs inside the dev machine):
 
@@ -87,23 +90,19 @@ None. Nothing was written to production, and no signup was submitted.
 
 Please create a new invite link for the Greenpill.network group with "Request admin approval" turned on, revoke the old links, and send me the new one. I will put it in `social-links.json` (`telegram`) in this PR. The live invite today is `t.me/+g9TM…` (a plain join link). Once approval is on, I suggest step 2's copy says so: "Ask to join the shared Greenpill chat. An admin approves new members to keep out spam. Lurk as long as you like."
 
-### D3: newsletter (for Afo)
+### D3: newsletter (decided: Paragraph)
 
-What production has today (read-only checks, 2026-11-06):
+Afo chose option B, "Paragraph subscribe", on 2026-11-06 (relayed by the orchestrating session). Implemented in commit `1255293`.
 
-- `fly secrets list -a network-agent` lists `RESEND_API_KEY` (the key the map and content-review emails also read), but neither `RESEND_NEWSLETTER_SEGMENT_ID` nor `RESEND_NEWSLETTER_TOPIC_ID`. A signup therefore creates a Resend contact with no segment or topic attached (`packages/agent/src/newsletter.ts`, `buildContactPayload` adds them only when the ids are set). Whether the key may create contacts at all is untested; if it is a sending-only key, the form shows "Subscription is unavailable right now."
-- Greenpill's Paragraph publication (`paragraph.com/@greenpill`) shows 400+ subscribers and 3 published posts: "Greenpill 2024: A Year in Review" (December 31, 2024), "Greenpill Q1 2025: Laying The Groundwork" (April 30, 2025) and the Bread Cooperative post (November 5, 2025). The 2025 year in review and the 2026 thesis exist only as unpublished `/preview/` links. Nothing has gone to those subscribers for a year.
-- No other Greenpill Network newsletter with a 2025 or 2026 issue was found (subagent: `greenpill.substack.com` is Kevin Owocki's "Green Pill" episode posts, newest March 7, 2023; Mirror and Beehiiv not checked).
+What the signup asks for: `https://paragraph.com/@greenpill/subscribe` shows "Subscribe to Greenpill Network", the line "Stay updated by getting the latest posts delivered directly to your inbox.", one email field and a Subscribe button; no wallet option. I opened it in Brave without submitting. Brave is signed in to Paragraph as Afo, so the field was prefilled and the publication page showed no Subscribe button; a signed-out visitor's view was not checked.
 
-Question for Afo: does anyone send, or plan to send, a Greenpill newsletter? The card promises "An occasional public digest with chapter updates, new resources, podcast highlights, and upcoming calls."
+Facts behind the decision (read-only checks, 2026-11-06):
 
-| Option | What changes | Cost and risk |
-| --- | --- | --- |
-| A. Keep the Resend form | Create a segment (and a topic, for unsubscribe preferences) in Resend, set `RESEND_NEWSLETTER_SEGMENT_ID` / `RESEND_NEWSLETTER_TOPIC_ID` on `network-agent` (a production write), confirm the key can create contacts, then one test signup with an address Afo chooses. | Someone has to write and send issues from Resend, and the list starts at zero. |
-| B. Use Paragraph (recommended if someone will post) | Step 1 links to `https://paragraph.com/@greenpill` ("Subscribe on Paragraph"), and the card says what subscribers get: Greenpill's posts by email. Paragraph lists newsletters and email among the channels it ships. The Resend route stays in the agent, unused. | No secrets or new tools, and 400+ people already subscribe. Subscribers live on Paragraph, and they hear from Greenpill only when someone publishes there. I have not clicked Subscribe to see whether it asks for an email or a wallet. |
-| C. Remove Subscribe for now | Drop step 1 from the ramp (home and `/garden`), leaving three steps; bring it back when a newsletter exists. | Honest, but loses the lightest way in. |
+- `fly secrets list -a network-agent` lists `RESEND_API_KEY` but neither `RESEND_NEWSLETTER_SEGMENT_ID` nor `RESEND_NEWSLETTER_TOPIC_ID`, so the old form would have created Resend contacts with no segment or topic.
+- `paragraph.com/@greenpill` shows 400+ subscribers and 3 published posts: "Greenpill 2024: A Year in Review" (December 31, 2024), "Greenpill Q1 2025: Laying The Groundwork" (April 30, 2025) and the Bread Cooperative post (November 5, 2025). The 2025 year in review and the 2026 thesis exist only as unpublished `/preview/` links, so subscribers hear from Greenpill only when someone publishes there.
+- No other Greenpill Network newsletter with a 2025 or 2026 issue was found (subagent: `greenpill.substack.com` is Kevin Owocki's "Green Pill" episode posts, newest March 7, 2023).
 
-Recommendation: B, with the card reworded to match what Paragraph sends, if Afo or a steward will publish there again (the 2025 review and 2026 thesis drafts are ready candidates). If nobody will, C. A makes sense only with a named owner and a sending rhythm.
+Follow-ups outside this PR: publishing the 2025 review or 2026 thesis would give the 400+ subscribers something; the agent's newsletter route and `newsletter.ts` could be removed in a later agent change.
 
 ### Requests to other sessions
 
@@ -116,6 +115,5 @@ Recommendation: B, with the card reworded to match what Paragraph sends, if Afo 
 ### Not done here
 
 - No new Telegram link yet (needs I1).
-- D3 is open; Subscribe still points at the Resend form.
 - `ui:verify` not run: it cannot render in the dev machine (no browser), so axe-core did not run.
 - Suggested follow-up, not in this scope: the `/garden` step body runs about 1,100px wide at 1440 (September audit, line length); a `max-inline-size: 65ch` on step copy would fix it.
