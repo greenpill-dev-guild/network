@@ -2,11 +2,11 @@
 
 ## Final state, 2026-11-07
 
-Every session's pull request except the last is merged into `main`, and their changes were checked live on greenpill.network. `qa-system-pass` is open as #44 and is the last step; the orchestrating session merges it and runs the post-deploy checks.
+Every session's pull request is merged into `main`, and each change was checked live on greenpill.network. The last one, `qa-system-pass` (#44), merged on 11-07 at 22:23 UTC, and the orchestrating session checked it live after the deploy (see the `qa-system-pass` checklist). The hub moved to `.plans/archive/` the same day. PRD-739 and PRD-1417 stay open as their own P-PRD-19 issues.
 
 | Session | Pull request | Merged (UTC) | Linear | Left open |
 | --- | --- | --- | --- | --- |
-| Hub | #33 | 11-07 06:53 | PRD-1408 (parent): In Progress until PRD-1418 is verified live | |
+| Hub | #33 | 11-07 06:53 | PRD-1408 (parent): Done | |
 | `qa-map-data` | #35; repair run `0f27b0a7` applied 11-07 07:01 (record cherry-picked in #44) | 11-07 06:54 | PRD-1409: Done | Directus approvals can still publish nodes at bad points: PRD-1417 |
 | `qa-guilds` | #36; change set applied, recorded in #43 | 11-07 06:53; #43 19:54 | PRD-1411: Done | |
 | `qa-stories` | #37 | 11-07 06:53 | PRD-1412: Done | |
@@ -16,7 +16,7 @@ Every session's pull request except the last is merged into `main`, and their ch
 | `qa-brand-shell` | #39 | 11-07 19:42 | PRD-1415: Done | |
 | `qa-map-polish` | #41 | 11-07 19:42 | PRD-739: Backlog (P0 shipped) | P1 and P2 below |
 | `qa-assessment` | #42 | 11-07 19:54 | PRD-1414: Done | |
-| `qa-system-pass` | #44 | open | PRD-1418: In Progress | The pull-request workflow for the em-dash check waits on Afo's OK |
+| `qa-system-pass` | #44 | 11-07 22:23 | PRD-1418: Done | The pull-request workflow for the em-dash check waits on Afo's OK |
 
 Open follow-ups:
 
@@ -141,7 +141,7 @@ Open with Afo for the map: confirm `MAP_LOCATION_CONFIRMATION_REQUIRED` is `true
 - [ ] Wire it into CI: no workflow runs on ordinary website pull requests today (`github-pages.yml` builds only on `main` pushes and its schedule; `supply-chain-guardrails.yml` triggers only on package, lockfile and workflow paths). With Afo's OK, add a pull-request workflow for website paths that runs the check with read-only permissions. Do not fail the hourly publish on steward-edited Directus copy; clean that through the change set. (Proposed in the `qa-system-pass` handoff; waits on Afo's OK.)
 - [x] Refresh the fallback snapshot with `bun run content:snapshot:from-agent` after the Directus change sets are applied. (From the live snapshot of 2026-11-07 20:51 UTC, through the same script.)
 - [x] Full-site QA in Brave at 375, 1024 and 1440, plus 1920 for the background; `bun run ui:verify` counts as not run in the dev machine. Update this hub and Linear.
-- [ ] After deploy: repeat the background check at 1920 and the card checks on greenpill.network (orchestrating session).
+- [x] After deploy: repeat the background check at 1920 and the card checks on greenpill.network (orchestrating session). (11-07 22:26 UTC, after Pages run 42420430610 deployed merge `8075333`: every card on home, `/chapters`, a chapter, both guilds, `/stories`, a story, `/library` and `/garden` is a `.gp-card`; the `/chapters` region filter hides the right cards (Africa shows 4 of 12, Americas 5, Asia 2, Europe 1); no em dash left in page copy apart from one podcast episode title from the RSS feed on `/library`; no "source-backed" caption; the 18 footer links match `social-links.json`; no page overflows at 375, where the Library book rail scrolls inside itself; the background at 1920 shows no seams; `network-agent` `/ready` is ok after its redeploy.)
 
 ## Linear mirror
 
@@ -162,7 +162,7 @@ One parent issue in P-PRD-19 for this hub, and one child per session, created wh
 | PRD-1417 | Follow-up from `qa-map-data`: Directus approvals at bad coordinates |
 | PRD-1418 | `qa-system-pass` |
 
-States on 2026-11-07 are in the Final state table at the top.
+States on 2026-11-07 are in the Final state table at the top. When the hub closed, PRD-739 and PRD-1417 were moved out from under PRD-1408 and linked to it as related issues, so the parent could close while they stay open.
 
 Pull requests: #33 this hub; #34 `qa-home-garden`; #35 `qa-map-data` (its nine-row coordinate repair ran right after it deployed); #36 `qa-guilds` (its 42-row Directus change set, approved by Afo on 2026-11-06, is applied and recorded in #43); #37 `qa-stories`; #38 `qa-library` (also updates `scripts/public-content-contract.test.ts`, which pinned the old episode count); #39 `qa-brand-shell` (seam-free background, the build-time external-link rule in `src/middleware.ts`, footer links and the brand kit, approved by Afo on screenshots); #40 `qa-chapters` (153 approved fields live in production Directus; no pages for inactive chapters); #41 `qa-map-polish` (PRD-739 P0); #42 `qa-assessment`; #43 the guild change set record; #44 `qa-system-pass` (one card treatment, the em-dash check, the fresh fallback snapshot, and the footer's outside links moved into `social-links.json` with `hub` set to the working `https://hub.regencoordination.xyz`).
 
