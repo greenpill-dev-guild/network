@@ -1,5 +1,6 @@
 ---
 import Button from '../ui/Button.astro';
+import Card from '../ui/Card.astro';
 import Text from '../ui/Text.astro';
 import type { AssessmentPath as PathId } from '../../lib/garden-assessment';
 
@@ -174,7 +175,8 @@ const questionCount = QUESTIONS.length;
         const hintId = question.multiple ? `ga-${question.id}-hint` : undefined;
         return (
           <li>
-            <fieldset
+            <Card
+              as="fieldset"
               class="gp-ga-q"
               data-ga-question={question.id}
               data-ga-multiple={question.multiple ? 'true' : undefined}
@@ -201,7 +203,7 @@ const questionCount = QUESTIONS.length;
                   );
                 })}
               </div>
-            </fieldset>
+            </Card>
           </li>
         );
       })}
@@ -224,7 +226,16 @@ const questionCount = QUESTIONS.length;
     </noscript>
   </form>
 
-  <div class="gp-ga-result-wrap" data-ga-result-wrap hidden role="region" aria-label="Your assessment result">
+  <Card
+    variant="elevated"
+    padded="lg"
+    stack="md"
+    class="gp-ga-result-wrap"
+    data-ga-result-wrap
+    hidden
+    role="region"
+    aria-label="Your assessment result"
+  >
     {RESULTS.map((result) => (
       <article
         class="gp-ga-result"
@@ -268,7 +279,7 @@ const questionCount = QUESTIONS.length;
       <p class="gp-ga-saved" data-ga-saved></p>
       <button type="button" class="gp-ga-reset" data-ga-retake>Retake the assessment</button>
     </div>
-  </div>
+  </Card>
 </div>
 
 <script>
@@ -511,7 +522,6 @@ const questionCount = QUESTIONS.length;
   }
 
   .gp-ga-form[hidden],
-  .gp-ga-result-wrap[hidden],
   .gp-ga-result[hidden],
   .gp-ga-secondary[hidden],
   .gp-ga-reset[hidden] {
@@ -527,14 +537,7 @@ const questionCount = QUESTIONS.length;
     list-style: none;
   }
 
-  .gp-ga-q {
-    margin: 0;
-    padding: var(--gp-space-lg);
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-lg);
-    background: var(--gp-card);
-    min-width: 0;
-  }
+  /* Each question is a Card fieldset (components/ui/Card.astro). */
 
   /* Standard legend reset. A floated legend is no longer the fieldset's
      "rendered legend", so it lays out inside the card padding like any other
@@ -706,16 +709,7 @@ const questionCount = QUESTIONS.length;
     color: var(--gp-primary);
   }
 
-  .gp-ga-result-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gp-space-md);
-    padding: var(--gp-space-xl);
-    border: 1px solid color-mix(in srgb, var(--gp-primary) 32%, transparent);
-    border-radius: var(--gp-radius-lg);
-    background: var(--gp-card-elev);
-    min-width: 0;
-  }
+  /* The result is an elevated Card (components/ui/Card.astro). */
 
   .gp-ga-result {
     display: flex;
@@ -790,14 +784,6 @@ const questionCount = QUESTIONS.length;
   }
 
   @container (max-width: 640px) {
-    .gp-ga-q {
-      padding: var(--gp-space-md);
-    }
-
-    .gp-ga-result-wrap {
-      padding: var(--gp-space-lg);
-    }
-
     .gp-ga-form-foot,
     .gp-ga-result-foot {
       align-items: stretch;

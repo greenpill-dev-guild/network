@@ -380,8 +380,46 @@ test('chapter initiatives are operational records and projects stay guild-owned'
 test('chapter initiative cards do not render dead links when no URL is present', async () => {
   const source = await readFile(chapterPagePath, 'utf8');
 
-  assert.match(source, /<article class="gp-chapter-initiative">/);
+  // Card renders an <article> when there is no href, and a link otherwise.
+  assert.match(source, /<Card href=\{href \|\| undefined\} as="article"/);
   assert.doesNotMatch(source, /href=\{href \|\| '#'\}/);
+});
+
+test('cards on every page come from the Card primitive and do not move on hover', async () => {
+  // Website QA, November 2026, finding 9: one card treatment. Pages place cards
+  // and lay out what sits inside them; the surface (border, radius, card tone,
+  // hover) lives in components/ui/Card.astro. The map edit and moderation pages
+  // are standalone tools outside the site shell and keep their own styles.
+  const standalonePages = new Set(['map/edit.astro', 'map/moderate.astro']);
+  const pageFiles = (await readdir(websitePagesDir, { recursive: true }))
+    .map((file) => String(file).replaceAll('\\', '/'))
+    .filter((file) => file.endsWith('.astro') && !standalonePages.has(file));
+  const sourcePaths = [
+    ...pageFiles.map((file) => join(websitePagesDir, file)),
+    join(rootDir, 'packages/website/src/components/page-sections/GardenAssessment.astro'),
+    join(rootDir, 'packages/website/src/components/page-sections/BookDialog.astro'),
+  ];
+  const problems = [];
+  for (const path of sourcePaths) {
+    const source = await readFile(path, 'utf8');
+    const styles = [...source.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((match) => match[1]).join('\n');
+    for (const [, selectorText, body] of styles.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const selector = selectorText.trim().replace(/\s+/g, ' ');
+      if (/background:\s*var\(--gp-card(-elev)?\)/.test(body) && /border-radius:/.test(body)) {
+        problems.push(`${path}: ${selector} repeats the card surface; use Card`);
+      }
+      if (/:hover/.test(selector) && /transform:/.test(body)) {
+        problems.push(`${path}: ${selector} moves on hover (DESIGN.md Motion)`);
+      }
+    }
+  }
+  assert.deepEqual(problems, []);
+
+  const card = await readFile(join(rootDir, 'packages/website/src/components/ui/Card.astro'), 'utf8');
+  const cardStyles = card.slice(card.indexOf('<style>'));
+  assert.doesNotMatch(cardStyles, /transform\s*:|box-shadow:\s*var\(--gp-shadow-card-lg\)/);
+  assert.match(cardStyles, /\.gp-card\[hidden\]/, 'a filtered card must still hide');
+  assert.match(card, /const Tag = href \? 'a' : \(as \?\? 'div'\);/);
 });
 
 test('noindex chapters keep their own page while staying out of discovery', async () => {

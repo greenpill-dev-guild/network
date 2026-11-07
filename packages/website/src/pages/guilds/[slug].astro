@@ -217,13 +217,13 @@ const projects = (await getOperationalProjects())
                 <Overline as="h2" text="Principles" />
                 <ol class="gp-guild-principles" role="list">
                   {principles.map((principle, index) => (
-                    <li>
+                    <Card as="li" class="gp-guild-principle">
                       <span class="gp-guild-principle-num" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
                       <div class="gp-guild-stack is-tight">
                         <Text variant="title-md" as="h3">{principle.title}</Text>
                         {principle.body && <Text variant="body-lg">{principle.body}</Text>}
                       </div>
-                    </li>
+                    </Card>
                   ))}
                 </ol>
               </div>
@@ -319,7 +319,7 @@ const projects = (await getOperationalProjects())
             </Card>
 
             {moreAppearances.length > 0 && (
-              <ul class="gp-guild-media-list" role="list">
+              <Card as="ul" padded="none" class="gp-guild-media-list" role="list">
                 {moreAppearances.map((appearance) => (
                   <li>
                     <a class="gp-guild-media-row" href={appearance.href}>
@@ -332,7 +332,7 @@ const projects = (await getOperationalProjects())
                     </a>
                   </li>
                 ))}
-              </ul>
+              </Card>
             )}
           </div>
         </Container>
@@ -534,13 +534,9 @@ const projects = (await getOperationalProjects())
     gap: var(--gp-space-md);
   }
 
-  .gp-guild-principles li {
+  .gp-guild-principles :global(.gp-guild-principle) {
     display: flex;
     gap: var(--gp-space-md);
-    padding: var(--gp-space-lg);
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-lg);
-    background: var(--gp-card);
   }
 
   .gp-guild-principle-num {
@@ -620,14 +616,13 @@ const projects = (await getOperationalProjects())
     align-items: start;
   }
 
-  .gp-guild-media-list {
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-lg);
-    background: var(--gp-card);
+  /* A Card list: rows share its border, and the clip keeps a row's hover
+     tone inside the rounded corners. */
+  .gp-guild-media :global(.gp-guild-media-list) {
     overflow: hidden;
   }
 
-  .gp-guild-media-list li + li {
+  .gp-guild-media :global(.gp-guild-media-list > li + li) {
     border-block-start: 1px solid var(--gp-border-soft);
   }
 
