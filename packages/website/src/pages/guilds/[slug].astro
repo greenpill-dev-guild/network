@@ -18,6 +18,7 @@ import {
   getOperationalProjects,
 } from '../../lib/operational-content';
 import { hasPublicGuildPage } from '../../lib/public-routes';
+import { formatContentDate } from '../../lib/content-dates';
 
 export async function getStaticPaths() {
   const items = await getOperationalGuilds();
@@ -32,17 +33,6 @@ const data = item.data;
 const text = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 const list = (value: unknown): any[] => (Array.isArray(value) ? value : []);
 const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
-
-// Content dates are "YYYY", "YYYY-MM" or "YYYY-MM-DD"; show them as words, never raw.
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-function formatDate(value: unknown): string {
-  const match = /^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?$/.exec(text(value));
-  if (!match) return '';
-  const [, year, month, day] = match;
-  const monthName = month ? MONTHS[Number(month) - 1] : '';
-  if (!monthName) return year;
-  return day ? `${monthName} ${Number(day)}, ${year}` : `${monthName} ${year}`;
-}
 
 // Link labels name the destination ("GitHub", "greengoods.app"), not the action.
 const HOST_LABELS: Record<string, string> = {
@@ -180,7 +170,7 @@ const projects = (await getOperationalProjects())
           )}
 
           {themeLabels.length > 0 && (
-            <ul class="gp-guild-row" aria-label="Themes">
+            <ul class="gp-guild-row" role="list" aria-label="Themes">
               {themeLabels.map((label) => (
                 <li><Chip size="sm">{label}</Chip></li>
               ))}
@@ -188,7 +178,7 @@ const projects = (await getOperationalProjects())
           )}
 
           {keyLinks.length > 0 && (
-            <ul class="gp-guild-row gp-guild-key-links" aria-label="Key links">
+            <ul class="gp-guild-row gp-guild-key-links" role="list" aria-label="Key links">
               {keyLinks.map((link) => {
                 const glyph = linkGlyph(link);
                 return (
@@ -220,7 +210,7 @@ const projects = (await getOperationalProjects())
             {principles.length > 0 && (
               <div class="gp-guild-stack">
                 <Overline as="h2" text="Principles" />
-                <ol class="gp-guild-principles">
+                <ol class="gp-guild-principles" role="list">
                   {principles.map((principle, index) => (
                     <li>
                       <span class="gp-guild-principle-num" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
@@ -244,10 +234,10 @@ const projects = (await getOperationalProjects())
           <div class="gp-guild-section-head">
             <Overline as="h2" text={workHeading} />
           </div>
-          <ul class="gp-guild-grid is-two">
+          <ul class="gp-guild-grid is-two" role="list">
             {publishedWork.map((work) => {
               const credits = list(work.contributors).map(text).filter(Boolean);
-              const meta = [text(work.kind), formatDate(work.date)].filter(Boolean);
+              const meta = [text(work.kind), formatContentDate(work.date)].filter(Boolean);
               const href = text(work.href);
               return (
                 <li>
@@ -283,7 +273,7 @@ const projects = (await getOperationalProjects())
           <div class="gp-guild-section-head">
             <Overline as="h2" text="Projects" />
           </div>
-          <ul class="gp-guild-grid is-three">
+          <ul class="gp-guild-grid is-three" role="list">
             {projects.map((project) => (
               <li>
                 <Card padded="lg">
@@ -314,7 +304,7 @@ const projects = (await getOperationalProjects())
           <div class:list={['gp-guild-media', { 'has-list': moreAppearances.length > 0 }]}>
             <Card variant="elevated" padded="lg">
               <div class="gp-guild-card-body">
-                <Meta items={[text(leadAppearance.source), formatDate(leadAppearance.date)].filter(Boolean)} accentIndex={0} />
+                <Meta items={[text(leadAppearance.source), formatContentDate(leadAppearance.date)].filter(Boolean)} accentIndex={0} />
                 <Text variant="h3">{leadAppearance.title}</Text>
                 {list(leadAppearance.people).length > 0 && (
                   <Text variant="body-lg">With {list(leadAppearance.people).map(text).filter(Boolean).join(', ')}</Text>
@@ -326,12 +316,12 @@ const projects = (await getOperationalProjects())
             </Card>
 
             {moreAppearances.length > 0 && (
-              <ul class="gp-guild-media-list">
+              <ul class="gp-guild-media-list" role="list">
                 {moreAppearances.map((appearance) => (
                   <li>
                     <a class="gp-guild-media-row" href={appearance.href}>
                       <span class="gp-guild-media-copy">
-                        <Meta items={[text(appearance.source), formatDate(appearance.date)].filter(Boolean)} accentIndex={0} />
+                        <Meta items={[text(appearance.source), formatContentDate(appearance.date)].filter(Boolean)} accentIndex={0} />
                         <span class="gp-guild-media-title">{appearance.title}</span>
                       </span>
                       <span class="gp-guild-media-arrow" aria-hidden="true">&rarr;</span>
@@ -356,14 +346,14 @@ const projects = (await getOperationalProjects())
               <Card padded="lg">
                 <div class="gp-guild-card-body">
                   <Overline as="h3" tone="muted" text={group} />
-                  <ul class="gp-guild-hat-list">
+                  <ul class="gp-guild-hat-list" role="list">
                     {hats.map((hat) => (
                       <li class="gp-guild-hat">
                         <span class="gp-guild-hat-role">
                           <Text variant="title-md" as="span">{hat.role}</Text>
                         </span>
                         {hat.holders.length > 0 ? (
-                          <ul class="gp-guild-hat-holders">
+                          <ul class="gp-guild-hat-holders" role="list">
                             {hat.holders.map((holder: string) => (
                               <li class="gp-guild-person is-compact">
                                 <span class="gp-guild-avatar" aria-hidden="true"><Avatar name={avatarName(holder)} size={32} /></span>
@@ -392,7 +382,7 @@ const projects = (await getOperationalProjects())
           <div class="gp-guild-section-head">
             <Overline as="h2" segments={['People', 'Public contributors']} />
           </div>
-          <ul class="gp-guild-members">
+          <ul class="gp-guild-members" role="list">
             {contributors.map((member) => (
               <li class="gp-guild-person">
                 <span class="gp-guild-avatar" aria-hidden="true"><Avatar name={avatarName(member.name)} size={56} /></span>
@@ -455,6 +445,8 @@ const projects = (await getOperationalProjects())
     background: transparent;
   }
 
+  /* Safari drops list semantics from lists without markers, so each list
+     in the markup also carries role="list". */
   .gp-guild ul,
   .gp-guild ol {
     margin: 0;
