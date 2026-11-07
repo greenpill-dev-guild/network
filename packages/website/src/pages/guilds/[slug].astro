@@ -56,12 +56,18 @@ const HOST_LABELS: Record<string, string> = {
   'x.com': 'X',
   'luma.com': 'Luma',
   'lu.ma': 'Luma',
+  'cryptoaltruists.com': 'Crypto Altruists',
+};
+// Hosts whose subdomain is an account id ("128c3f4a….libsyn.com").
+const HOST_SUFFIX_LABELS: Record<string, string> = {
+  'libsyn.com': 'Libsyn',
 };
 function destinationLabel(url: string): string {
   if (url.startsWith('/')) return /\.pdf$/i.test(url) ? 'Read the PDF' : 'Read on this site';
   try {
     const host = new URL(url).hostname.replace(/^www\./, '');
-    return HOST_LABELS[host] ?? host;
+    const suffix = Object.keys(HOST_SUFFIX_LABELS).find((key) => host.endsWith(`.${key}`));
+    return HOST_LABELS[host] ?? (suffix ? HOST_SUFFIX_LABELS[suffix] : host);
   } catch {
     return 'Open';
   }
@@ -73,7 +79,11 @@ const APPEARANCE_VERBS: Record<string, string> = {
   recording: 'Watch',
   talk: 'Watch',
   space: 'Listen',
+  article: 'Read',
 };
+
+// Avatar initials come from the words of a name; "Afo (Afolabi …)" should read "AA", not "A(".
+const avatarName = (name: unknown) => text(name).replace(/[()]/g, '');
 const appearanceLinkLabel = (appearance: any) =>
   `${APPEARANCE_VERBS[text(appearance.kind).toLowerCase()] ?? 'Open'} on ${destinationLabel(text(appearance.href))}`;
 
@@ -121,8 +131,10 @@ const [leadAppearance, ...moreAppearances] = appearances;
 const contributors = list(data.publicMembers).filter((member) => text(member?.name));
 
 // Hats and roles: the guild's stewards field holds one entry per hat, grouped by `group`.
+// A hat names its wearer in `name`, or several in `holders`; with neither it is open.
 const hatGroups = list(data.stewards)
   .filter((hat) => text(hat?.role))
+  .map((hat) => ({ ...hat, holders: [text(hat.name), ...list(hat.holders).map(text)].filter(Boolean) }))
   .reduce((groups: Map<string, any[]>, hat) => {
     const group = text(hat.group) || 'Roles';
     groups.set(group, [...(groups.get(group) ?? []), hat]);
@@ -347,11 +359,15 @@ const projects = (await getOperationalProjects())
                         <span class="gp-guild-hat-role">
                           <Text variant="title-md" as="span">{hat.role}</Text>
                         </span>
-                        {text(hat.name) ? (
-                          <span class="gp-guild-person is-compact">
-                            <Avatar name={hat.name} size={32} />
-                            <span>{hat.name}</span>
-                          </span>
+                        {hat.holders.length > 0 ? (
+                          <ul class="gp-guild-hat-holders">
+                            {hat.holders.map((holder: string) => (
+                              <li class="gp-guild-person is-compact">
+                                <Avatar name={avatarName(holder)} size={32} />
+                                <span>{holder}</span>
+                              </li>
+                            ))}
+                          </ul>
                         ) : (
                           <Chip tone="soft-gold" size="sm">Open hat</Chip>
                         )}
@@ -376,7 +392,7 @@ const projects = (await getOperationalProjects())
           <ul class="gp-guild-members">
             {contributors.map((member) => (
               <li class="gp-guild-person">
-                <Avatar name={member.name} size={56} />
+                <Avatar name={avatarName(member.name)} size={56} />
                 <span class="gp-guild-stack is-tight">
                   <Text variant="title-md" as="span">{member.name}</Text>
                   {member.role && <Text variant="body-sm" as="span">{member.role}</Text>}
@@ -667,6 +683,12 @@ const projects = (await getOperationalProjects())
   .gp-guild-hat-role {
     flex: 1 1 12rem;
     min-width: 0;
+  }
+
+  .gp-guild-hat-holders {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gp-space-sm) var(--gp-space-md);
   }
 
   .gp-guild-members {
