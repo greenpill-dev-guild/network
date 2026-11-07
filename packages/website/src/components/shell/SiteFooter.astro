@@ -1,4 +1,9 @@
 ---
+import socialLinks from '../../content/social-links.json';
+
+// Footer links follow the July 16 call (Farcaster, LinkedIn, YouTube, Luma,
+// Code of Conduct, "Join the map"). Telegram, X and YouTube come from
+// content/social-links.json so every page shares one invite link.
 const columns = [
   {
     heading: 'Network',
@@ -6,15 +11,15 @@ const columns = [
       { label: 'Chapters', href: '/chapters' },
       { label: 'Dev Guild', href: '/guilds/dev-guild' },
       { label: 'Writers Guild', href: '/guilds/writers-guild' },
-      { label: 'Garden', href: '/garden' },
+      { label: 'Code of Conduct', href: 'https://hub.regencoordination.xyz/t/code-of-conduct/37' },
     ],
   },
   {
     heading: 'Get involved',
     items: [
       { label: 'Start in the Garden', href: '/garden' },
-      { label: 'Attend an event', href: '/chapters' },
-      { label: 'Add yourself to the map', href: '/#join-map' },
+      { label: 'Events calendar', href: 'https://luma.com/greenpill-network' },
+      { label: 'Join the map', href: '/#join-map' },
       { label: 'Talk to a steward', href: 'https://calendar.app.google/gia7UpaSVKwwEKxy5' },
     ],
   },
@@ -23,19 +28,24 @@ const columns = [
     items: [
       { label: 'Library', href: '/library' },
       { label: 'Stories', href: '/stories' },
-      { label: 'Podcast', href: 'https://podcasts.apple.com/us/podcast/greenpill/id1609313639' },
+      { label: 'Podcast', href: '/library#podcast' },
     ],
   },
   {
     heading: 'Connect',
     items: [
-      { label: 'Twitter / X', href: 'https://twitter.com/greenpillnet' },
-      { label: 'Warpcast', href: 'https://warpcast.com/~/channel/green-pill' },
-      { label: 'Telegram', href: 'https://t.me/+e-aa2Ed3LWVlYjNh' },
+      { label: 'X / Twitter', href: socialLinks.twitter },
+      { label: 'Farcaster', href: 'https://farcaster.xyz/~/channel/green-pill' },
+      { label: 'Telegram', href: socialLinks.telegram },
+      { label: 'LinkedIn', href: 'https://www.linkedin.com/company/greenpill-network' },
+      { label: 'YouTube', href: socialLinks.youtube },
       { label: 'Regen Hub', href: 'https://hub.regencoordination.xyz' },
     ],
   },
 ];
+
+// Built hourly, so the year stays current without an edit.
+const year = new Date().getFullYear();
 ---
 
 <footer class="gp-site-footer">
@@ -53,8 +63,8 @@ const columns = [
   </div>
 
   <div class="gp-footer-bottom">
-    <span>greenpill.network</span>
-    <span>2026 Greenpill Network</span>
+    <span>© {year} Greenpill Network</span>
+    <a href="https://github.com/greenpill-dev-guild/network">Built in the open on GitHub</a>
   </div>
 </footer>
 
@@ -64,7 +74,6 @@ const columns = [
     margin-top: 0;
     padding: var(--gp-space-4xl) clamp(var(--gp-space-lg), 6vw, var(--gp-space-4xl)) var(--gp-space-3xl);
     border-top: 1px solid var(--gp-border-soft);
-    background: rgba(7, 24, 15, 0);
   }
 
   .gp-footer-grid {
@@ -115,28 +124,31 @@ const columns = [
   }
 
   .gp-footer-bottom {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
-    gap: var(--gp-space-lg);
+    gap: var(--gp-space-sm) var(--gp-space-lg);
     max-width: var(--gp-container-2xl);
     margin: var(--gp-space-3xl) auto 0;
     padding-top: var(--gp-space-lg);
     border-top: 1px solid var(--gp-border-soft);
     color: var(--gp-fg-dim);
     font-family: var(--gp-font-mono);
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    line-height: 1.3;
-    text-transform: uppercase;
+    font-size: var(--gp-caption);
+    letter-spacing: 0.02em;
+    line-height: 1.4;
   }
 
-  .gp-footer-bottom span:nth-child(2) {
-    text-align: center;
+  .gp-footer-bottom a {
+    color: var(--gp-fg-muted);
+    text-decoration: underline;
+    text-decoration-color: var(--gp-border);
+    text-underline-offset: 0.2em;
+    transition: color 180ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  .gp-footer-bottom span:nth-child(3) {
-    text-align: end;
+  .gp-footer-bottom a:hover {
+    color: var(--gp-primary);
   }
 
   @media (max-width: 900px) {
@@ -155,13 +167,7 @@ const columns = [
     }
 
     .gp-footer-bottom {
-      grid-template-columns: 1fr;
-      gap: var(--gp-space-sm);
-    }
-
-    .gp-footer-bottom span:nth-child(2),
-    .gp-footer-bottom span:nth-child(3) {
-      text-align: start;
+      flex-direction: column;
     }
   }
 </style>

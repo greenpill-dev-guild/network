@@ -23,7 +23,7 @@
     "preview:website": "bun --bun run --cwd packages/website preview",
     "start:agent": "bun run --cwd packages/agent start",
     "admin:down": "bun run --cwd packages/admin down",
-    "astro": "bun run --cwd packages/website astro",
+    "astro": "bun --bun run --cwd packages/website astro",
     "typecheck": "node_modules/@typescript/native/bin/tsc -b --pretty false",
     "db:local:up": "bun --no-env-file scripts/docker-compose.ts -f packages/agent/docker-compose.yml up -d agent-postgres",
     "db:local:down": "bun --no-env-file scripts/docker-compose.ts -f packages/agent/docker-compose.yml down",

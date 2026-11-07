@@ -21,6 +21,7 @@ import {
   getOperationalChapterInitiatives,
   getOperationalChapters,
 } from '../../lib/operational-content';
+import { NEW_TAB_HINT_ID, NEW_TAB_HINT_TEXT } from '../../lib/external-links';
 
 export async function getStaticPaths() {
   const items = await getOperationalChapterPages();
@@ -389,8 +390,21 @@ function primaryInitiativeHref(initiative: any) {
 </GpLayout>
 
 {showImpact && (
-  <script is:inline>
+  <script is:inline define:vars={{ newTabHint: { id: NEW_TAB_HINT_ID, text: NEW_TAB_HINT_TEXT } }}>
     const numberFormatter = new Intl.NumberFormat('en');
+    // Links built here in the browser miss the site-wide link rule
+    // (lib/external-links.ts), which runs when the page is rendered, so
+    // describe them as opening in a new tab the same way.
+    const describeAsNewTab = (link) => {
+      if (!document.getElementById(newTabHint.id)) {
+        const hint = document.createElement('span');
+        hint.id = newTabHint.id;
+        hint.hidden = true;
+        hint.textContent = newTabHint.text;
+        document.body.append(hint);
+      }
+      link.setAttribute('aria-describedby', newTabHint.id);
+    };
     const visible = (element, shouldShow) => {
       if (!element) return;
       element.classList.toggle('is-hidden', !shouldShow);
@@ -417,6 +431,7 @@ function primaryInitiativeHref(initiative: any) {
           link.href = event.url;
           link.target = '_blank';
           link.rel = 'noopener';
+          describeAsNewTab(link);
           link.textContent = label;
           item.append(link);
         } else {
