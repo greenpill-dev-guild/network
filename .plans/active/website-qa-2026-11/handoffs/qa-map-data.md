@@ -76,7 +76,7 @@ Proposed points come from OpenStreetMap through Nominatim, the geocoder the map'
 
 ## Production change set
 
-**Status: proposed, not approved.** Nothing has been written to production. Only latitude and longitude change; place text, names and private fields stay as they are. Values are rounded to the column's six decimals.
+**Status: approved by Afo on 2026-11-06 in the `qa-map-data` session ("Approve all nine"), to run right after #35 deploys `network-agent`.** Not applied yet; nothing has been written to production. A read-only check of live `/map/state` at 2026-11-07 00:31 UTC found all nine rows still at the reviewed place text and coordinates. Only latitude and longitude change; place text, names and private fields stay as they are. Values are rounded to the column's six decimals.
 
 | Node id | Public name | Place (unchanged) | Current | Proposed | Moves | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -99,8 +99,8 @@ Not in the change set:
 
 ## Open items and decisions needed
 
-1. **Approve the change set (input I5).** If approved as is, the nine rows move. Say which rows to drop if not.
-2. **Duplicates.** Victor Porton has two identical rows, and kitblake has a correct Amsterdam row plus the Rotterdam row at 0,0. The change set moves all of them. If you would rather archive one Victor Porton row, or the kitblake Rotterdam row, a moderator can set its status to archived in Directus and I will drop it from the runner.
+1. **Change set (input I5): approved** by Afo on 2026-11-06, all nine rows, to run after #35 deploys. Order: merge #33, then #35; check the `network-agent` release and `/ready`; run the dry run, then `--apply`; keep the printed run id; check live `/map/state`.
+2. **Duplicates: settled by that approval.** Both Victor Porton rows and the kitblake Rotterdam row move; none are archived. Archiving a duplicate later stays possible in Directus.
 3. **Production flag.** Please confirm `MAP_LOCATION_CONFIRMATION_REQUIRED` on `network-agent` is `true` or unset. Its value is a secret (Fly shows only a digest), and a validation-only production probe was blocked by the permission classifier, so I could not check it. After this change the raw path refuses 0,0, out-of-range and edge points either way, but while it is open it still accepts any free-text place with any plausible point, which is how the Eve, Victor Porton and Dida rows happened.
 4. **Follow-up (not done here): tighten the database checks.** A migration that adds a not-0,0 check as `NOT VALID`, then `VALIDATE` after the repair, would also cover Directus admin edits. The existing range checks already match the rule (edges allowed). It needs its own production apply.
 5. **Optional:** clear the ecoregion names stored in `intake.map_node_submissions.bioregion`. They are no longer published, so this is tidiness only.
