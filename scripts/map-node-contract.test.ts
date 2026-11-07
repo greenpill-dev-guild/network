@@ -1897,7 +1897,7 @@ test('home map list heading follows the page h1', async () => {
 // latitude and longitude fields as 0. Out-of-range, non-numeric and 0,0 points
 // are always refused. An exact edge point is refused from raw coordinates but
 // accepted from a confirmed place, because real places sit on the 180th
-// meridian (Fiji). Evidence: .plans/active/website-qa-2026-11/handoffs/qa-map-data.md
+// meridian (Fiji). Evidence: .plans/archive/website-qa-2026-11/handoffs/qa-map-data.md
 // ---------------------------------------------------------------------------
 const LIVE_EDGE_POINTS = Object.freeze([
   { place: 'Florida', lat: 90, long: 97.76261 },

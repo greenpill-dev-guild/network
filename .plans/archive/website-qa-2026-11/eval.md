@@ -10,11 +10,11 @@ Each finding in `reports/2026-11-06-qa-findings.md` is closed when its check bel
 | 2 | No "Knowledge map" or "Open the toolkit" tile on the home page. The ecoregion layer, its dataset and the footer credit are gone (D2). |
 | 3 | Every ecosystem entry links to the organization's own page and has a source in the `qa-home-garden` handoff; partners and tools are separate rows. |
 | 4 | Every story claim has a source in the `qa-stories` handoff; at least the verifiable stories from the last 12 months are published with exact dates; no "storyies", "seed copy" or raw category slugs render. |
-| 5 | Subscribe on the home page leads to a working signup, or is replaced as decided in D3. A real signup reaches the chosen list (tested by Afo or with his approval). |
-| 6 | One Telegram invite link, read from `content/social-links.json`, requires admin approval, and opens in a new tab. |
+| 5 | Subscribe on the home page leads to a working signup, or is replaced as decided in D3. A real signup reaches the chosen list (tested by Afo or with his approval). At hub close on 2026-11-07 the real signup was untested; it moved to PRD-1420. |
+| 6 | One Telegram invite link, read from `content/social-links.json`, requires admin approval, and opens in a new tab. At hub close on 2026-11-07 the site used only the approval invite, but the old plain-join invite still opened the group; its revocation moved to PRD-1420. |
 | 7 | On the home, Library, a guild, a chapter and a story page, every external link opens in a new tab with `rel="noopener"` and an accessible hint; internal links do not. |
 | 8 | Pages with the illustrated background show no seams, hard edges or clipped glow at 375, 1024, 1440 or 1920 (D4 as changed on 2026-11-07); the home page stays plain. |
-| 9 | Cards on every page use `Card` with the home treatment; no page-local card classes remain. |
+| 9 | Cards on every page use `Card` with the home treatment; no page-local card classes remain. Met on the pages checked live at hub close on 2026-11-07: home, `/chapters`, `/stories`, `/library`, `/garden`, both guild pages, and one page each from the chapter and story templates (`/404` and `/design-system` were not checked). `/map/edit` and `/map/moderate`, which sit outside the site shell, keep their own cards and are tracked in PRD-1422. |
 | 10 | Each book opens a dialog with the larger cover, the English PDF, every translation and every store or edition link; works with keyboard and screen reader; the cover still works without JavaScript. |
 | 11 | The Library shows the newest episodes the feed held at the last build, and they play on the site; the scheduled build refreshes the feed; the episode count comes from the feed. |
 | 12 | No Knowledge Garden block or inactive protocol guides; GreenSci listed or not per I4. |
@@ -23,7 +23,7 @@ Each finding in `reports/2026-11-06-qa-findings.md` is closed when its check bel
 | 15 | The Writers Guild page lists only verified Writers Guild work, credits contributors, and does not claim the podcast. |
 | 16 | The footer says Farcaster and includes LinkedIn; the unmaintained website link is gone. |
 | 17 | Header, favicon, touch icon and default share image use the current brand kit. |
-| 18 | A pull-request workflow runs the em-dash check on website changes and it passes on `main`; no em dashes in website copy; Directus content is cleaned through an approved change set, and the hourly publish never fails on steward copy. |
+| 18 | A pull-request workflow runs the em-dash check on website changes and it passes on `main`; no em dashes in website copy; Directus content is cleaned through an approved change set, and the hourly publish never fails on steward copy. When the hub closed on 2026-11-07, everything here was met except the pull-request workflow, which waits on Afo's OK and moved to PRD-1419. |
 | 19 | The assessment stays (D1). Its legends sit inside their cards. The questions Afo marks as multi-answer accept several answers, and both the stored answers and the result use every selected answer under the scoring he agrees. Checked at all three widths and with keyboard and screen reader. |
 | 20 | The footer's bottom row is friendly and accurate; no retired "friction" labels. |
 

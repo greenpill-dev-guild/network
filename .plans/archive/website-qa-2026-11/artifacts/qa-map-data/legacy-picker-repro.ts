@@ -6,7 +6,7 @@
 //   mkdir -p tmp/qa-map-data
 //   git show 228168e:packages/website/src/components/page-sections/HomeMap.astro > tmp/qa-map-data/HomeMap-228168e.astro
 //   git show 228168e:packages/website/src/data/operational-content-snapshot.json > tmp/qa-map-data/snapshot-228168e.json
-//   bun .plans/active/website-qa-2026-11/artifacts/qa-map-data/legacy-picker-repro.ts
+//   bun .plans/archive/website-qa-2026-11/artifacts/qa-map-data/legacy-picker-repro.ts
 //
 // Output from 2026-11-06 is in legacy-picker-repro.out next to this file.
 import { readFileSync } from 'node:fs';

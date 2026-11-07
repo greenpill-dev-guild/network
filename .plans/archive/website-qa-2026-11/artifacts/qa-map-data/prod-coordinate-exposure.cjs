@@ -10,7 +10,7 @@
 // It runs inside the network-agent machine, which holds DATABASE_URL. One
 // command from the repository root, leaving no file on the machine:
 //
-//   fly ssh console -a network-agent -C "node -e 'eval(atob(process.argv[1]))' $(base64 < .plans/active/website-qa-2026-11/artifacts/qa-map-data/prod-coordinate-exposure.cjs | tr -d '\n')"
+//   fly ssh console -a network-agent -C "node -e 'eval(atob(process.argv[1]))' $(base64 < .plans/archive/website-qa-2026-11/artifacts/qa-map-data/prod-coordinate-exposure.cjs | tr -d '\n')"
 (async () => {
   const postgres = require('module').createRequire('/app/package.json')('postgres');
   const sql = postgres(process.env.DATABASE_URL, { max: 1, idle_timeout: 5, connect_timeout: 15, prepare: false });
