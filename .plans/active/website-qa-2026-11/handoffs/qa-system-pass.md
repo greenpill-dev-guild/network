@@ -1,6 +1,6 @@
 # Handoff: qa-system-pass (PRD-1418)
 
-Session `qa-system-pass`, Linear PRD-1418, the last step of the November QA pass (findings 9 and 18 plus the carried items). Branch `claude/qa-system-pass-b762a4`, pull request: see the PR line under Changed. Not merged; the orchestrating session merges it and runs the post-deploy checks.
+Session `qa-system-pass`, Linear PRD-1418, the last step of the November QA pass (findings 9 and 18 plus the carried items). Branch `claude/qa-system-pass-b762a4`, pull request https://github.com/greenpill-dev-guild/network/pull/44 (not merged; the orchestrating session merges it and runs the post-deploy checks).
 
 ## Changed
 
@@ -25,7 +25,7 @@ Session `qa-system-pass`, Linear PRD-1418, the last step of the November QA pass
 
 ## Evidence
 
-- **Gate, on the final commit** (see the PR body for the rerun): `bun run typecheck` passed; `bun run test:content` 47 pass, 0 fail; `bun run test:em-dashes` 13 pass; `bun run test:plans` passed; `bun run check:em-dashes` "no em dashes in the copy of 226 website files"; `bun run agentic:check` passed (guidance, browser-verification policy, em-dash check, plan hubs, `ui:check` 0 hard, 0 warn); `bun run build` built 44 pages. `bun run ui:verify` was not run: the dev machine has no Chrome.
+- **Gate, on `706a51f`:** `bun run typecheck` passed; `bun run test:content` 47 pass, 0 fail in `scripts/public-content-contract.test.ts` (it also runs a git-ignored October copy under `tmp/pr26-review/`, which passes); `bun run test:em-dashes` 13 pass; `bun run test:plans` passed; `bun run check:em-dashes` "no em dashes in the copy of 226 website files"; `bun run agentic:check` passed (guidance, browser-verification policy, em-dash check, plan hubs, `ui:check` 0 hard, 0 warn); `bun run build` built 44 pages. `bun run ui:verify` was not run: the dev machine has no Chrome.
 - **Brave QA** (Afo's profile through Claude in Chrome), the build exported with `dm-export` and served on `127.0.0.1:3321`; 375 and 1024 in same-origin iframes, 1920 in a scaled iframe:
   - DOM audit on home, `/chapters`, a chapter, a guild, `/stories`, a story, `/library` and `/garden`: every card is a `.gp-card` with a 20px radius, the soft border and the card tone (elevated where intended); no other element in `main` has a card's border, radius and fill (the guild CTA strip aside, see Open items). The only `:hover` rules with a transform are two buttons in the map walkthrough (not cards).
   - Hover on a home guild tile: background `card-elev`, border lime at 32%, `transform: none`.
