@@ -9,8 +9,8 @@
   "workflow": {
     "overall_status": "active",
     "priority": "p1",
-    "created_at": "2026-11-06T23:30:00Z",
-    "updated_at": "2026-11-07T00:15:00Z"
+    "created_at": "2026-11-06T22:51:19Z",
+    "updated_at": "2026-11-06T23:16:06Z"
   },
   "links": {
     "brief": "brief.md",
@@ -66,18 +66,18 @@
   },
   "history": [
     {
-      "timestamp": "2026-11-06T23:30:00Z",
+      "timestamp": "2026-11-06T22:51:19Z",
       "actor": "claude",
       "lane": "system",
       "status": "scaffolded",
-      "note": "Scaffolded from Afo's 2026-11-06 QA review with findings, session roster, decisions and acceptance checks."
+      "note": "Scaffolded from Afo's 2026-11-06 QA review with findings, session roster, decisions and acceptance checks, and moved to active in the same commit on his launch approval."
     },
     {
-      "timestamp": "2026-11-07T00:15:00Z",
+      "timestamp": "2026-11-06T22:54:28Z",
       "actor": "claude",
       "lane": "system",
       "status": "activated",
-      "note": "Moved to active on Afo's launch approval; batch A sessions started."
+      "note": "Linear mirror recorded (PRD-1408 to PRD-1412); batch A sessions (qa-map-data, qa-home-garden, qa-guilds, qa-stories) started right after this commit."
     }
   ]
 }
