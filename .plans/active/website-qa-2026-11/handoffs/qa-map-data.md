@@ -1,6 +1,6 @@
 # Handoff: qa-map-data (PRD-1409)
 
-Findings 1 and 2 (decision D2). Branch `claude/qa-map-data-5361dc`, pull request linked in PRD-1409. Evidence files are in `../artifacts/qa-map-data/`.
+Findings 1 and 2 (decision D2). Branch `claude/qa-map-data-5361dc`, pull request https://github.com/greenpill-dev-guild/network/pull/35 (not merged; merging deploys `network-agent`). Evidence files are in `../artifacts/qa-map-data/`.
 
 ## Changed
 
