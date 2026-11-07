@@ -9,6 +9,7 @@ import ArrowLink from '../../components/ui/ArrowLink.astro';
 import Overline from '../../components/ui/Overline.astro';
 import Text from '../../components/ui/Text.astro';
 import Meta from '../../components/ui/Meta.astro';
+import BookDialog from '../../components/page-sections/BookDialog.astro';
 import library from '../../content/library.json';
 import podcastFeed from '../../data/podcast-feed-snapshot.json';
 
@@ -16,13 +17,9 @@ const books = (await getCollection('books')).sort(
   (a, b) => (a.data.sortOrder ?? 0) - (b.data.sortOrder ?? 0),
 );
 
-const allResources = await getCollection('resources');
-const resourceRank = new Map((library.featuredResourceSlugs ?? []).map((slug, index) => [slug, index]));
-const resources = allResources
-  .filter((r) => r.data.status === 'published')
-  .sort((a, b) => (resourceRank.get(a.id) ?? 99) - (resourceRank.get(b.id) ?? 99));
-
-const podcastResource = resources.find((r) => r.id === 'greenpill-podcast');
+const podcastResource = (await getCollection('resources')).find(
+  (resource) => resource.id === 'greenpill-podcast' && resource.data.status === 'published',
+);
 const guilds = (await getOperationalGuilds())
   .filter((guild) => !guild.data.seo?.noindex)
   .sort((a, b) => (
@@ -31,6 +28,8 @@ const guilds = (await getOperationalGuilds())
   ));
 
 const hero = library.hero ?? {};
+// The episode count comes from the RSS feed. The Pages build refreshes
+// podcast-feed-snapshot.json before it builds, so this stays current.
 const podcastEpisodes = `${podcastFeed.episodeCount} episodes`;
 const recentPodcastEpisodes = podcastFeed.episodes ?? [];
 const featuredEpisode = recentPodcastEpisodes[0];
@@ -38,42 +37,20 @@ const listedEpisodes = recentPodcastEpisodes.slice(1, 4);
 const podcastArchiveHref = podcastFeed.archiveUrl || podcastResource?.data.primaryUrl || 'https://podcasts.apple.com/us/podcast/greenpill/id1609313639';
 const podcastCoverImage = podcastFeed.image || '/images/podcast-cover.png';
 const podcastUpdated = formatDate(podcastFeed.lastBuildDate);
-const gardenGuideResources = ['greenpill-garden-season-one', 'regen-protocols']
-  .map((slug) => resources.find((resource) => resource.id === slug))
-  .filter((resource): resource is typeof resources[number] => Boolean(resource));
-const gardenGuides = [
-  ...gardenGuideResources.map((resource) => ({
-    title: resource.data.card?.title || resource.data.title,
-    summary: resource.data.card?.summary || resource.data.summary || resource.data.description,
-    href: resource.data.primaryUrl || resource.data.card?.href || '/garden',
-    meta: resource.data.readTime || resource.data.publishDate || 'Public guide',
-    updated: resource.data.updatedDate || resource.data.publishDate || 'Public source',
-    authors: resource.data.author || 'Network stewards',
-    topics: (resource.data.themeSlugs ?? []).slice(0, 3).map(titleCaseTheme),
-  })),
-  {
-    title: library.gardenCard?.title || 'Enter the Garden',
-    summary: library.gardenCard?.summary || 'A public onboarding ramp from a light newsletter subscription to a high-intent steward call.',
-    href: library.gardenCard?.href || '/garden',
-    meta: 'Public ramp',
-    updated: 'Live page',
-    authors: 'Network stewards',
-    topics: ['Onboarding', 'Stewardship', 'Coordination'],
-  },
-];
+const translationCount = books.reduce((total, book) => total + book.data.translations.length, 0);
 const libraryStats = [
-  { value: String(books.length), label: 'Books' },
-  { value: podcastEpisodes, label: 'Podcast archive' },
+  { value: String(books.length), label: books.length === 1 ? 'Book' : 'Books' },
+  { value: String(podcastFeed.episodeCount), label: 'Podcast episodes' },
+  { value: String(translationCount), label: translationCount === 1 ? 'Translation' : 'Translations' },
   { value: String(guilds.length), label: guilds.length === 1 ? 'Guild' : 'Guilds' },
-  { value: String(gardenGuides.length), label: gardenGuides.length === 1 ? 'Garden guide' : 'Garden guides' },
-];
+].filter((stat) => stat.value !== '0');
 
-function titleCaseTheme(slug: string) {
-  return slug
-    .split('-')
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
+function bookDialogId(book: typeof books[number]) {
+  return `book-${book.id}`;
+}
+
+function translationLabel(count: number) {
+  return count === 1 ? '1 translation' : `${count} translations`;
 }
 
 function formatDate(value: string) {
@@ -107,9 +84,7 @@ function guildHref(guild: typeof guilds[number]) {
 }
 
 function guildFootLabel(guild: typeof guilds[number]) {
-  return publicGuildPath(guild.id || guild.slug)
-    ? `${(guild.data.proofSignals ?? []).length || 'Public'} proof sources`
-    : 'Visit guild site';
+  return publicGuildPath(guild.id || guild.slug) ? 'Visit guild' : 'Visit guild site';
 }
 ---
 
@@ -173,32 +148,56 @@ function guildFootLabel(guild: typeof guilds[number]) {
           <Text variant="mono">All free · multiple languages</Text>
         </div>
 
-        <div class="gp-library-books-grid">
+        {/*
+          Each cover links to the English PDF. With JavaScript, a plain click
+          opens the book's dialog instead (BookDialog.astro), which carries the
+          translations and the store or edition links.
+        */}
+        <ul class="gp-library-books-grid" role="list">
           {books.map((book, index) => (
-            <a class="gp-library-book" href={book.data.ebookLink || '#'} target={book.data.ebookLink?.startsWith('http') ? '_blank' : undefined} rel="noopener">
-              <span class="gp-library-book-index">{String(index + 1).padStart(2, '0')}</span>
-              <span class="gp-library-book-cover">
-                {book.data.image && (
-                  <img
-                    src={book.data.image}
-                    alt={book.data.imageAlt}
-                    width={book.data.imageWidth ?? 200}
-                    height={book.data.imageHeight ?? 300}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                )}
-              </span>
-              <div class="gp-library-book-meta">
-                <Text variant="title-md" class="gp-library-book-title">{book.data.title}</Text>
-                {book.data.author && <Text variant="caption">{book.data.author}{book.data.publishYear && ` · ${book.data.publishYear}`}</Text>}
-                {book.data.translations.length > 0 && (
-                  <Text variant="mono">{book.data.translations.length} translations</Text>
-                )}
-              </div>
-            </a>
+            <li class="gp-library-book">
+              <a class="gp-library-book-link" href={book.data.ebookLink} data-book-dialog-trigger={bookDialogId(book)}>
+                <span class="gp-library-book-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+                <span class="gp-library-book-cover">
+                  {book.data.image && (
+                    <img
+                      src={book.data.image}
+                      alt=""
+                      width={book.data.imageWidth ?? 200}
+                      height={book.data.imageHeight ?? 300}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  )}
+                </span>
+                <span class="gp-library-book-meta">
+                  <Text as="span" variant="title-md" class="gp-library-book-title">{book.data.title}</Text>
+                  {book.data.author && <Text variant="caption">{book.data.author}{book.data.publishYear && ` · ${book.data.publishYear}`}</Text>}
+                  {book.data.translations.length > 0 && (
+                    <Text variant="mono">{translationLabel(book.data.translations.length)}</Text>
+                  )}
+                </span>
+              </a>
+            </li>
           ))}
-        </div>
+        </ul>
+
+        {books.map((book) => (
+          <BookDialog
+            id={bookDialogId(book)}
+            title={book.data.title}
+            description={book.data.description}
+            author={book.data.author}
+            publishYear={book.data.publishYear}
+            image={book.data.image}
+            imageAlt={book.data.imageAlt}
+            imageWidth={book.data.imageWidth}
+            imageHeight={book.data.imageHeight}
+            ebookLink={book.data.ebookLink}
+            formats={book.data.formats}
+            translations={book.data.translations}
+          />
+        ))}
       </Container>
     </section>
 
@@ -234,7 +233,7 @@ function guildFootLabel(guild: typeof guilds[number]) {
                 <Text variant="h3" class="gp-library-podcast-title">{featuredEpisode.title}</Text>
                 <Text variant="body-sm" class="gp-library-podcast-summary">{featuredEpisode.summary || podcastFeed.description || podcastResource?.data.summary}</Text>
               </div>
-              <audio class="gp-library-audio gp-library-feature-audio" controls preload="none">
+              <audio class="gp-library-audio gp-library-feature-audio" controls preload="none" aria-label={featuredEpisode.title}>
                 <source src={featuredEpisode.audioUrl} type={featuredEpisode.audioType || 'audio/mpeg'} />
                 Your browser does not support the audio element.
               </audio>
@@ -244,9 +243,9 @@ function guildFootLabel(guild: typeof guilds[number]) {
               </div>
             </article>
 
-            <div class="gp-library-episode-list" aria-label="Featured public episodes">
+            <ul class="gp-library-episode-list" role="list" aria-label="More recent episodes">
               {listedEpisodes.map((episode) => (
-                <article class="gp-library-episode-row">
+                <li class="gp-library-episode-row">
                   <img
                     class="gp-library-episode-image"
                     src={episode.image || podcastCoverImage}
@@ -259,91 +258,54 @@ function guildFootLabel(guild: typeof guilds[number]) {
                     <Text variant="title-md" class="gp-library-episode-title">{episode.title}</Text>
                     <Text variant="caption">{episode.author || 'GreenPill'}</Text>
                   </span>
-                  <audio class="gp-library-audio gp-library-row-audio" controls preload="none">
+                  <audio class="gp-library-audio gp-library-row-audio" controls preload="none" aria-label={episode.title}>
                     <source src={episode.audioUrl} type={episode.audioType || 'audio/mpeg'} />
                     Your browser does not support the audio element.
                   </audio>
-                  <a class="gp-library-episode-notes" href={episode.link}>Notes</a>
-                </article>
+                  <a class="gp-library-episode-notes" href={episode.link}>Notes<span class="gp-library-sr">: {episode.title}</span></a>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         </Container>
       </section>
     )}
 
-    <section class="gp-library-section" id="tools-guides">
-      <Container size="2xl">
-        <div class="gp-library-bento-stack">
-          {guilds.length > 0 && (
-            <div>
-              <div class="gp-library-section-head">
-                <div class="gp-library-section-head-copy">
-                  <Overline>Guilds · Working circles</Overline>
-                  <Text variant="h2">Build with the network.</Text>
-                  <Text variant="body" class="gp-library-section-dek">
-                    Public guild pages collect the tools, writing, and coordination work already visible to the network.
-                  </Text>
-                </div>
-              </div>
-
-	              <div class="gp-library-guild-grid">
-	                {guilds.map((guild, index) => {
-	                  const href = guildHref(guild);
-	                  const isExternal = href.startsWith('http');
-	                  return (
-	                    <a class:list={['gp-library-guild-card', { 'is-bento-wide': guilds.length === 3 && index === 2 }]} href={href} target={isExternal ? '_blank' : undefined} rel={isExternal ? 'noopener' : undefined}>
-	                      <span class="gp-library-status">{guild.data.status || 'active'}</span>
-	                      <Text variant="h3" class="gp-library-guild-title">{guild.data.name}</Text>
-	                      <Text variant="body-sm">{guild.data.summary || guild.data.oneliner || guild.data.description}</Text>
-	                      <span class="gp-library-guild-foot">
-	                        <span>{guildFootLabel(guild)}</span>
-	                        <span aria-hidden="true">→</span>
-	                      </span>
-	                    </a>
-	                  );
-	                })}
-	              </div>
+    {guilds.length > 0 && (
+      <section class="gp-library-section" id="guilds">
+        <Container size="2xl">
+          <div class="gp-library-section-head">
+            <div class="gp-library-section-head-copy">
+              <Overline>Guilds · Working circles</Overline>
+              <Text variant="h2">Build with the network.</Text>
+              <Text variant="body" class="gp-library-section-dek">
+                Public guild pages collect the tools, writing, and coordination work already visible to the network.
+              </Text>
             </div>
-          )}
-
-          <div>
-            <div class="gp-library-section-head">
-              <div class="gp-library-section-head-copy">
-                <Overline>Knowledge Garden · Living guides</Overline>
-                <Text variant="h2">Learn how the network operates.</Text>
-                <Text variant="body" class="gp-library-section-dek">
-                  Garden threads, public docs, and source-backed guides stay here when they are ready for public readers.
-                </Text>
-              </div>
-              <ArrowLink href="/garden">Open Garden</ArrowLink>
-            </div>
-
-	            <div class="gp-library-garden-grid">
-	              {gardenGuides.map((guide, index) => (
-	                <a class:list={['gp-library-garden-card', { 'is-featured': index === 0 }]} href={guide.href} target={guide.href.startsWith('http') ? '_blank' : undefined} rel={guide.href.startsWith('http') ? 'noopener' : undefined}>
-	                  <span class="gp-library-garden-wash" aria-hidden="true"></span>
-	                  <span class="gp-library-garden-head">
-	                    <Overline>Knowledge Garden</Overline>
-	                    <span>{guide.meta}</span>
-	                  </span>
-	                  <Text variant="h3" class="gp-library-garden-title">{guide.title}</Text>
-	                  <Text variant="body-sm">{guide.summary}</Text>
-	                  <span class="gp-library-garden-topics">
-	                    {guide.topics.map((topic) => <span>{topic}</span>)}
-	                  </span>
-	                  <span class="gp-library-garden-foot">
-	                    <span>{guide.updated}</span>
-	                    <span>{guide.authors}</span>
-	                  </span>
-	                  <span class="gp-library-resource-arrow" aria-hidden="true">↗</span>
-	                </a>
-	              ))}
-	            </div>
           </div>
-        </div>
-      </Container>
-    </section>
+
+          <div class="gp-library-guild-grid">
+            {guilds.map((guild, index) => {
+              const href = guildHref(guild);
+              // Existing per-link new-tab handling, kept until the site-wide
+              // external-link rule (qa-brand-shell) replaces it.
+              const isExternal = href.startsWith('http');
+              return (
+                <a class:list={['gp-library-guild-card', { 'is-bento-wide': guilds.length === 3 && index === 2 }]} href={href} target={isExternal ? '_blank' : undefined} rel={isExternal ? 'noopener' : undefined}>
+                  <span class="gp-library-status">{guild.data.status || 'active'}</span>
+                  <Text variant="h3" class="gp-library-guild-title">{guild.data.name}</Text>
+                  <Text variant="body-sm">{guild.data.summary || guild.data.oneliner || guild.data.description}</Text>
+                  <span class="gp-library-guild-foot">
+                    <span>{guildFootLabel(guild)}</span>
+                    <span aria-hidden="true">→</span>
+                  </span>
+                </a>
+              );
+            })}
+          </div>
+        </Container>
+      </section>
+    )}
   </main>
 </GpLayout>
 
@@ -449,18 +411,24 @@ function guildFootLabel(guild: typeof guilds[number]) {
 	    display: grid;
 	    grid-template-columns: repeat(10, minmax(0, 1fr));
 	    gap: var(--gp-space-2xl) clamp(18px, 2vw, 28px);
+	    margin: 0;
+	    padding: 0;
+	    list-style: none;
 	  }
 
 	  .gp-library-book {
-	    position: relative;
-	    display: flex;
 	    grid-column: span 2;
+	    min-width: 0;
+	  }
+
+	  .gp-library-book-link {
+	    display: flex;
 	    flex-direction: column;
 	    gap: 14px;
-	    min-width: 0;
-    text-decoration: none;
-    color: var(--gp-fg);
-	    transition: transform 200ms, color 200ms;
+	    block-size: 100%;
+	    color: var(--gp-fg);
+	    text-decoration: none;
+	    cursor: pointer;
 	  }
 
 	  .gp-library-book:last-child:nth-child(5n + 1) {
@@ -479,35 +447,31 @@ function guildFootLabel(guild: typeof guilds[number]) {
 	    grid-column: 2 / span 2;
 	  }
 
-	  .gp-library-book:hover {
-	    transform: translateY(-3px);
-	  }
-
   .gp-library-book-index {
     color: var(--gp-fg-dim);
     font-family: var(--gp-font-mono);
-    font-size: 11px;
+    font-size: var(--gp-label-sm);
     letter-spacing: 0.08em;
   }
 
   .gp-library-book-cover {
-	    display: grid;
-	    place-items: center;
-	    width: 100%;
-	    aspect-ratio: 3 / 4;
-	    padding: 10px;
-	    border: 1px solid rgba(240, 220, 160, 0.14);
-	    border-radius: var(--gp-radius-md);
-	    background: rgba(15, 61, 46, 0.5);
-	    box-shadow: var(--gp-shadow-card);
-	    overflow: hidden;
-	    transition: border-color 200ms, background 200ms, box-shadow 200ms;
-	  }
+    display: grid;
+    place-items: center;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    padding: 10px;
+    border: 1px solid color-mix(in srgb, var(--gp-secondary) 14%, transparent);
+    border-radius: var(--gp-radius-md);
+    background: color-mix(in srgb, var(--gp-bg) 50%, transparent);
+    box-shadow: var(--gp-shadow-card);
+    overflow: hidden;
+    transition: border-color 200ms, background 200ms;
+  }
 
-  .gp-library-book:hover .gp-library-book-cover {
-    border-color: rgba(184, 232, 53, 0.34);
-    background: rgba(15, 61, 46, 0.68);
-    box-shadow: var(--gp-shadow-card-lg);
+  /* Hover steps the surface and border tone only (DESIGN.md: no lift, no shadow stack). */
+  .gp-library-book-link:hover .gp-library-book-cover {
+    border-color: color-mix(in srgb, var(--gp-primary) 34%, transparent);
+    background: color-mix(in srgb, var(--gp-bg) 68%, transparent);
   }
 
   .gp-library-book-cover img {
@@ -526,9 +490,22 @@ function guildFootLabel(guild: typeof guilds[number]) {
   .gp-library-book-meta :global(.gp-library-book-title) {
     color: var(--gp-secondary);
     font-family: var(--gp-font-display);
-    font-size: 18px;
+    font-size: var(--gp-title-md);
     font-weight: 500;
     letter-spacing: 0;
+  }
+
+  /* Visually hidden text that screen readers still announce. */
+  .gp-library-sr {
+    position: absolute;
+    overflow: hidden;
+    clip-path: inset(50%);
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    white-space: nowrap;
   }
 
 	  .gp-library-podcast-layout {
@@ -607,6 +584,9 @@ function guildFootLabel(guild: typeof guilds[number]) {
 	    display: flex;
 	    flex-direction: column;
 	    justify-content: flex-start;
+	    margin: 0;
+	    padding: 0;
+	    list-style: none;
     border-top: 1px solid var(--gp-border-soft);
     border-bottom: 1px solid var(--gp-border-soft);
   }
@@ -689,141 +669,6 @@ function guildFootLabel(guild: typeof guilds[number]) {
 	  .gp-library-episode-notes:hover {
 	    color: var(--gp-primary-hover);
 	  }
-
-	  .gp-library-garden-grid {
-	    display: grid;
-	    grid-template-columns: repeat(3, minmax(0, 1fr));
-	    gap: clamp(14px, 1.5vw, 20px);
-	  }
-
-	  .gp-library-garden-card {
-	    position: relative;
-	    display: flex;
-	    flex-direction: column;
-	    gap: var(--gp-space-md);
-	    min-height: 300px;
-	    padding: var(--gp-space-xl);
-	    border: 1px solid rgba(240, 220, 160, 0.22);
-	    border-radius: var(--gp-radius-lg);
-	    background: rgba(20, 63, 48, 0.5);
-	    color: var(--gp-fg);
-	    overflow: hidden;
-	    text-decoration: none;
-	    transition: border-color 200ms, background 200ms;
-	  }
-
-	  .gp-library-garden-card > *:not(.gp-library-garden-wash) {
-	    position: relative;
-	    z-index: 1;
-	  }
-
-	  .gp-library-garden-card:hover {
-	    border-color: rgba(240, 220, 160, 0.36);
-	    background: rgba(20, 63, 48, 0.7);
-	  }
-
-	  .gp-library-garden-card.is-featured {
-	    border-color: rgba(240, 220, 160, 0.34);
-	  }
-
-	  .gp-library-garden-card::before {
-	    content: "";
-	    position: absolute;
-	    inset-block-start: 0;
-	    inset-inline-start: 0;
-	    width: 2px;
-	    height: 40px;
-	    background: var(--gp-gold-300);
-	    opacity: 0.72;
-	  }
-
-	  .gp-library-garden-wash {
-	    position: absolute;
-	    inset: 0;
-	    background-image: url('/images/hifi/garden-overlay.jpg');
-	    background-position: center;
-	    background-size: cover;
-	    opacity: 0.14;
-	    mix-blend-mode: overlay;
-	  }
-
-	  .gp-library-garden-card.is-featured .gp-library-garden-wash {
-	    opacity: 0.22;
-	  }
-
-	  .gp-library-garden-head {
-	    display: flex;
-	    align-items: center;
-	    justify-content: space-between;
-	    gap: var(--gp-space-md);
-	  }
-
-	  .gp-library-garden-head :global(.gp-overline) {
-	    color: var(--gp-gold-300);
-	  }
-
-	  .gp-library-garden-head > span {
-	    color: var(--gp-fg-muted);
-	    font-family: var(--gp-font-mono);
-	    font-size: 11px;
-	    letter-spacing: 0.06em;
-	    text-align: right;
-	    text-transform: uppercase;
-	  }
-
-	  .gp-library-garden-card :global(.gp-library-garden-title) {
-	    letter-spacing: 0;
-	  }
-
-	  .gp-library-garden-topics {
-	    display: flex;
-	    flex-wrap: wrap;
-	    gap: 6px;
-	  }
-
-	  .gp-library-garden-topics span {
-	    padding: 4px 10px;
-	    border: 1px solid rgba(240, 220, 160, 0.22);
-	    border-radius: var(--gp-radius-pill);
-	    background: rgba(240, 220, 160, 0.08);
-	    color: var(--gp-gold-300);
-	    font-family: var(--gp-font-body);
-	    font-size: 11px;
-	    font-weight: 600;
-	    white-space: nowrap;
-	  }
-
-	  .gp-library-garden-foot {
-	    display: flex;
-	    justify-content: space-between;
-	    gap: var(--gp-space-md);
-	    margin-top: auto;
-	    padding-top: var(--gp-space-md);
-	    border-top: 1px solid var(--gp-border-soft);
-	    color: var(--gp-fg-dim);
-	    font-family: var(--gp-font-mono);
-	    font-size: 11px;
-	    letter-spacing: 0.06em;
-	    text-transform: uppercase;
-	  }
-
-	  .gp-library-resource-arrow {
-	    position: absolute;
-	    inset-block-start: var(--gp-space-lg);
-    inset-inline-end: var(--gp-space-lg);
-    color: var(--gp-fg-dim);
-    transition: color 200ms;
-  }
-
-	  .gp-library-garden-card:hover .gp-library-resource-arrow {
-	    color: var(--gp-gold-300);
-	  }
-
-  .gp-library-bento-stack {
-    display: flex;
-    flex-direction: column;
-    gap: clamp(var(--gp-space-3xl), 7vw, var(--gp-space-5xl));
-  }
 
   .gp-library-guild-grid {
     display: grid;
@@ -934,9 +779,6 @@ function guildFootLabel(guild: typeof guilds[number]) {
 	      grid-column: 2;
 	    }
 
-	    .gp-library-garden-grid {
-	      grid-template-columns: repeat(2, minmax(0, 1fr));
-	    }
 	  }
 
   @container (max-width: 640px) {
@@ -983,13 +825,11 @@ function guildFootLabel(guild: typeof guilds[number]) {
 	      min-height: 44px;
 	    }
 
-	    .gp-library-guild-grid,
-	    .gp-library-garden-grid {
+	    .gp-library-guild-grid {
 	      grid-template-columns: 1fr;
 	    }
 
-	    .gp-library-guild-card,
-	    .gp-library-garden-card {
+	    .gp-library-guild-card {
 	      min-height: 0;
 	    }
   }

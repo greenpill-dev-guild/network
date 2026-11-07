@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -462,17 +462,74 @@ test('library podcast section uses RSS snapshot and in-page audio', async () => 
   const podcastSnapshot = JSON.parse(podcastSnapshotSource);
 
   assert.equal(podcastSnapshot.sourceUrl, 'https://rss.libsyn.com/shows/400481/destinations/3304589.xml');
-  assert.equal(podcastSnapshot.episodeCount, 296);
+  // The count is whatever the feed carried when the snapshot was taken; the
+  // Pages build refreshes it, so pin its shape rather than a number.
+  assert.equal(Number.isInteger(podcastSnapshot.episodeCount), true);
+  assert.equal(podcastSnapshot.episodeCount >= podcastSnapshot.episodes.length, true);
   assert.equal(podcastSnapshot.episodes.length >= 8, true);
   assert.equal(podcastSnapshot.episodes.every((episode) => episode.title && episode.audioUrl), true);
 
   assert.match(libraryPage, /import podcastFeed/);
+  assert.match(libraryPage, /podcastFeed\.episodeCount/);
   assert.match(libraryPage, /id="podcast"/);
   assert.match(libraryPage, /<audio class="gp-library-audio/);
-  assert.match(libraryPage, /gardenGuides\.map/);
   assert.doesNotMatch(libraryPage, /episodeResources\.map/);
   assert.doesNotMatch(libraryPage, /guideResources\.map/);
   assert.doesNotMatch(libraryPage, /gp-library-play/);
+});
+
+test('library lists guilds under the anchor that guild breadcrumbs link to, without the retired Knowledge Garden block', async () => {
+  const libraryPage = await readFile(libraryPagePath, 'utf8');
+
+  assert.match(libraryPage, /id="guilds"/);
+  assert.doesNotMatch(libraryPage, /Knowledge Garden|gardenGuides|gp-library-garden/);
+});
+
+test('every book links to files that ship with the site and opens a detail dialog', async () => {
+  const publicDir = join(rootDir, 'packages/website/public');
+  const libraryPage = await readFile(libraryPagePath, 'utf8');
+  const problems = [];
+
+  for (const [slug, book] of await readCollection('books')) {
+    const siteLinks = [
+      ['image', book.image],
+      ['ebookLink', book.ebookLink],
+      ...(book.formats ?? []).map((format, index) => [`formats[${index}].link`, format.link]),
+      ...(book.translations ?? []).map((translation, index) => [`translations[${index}].link`, translation.link]),
+    ];
+    for (const [field, link] of siteLinks) {
+      if (typeof link !== 'string' || !link) {
+        problems.push(`books/${slug}.json ${field} is empty`);
+        continue;
+      }
+      if (!link.startsWith('/')) continue;
+      const file = await stat(join(publicDir, decodeURI(link))).catch(() => null);
+      if (!file?.isFile()) {
+        problems.push(`books/${slug}.json ${field} points at missing file ${link}`);
+      }
+    }
+    if (!book.ebookLink?.startsWith('/pdf/')) {
+      problems.push(`books/${slug}.json ebookLink should be a site PDF so the cover works without JavaScript`);
+    }
+  }
+
+  assert.deepEqual(problems, []);
+  assert.match(libraryPage, /<BookDialog/);
+  assert.match(libraryPage, /href=\{book\.data\.ebookLink\}/);
+  assert.match(libraryPage, /data-book-dialog-trigger=/);
+});
+
+test('scheduled Pages builds refresh the podcast snapshot without blocking the publish', async () => {
+  const workflow = await readFile(join(rootDir, '.github/workflows/github-pages.yml'), 'utf8');
+  const refreshStep = workflow.match(/- name: Refresh podcast feed snapshot\n([\s\S]*?)\n\n/)?.[1] ?? '';
+
+  assert.match(workflow, /schedule:/);
+  assert.match(refreshStep, /continue-on-error: true/);
+  assert.match(refreshStep, /run: bun --no-env-file scripts\/podcast-feed-snapshot\.ts/);
+  assert.equal(
+    workflow.indexOf('- name: Refresh podcast feed snapshot') < workflow.indexOf('- name: Build website'),
+    true,
+  );
 });
 
 test('operational content snapshot generation quarantines unsafe records and rejects non-published input', () => {
