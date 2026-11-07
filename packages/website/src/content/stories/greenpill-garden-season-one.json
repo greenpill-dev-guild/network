@@ -1,73 +1,61 @@
 {
-  "title": "Greenpill Garden — Season One",
+  "title": "Greenpill Garden: Season One",
   "status": "published",
   "category": "program",
-  "publishDate": "2025",
-  "updatedDate": "2026",
-  "dek": "Public Hub sources and the approved Paragraph preview give the website a launch-safe Garden story for stewardship, workshops, protocols, and next-step onboarding.",
-  "excerpt": "A public Garden story connecting chapters, stewards, workshops, protocols, tools, impact reporting, the website revamp, and the 2026 Garden model.",
+  "publishDate": "2025-11-12",
+  "updatedDate": "2026-11-06",
+  "dek": "Greenpill Garden Season One launched at DevConnect on November 21, 2025: workshops to help stewards build strategy, structure, impact reporting and onchain tools.",
+  "excerpt": "A steward program planned from DevConnect to April 2026, with workshops on theory of change, cell structures, CIDS and Web3 tools.",
   "region": "global",
   "tag": "Garden",
   "tags": [
     "garden",
-    "onboarding",
-    "stewardship"
+    "stewards",
+    "onboarding"
   ],
-  "body": "Greenpill Garden remains editorial site content for now, not a guild project.\n\nThe public Garden thread supports copy about stewardship, chapters, impact reporting, tools, IRL events, and Greenpill's need for a clearer onboarding surface. A February 2026 update adds launch-safe context about strategy workshops, feedback sessions, worksheets, and the next phase of the season.\n\nThe Regen Protocols thread adds supporting public context for Garden-adjacent onchain protocols and steward support systems. The approved Paragraph preview adds a clearer 2026 frame: a five-month Garden incubation launched at DevConnect, Theory of Change and coherent design strategy workshops, CIDS/outcomes work, tooling implementation, and a summer 2026 harvest.\n\nKeep this material editorial until the network chooses an operational owner model for Garden. Knowledge Garden, Sarafu, and Regen Reservoir references should support the Garden narrative without becoming operational records in this batch.\n\nInternal Garden Guide details should stay out of launch content until approved.\n\n## Sources\n\n- S042: https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363\n- S050: https://hub.regencoordination.xyz/t/regen-protocols/364\n- S071: https://paragraph.com/@greenpill/preview/rN8MvIeOa4RGvE8kJN9L",
+  "body": "On November 12, 2025, Afolabi announced Greenpill Garden Season One on the Regen Coordination Hub. The program grew from a lesson of the previous years: giving stewards money alone does not help them put down deep local roots. Instead, the season offers teaching, support and coordination across many forms of capital, so local initiatives can develop their strategy, funding structure and impact reporting.\n\nThe season launched on November 21, 2025, live at DevConnect, with a target end date of April 3, 2026 and a budget of $24,000. Its operators were Afolabi Aiyeloja, Caue Tomaz and Matt Strachman.\n\n## Phases\n\n- Strategy and theory of change (November 21 to December 21): stewards ground their work in a theory of change and the eight forms of capital.\n- Structure and protocols (December 22 to January 18): stewards design a cell structure for their initiative.\n- CIDS activities and outcomes (January 19 to February 1): stewards map their plans to the Common Impact Data Standard.\n- Web3 tooling (February 1 to March 22): stewards put tools to work and report outcomes onchain, with an in-person check-in at ETHDenver.\n- Evaluation and retro rewards (March 31 to April 3).\n\n## How it unfolded\n\nIn an update on February 11, 2026, Coi reported that Durgadas of GravityDAO had led two strategy workshops with individual feedback on worksheets, that SuperBenefit had hosted a session on cell structures, and that conversations with MetaGov and OpenGrants had explored DAO-IP. Coi described the result so far as clearer shared language and sharper questions rather than a finished design.\n\nThe final phase was set to open with Glocal VR's Regenerative Resources Protocol workshop in early March, followed by a Regen Reservoir inventory: a map of what the network's chapters and stewards can offer and what they need.",
   "image": "/images/hifi/garden-overlay.jpg",
-  "author": "Greenpill Network research",
-  "authorRole": "Source-backed seed copy",
+  "author": "",
+  "authorRole": "",
   "authorBio": "",
   "authorSlug": "",
   "authorAvatar": "",
   "relatedChapter": "",
-  "relatedGuild": "writers-guild",
+  "relatedGuild": "",
   "relatedStorySlugs": [
-    "greenpill-earth-week",
-    "growing-greenpill-impact-framework"
+    "growing-greenpill-impact-framework",
+    "greenpill-earth-week"
   ],
   "continueReadingStorySlugs": [
     "growing-greenpill-impact-framework",
     "greenpill-earth-week",
-    "greenpill-nigeria-water-cup"
+    "greenpill-irl-building-a-coordi-nation"
   ],
   "themeSlugs": [
     "gov",
-    "currency",
-    "mutual",
-    "public"
+    "education",
+    "impact",
+    "coordination-tools"
   ],
   "translations": [],
   "proofSignals": [
     {
-      "label": "Public Garden thread",
-      "value": "Season One",
-      "source": "S042",
+      "label": "Announcement, November 12, 2025, and update, February 11, 2026",
+      "value": "Greenpill Garden: Season One",
+      "source": "Regen Coordination Hub",
       "href": "https://hub.regencoordination.xyz/t/greenpill-garden-season-one/363"
-    },
-    {
-      "label": "Regen Protocols",
-      "value": "Garden support context",
-      "source": "S050",
-      "href": "https://hub.regencoordination.xyz/t/regen-protocols/364"
-    },
-    {
-      "label": "2026 Garden model",
-      "value": "Approved Paragraph preview",
-      "source": "S071",
-      "href": "https://paragraph.com/@greenpill/preview/rN8MvIeOa4RGvE8kJN9L"
     }
   ],
   "featuredWeight": 85,
-  "readTime": "3 min read",
+  "readTime": "",
   "media": {
     "image": "/images/hifi/garden-overlay.jpg",
-    "imageAlt": "Garden texture from the high-fidelity design package.",
+    "imageAlt": "White line drawing of leaves on a teal background.",
     "ogImage": "/images/hifi/garden-overlay.jpg"
   },
   "seo": {
-    "title": "Greenpill Garden Season One · Greenpill Stories",
-    "description": "Source-backed Greenpill Garden story connecting onboarding, stewardship, chapters, tools, and impact reporting.",
+    "title": "Greenpill Garden: Season One · Greenpill Stories",
+    "description": "Greenpill Garden Season One: a steward program launched at DevConnect in November 2025, with workshops on strategy, cell structures, CIDS and Web3 tools.",
     "ogImage": "/images/hifi/garden-overlay.jpg",
     "canonicalPath": "/stories/greenpill-garden-season-one",
     "noindex": false

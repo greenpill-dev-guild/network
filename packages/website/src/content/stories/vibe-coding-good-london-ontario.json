@@ -1,57 +1,66 @@
 {
-  "title": "Vibe Coding for Good — Greenpill London Ontario",
+  "title": "Vibe Coding for Good in London, Ontario",
   "status": "published",
   "category": "chapter",
-  "publishDate": "2025-04-28",
-  "updatedDate": "",
-  "dek": "A public TechAlliance event listing confirms Greenpill London Ontario's collaborative build night at Reimagine Co.",
-  "excerpt": "A clean source-backed event story for the London Ontario chapter.",
+  "publishDate": "2026-04-28",
+  "updatedDate": "2026-11-06",
+  "dek": "Greenpill London Ontario presented a collaborative build night at Reimagine Co on April 28, 2026.",
+  "excerpt": "A Tuesday evening build night at Reimagine Co, listed on TechAlliance of Southwestern Ontario's events calendar.",
   "region": "americas",
-  "tag": "Open Source",
+  "tag": "Local Events",
   "tags": [
     "london-ontario",
     "build-night",
     "open-source"
   ],
-  "body": "This is a strong first public story for Greenpill London Ontario because the event source is clear, dated, and external.\n\nUse it for event, open-source, and chapter-card surfaces. Do not extrapolate a broader chapter program from a single event listing without steward review.\n\n## Sources\n\n- S033: https://www.techalliance.ca/news/events/vibe-coding-for-good-a-collaborative-build-night-reimagine-co-presented-by-greenpill-london-ontario/",
-  "image": "/images/chapters/greenpill-london-ontario-event.jpg",
-  "author": "Greenpill Network research",
-  "authorRole": "Source-backed seed copy",
+  "body": "On Tuesday, April 28, 2026, Greenpill London Ontario presented Vibe Coding for Good, a collaborative build night at Reimagine Co, 206 Piccadilly Street in London, Ontario. The evening ran from 6:00 to 8:30 PM and was listed on the events calendar of TechAlliance of Southwestern Ontario.\n\nReimagine Co describes itself as more than a maker of plant-based prepared meals: it calls itself London, Ontario's hub for community action and environmental activism.\n\nGreenpill London Ontario joined the network in early 2025. Greenpill's Q1 2025 update introduced it as one of the first chapters onboarded after the network revamped its onboarding, led by the Institute for Community Sustainability, whose work includes a Repair Café program and a Thing Library.",
+  "image": "",
+  "author": "",
+  "authorRole": "",
   "authorBio": "",
   "authorSlug": "",
   "authorAvatar": "",
   "relatedChapter": "london-ontario",
-  "relatedGuild": "dev-guild",
-  "relatedStorySlugs": [],
+  "relatedGuild": "",
+  "relatedStorySlugs": [
+    "greenpill-q1-2025-laying-groundwork"
+  ],
   "continueReadingStorySlugs": [
-    "regenmeetup-rio",
-    "greenpill-nigeria-water-cup"
+    "greenpill-q1-2025-laying-groundwork",
+    "greenpill-cape-town-trash-to-treasure",
+    "regenmeetup-rio"
   ],
   "themeSlugs": [
-    "opensrc",
     "events",
-    "education"
+    "opensrc",
+    "local-regeneration"
   ],
   "translations": [],
   "proofSignals": [
     {
-      "label": "Public event listing",
-      "value": "April 28, 2025",
-      "source": "S033",
+      "label": "Event listing, April 28, 2026",
+      "value": "Vibe Coding for Good: A Collaborative Build Night @ Reimagine Co",
+      "source": "TechAlliance of Southwestern Ontario",
       "href": "https://www.techalliance.ca/news/events/vibe-coding-for-good-a-collaborative-build-night-reimagine-co-presented-by-greenpill-london-ontario/"
+    },
+    {
+      "label": "New chapters, April 30, 2025",
+      "value": "Greenpill Q1 2025: Laying The Groundwork",
+      "source": "Paragraph",
+      "href": "https://paragraph.com/@greenpill/q1-2025-laying-the-groundwork"
     }
   ],
   "featuredWeight": 70,
-  "readTime": "2 min read",
+  "readTime": "",
   "media": {
-    "image": "/images/chapters/greenpill-london-ontario-event.jpg",
-    "imageAlt": "Vibe Coding for Good event artwork for Greenpill London Ontario.",
-    "ogImage": "/images/chapters/greenpill-london-ontario-event.jpg"
+    "image": "",
+    "imageAlt": "",
+    "ogImage": ""
   },
   "seo": {
-    "title": "Vibe Coding for Good · Greenpill Stories",
-    "description": "Source-backed event story for Greenpill London Ontario's Vibe Coding for Good build night.",
-    "ogImage": "/images/chapters/greenpill-london-ontario-event.jpg",
+    "title": "Vibe Coding for Good in London, Ontario · Greenpill Stories",
+    "description": "Greenpill London Ontario presented Vibe Coding for Good, a collaborative build night at Reimagine Co, on April 28, 2026.",
+    "ogImage": "",
     "canonicalPath": "/stories/vibe-coding-good-london-ontario",
     "noindex": false
   }

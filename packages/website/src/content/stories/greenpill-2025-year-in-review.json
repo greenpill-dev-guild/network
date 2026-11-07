@@ -1,6 +1,6 @@
 {
   "title": "Greenpill 2025: A Year in Review",
-  "status": "published",
+  "status": "draft",
   "category": "field-report",
   "publishDate": "2025",
   "updatedDate": "2025",
@@ -16,8 +16,8 @@
   ],
   "body": "Greenpill's 2025 was a year of local service, ecosystem building, and honest reflection.\n\nAcross the network, chapters and guilds kept showing up: Greenpill Goonies Giveback service activity around ETHDenver, GFEL Boulder and Ethereum Localism, 280+ podcast episodes across multiple seasons and mini-series, Regen Coordination and CIDS adoption work, Regen Commons, Gardens-based conviction voting, Localism Fund discussions, and candid notes on dormancy, coordination overhead, grant dependency, and volunteer burnout.\n\nRead it as a field report from the network's year: what gathered momentum, what strained the system, and what seeds are worth carrying into 2026.\n\n## Sources\n\n- S070: https://paragraph.com/@greenpill/preview/8QcFgBeASBiEy4QVxmZj",
   "image": "/images/stories/greenpill-2025-year-in-review.jpg",
-  "author": "Greenpill Network research",
-  "authorRole": "Network field report",
+  "author": "",
+  "authorRole": "",
   "authorBio": "",
   "authorSlug": "",
   "authorAvatar": "",
@@ -50,7 +50,7 @@
     }
   ],
   "featuredWeight": 90,
-  "readTime": "4 min read",
+  "readTime": "",
   "media": {
     "image": "/images/stories/greenpill-2025-year-in-review.jpg",
     "imageAlt": "Greenpill 2025 year in review cover artwork.",

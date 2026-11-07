@@ -1,11 +1,11 @@
 {
-  "title": "RegenMeetUp — Greenpill Brasil at Fabulosa Lab",
+  "title": "RegenMeetUp: Greenpill Brasil at Fabulosa Lab",
   "status": "published",
   "category": "chapter",
-  "publishDate": "2024",
-  "updatedDate": "",
-  "dek": "A public Luma source backs a Greenpill Brasil RegenMeetUp in Rio de Janeiro with open-space and coordination themes.",
-  "excerpt": "Greenpill Brasil's RegenMeetUp gives the chapter a public local-events seed story.",
+  "publishDate": "2024-05-17",
+  "updatedDate": "2026-11-06",
+  "dek": "On May 17, 2024, Greenpill Brasil hosted a RegenMeetUp in Rio de Janeiro on climate coordination and Web3 tools.",
+  "excerpt": "A weekly community meeting, a fishbowl conversation on climate coordination and an open space for project pitches, at Fabulosa Lab.",
   "region": "americas",
   "tag": "Local Events",
   "tags": [
@@ -13,10 +13,10 @@
     "rio",
     "regenmeetup"
   ],
-  "body": "This event source can support local-events cards and chapter activity strips.\n\nThe story should avoid invented attendance, impact, or follow-on metrics until steward-reviewed sources are added.\n\n## Sources\n\n- S021: https://luma.com/qm4tiq1e",
+  "body": "Greenpill Brasil hosted a RegenMeetUp on Friday, May 17, 2024, at Fabulosa Lab in Rio de Janeiro, an independent maker space in the global Fab Lab network. The theme was climate coordination and resilience with Web3 technologies, framed by one question: how can Web3 tools help people mobilize to face climate change?\n\nThe afternoon began with Greenpill Brasil's weekly community meeting. At 4 PM came a fishbowl conversation on climate coordination between communities, with Vini Glocal (ReRe protocol), Alberto (Blockchain Innovation Hub), Flavia Macedo (Muda outras economias) and Douglas Miranda (Rio Crypto Hub). The day closed with an open space for proposals, project pitches and exchanges.",
   "image": "/images/chapters/greenpill-brasil-community.jpg",
-  "author": "Greenpill Network research",
-  "authorRole": "Source-backed seed copy",
+  "author": "",
+  "authorRole": "",
   "authorBio": "",
   "authorSlug": "",
   "authorAvatar": "",
@@ -27,6 +27,7 @@
   ],
   "continueReadingStorySlugs": [
     "greenpill-brasil-gg20-climate-milestones",
+    "escola-da-regeneracao-do-cacau",
     "vibe-coding-good-london-ontario"
   ],
   "themeSlugs": [
@@ -37,22 +38,22 @@
   "translations": [],
   "proofSignals": [
     {
-      "label": "Public event",
-      "value": "RegenMeetUp Rio",
-      "source": "S021",
+      "label": "Event page, May 17, 2024",
+      "value": "RegenMeetUp - Greenpill Brasil",
+      "source": "Luma",
       "href": "https://luma.com/qm4tiq1e"
     }
   ],
   "featuredWeight": 50,
-  "readTime": "2 min read",
+  "readTime": "",
   "media": {
     "image": "/images/chapters/greenpill-brasil-community.jpg",
-    "imageAlt": "Greenpill Brasil community members gathered around a table.",
+    "imageAlt": "Members of the Greenpill Brasil community seated in a circle indoors.",
     "ogImage": "/images/chapters/greenpill-brasil-community.jpg"
   },
   "seo": {
-    "title": "RegenMeetUp Rio · Greenpill Stories",
-    "description": "Source-backed Greenpill Brasil event story for the RegenMeetUp at Fabulosa Lab in Rio de Janeiro.",
+    "title": "RegenMeetUp: Greenpill Brasil at Fabulosa Lab · Greenpill Stories",
+    "description": "Greenpill Brasil hosted a RegenMeetUp at Fabulosa Lab in Rio de Janeiro on May 17, 2024, on climate coordination and Web3 tools.",
     "ogImage": "/images/chapters/greenpill-brasil-community.jpg",
     "canonicalPath": "/stories/regenmeetup-rio",
     "noindex": false

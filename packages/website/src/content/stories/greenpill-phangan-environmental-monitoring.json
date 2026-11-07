@@ -1,11 +1,11 @@
 {
-  "title": "Greenpill Phangan Environmental Monitoring",
+  "title": "Greenpill Phangan: Cleanups and Environmental Monitoring",
   "status": "published",
   "category": "chapter",
-  "publishDate": "2026-02-24",
-  "updatedDate": "",
-  "dek": "Greenpill Phangan's Hub updates connect beach cleanups, Monthly Earth Day, DeCleanup, and decentralized environmental monitoring.",
-  "excerpt": "A source-backed Phangan story for cleanup coordination, environmental monitoring, and public impact tooling.",
+  "publishDate": "2026-08-17",
+  "updatedDate": "2026-11-06",
+  "dek": "Greenpill Phangan's work on Koh Phangan runs from beach cleanups to DeCleanup Network and community air quality sensors.",
+  "excerpt": "A cleanup idea born in the chapter became DeCleanup Network, which added AI-assisted verification and Gardens governance in 2026.",
   "region": "asia",
   "tag": "Environmental Monitoring",
   "tags": [
@@ -14,10 +14,10 @@
     "decleanup",
     "environmental-monitoring"
   ],
-  "body": "Greenpill Phangan now has a stronger chapter-owned initiative than an event-only record.\n\nThe public Phangan update thread describes ongoing beach cleanup work, Monthly Earth Day activity, and the origin path for DeCleanup Rewards. A later update adds a decentralized environmental monitoring analysis for Koh Phangan using Altruist Sensors by the Robonomics DePIN Network.\n\nThe DeCleanup Network update gives the wider project context: app launch, Celo testing, playbook publication, and public docs. For the Greenpill site, the chapter-owned surface should stay focused on Phangan's cleanup and monitoring work while treating DeCleanup as supporting public tooling context.\n\n## Sources\n\n- S051: https://hub.regencoordination.xyz/t/greenpill-phangan-updates/95\n- S052: https://hub.regencoordination.xyz/t/decleanup-network-base-app-launched-celo-in-testing-playbook-published-docs-live-heres-everything/394",
+  "body": "Greenpill Phangan began about a year before its first update on the Regen Coordination Hub in August 2024, with onboarding events called Regen Full Moon, held with ReFi Phangan. The chapter focuses on local regeneration infrastructure and public goods funding on Koh Phangan, Thailand, and started work on a quadratic funding round for island projects.\n\n## From cleanups to DeCleanup Network\n\nThe chapter's cleanups began with a simple registration form: participants uploaded a cleanup photo and received an Unlock Protocol certificate. The idea grew into an independent project, the Decentralized Cleanup Network, while the chapter kept running joint beach cleanups with local regens as part of Monthly Earth Day. In October 2024, the chapter's founders introduced DeCleanup Rewards, an app on Arbitrum for turning cleanup photos into an onchain record.\n\nOn February 24, 2026, DeCleanup Network reported that its rewards mini app was live on Base, inside Farcaster and the Base app, that its full platform on Celo was in testing, and that its docs and playbook were published. In an update on August 17, 2026, it added AI-assisted verification with automated fraud scoring and waste categorization, opened governance on Gardens, and announced a partnership with Global Cleanup Games on the Trash Athlete Challenge: pick up one piece of trash a day for 30 days.\n\n## Measuring the air\n\nIn May 2025, the chapter began placing Altruist air quality sensors from the Robonomics network at around five locations on the island. In July 2025 it published an analysis on the Hub of decentralized environmental monitoring for Koh Phangan, covering gaps in local data, pollution peaks during big tourist events, and the case for community-run sensors.",
   "image": "/images/stories/greenpill-phangan-cleanup.jpeg",
-  "author": "Greenpill Network research",
-  "authorRole": "Source-backed seed copy",
+  "author": "",
+  "authorRole": "",
   "authorBio": "",
   "authorSlug": "",
   "authorAvatar": "",
@@ -28,41 +28,41 @@
   ],
   "continueReadingStorySlugs": [
     "greenpill-earth-week",
-    "greensofa-taiwan-public-goods-tooling",
-    "greenpill-nigeria-water-cup"
+    "greenpill-cape-town-trash-to-treasure",
+    "greensofa-taiwan-public-goods-tooling"
   ],
   "themeSlugs": [
+    "water",
     "impact",
     "opensrc",
-    "public",
     "events",
-    "water"
+    "public"
   ],
   "translations": [],
   "proofSignals": [
     {
-      "label": "Phangan updates",
-      "value": "Cleanup and monitoring",
-      "source": "S051",
+      "label": "Chapter updates, August 2024 to July 2025",
+      "value": "GreenPill Phangan Updates",
+      "source": "Regen Coordination Hub",
       "href": "https://hub.regencoordination.xyz/t/greenpill-phangan-updates/95"
     },
     {
-      "label": "DeCleanup update",
-      "value": "Public tooling context",
-      "source": "S052",
+      "label": "Updates, February 24 and August 17, 2026",
+      "value": "DeCleanup Network: Base App Launched, Celo in Testing, Playbook Published, Docs Live",
+      "source": "Regen Coordination Hub",
       "href": "https://hub.regencoordination.xyz/t/decleanup-network-base-app-launched-celo-in-testing-playbook-published-docs-live-heres-everything/394"
     }
   ],
   "featuredWeight": 78,
-  "readTime": "3 min read",
+  "readTime": "",
   "media": {
     "image": "/images/stories/greenpill-phangan-cleanup.jpeg",
-    "imageAlt": "Greenpill Phangan cleanup and environmental monitoring activity.",
+    "imageAlt": "Decentralized Cleanup Network flyer explaining how to join a cleanup, upload photos on DeCleanup.net and earn roles on Guild.xyz.",
     "ogImage": "/images/stories/greenpill-phangan-cleanup.jpeg"
   },
   "seo": {
-    "title": "Greenpill Phangan Environmental Monitoring · Greenpill Stories",
-    "description": "Source-backed story for Greenpill Phangan cleanup, environmental monitoring, and DeCleanup context.",
+    "title": "Greenpill Phangan: Cleanups and Environmental Monitoring · Greenpill Stories",
+    "description": "Greenpill Phangan's cleanups, the DeCleanup Network that grew out of them, and the chapter's community air quality sensors on Koh Phangan.",
     "ogImage": "/images/stories/greenpill-phangan-cleanup.jpeg",
     "canonicalPath": "/stories/greenpill-phangan-environmental-monitoring",
     "noindex": false
