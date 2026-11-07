@@ -530,7 +530,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           <span class="gp-home-map-addnode-preview-dot" aria-hidden="true"></span>
           <div>
             <strong data-review-name>You</strong>
-            <span data-review-place>Member · —</span>
+            <span data-review-place>Member · No place yet</span>
           </div>
         </div>
 
@@ -3670,7 +3670,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const setModeCopy = (mode: string) => {
       if (!modeCopyEl) return;
       modeCopyEl.textContent = mode === 'live'
-        ? 'Live onboarding is on — your node appears on the public map right after you submit, and the map keeps refreshing as others join. Your email stays private and is used only for future edit links.'
+        ? 'Live onboarding is on: your node appears on the public map right after you submit, and the map keeps refreshing as others join. Your email stays private and is used only for future edit links.'
         : 'In moderated mode, your node appears on your device while stewards review it. Your email stays private and is used only for future edit links.';
     };
 
@@ -3952,7 +3952,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const publicNote = clean(data.get('publicNote'));
       const privateEmail = clean(data.get('contact')).toLowerCase();
       if (reviewName) reviewName.textContent = name;
-      if (reviewPlace) reviewPlace.textContent = `Member · ${place || '—'}`;
+      if (reviewPlace) reviewPlace.textContent = `Member · ${place || 'No place yet'}`;
       if (reviewNote) reviewNote.textContent = publicNote || 'None yet';
       if (reviewEmail) reviewEmail.textContent = privateEmail || 'Saved privately for future edit links.';
       if (taglineCount) taglineCount.textContent = `${String(data.get('publicNote') ?? '').length} / 72`;
