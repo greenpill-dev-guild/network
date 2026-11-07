@@ -4,7 +4,7 @@
   "country": "United States",
   "region": "americas",
   "status": "active",
-  "summary": "Monthly meetups, public-goods education, and local builder gatherings for New York City's Greenpill community.",
+  "summary": "Greenpill NYC teaches New Yorkers about onchain public goods and experiments with ways to fund them. The chapter hosts regular meetups in New York City.",
   "introQuote": "",
   "introQuoteAttribution": "",
   "image": "/images/chapters/greenpill-nyc-meetup.jpg",
@@ -87,14 +87,19 @@
     "toronto",
     "london-ontario"
   ],
+  "featuredStory": {},
   "featuredStorySlugs": [],
   "authoredResourceSlugs": [],
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "featuredWeight": 75,
   "proofSignals": [
     {
       "label": "Luma calendar",
-      "value": "Monthly meetups",
-      "source": "S029",
+      "value": "Regular meetups",
+      "source": "Luma",
       "href": "https://luma.com/GPNYC"
     }
   ],
@@ -108,7 +113,7 @@
   },
   "seo": {
     "title": "Greenpill NYC · Greenpill Network",
-    "description": "Greenpill NYC hosts source-backed public-goods education and meetup activity through public Luma, Hub, and X sources.",
+    "description": "Greenpill NYC teaches New Yorkers about onchain public goods, experiments with ways to fund them, and hosts regular meetups.",
     "ogImage": "/images/chapters/greenpill-nyc-meetup.jpg",
     "canonicalPath": "/chapters/new-york-city",
     "noindex": false

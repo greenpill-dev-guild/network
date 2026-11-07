@@ -3,7 +3,7 @@
   "title": "Ethereum Localism and Public-Goods Tooling",
   "status": "active",
   "summary": "GreenSofa public-goods tooling, Ethereum Localism education, and civic-tech bridge work in Taiwan.",
-  "description": "Public GreenSofa sources document Ethereum Localism events, GreenSofa / FAB DAO context, public-goods tooling work, Hypercert dashboard development, Gitcoin/Giveth participation, and civic-tech bridge-building with Taiwan communities.",
+  "description": "GreenSofa has brought funding and public goods tools such as Gitcoin, Giveth and Hypercerts into Taiwan's civic tech scene, working with g0v and local NGOs. It keeps an itemized log of its funding receipts on HackMD, runs a Hypercerts dashboard for local public goods in Taiwan, and hosted an Ethereum Localism gathering with FAB DAO on July 30, 2025.",
   "themeSlugs": [
     "public-goods",
     "coordination-tools",
@@ -32,7 +32,7 @@
     },
     {
       "label": "Ethereum Localism field report",
-      "url": "https://www.ethereumlocalism.xyz/library/Field-Reports/GreenSofa-Taiwan",
+      "url": "https://www.ethereumlocalism.xyz/knowledge-garden/library/Field-Reports/GreenSofa-Taiwan",
       "subtext": "Public field report",
       "handle": "Ethereum Localism",
       "action": "Read",
@@ -54,7 +54,10 @@
       "href": "https://hackmd.io/@greensofa/home"
     }
   ],
-  "impactSources": {},
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "relatedStorySlugs": [
     "greensofa-taiwan-public-goods-tooling"
   ],

@@ -3,7 +3,7 @@
   "title": "Regenerative Agriculture, Biochar, and Vermicomposting Hub",
   "status": "active",
   "summary": "Greenpill Kenya work around environmental workshops, regenerative agriculture, tree planting, biochar, and vermicomposting.",
-  "description": "Public Regen Hub posts describe Greenpill Kenya goals for forestry, soil carbon, composting, biochar, environmental workshops, regenerative agriculture, tree planting, cleanups, vermicomposting, and a demo farm / tree nursery partner. Keep numeric impact claims out until steward-reviewed measurements are available.",
+  "description": "Greenpill Kenya set out its plans on the Regen Hub in 2024: environmental workshops and seminars, regenerative agriculture, tree planting, vermicomposting and biochar production, with a demo farm and tree nursery run with a partner. In its Q4 2024 update the chapter narrowed its focus to three projects, including a regen hub with a builder residency and co-working space.",
   "themeSlugs": [
     "trees",
     "food",
@@ -54,7 +54,10 @@
       "href": "https://hub.regencoordination.xyz/t/greenpill-kenya-biochar-and-vermicomposting-experiment-to-mitigate-ghgs-emissions/94"
     }
   ],
-  "impactSources": {},
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "relatedStorySlugs": [],
   "relatedResourceSlugs": [
     "regen-coordination-hub"

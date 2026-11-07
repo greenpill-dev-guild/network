@@ -1,9 +1,9 @@
 {
   "chapterSlug": "toronto",
   "title": "Web3 Solutions for Local Impact",
-  "status": "active",
-  "summary": "GreenPill Toronto Consensus-side gathering on Web3, regeneration, public-goods funding, and local impact.",
-  "description": "The public Luma page describes a GreenPill Toronto fireside chat bringing together investors, builders, academics, nonprofits, and Indigenous leaders to discuss ReFi, Ethereum Localism, public goods funding, and community projects.",
+  "status": "inactive",
+  "summary": "A fireside chat on May 15, 2025, during Consensus in Toronto, on Web3, regeneration, public goods funding and local impact.",
+  "description": "GreenPill TO's fireside chat brought together investors, builders, academics, nonprofits and Indigenous leaders to discuss ReFi, Ethereum Localism, public goods funding and community projects. It was held at Lodge On Queen.",
   "themeSlugs": [
     "events",
     "public-goods",
@@ -38,7 +38,10 @@
       "href": "https://luma.com/tgie0ose"
     }
   ],
-  "impactSources": {},
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "relatedStorySlugs": [],
   "relatedResourceSlugs": [
     "ethereum-localism"

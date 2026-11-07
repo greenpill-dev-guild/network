@@ -1,9 +1,9 @@
 {
   "chapterSlug": "new-york-city",
-  "title": "Greenpill NYC Monthly Meetups",
+  "title": "Greenpill NYC Meetups",
   "status": "active",
-  "summary": "Source-backed public-goods education and meetup activity hosted through the Greenpill NYC Luma calendar.",
-  "description": "The current NYC chapter record identifies monthly meetups from the public Luma calendar, with the Hub and X account kept as supporting chapter context.",
+  "summary": "Regular meetups in New York City for people who care about public goods, listed on the Greenpill NYC Luma calendar.",
+  "description": "In 2024 the chapter described its focus as educating New Yorkers about the value of onchain public goods mechanisms through monthly meetups. Recent meetups took place on April 22 and June 30, 2026.",
   "themeSlugs": [
     "education",
     "public",
@@ -23,12 +23,15 @@
   "proofSignals": [
     {
       "label": "Luma calendar",
-      "value": "Monthly meetups",
-      "source": "S029",
+      "value": "Regular meetups",
+      "source": "Luma",
       "href": "https://luma.com/GPNYC"
     }
   ],
-  "impactSources": {},
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "relatedStorySlugs": [],
   "relatedResourceSlugs": [
     "greenpill-network-luma"

@@ -1,9 +1,10 @@
 #!/usr/bin/env bun
 
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createDatabaseClient, getMigrationDatabaseUrl } from '@greenpill-network/agent/db';
+import { readOperationalSeedCollection } from './operational-content-seed.ts';
 import {
   assertPublicOperationalContentSnapshot,
   toPublicOperationalContentSnapshot,
@@ -27,21 +28,7 @@ const asObject = (value) => (
   value && typeof value === 'object' && !Array.isArray(value) ? value : {}
 );
 
-async function readCollection(collection) {
-  const dir = join(operationalSeedDir, collection);
-  const records = [];
-  for (const file of await readdir(dir)) {
-    if (!file.endsWith('.json')) continue;
-    const slug = file.replace(/\.json$/, '');
-    const data = JSON.parse(await readFile(join(dir, file), 'utf8'));
-    records.push({
-      ...data,
-      slug,
-      id: slug,
-    });
-  }
-  return records;
-}
+const readCollection = (collection) => readOperationalSeedCollection(operationalSeedDir, collection);
 
 async function loadOperationalContent() {
   return toPublicOperationalContentSnapshot({

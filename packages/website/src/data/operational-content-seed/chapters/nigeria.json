@@ -1,16 +1,16 @@
 {
   "name": "Greenpill Nigeria",
-  "city": "Lagos / Awka",
+  "city": "Awka",
   "country": "Nigeria",
   "region": "africa",
   "status": "active",
-  "summary": "ReFi education, Water Cup mapping, public-goods events, and impact proof work across Lagos, Awka, and beyond.",
+  "summary": "Greenpill Nigeria runs ReFi education and local impact projects in southeastern Nigeria. It mapped water access in 15 communities through Water Cup and, since March 2026, hosts weekly learning days at its solar-powered Tech & Sun Hub at Nnamdi Azikiwe University in Awka.",
   "introQuote": "",
   "introQuoteAttribution": "",
   "image": "/images/chapters/greenpill-nigeria-education.jpeg",
   "founded": "",
-  "lat": 6.5244,
-  "long": 3.3792,
+  "lat": 6.20694,
+  "long": 7.06778,
   "link": "https://hub.regencoordination.xyz/t/greenpill-nigeria-project-water-cup-updates/307",
   "stewards": [
     {
@@ -78,7 +78,7 @@
     {
       "label": "Water Cup Mapping Hypercert",
       "url": "https://app.hypercerts.org/hypercerts/42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-86091438830997431256233775680237357498368",
-      "subtext": "Public proof artifact",
+      "subtext": "Impact certificate",
       "handle": "Hypercerts",
       "action": "Open",
       "icon": "impact",
@@ -86,9 +86,9 @@
     },
     {
       "label": "X",
-      "url": "https://x.com/greenpillnaija",
-      "subtext": "Public chapter account",
-      "handle": "@greenpillnaija",
+      "url": "https://x.com/Greenpill9ja",
+      "subtext": "Chapter account",
+      "handle": "@Greenpill9ja",
       "action": "Follow",
       "icon": "x",
       "kind": "social"
@@ -115,9 +115,9 @@
     },
     {
       "label": "X",
-      "url": "https://x.com/greenpillnaija",
-      "subtext": "Public chapter account",
-      "handle": "@greenpillnaija",
+      "url": "https://x.com/Greenpill9ja",
+      "subtext": "Chapter account",
+      "handle": "@Greenpill9ja",
       "action": "Follow",
       "icon": "x",
       "kind": "social"
@@ -133,23 +133,20 @@
   "impactSources": {
     "impactEnabled": true,
     "greenGoodsGardenAddress": "0x35722eEdf3F7566A23FA871f0a04267AEe78E0dB",
-    "greenGoodsChainId": 42161,
-    "karmaProjectUID": "",
-    "karmaProjectSlug": "",
-    "karmaCommunitySlug": ""
+    "greenGoodsChainId": 42161
   },
   "featuredWeight": 95,
   "proofSignals": [
     {
       "label": "Education program",
       "value": "10 weeks",
-      "source": "S016",
+      "source": "Regen Hub",
       "href": "https://hub.regencoordination.xyz/t/take-the-greenpill-with-greenpill-nigeria-10-weeks-of-refi-education/324"
     },
     {
       "label": "Water Cup Mapping",
       "value": "Hypercert",
-      "source": "S046",
+      "source": "Hypercerts",
       "href": "https://app.hypercerts.org/hypercerts/42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-86091438830997431256233775680237357498368"
     }
   ],
@@ -163,7 +160,7 @@
   },
   "seo": {
     "title": "Greenpill Nigeria · Greenpill Network",
-    "description": "Greenpill Nigeria runs source-backed Water Cup, ReFi education, Ethereum-at-10, and public impact proof work.",
+    "description": "Greenpill Nigeria runs ReFi education, the Water Cup mapping project and solar-powered Tech & Sun hubs for student builders in southeastern Nigeria.",
     "ogImage": "/images/chapters/greenpill-nigeria-education.jpeg",
     "canonicalPath": "/chapters/nigeria",
     "noindex": false

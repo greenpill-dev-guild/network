@@ -4,7 +4,7 @@
   "country": "Uganda",
   "region": "africa",
   "status": "inactive",
-  "summary": "Adjacent public source-backed chapter record from the Regen Coordination Hub. It is not one of the priority 14 research rows, so launch feature placement needs steward review.",
+  "summary": "Greenpill Uganda shared its work on agroforestry, training for rural farmers and women, and Web3 and computer literacy in 2024. In April 2026 it listed an Earth Day tree planting at Morikiswa Primary School.",
   "introQuote": "",
   "introQuoteAttribution": "",
   "image": "",
@@ -37,14 +37,19 @@
     "nigeria",
     "c-te-d-ivoire"
   ],
+  "featuredStory": {},
   "featuredStorySlugs": [],
   "authoredResourceSlugs": [],
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "featuredWeight": 15,
   "proofSignals": [
     {
       "label": "Public Hub thread",
       "value": "Greenpill Uganda",
-      "source": "S041",
+      "source": "Regen Hub",
       "href": "https://hub.regencoordination.xyz/t/greenpill-uganda/29"
     }
   ],
@@ -55,7 +60,7 @@
   },
   "seo": {
     "title": "Greenpill Uganda · Greenpill Network",
-    "description": "Greenpill Uganda has an adjacent public Hub source and needs steward confirmation for launch feature placement.",
+    "description": "Greenpill Uganda has worked on agroforestry, training for rural farmers and women, and Web3 and computer literacy.",
     "ogImage": "",
     "canonicalPath": "/chapters/uganda",
     "noindex": true

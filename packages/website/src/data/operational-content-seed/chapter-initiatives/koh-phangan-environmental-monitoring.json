@@ -2,8 +2,8 @@
   "chapterSlug": "koh-pha-ngan",
   "title": "Environmental Monitoring and Cleanup",
   "status": "active",
-  "summary": "Source-backed Phangan cleanup and decentralized environmental monitoring work connected to DeCleanup public tooling.",
-  "description": "The public Phangan update thread connects beach cleanups, Monthly Earth Day activity, DeCleanup origins, and decentralized environmental monitoring analysis. DeCleanup is supporting tooling context; the chapter initiative remains Phangan-owned cleanup and monitoring work.",
+  "summary": "Weekly cleanups and community air quality monitoring on Koh Phangan, where the Decentralized Cleanup initiative began.",
+  "description": "GreenPill Phangan cleans beaches and promotes the Monthly Earth Day movement on the island. The Decentralized Cleanup initiative began in the chapter in 2024, and in 2025 the chapter began placing Altruist air quality sensors at about five locations. During Artizen Season 6 in 2026 it joined weekly Clean Phangan cleanups and boat trips to Koh Tae Nae.",
   "themeSlugs": [
     "impact",
     "opensrc",
@@ -34,17 +34,20 @@
     {
       "label": "Phangan cleanup and monitoring",
       "value": "Public Hub updates",
-      "source": "S051",
+      "source": "Regen Hub",
       "href": "https://hub.regencoordination.xyz/t/greenpill-phangan-updates/95"
     },
     {
       "label": "DeCleanup tooling",
       "value": "App and playbook update",
-      "source": "S052",
+      "source": "Regen Hub",
       "href": "https://hub.regencoordination.xyz/t/decleanup-network-base-app-launched-celo-in-testing-playbook-published-docs-live-heres-everything/394"
     }
   ],
-  "impactSources": {},
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "relatedStorySlugs": [
     "greenpill-phangan-environmental-monitoring"
   ],

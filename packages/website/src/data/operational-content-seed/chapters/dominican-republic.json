@@ -3,14 +3,14 @@
   "city": "Santo Domingo",
   "country": "Dominican Republic",
   "region": "americas",
-  "status": "forming",
-  "summary": "Held as a legacy chapter record from the existing site. This pass did not find a source-backed Dominican Republic row in the provided priority research artifact, so detailed public copy needs steward backfill before launch.",
+  "status": "inactive",
+  "summary": "Greenpill Dominican Republic is not active right now.",
   "introQuote": "",
   "introQuoteAttribution": "",
   "image": "",
   "founded": "",
-  "lat": 18.54,
-  "long": -70.34,
+  "lat": 18.4625,
+  "long": -69.9361,
   "link": "",
   "stewards": [],
   "stewardSlugs": [],
@@ -21,17 +21,15 @@
   "links": [],
   "connectLinks": [],
   "relatedChapterSlugs": [],
+  "featuredStory": {},
   "featuredStorySlugs": [],
   "authoredResourceSlugs": [],
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "featuredWeight": 0,
-  "proofSignals": [
-    {
-      "label": "Legacy record",
-      "value": "Needs source review",
-      "source": "Existing repo content",
-      "href": ""
-    }
-  ],
+  "proofSignals": [],
   "media": {
     "image": "",
     "imageAlt": "",
@@ -39,7 +37,7 @@
   },
   "seo": {
     "title": "Greenpill Dominican Republic · Greenpill Network",
-    "description": "Greenpill Dominican Republic is a legacy chapter record that needs steward review before launch feature placement.",
+    "description": "Greenpill Dominican Republic is not active right now.",
     "ogImage": "",
     "canonicalPath": "",
     "noindex": true

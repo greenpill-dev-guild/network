@@ -2,8 +2,8 @@
   "chapterSlug": "nigeria",
   "title": "Tech & Sun Round",
   "status": "active",
-  "summary": "Solar-powered public goods infrastructure and builder education effort sourced from Greenpill Nigeria's Localism Fund thread.",
-  "description": "The public Tech & Sun Round thread documents Greenpill Nigeria's work on solar, internet, campus infrastructure, and hands-on builder education. Keep final activation and usage metrics source-bound until steward review adds completed counts.",
+  "summary": "Solar-powered container hubs with internet for student builders. The first opened at Nnamdi Azikiwe University in Awka in March 2026; a second, at the University of Nigeria, Nsukka, will be completed when more funding comes in.",
+  "description": "Tech & Sun (TAS) brings reliable power, internet and Web3 education to Nigerian universities. The Awka hub hosts weekly learning days of 8 to 10 hours, and the round was matched through Localism Fund Round 1.",
   "themeSlugs": [
     "energy",
     "education",
@@ -24,12 +24,15 @@
   "proofSignals": [
     {
       "label": "Solar hub build",
-      "value": "Localism Fund updates",
-      "source": "S049",
+      "value": "Build log, February to March 2026",
+      "source": "Regen Hub",
       "href": "https://hub.regencoordination.xyz/t/tech-sun-round-by-greenpill-nigeria/393"
     }
   ],
-  "impactSources": {},
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "relatedStorySlugs": [
     "greenpill-nigeria-tech-and-sun-round"
   ],

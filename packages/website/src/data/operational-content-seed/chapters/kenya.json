@@ -1,23 +1,23 @@
 {
   "name": "Greenpill Kenya",
-  "city": "Distributed",
+  "city": "Nairobi",
   "country": "Kenya",
   "region": "africa",
   "status": "active",
-  "summary": "ReFi education, soil health, river cleanups, wallet-safety workshops, and local Regen Hub coordination in Kenya.",
+  "summary": "Greenpill Kenya works on regenerative agriculture, tree planting, biochar and vermicomposting. Based at the Mortech Regen Hub in Nairobi, it also organizes cleanups and helps people get started with Green Goods.",
   "introQuote": "",
   "introQuoteAttribution": "",
   "image": "/images/chapters/greenpill-kenya-profile.jpg",
   "founded": "",
-  "lat": -0.0236,
-  "long": 37.9062,
-  "link": "https://checker.gitcoin.co/public/project/show/greenpill-kenya-octant-community-round-1",
+  "lat": -1.28639,
+  "long": 36.81722,
+  "link": "https://hub.regencoordination.xyz/t/greenpill-kenya/92",
   "stewards": [
     {
-      "name": "David Moretech",
+      "name": "David Mortech",
       "role": "Chapter steward",
       "bio": "",
-      "location": "Kenya",
+      "location": "Nairobi, Kenya",
       "personSlug": "david-moretech",
       "chapterSlug": "kenya",
       "avatar": "",
@@ -37,47 +37,54 @@
   ],
   "links": [
     {
-      "label": "Gitcoin project",
-      "url": "https://checker.gitcoin.co/public/project/show/greenpill-kenya-octant-community-round-1",
-      "subtext": "Public Octant community round project",
-      "handle": "greenpill-kenya",
-      "action": "Open",
-      "icon": "gitcoin",
+      "label": "Greenpill Kenya on the Regen Hub",
+      "url": "https://hub.regencoordination.xyz/t/greenpill-kenya/92",
+      "subtext": "Chapter introduction",
+      "handle": "Regen Hub",
+      "action": "Read",
+      "icon": "hub",
       "kind": "external"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/GreenpillKenya",
+      "subtext": "Chapter account",
+      "handle": "@GreenpillKenya",
+      "action": "Follow",
+      "icon": "x",
+      "kind": "social"
     }
   ],
   "connectLinks": [
     {
-      "label": "Gitcoin project",
-      "url": "https://checker.gitcoin.co/public/project/show/greenpill-kenya-octant-community-round-1",
-      "subtext": "Public Octant community round project",
-      "handle": "greenpill-kenya",
-      "action": "View",
-      "icon": "gitcoin",
-      "kind": "external"
+      "label": "X",
+      "url": "https://x.com/GreenpillKenya",
+      "subtext": "Chapter account",
+      "handle": "@GreenpillKenya",
+      "action": "Follow",
+      "icon": "x",
+      "kind": "social"
     }
   ],
   "relatedChapterSlugs": [
     "nigeria",
     "c-te-d-ivoire"
   ],
+  "featuredStory": {},
   "featuredStorySlugs": [],
   "authoredResourceSlugs": [],
   "impactSources": {
     "impactEnabled": true,
     "greenGoodsGardenAddress": "0x3f0f1551C7E08a2cf6800BD7D72aBfE23E3E32a0",
-    "greenGoodsChainId": 42161,
-    "karmaProjectUID": "",
-    "karmaProjectSlug": "",
-    "karmaCommunitySlug": ""
+    "greenGoodsChainId": 42161
   },
   "featuredWeight": 55,
   "proofSignals": [
     {
-      "label": "Octant community round",
-      "value": "Public Gitcoin project",
-      "source": "S039",
-      "href": "https://checker.gitcoin.co/public/project/show/greenpill-kenya-octant-community-round-1"
+      "label": "Earth Day community action",
+      "value": "Mortech Regen Hub, April 2026",
+      "source": "Luma",
+      "href": "https://luma.com/8b4p3o5p"
     }
   ],
   "media": {
@@ -90,7 +97,7 @@
   },
   "seo": {
     "title": "Greenpill Kenya · Greenpill Network",
-    "description": "Greenpill Kenya public sources describe soil, farming, river cleanup, Web3 workshop, and Regen Hub work.",
+    "description": "Greenpill Kenya works on regenerative agriculture, biochar, tree planting and cleanups, based at the Mortech Regen Hub in Nairobi.",
     "ogImage": "/images/chapters/greenpill-kenya-profile.jpg",
     "canonicalPath": "/chapters/kenya",
     "noindex": false

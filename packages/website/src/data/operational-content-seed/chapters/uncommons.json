@@ -4,7 +4,7 @@
   "country": "Chinese-speaking diaspora",
   "region": "asia",
   "status": "inactive",
-  "summary": "Uncommons, formerly GreenPill CN, is a public crypto-humanities and public-goods builder community with public Hub, X, and website sources. Some funding metrics need cross-check before launch.",
+  "summary": "Uncommons, formerly GreenPill CN, is a public sphere where a collective of public goods builders explores crypto thought together.",
   "introQuote": "",
   "introQuoteAttribution": "",
   "image": "",
@@ -33,15 +33,6 @@
       "kind": "external"
     },
     {
-      "label": "Website",
-      "url": "https://uncommons.cc",
-      "subtext": "Public website",
-      "handle": "uncommons.cc",
-      "action": "Open",
-      "icon": "external",
-      "kind": "external"
-    },
-    {
       "label": "X",
       "url": "https://x.com/Un__commons",
       "subtext": "Public account",
@@ -57,23 +48,20 @@
     "germany",
     "koh-pha-ngan"
   ],
-  "featuredStorySlugs": [
-    "greenpill-2025-year-in-review"
-  ],
+  "featuredStory": {},
+  "featuredStorySlugs": [],
   "authoredResourceSlugs": [],
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "featuredWeight": 72,
   "proofSignals": [
     {
       "label": "Public identity",
       "value": "Formerly GreenPill CN",
-      "source": "S023",
+      "source": "Regen Hub",
       "href": "https://hub.regencoordination.xyz/t/uncommons-previous-greenpill-cn/63"
-    },
-    {
-      "label": "Publications and learning",
-      "value": "Approved Paragraph preview",
-      "source": "S072",
-      "href": "https://paragraph.com/@greenpill/preview/IpvSMGPJ4B3szOkcVUQo"
     }
   ],
   "media": {

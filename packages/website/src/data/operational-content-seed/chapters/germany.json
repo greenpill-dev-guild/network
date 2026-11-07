@@ -1,10 +1,10 @@
 {
   "name": "Greenpill Germany",
   "city": "Distributed",
-  "country": "Germany / DACH",
+  "country": "Germany",
   "region": "europe",
   "status": "active",
-  "summary": "A DACH network for ReFi, biodiversity, climate action, and decentralized community builders.",
+  "summary": "Greenpill Germany spreads awareness of regenerative finance (ReFi) in Germany and links it with decentralized science. The chapter hosted ReFi meetups in Hamburg and Munich in 2023 and took part in Berlin Science Week.",
   "introQuote": "",
   "introQuoteAttribution": "",
   "image": "/images/chapters/greenpill-germany-profile.jpg",
@@ -58,14 +58,19 @@
   "relatedChapterSlugs": [
     "greensofa"
   ],
+  "featuredStory": {},
   "featuredStorySlugs": [],
   "authoredResourceSlugs": [],
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "featuredWeight": 65,
   "proofSignals": [
     {
       "label": "Public account",
       "value": "@GreenPillGER",
-      "source": "S035",
+      "source": "X",
       "href": "https://twitter.com/GreenPillGER"
     }
   ],
@@ -79,7 +84,7 @@
   },
   "seo": {
     "title": "Greenpill Germany · Greenpill Network",
-    "description": "Greenpill Germany / DACH has public social proof around regenerative finance and community coordination.",
+    "description": "Greenpill Germany spreads awareness of regenerative finance in Germany, with ReFi meetups in Hamburg and Munich and DeSci work at Berlin Science Week.",
     "ogImage": "/images/chapters/greenpill-germany-profile.jpg",
     "canonicalPath": "/chapters/germany",
     "noindex": false

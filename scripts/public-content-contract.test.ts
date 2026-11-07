@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -31,6 +31,7 @@ import {
 import {
   loadOperationalEnrichment,
 } from './directus-operational-enrichment.ts';
+import { readOperationalSeedCollection } from './operational-content-seed.ts';
 import {
   minimumRecentEpisodes,
   parseFeed,
@@ -79,10 +80,14 @@ const activeChapterEnrichmentSlugs = [
   'toronto',
 ];
 const requiredEnrichedInitiativeSlugs = [
-  'cape-town-ethereum-at-10',
-  'germany-refi-community-activation',
   'greensofa-ethereum-localism-public-goods-tooling',
   'kenya-regenerative-agriculture-hub',
+];
+// Initiatives the qa-chapters change set (PRD-625) marked inactive because
+// they finished. They stay published, and the enrichment leaves them alone.
+const inactiveInitiativeSlugs = [
+  'cape-town-ethereum-at-10',
+  'germany-refi-community-activation',
   'ottawa-reimagining-our-future',
   'toronto-local-impact-web3-solutions',
 ];
@@ -1201,6 +1206,46 @@ test('the committed fallback snapshot projects to itself', async () => {
   }
 });
 
+test('seed files and the agent write the same fallback snapshot for the same content', async () => {
+  // content:snapshot (seed files) and content:snapshot:from-agent write the
+  // same file, so for the same content they must write the same bytes,
+  // whatever key order a seed file uses (PRD-1421).
+  const committed = JSON.parse(await readFile(snapshotPath, 'utf8'));
+  const reversed = (value) => {
+    if (Array.isArray(value)) return value.map(reversed);
+    if (!value || typeof value !== 'object') return value;
+    return Object.fromEntries(Object.entries(value).reverse().map(([key, nested]) => [key, reversed(nested)]));
+  };
+  const folders = {
+    themes: 'themes',
+    people: 'people',
+    chapters: 'chapters',
+    chapterInitiatives: 'chapter-initiatives',
+    guilds: 'guilds',
+    projects: 'projects',
+  };
+  const seedDir = await mkdtemp(join(tmpdir(), 'operational-seed-'));
+  try {
+    const input = {};
+    for (const [collection, folder] of Object.entries(folders)) {
+      await mkdir(join(seedDir, folder));
+      for (const { slug, id: _id, ...record } of committed[collection]) {
+        await writeFile(join(seedDir, folder, `${slug}.json`), `${JSON.stringify(reversed(record), null, 2)}\n`);
+      }
+      input[collection] = await readOperationalSeedCollection(seedDir, folder);
+    }
+    const rebuilt = toPublicOperationalContentSnapshot({ ...input, generatedAt: committed.generatedAt });
+    // Compared as lines of the written file, so key order counts.
+    const actual = JSON.stringify(rebuilt, null, 2).split('\n');
+    const expected = JSON.stringify(committed, null, 2).split('\n');
+    const line = expected.findIndex((text, index) => actual[index] !== text);
+    assert.equal(line, -1, `line ${line + 1}: expected ${expected[line]?.trim()}, got ${actual[line]?.trim()}`);
+    assert.equal(actual.length, expected.length);
+  } finally {
+    await rm(seedDir, { recursive: true, force: true });
+  }
+});
+
 test('chapter image projection is stable when a published snapshot is projected again', () => {
   const first = projectChapters([
     {
@@ -1334,6 +1379,9 @@ test('Directus operational enrichment targets public guilds and visible initiati
   assert.deepEqual(guildImageStatuses.sort(), ['dev-guild:approved', 'writers-guild:approved']);
   for (const slug of requiredEnrichedInitiativeSlugs) {
     assert.equal(initiativeSlugs.has(slug), true);
+  }
+  for (const slug of inactiveInitiativeSlugs) {
+    assert.equal(initiativeSlugs.has(slug), false);
   }
   assert.equal(enrichment.chapterInitiatives.some((initiative) => initiative.chapterSlug === 'uncommons'), false);
   assert.equal(emailLike.test(JSON.stringify(enrichment)), false);

@@ -2,8 +2,8 @@
   "chapterSlug": "c-te-d-ivoire",
   "title": "La Ligne Verte",
   "status": "active",
-  "summary": "Public Green Mission source for environmental coordination around collection, education, and waste valorization.",
-  "description": "The current Cote d'Ivoire chapter record points at a public La Ligne Verte update and frames the targets as goals rather than completed metrics.",
+  "summary": "A Telegram chatbot, with WhatsApp planned, where residents report trash-filled areas and earn points, with bonus points for cleaning them up. Every report feeds an open data map.",
+  "description": "Greenpill Côte d'Ivoire presented La Ligne Verte as its Green Mission 2025 in Gitcoin Grants. A beta version runs on Telegram, and the project won a UNDP Côte d'Ivoire hackathon on AI and biodiversity protection, which partly funds it. Next steps include storing data in a smart contract and launching the first field actions.",
   "themeSlugs": [
     "water",
     "education",
@@ -23,13 +23,16 @@
   ],
   "proofSignals": [
     {
-      "label": "Green Mission targets",
-      "value": "2025-2026 goals",
-      "source": "S022",
+      "label": "UNDP Côte d'Ivoire hackathon",
+      "value": "Winning project",
+      "source": "Regen Hub",
       "href": "https://hub.regencoordination.xyz/t/greenpill-civ-chapter-update-the-beginning-of-la-ligne-verte/333"
     }
   ],
-  "impactSources": {},
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "relatedStorySlugs": [
     "greenpill-cote-divoire-la-ligne-verte"
   ],
