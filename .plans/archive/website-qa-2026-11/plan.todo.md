@@ -23,10 +23,10 @@ Open follow-ups:
 - **PRD-1417 (Todo):** Directus approvals write straight to the database, so a pending submission or update request saved at 0,0 or an edge point can still reach the map. Run the read-only exposure count, decide on the guard (a not-0,0 check plus a trigger that refuses approvals at bad points; one migration, rehearsed locally, applied with Afo's approval), and confirm `MAP_LOCATION_CONFIRMATION_REQUIRED` on `network-agent`.
 - **PRD-739 P1, information layout** (one redesign, best designed together first): hover as a compact tooltip with rich content in a docked side inspector on desktop and a bottom sheet on mobile; themes as a chip strip with Clear and All, the panel only for editing; the list as a non-modal drawer with compact grouped rows, map highlight on hover and search; a single-row compact chrome with the map at 60svh or more, and the 520 versus 720/480 breakpoint reconciled with DESIGN.md; chapter labels at rest, 44px targets, and deduplicated node data.
 - **PRD-739 P2, polish and live trust:** theme tags on chapters so theme filters apply to them; a live status line, a fetch error state and polling backoff; thread clipping; the walkthrough title and close button at 375; roles on overlay wrappers; pressed versus focus styling on pills; the two walkthrough buttons that lift 1px on hover (found by `qa-system-pass`).
-- **From `qa-system-pass`:** the em-dash pull-request workflow (PRD-1419, waits on Afo's OK); the CTA strips on `/chapters`, chapter and guild pages, which keep their own panels (a design call, since `ui/CtaStrip.astro` looks different); `/map/edit` and `/map/moderate`, which sit outside the site shell with their own card styles; the steward booking link kept in four places.
+- **From `qa-system-pass`:** the em-dash pull-request workflow (PRD-1419, waits on Afo's OK); the CTA strips on `/chapters`, chapter and guild pages, which keep their own panels (a design call, since `ui/CtaStrip.astro` looks different); `/map/edit` and `/map/moderate`, which sit outside the site shell with their own card styles; the steward booking link kept in four places. All three, with the hand-set link targets and the Library book title font, are tracked in PRD-1422.
 - **PRD-1420 (Todo, Afo):** revoke the old plain-join Telegram invite, which still opened the group at 22:40 UTC on 11-07 (the other old link is dead), and test a real Paragraph signup (eval checks 5 and 6).
 - **PRD-1421 (Backlog):** the chapter, chapter-initiative and people seed files still hold the copy from before the `qa-chapters` change set, so `bun run content:snapshot` would write it back into the fallback snapshot; bring them in line with the approved values, as `qa-guilds` did for guilds (`handoffs/qa-chapters.md`, "Seed files").
-- **Optional tidiness:** clear the ecoregion names stored in `intake.map_node_submissions.bioregion`, which are no longer published.
+- **Optional tidiness:** clear the ecoregion names stored in `intake.map_node_submissions.bioregion`, which are no longer published (a production write with Afo's approval; in PRD-1422).
 
 ## Session roster
 
@@ -114,7 +114,7 @@ Open with Afo for the map: confirm `MAP_LOCATION_CONFIRMATION_REQUIRED` is `true
 - [x] One rule for external links: new tab, `rel="noopener"`, and an accessible "opens in a new tab" hint. Prefer a build-time step over client script.
 - [x] Footer: Farcaster instead of Warpcast, LinkedIn, YouTube, Luma, Code of Conduct; Telegram from `social-links.json`; friendlier bottom row. Leave the ecoregion credit line to `qa-map-data` (it goes with the layer); rebase on `main` before editing the bottom row if that PR has merged. Edit `social-links.json` only after the `qa-home-garden` PR has merged, rebased on `main`.
 - [x] Brand kit (I3): current logo in the header, favicon, touch icon and default share image; book art only where a book is the subject.
-- [ ] Carried from `qa-home-garden`: `SiteFooter.astro:34` still hard-codes `t.me/+e-aa2Ed3LWVlYjNh`, which now opens a generic page (likely revoked); read `social-links.json` `telegram`. The ecosystem tiles (`index.astro`) and Garden step buttons (`garden/index.astro`) keep hand-set `target` and `rel` that the site-wide rule should replace. (Telegram done in #39; the ecosystem tiles' own `target` and `rel` went in #44. The Garden step buttons and the home book links still set `target` themselves, which the site-wide rule keeps.)
+- [ ] Carried from `qa-home-garden`: `SiteFooter.astro:34` still hard-codes `t.me/+e-aa2Ed3LWVlYjNh`, which now opens a generic page (likely revoked); read `social-links.json` `telegram`. The ecosystem tiles (`index.astro`) and Garden step buttons (`garden/index.astro`) keep hand-set `target` and `rel` that the site-wide rule should replace. (Telegram done in #39; the ecosystem tiles' own `target` and `rel` went in #44. The Garden step buttons and the home book links still set `target` themselves, which the site-wide rule keeps; eval check 7 holds live. Removing them is tracked in PRD-1422.)
 
 ### `qa-chapters` (PRD-625)
 
@@ -166,6 +166,7 @@ One parent issue in P-PRD-19 for this hub, and one child per session, created wh
 | PRD-1419 | Follow-up from `qa-system-pass`: run the em-dash check on pull requests (finding 18) |
 | PRD-1420 | Follow-up for Afo: revoke the old Telegram invite, test a real Paragraph signup (eval checks 5 and 6) |
 | PRD-1421 | Follow-up from `qa-chapters`: bring the chapter seed files in line with the approved Directus copy |
+| PRD-1422 | Leftover polish: map editor pages' cards, CTA panels, one steward booking link, hand-set link targets, Library book title font, stored ecoregion names |
 
 States on 2026-11-07 are in the Final state table at the top. When the hub closed, PRD-739 and PRD-1417 were moved out from under PRD-1408 and linked to it as related issues, so the parent could close while they stay open.
 
