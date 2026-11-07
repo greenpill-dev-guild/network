@@ -1,18 +1,17 @@
 {
-  "name": "Greenpill Network V2 Website",
+  "name": "Greenpill Network website",
   "status": "active",
   "guild": "dev-guild",
-  "summary": "Public front-door rebuild for chapters, Library, Stories, Guilds, Garden, map, and impact surfaces.",
+  "summary": "Public front door for chapters, Library, Stories, Guilds, and the map.",
   "description": "The April 2026 website revamp thread frames the V2 site as a move from a content shelf and link hub toward a public knowledge commons, interactive chapter map, Library, Stories, and Garden-style onboarding.",
   "image": "",
   "techStack": [
     "Astro",
-    "Keystatic",
-    "Public agent routes",
-    "Source-backed content"
+    "Directus",
+    "Hono"
   ],
-  "repoUrl": "https://github.com/greenpill-dev-guild",
-  "liveUrl": "https://hub.regencoordination.xyz/t/greenpill-network-website-revamp/414",
+  "repoUrl": "https://github.com/greenpill-dev-guild/network",
+  "liveUrl": "https://greenpill.network",
   "stewardSlugs": [
     "afo-aiyeloja",
     "matt-mattycompost"

@@ -2,36 +2,35 @@
   "title": "Greenpill Earth Week",
   "status": "published",
   "category": "program",
-  "publishDate": "2026-04-29",
-  "updatedDate": "",
-  "dek": "A live Hub coordination thread shows Greenpill chapters using Earth Week to make local regenerative action visible and source-backed.",
-  "excerpt": "Greenpill Earth Week connected local cleanups, garden work, teach-ins, and Green Goods documentation across the network.",
+  "publishDate": "2026-04-22",
+  "updatedDate": "2026-11-06",
+  "dek": "For Earth Day 2026, Greenpill chapters planned cleanups, tree planting and teach-ins, and used Green Goods to document the work.",
+  "excerpt": "Chapters in Nigeria, Kenya, Uganda and Koh Phangan put Earth Week events on the calendar, coordinated on the Regen Coordination Hub.",
   "region": "global",
   "tag": "Earth Week",
   "tags": [
     "earth-week",
-    "garden",
     "chapters",
+    "green-goods",
     "environment"
   ],
-  "body": "Greenpill Earth Week is a network story first, not a new operational owner model.\n\nThe Hub thread starts with a call to coordinate real regenerative action around Earth Day through local cleanups, waste audits, garden or tree-planting workdays, teach-ins, mutual aid, and small public goods experiments that can continue beyond the date.\n\nThe replies make the story concrete: Greenpill Kenya discussed plastic collection, tree planting, and Green Goods onboarding; GreenSofa connected the moment to MEGAWEAVING and local resource sharing; Greenpill Cape Town pointed toward support for a Peace Garden project; and Brasil/Fabulosa linked the coordination moment to an upcoming Web3 cafe gathering.\n\nThis should stay as one published network story for now. Split it into chapter initiatives only when stewards confirm each local effort's owner, scope, and publication-ready claims.\n\n## Sources\n\n- S048: https://hub.regencoordination.xyz/t/greenpill-earth-week/413",
+  "body": "On April 6, 2026, Afolabi opened a thread on the Regen Coordination Hub inviting Greenpill chapters to use Earth Day, Wednesday, April 22, to coordinate real regenerative action rather than only posting about it. The post suggested a few tracks: local cleanups or waste audits, community garden or tree-planting days, teach-ins on regeneration and public goods, mutual aid, and small public goods experiments that could continue after the day. It also proposed using Green Goods to document the work before, during and after the day.\n\n## What chapters planned\n\n- Greenpill Kenya planned plastic collection, tree planting, a composting demonstration and a class on using the Green Goods app at the Mortech Regen Hub.\n- Greenpill Cape Town planned to help the Amava Uluntu organization in Vrygrond raise donations for its Peace Garden through a BackaBuddy campaign.\n- GreenSofa shared a teaser of MEGAWEAVING, a community platform in Taiwan for sharing surplus resources, and proposed a resource mapping session.\n\n## On the calendar\n\n- April 22: Greenpill Nigeria cleaned and weeded around the Tech & Sun hub at Nnamdi Azikiwe University in Awka, as part of a clean-up drive and climate education session listed on Luma.\n- April 22: GreenPill Uganda listed a tree planting event at Morikiswa primary school.\n- April 22 to 26: Greenpill Kenya listed its Earth Day exercise at the Mortech Farmhouse in Nairobi.\n- April 25: Greenpill Phangan listed an Earth Week cleanup marathon with Clean Phangan to Ko Tae Nai, near Thong Sala, with boat transport, kayaks and supplies covered by Green Goods micro-grants.",
   "image": "/images/stories/greenpill-earth-week.webp",
-  "author": "Greenpill Network research",
-  "authorRole": "Source-backed seed copy",
+  "author": "",
+  "authorRole": "",
   "authorBio": "",
   "authorSlug": "",
   "authorAvatar": "",
   "relatedChapter": "",
   "relatedGuild": "",
   "relatedStorySlugs": [
-    "greenpill-garden-season-one",
-    "greensofa-taiwan-public-goods-tooling",
+    "greenpill-nigeria-tech-and-sun-round",
     "growing-greenpill-impact-framework"
   ],
   "continueReadingStorySlugs": [
-    "greenpill-garden-season-one",
+    "greenpill-nigeria-tech-and-sun-round",
     "greenpill-phangan-environmental-monitoring",
-    "greenpill-nigeria-tech-and-sun-round"
+    "greenpill-cape-town-trash-to-treasure"
   ],
   "themeSlugs": [
     "local-regeneration",
@@ -43,22 +42,52 @@
   "translations": [],
   "proofSignals": [
     {
-      "label": "Earth Week coordination",
-      "value": "Cross-chapter thread",
-      "source": "S048",
+      "label": "Coordination thread, April 6 to 29, 2026",
+      "value": "Greenpill Earth Week",
+      "source": "Regen Coordination Hub",
       "href": "https://hub.regencoordination.xyz/t/greenpill-earth-week/413"
+    },
+    {
+      "label": "Greenpill Nigeria, April 22, 2026",
+      "value": "Celebrating EarthDay At Greenpill Nigeria",
+      "source": "Luma",
+      "href": "https://luma.com/7g0q6lto"
+    },
+    {
+      "label": "@Greenpill9ja, April 22, 2026",
+      "value": "Greenpill Nigeria on Earth Day",
+      "source": "X",
+      "href": "https://x.com/Greenpill9ja/status/2047020884884422990"
+    },
+    {
+      "label": "GreenPill Uganda, April 22, 2026",
+      "value": "EarthDay Tree Planting",
+      "source": "Luma",
+      "href": "https://luma.com/rwo6wvcf"
+    },
+    {
+      "label": "Greenpill Kenya, April 22 to 26, 2026",
+      "value": "Greenpill Kenya Earth Day Exercise",
+      "source": "Luma",
+      "href": "https://luma.com/8b4p3o5p"
+    },
+    {
+      "label": "Greenpill Phangan, April 25, 2026",
+      "value": "Earth Week Cleanup Marathon",
+      "source": "Luma",
+      "href": "https://luma.com/dcj9r2l5"
     }
   ],
   "featuredWeight": 97,
-  "readTime": "4 min read",
+  "readTime": "",
   "media": {
     "image": "/images/stories/greenpill-earth-week.webp",
-    "imageAlt": "Greenpill Earth Week public event artwork.",
+    "imageAlt": "Green Goods home page, which describes a mobile-first tool that helps local communities document, verify and fund their positive impact.",
     "ogImage": "/images/stories/greenpill-earth-week.webp"
   },
   "seo": {
     "title": "Greenpill Earth Week · Greenpill Stories",
-    "description": "Source-backed network story for Greenpill Earth Week coordination across local regenerative action, Green Goods, and chapter updates.",
+    "description": "How Greenpill chapters in Nigeria, Kenya, Uganda, Cape Town, Taiwan and Koh Phangan planned Earth Day 2026, with Green Goods to document the work.",
     "ogImage": "/images/stories/greenpill-earth-week.webp",
     "canonicalPath": "/stories/greenpill-earth-week",
     "noindex": false

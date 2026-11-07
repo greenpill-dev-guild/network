@@ -2,59 +2,66 @@
   "title": "Growing the Greenpill Impact Framework",
   "status": "published",
   "category": "program",
-  "publishDate": "2025",
-  "updatedDate": "",
-  "dek": "A public thread connects Green Goods v1, strategy, measurement, coordination, and capital formation.",
-  "excerpt": "Launch-safe story copy for the Greenpill Impact Framework should cite the public Hub thread and keep internal framework details review-only.",
+  "publishDate": "2026-03-25",
+  "updatedDate": "2026-11-06",
+  "dek": "In March 2026, Greenpill opened a public thread to shape an impact framework for Green Goods across solar, agroforestry, education and waste management.",
+  "excerpt": "An open process to define outcomes and indicators for Green Goods, starting with GreenWill badges.",
   "region": "global",
   "tag": "Impact Tracking",
   "tags": [
     "impact-framework",
     "green-goods",
-    "capital-formation"
+    "greenwill"
   ],
-  "body": "The public Impact Framework thread is the best current source for explaining the impact direction on greenpill.network.\n\nThe research artifact includes richer internal framework language around MDR, CIDS, Y2I, Hypercerts, and anomaly detection. Those details should remain in the seed inventory and steward-review queue unless a public mirror or approval exists.\n\n## Sources\n\n- S043: https://hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411\n- S047: https://docs.greengoods.app/community/why-we-build",
+  "body": "On March 25, 2026, as the first quarter closed, Afolabi opened a thread on the Regen Coordination Hub to keep the momentum around Green Goods v1 by developing the Greenpill Impact Framework in public. The goal was a first version concrete enough to put to use soon and flexible enough to evolve as Green Goods grows.\n\nFor Season One, Green Goods centers on four domains: solar, agroforestry, education and waste management. The thread asks practical questions: which outcomes matter in each domain, which indicators show whether they are happening, which metrics are realistic to track early on, and what should be shared across domains.\n\nIt also connects the framework to strategy and theory of change, the Common Impact Data Standard, partner frameworks such as DAOstar's DAO-IP5 and Octant Vaults, badging with Unlock Protocol, and \"yield to impact\": how the value a project generates relates to the impact it creates over time.\n\n## First step: GreenWill badges\n\nOn April 6, 2026, Afolabi shared that the first implementation phase would run through GreenWill, the badge and recognition layer being designed for Green Goods. The work covered an onchain registry and badge issuance, the backend and indexer needed for eligibility and proof data, and the first interface updates for profile badges. The first planned badges were Genesis member, first submission and first support.",
   "image": "/images/stories/green-goods-regen-stack.webp",
-  "author": "Greenpill Network research",
-  "authorRole": "Source-backed seed copy",
+  "author": "",
+  "authorRole": "",
   "authorBio": "",
   "authorSlug": "",
   "authorAvatar": "",
   "relatedChapter": "",
   "relatedGuild": "dev-guild",
   "relatedStorySlugs": [
-    "greenpill-garden-season-one",
-    "greenpill-nigeria-water-cup"
+    "dev-guild-regenerative-stack",
+    "greenpill-earth-week"
   ],
   "continueReadingStorySlugs": [
+    "dev-guild-regenerative-stack",
     "greenpill-garden-season-one",
-    "greenpill-brasil-gg20-climate-milestones"
+    "greenpill-earth-week"
   ],
   "themeSlugs": [
     "impact",
-    "gov",
     "public",
-    "ai"
+    "coordination-tools",
+    "opensrc"
   ],
   "translations": [],
   "proofSignals": [
     {
-      "label": "Public Impact Framework thread",
-      "value": "Regen Hub",
-      "source": "S043",
+      "label": "Afolabi, March 25 and April 6, 2026",
+      "value": "Growing The Greenpill Impact Framework",
+      "source": "Regen Coordination Hub",
       "href": "https://hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411"
+    },
+    {
+      "label": "Green Goods documentation",
+      "value": "Why We Build",
+      "source": "Green Goods docs",
+      "href": "https://docs.greengoods.app/community/why-we-build"
     }
   ],
   "featuredWeight": 75,
-  "readTime": "3 min read",
+  "readTime": "",
   "media": {
     "image": "/images/stories/green-goods-regen-stack.webp",
-    "imageAlt": "Green Goods regenerative stack diagram.",
+    "imageAlt": "Diagram of Greenpill Dev Guild projects across Ethereum layers: Green Goods, GreenWill, the Allo Alliance and the Public Goods Staking Protocol.",
     "ogImage": "/images/stories/green-goods-regen-stack.webp"
   },
   "seo": {
     "title": "Growing the Greenpill Impact Framework · Greenpill Stories",
-    "description": "Source-backed story for the public Greenpill Impact Framework thread and Green Goods direction.",
+    "description": "The Greenpill Impact Framework: an open process, started in March 2026, to define outcomes and indicators for Green Goods, beginning with GreenWill badges.",
     "ogImage": "/images/stories/green-goods-regen-stack.webp",
     "canonicalPath": "/stories/growing-greenpill-impact-framework",
     "noindex": false

@@ -1,6 +1,6 @@
 {
   "name": "Grant Ships",
-  "status": "active",
+  "status": "inactive",
   "guild": "dev-guild",
   "summary": "Grant-allocation game and public-goods funding experiment.",
   "description": "Grant Ships appears in the public Dev Guild funding/project inventory as an allocation game where funders compete to support projects and bring regenerative features into game ecosystems.",
@@ -11,7 +11,7 @@
     "Public goods"
   ],
   "repoUrl": "",
-  "liveUrl": "https://checker.gitcoin.co/public/project/show/greenpill-dev-guild",
+  "liveUrl": "",
   "stewardSlugs": [],
   "themeSlugs": [
     "funding",
@@ -21,16 +21,10 @@
   "featuredWeight": 45,
   "proofSignals": [
     {
-      "label": "Gitcoin project",
-      "value": "Greenpill Dev Guild",
-      "source": "S010",
-      "href": "https://checker.gitcoin.co/public/project/show/greenpill-dev-guild"
-    },
-    {
+      "href": "https://paragraph.com/@greenpilldevguild/the-allo-alliance-innovating-capital-allocation-on-chain",
       "label": "Allo Alliance article",
       "value": "Grant ships allocation context",
-      "source": "S062",
-      "href": "https://paragraph.com/@greenpilldevguild/the-allo-alliance-innovating-capital-allocation-on-chain"
+      "source": "S062"
     }
   ],
   "media": {

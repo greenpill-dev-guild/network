@@ -1,23 +1,23 @@
 {
-  "title": "Greenpill Cote d'Ivoire — La Ligne Verte",
+  "title": "Greenpill Côte d'Ivoire: La Ligne Verte",
   "status": "published",
   "category": "chapter",
-  "publishDate": "2025",
-  "updatedDate": "",
-  "dek": "The public Green Mission / La Ligne Verte source supports a planned environmental action platform, with targets that must stay labeled as goals.",
-  "excerpt": "A source-backed Cote d'Ivoire story for environmental action and steward review.",
+  "publishDate": "2025-08-06",
+  "updatedDate": "2026-11-06",
+  "dek": "Greenpill Côte d'Ivoire is building La Ligne Verte, a Telegram chatbot that rewards neighbors for reporting and cleaning up trash.",
+  "excerpt": "La Ligne Verte turns trash reports into points and open map data, and won a UNDP hackathon in Côte d'Ivoire, the chapter reports.",
   "region": "africa",
   "tag": "Water & Waste",
   "tags": [
     "cote-divoire",
-    "green-mission",
+    "la-ligne-verte",
     "waste",
     "environment"
   ],
-  "body": "Greenpill Cote d'Ivoire has a public Regen Hub source for La Ligne Verte / Green Mission.\n\nThe research artifact flags the 2025-2026 targets as targets, not delivered metrics. The website should present them as planned goals unless a follow-up public source confirms completion.\n\n## Sources\n\n- S022: https://hub.regencoordination.xyz/t/greenpill-civ-chapter-update-the-beginning-of-la-ligne-verte/333",
+  "body": "In an update on the Regen Coordination Hub on August 6, 2025, Greenpill Côte d'Ivoire chapter lead Abraham Coulibaly shared how the chapter's Green Mission 2025, first presented to the ReFi community during Gitcoin Grants, became a working project called La Ligne Verte.\n\nThe chapter decided the project had to be simple and visible to everyone, without crypto jargon. Its slogan, \"Rends ton quartier zo, et prends tes points\", is Ivorian slang for \"Make your neighborhood beautiful and earn points.\"\n\n## How it works\n\nLa Ligne Verte is a chatbot on Telegram, with WhatsApp planned. Contributors report trash-filled spots in their neighborhoods and earn points, with bonus points when they clean the area themselves. The collected data feeds an open source, open data map that partners, institutions and other builders can use.\n\nThe team pitched the idea to communities including Habitants d'Internet, Celo Côte d'Ivoire and Tech Republic, then built a prototype through vibe coding. At the time of the update, a stable version was in beta testing through the Telegram bot.\n\n## A UNDP hackathon\n\nWith the bot, the chapter entered a project call and hackathon run by the United Nations Development Programme in Côte d'Ivoire on the theme of AI and biodiversity protection. Its challenge was to verify user-submitted photos with AI. The chapter reported that it won, and that La Ligne Verte is now partly funded by the UN, with structured support and mentorship.\n\nNext on the chapter's list: a smart contract to store the collected data, automatic point attribution, a better AI model and the first field actions.",
   "image": "/images/chapters/greenpill-civ-mission.jpg",
-  "author": "Greenpill Network research",
-  "authorRole": "Source-backed seed copy",
+  "author": "",
+  "authorRole": "",
   "authorBio": "",
   "authorSlug": "",
   "authorAvatar": "",
@@ -26,33 +26,34 @@
   "relatedStorySlugs": [],
   "continueReadingStorySlugs": [
     "greenpill-nigeria-water-cup",
-    "greenpill-brasil-gg20-climate-milestones"
+    "greenpill-cape-town-trash-to-treasure",
+    "greenpill-phangan-environmental-monitoring"
   ],
   "themeSlugs": [
     "water",
-    "events",
-    "education",
-    "currency"
+    "local-regeneration",
+    "ai",
+    "opensrc"
   ],
   "translations": [],
   "proofSignals": [
     {
-      "label": "Green Mission goals",
-      "value": "2025-2026 targets",
-      "source": "S022",
+      "label": "Abraham Coulibaly, August 6, 2025",
+      "value": "Greenpill CIV Chapter Update: The Beginning of La Ligne Verte",
+      "source": "Regen Coordination Hub",
       "href": "https://hub.regencoordination.xyz/t/greenpill-civ-chapter-update-the-beginning-of-la-ligne-verte/333"
     }
   ],
   "featuredWeight": 65,
-  "readTime": "3 min read",
+  "readTime": "",
   "media": {
     "image": "/images/chapters/greenpill-civ-mission.jpg",
-    "imageAlt": "GreenPill Cote d Ivoire community members gathered outdoors.",
+    "imageAlt": "Greenpill Côte d'Ivoire community members gathered outdoors with a green flag and a banner.",
     "ogImage": "/images/chapters/greenpill-civ-mission.jpg"
   },
   "seo": {
-    "title": "Greenpill Cote d'Ivoire La Ligne Verte · Greenpill Stories",
-    "description": "Source-backed Cote d'Ivoire story for La Ligne Verte and Green Mission goals.",
+    "title": "Greenpill Côte d'Ivoire: La Ligne Verte · Greenpill Stories",
+    "description": "La Ligne Verte by Greenpill Côte d'Ivoire: a Telegram chatbot that rewards neighbors for reporting and cleaning up trash, with open map data.",
     "ogImage": "/images/chapters/greenpill-civ-mission.jpg",
     "canonicalPath": "/stories/greenpill-cote-divoire-la-ligne-verte",
     "noindex": false

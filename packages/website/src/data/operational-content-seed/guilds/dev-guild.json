@@ -2,46 +2,18 @@
   "name": "Dev Guild",
   "type": "guild",
   "status": "active",
-  "summary": "The engineering arm of Greenpill Network, building open-source coordination tools for chapters, funders, and regenerative communities.",
-  "description": "The Dev Guild ships public tooling for impact measurement, capital allocation, community governance, reputation, and public network surfaces. Public sources connect the guild to Green Goods, GreenWill, Impact Reef, Cookie Jar, Grant Ships, Octant funding, Gitcoin rounds, and recurring builder programming.",
+  "summary": "A collective of regen developers building open-source tools for Greenpill chapters and regen communities.",
+  "description": "A community of builders making open-source tools, guides and workshops for Greenpill chapters and regen communities.",
   "foundedYear": 2023,
   "oneliner": "Building open-source coordination tools for the regenerative network.",
-  "outputs": [
-    {
-      "label": "Impact verification",
-      "summary": "Green Goods and related tools help communities document and verify regenerative work.",
-      "href": "https://github.com/greenpill-dev-guild/green-goods"
-    },
-    {
-      "label": "Capital allocation",
-      "summary": "Grant Ships, Cookie Jar, and related experiments explore public-goods funding mechanisms.",
-      "href": "https://github.com/greenpill-dev-guild"
-    },
-    {
-      "label": "Reputation primitives",
-      "summary": "GreenWill explores public-good reputation and pay-it-forward activity.",
-      "href": "https://github.com/greenpill-dev-guild/greenwill"
-    },
-    {
-      "label": "Public goods staking",
-      "summary": "PGSP and Squad Staking explore validator rewards as recurring funding for public goods.",
-      "href": "https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0"
-    },
-    {
-      "label": "Public writing",
-      "summary": "The Dev Guild Paragraph documents builder work and grant-facing updates.",
-      "href": "https://paragraph.com/@greenpilldevguild"
-    }
-  ],
+  "outputs": [],
   "mandateParagraphs": [
-    "The Dev Guild is the engineering arm of Greenpill Network. It designs and ships open-source software that helps chapters and allied communities coordinate without relying on private intermediaries.",
-    "The strongest public proof points are Green Goods, GreenWill, Cookie Jar, Grant Ships, Impact Reef, public GitHub repositories, and the Octant / Gitcoin funding trail.",
-    "Where existing tools already do the job, the public direction should frame the guild as an integrator and steward of coordination infrastructure rather than a team rebuilding every primitive from scratch."
+    "The Dev Guild is a community of builders making open-source tools, guides and workshops for Greenpill chapters and regen communities, focused on impact measurement, community coordination, capital allocation and capital formation."
   ],
   "cadence": {
-    "summary": "Public sources confirm recurring builder programming, but exact call cadence should be steward-confirmed before launch copy promises a standing schedule.",
-    "callTime": "",
     "format": "Builder spaces and public async work",
+    "summary": "",
+    "callTime": "",
     "recordingsHref": ""
   },
   "principles": [
@@ -62,7 +34,64 @@
     }
   ],
   "image": "/images/guilds/dev-guild-regenerative-stack.jpg",
-  "stewards": [],
+  "stewards": [
+    {
+      "group": "Guild stewardship",
+      "role": "Core steward",
+      "name": "Afolabi Aiyeloja",
+      "personSlug": "afo-aiyeloja"
+    },
+    {
+      "group": "Guild stewardship",
+      "role": "Lead and treasury manager",
+      "name": "Matt Strachman",
+      "personSlug": "matt-mattycompost"
+    },
+    {
+      "group": "Work areas",
+      "role": "Product",
+      "holders": [
+        "Afolabi Aiyeloja",
+        "Matt Strachman",
+        "Gui"
+      ]
+    },
+    {
+      "group": "Work areas",
+      "role": "Research",
+      "holders": [
+        "Afolabi Aiyeloja",
+        "Matt Strachman"
+      ]
+    },
+    {
+      "group": "Work areas",
+      "role": "Funding and partnerships",
+      "holders": [
+        "Afolabi Aiyeloja",
+        "Matt Strachman",
+        "Kit"
+      ]
+    },
+    {
+      "group": "Work areas",
+      "role": "Community",
+      "holders": [
+        "Afolabi Aiyeloja",
+        "Matt Strachman",
+        "Nansel"
+      ]
+    },
+    {
+      "group": "Work areas",
+      "role": "Marketing",
+      "holders": [
+        "Afolabi Aiyeloja",
+        "Nansel",
+        "Kit"
+      ]
+    }
+  ],
   "stewardSlugs": [
     "afo-aiyeloja",
     "matt-mattycompost",
@@ -73,18 +102,108 @@
   "publicMembers": [
     {
       "personSlug": "afo-aiyeloja",
-      "name": "Afo (Afolabi Aiyeloja)",
-      "role": "Dev Guild contributor",
-      "bio": "Publicly referenced in Dev Guild / Octant research as part of the builder layer.",
+      "name": "Afolabi Aiyeloja",
+      "role": "Core steward",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "coi",
+      "name": "Caue Tomaz",
+      "role": "Guild lead",
+      "bio": "",
       "location": "",
       "chapterSlug": "",
       "avatar": ""
     },
     {
       "personSlug": "matt-mattycompost",
-      "name": "Matt (mattycompost)",
-      "role": "Dev Guild contributor",
-      "bio": "Publicly referenced in Dev Guild / Octant and Garden-oriented research.",
+      "name": "Matt Strachman",
+      "role": "Guild lead and treasury manager",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "trinity-morphy",
+      "name": "Trinity Morphy",
+      "role": "Public Goods Staking lead and writer",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "",
+      "name": "Marcin",
+      "role": "Product lead",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "",
+      "name": "Leo",
+      "role": "Social media lead",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "",
+      "name": "Marcus",
+      "role": "Designer",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "",
+      "name": "Nansel",
+      "role": "Designer",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "",
+      "name": "BitBeckers",
+      "role": "Engineer",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "",
+      "name": "Tarun",
+      "role": "Engineer",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "",
+      "name": "Athus",
+      "role": "Engineer",
+      "bio": "",
+      "location": "",
+      "chapterSlug": "",
+      "avatar": ""
+    },
+    {
+      "personSlug": "",
+      "name": "Steve",
+      "role": "Engineer",
+      "bio": "",
       "location": "",
       "chapterSlug": "",
       "avatar": ""
@@ -104,26 +223,44 @@
       "url": "https://github.com/greenpill-dev-guild",
       "subtext": "Public repositories",
       "handle": "greenpill-dev-guild",
-      "action": "Visit org",
+      "action": "Visit",
       "icon": "github",
       "kind": "external"
     },
     {
-      "label": "Dev Guild Paragraph",
-      "url": "https://paragraph.com/@greenpilldevguild",
-      "subtext": "Public writing and updates",
-      "handle": "@greenpilldevguild",
-      "action": "Read",
-      "icon": "article",
+      "label": "Karma GAP",
+      "url": "https://www.karmahq.org/project/greenpill-dev-guild",
+      "subtext": "Grants, milestones and updates",
+      "handle": "Karma",
+      "action": "Visit",
+      "icon": "karma",
       "kind": "external"
     },
     {
-      "label": "Octant proposal",
-      "url": "https://discuss.octant.app/t/greenpill-dev-guild-regeneration-through-collaboration/456",
-      "subtext": "Public funding proposal",
-      "handle": "Octant forum",
+      "label": "Green Goods",
+      "url": "https://greengoods.app",
+      "subtext": "Green Goods app",
+      "handle": "greengoods.app",
       "action": "Open",
-      "icon": "external",
+      "icon": "",
+      "kind": "website"
+    },
+    {
+      "label": "@greenpilldevs",
+      "url": "https://x.com/greenpilldevs",
+      "subtext": "Guild updates",
+      "handle": "X",
+      "action": "Follow",
+      "icon": "x",
+      "kind": "social"
+    },
+    {
+      "label": "Calls and workshops",
+      "url": "https://luma.com/greengoods",
+      "subtext": "Community calls, demos and workshops",
+      "handle": "Luma",
+      "action": "Join",
+      "icon": "luma",
       "kind": "external"
     }
   ],
@@ -147,43 +284,83 @@
       "kind": "external"
     },
     {
-      "label": "Builder spaces",
-      "url": "https://luma.com/greenpilldevguild",
-      "subtext": "Public workshop calendar",
+      "label": "Calls and workshops",
+      "url": "https://luma.com/greengoods",
+      "subtext": "Community calls, demos and workshops",
       "handle": "Luma",
-      "action": "Join a space",
+      "action": "Join",
       "icon": "calendar",
       "kind": "external"
+    },
+    {
+      "label": "LinkedIn",
+      "url": "https://www.linkedin.com/company/greenpilldevguild",
+      "subtext": "Greenpill Dev Guild company page",
+      "handle": "LinkedIn",
+      "action": "Follow",
+      "icon": "linkedin",
+      "kind": "social"
     }
   ],
   "featuredWeight": 100,
-  "proofSignals": [
-    {
-      "label": "Octant Community Fund grant",
-      "value": "2.5 ETH",
-      "source": "S013 Crypto Altruists",
-      "href": "https://www.cryptoaltruists.com/blog/trailblazers-of-octant-episode-4-greenpill-dev-guild-scaling-the-regen-movement-with-web3-coordination-tools"
-    },
-    {
-      "label": "Octant proposal",
-      "value": "$60k request",
-      "source": "S012 Octant forum",
-      "href": "https://discuss.octant.app/t/greenpill-dev-guild-regeneration-through-collaboration/456"
-    },
-    {
-      "label": "Regenerative stack",
-      "value": "Paragraph series",
-      "source": "S060",
-      "href": "https://paragraph.com/@greenpilldevguild/pioneering-a-regenerative-stack"
-    }
-  ],
+  "proofSignals": [],
   "media": {
     "image": "/images/guilds/dev-guild-regenerative-stack.jpg",
-    "imageAlt": "Infographic for the Greenpill Dev Guild regenerative stack.",
     "ogImage": "/images/guilds/dev-guild-regenerative-stack.jpg",
-    "imageSourceUrl": "https://paragraph.com/@greenpilldevguild/validating-the-regenerative-stack",
+    "imageAlt": "Infographic for the Greenpill Dev Guild regenerative stack.",
     "imageCredit": "Greenpill Dev Guild via Paragraph",
-    "reviewStatus": "approved"
+    "reviewStatus": "approved",
+    "imageSourceUrl": "https://paragraph.com/@greenpilldevguild/validating-the-regenerative-stack",
+    "appearances": [
+      {
+        "kind": "podcast",
+        "source": "Greenpill Podcast",
+        "date": "2026-11-05",
+        "title": "Greenpill IRL: Building a Coordi-Nation with Kevin Owocki, Matt & Afolabi",
+        "href": "https://128c3f4a-6136-477c-8898-83d022a2d198.libsyn.com/greenpill-irl-building-a-coordi-nation-with-kevin-owocki-matt-afo",
+        "people": []
+      },
+      {
+        "kind": "article",
+        "source": "Dev Guild Paragraph",
+        "date": "2026-03-23",
+        "title": "The Public Goods Staking Protocol v0",
+        "href": "https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0",
+        "people": [
+          "Afo",
+          "Matt",
+          "Trinity Morphy"
+        ]
+      },
+      {
+        "kind": "podcast",
+        "source": "Crypto Altruists",
+        "date": "2024-12-28",
+        "title": "Trailblazers of Octant Episode 4: Greenpill Dev Guild",
+        "href": "https://www.cryptoaltruists.com/blog/trailblazers-of-octant-episode-4-greenpill-dev-guild-scaling-the-regen-movement-with-web3-coordination-tools",
+        "people": [
+          "Afo",
+          "Coi",
+          "Matt"
+        ]
+      },
+      {
+        "kind": "video",
+        "source": "YouTube",
+        "date": "2024",
+        "title": "Greenpill Hypercerts Workshop Highlights",
+        "href": "https://www.youtube.com/watch?v=5zf9ynSXppE",
+        "people": []
+      },
+      {
+        "kind": "video",
+        "source": "YouTube",
+        "date": "",
+        "title": "Workshop videos on the Greenpill Network channel",
+        "href": "https://www.youtube.com/@GreenpillNet/playlists",
+        "people": []
+      }
+    ]
   },
   "seo": {
     "title": "Dev Guild · Greenpill Network",
