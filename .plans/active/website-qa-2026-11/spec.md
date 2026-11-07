@@ -35,7 +35,7 @@ Twenty review notes (see `reports/2026-11-06-qa-findings.md`) plus two open Line
 
 | # | Input | Needed by |
 | --- | --- | --- |
-| I1 | A new Telegram invite link with "Request admin approval" turned on, and the old links revoked | `qa-brand-shell`, `qa-home-garden` |
+| I1 | A new Telegram invite link with "Request admin approval" turned on. Revoke the old links only after the new invite is deployed and verified on home, Garden and the footer, or the live buttons break in between | `qa-brand-shell`, `qa-home-garden` |
 | I2 | The LinkedIn URL to use, and which "website" link is no longer maintained | `qa-guilds`, `qa-brand-shell` |
 | I3 | Where the current brand kit and logo files live | `qa-brand-shell` |
 | I4 | Whether GreenSci should be listed publicly | `qa-library` |
