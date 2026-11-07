@@ -883,7 +883,12 @@ test('home map intake requires a valid email and stores local pending only after
     component,
     /<button type="button" class="gp-home-map-join" data-home-map-open aria-haspopup="dialog">Join the map<\/button>/
   );
-  assert.match(component, /querySelectorAll\('\[data-home-map-browse\]'\)[\s\S]*?addEventListener\('click', openNodeList\)/);
+  assert.match(component, /querySelectorAll\('\[data-home-map-browse\]'\)[\s\S]*?addEventListener\('click', \(\) => openNodeList\(trigger\)\)/);
+  // Closing the list gives focus back to whatever opened it (the hero link or
+  // the List toggle), not always to the toggle.
+  assert.match(component, /const openNodeList = \(opener: HTMLElement \| null = listToggle\) => \{[\s\S]*?listOpener = opener \?\? listToggle;/);
+  assert.equal(component.match(/\(listOpener \?\? listToggle\)\??\.focus\(\{ preventScroll: true \}\)/g)?.length, 2);
+  assert.doesNotMatch(component, /restoreListFocusOnClose\) listToggle\??\.focus/);
 
   // Filtering always offers a way back, and hover never outlives the pointer.
   assert.match(component, /<button type="button" class="gp-home-map-legend-reset" data-home-map-filter-reset hidden>Show all<\/button>/);
@@ -902,7 +907,7 @@ test('home map intake requires a valid email and stores local pending only after
   // open fan and hover, so no stale card or coloured web stays under them.
   assert.match(component, /const clearMapSurfaces = \(\) => \{[\s\S]*?closeSelected\(\);[\s\S]*?closeFanNow\(\);[\s\S]*?dropPointerFocus\(\);/);
   assert.match(component, /const setFilterPanel = [\s\S]*?if \(openFilterPanel\) \{[\s\S]*?clearMapSurfaces\(\);/);
-  assert.match(component, /const openNodeList = \(\) => \{[\s\S]*?clearMapSurfaces\(\);/);
+  assert.match(component, /const openNodeList = \(opener: HTMLElement \| null = listToggle\) => \{[\s\S]*?clearMapSurfaces\(\);/);
   assert.match(component, /const openAddDialog = \(trigger\?: HTMLElement\) => \{[\s\S]*?clearMapSurfaces\(\);/);
   assert.match(homepage, /min-block-size: calc\(100dvh - var\(--gp-header-height\)\)/);
   assert.match(homepage, /<Text variant="display" class="gp-home-hero-title">/);
@@ -1277,7 +1282,7 @@ test('home map mobile touch mode supports bounded zoom and compact connection ro
   assert.match(component, /\.gp-home-map-control-row\s*{[\s\S]*?flex-wrap:\s*nowrap/);
   assert.match(component, /const closeFilterPanels = \(\) => \{[\s\S]*?openFilterPanel = ''[\s\S]*?syncFilterPanels\(\)/);
   assert.match(component, /const setFilterPanel = \(panelName: string\) => \{[\s\S]*?if \(openFilterPanel\) \{\s*closeNodeList\(\);[\s\S]*?syncFilterPanels\(\)/);
-  assert.match(component, /const openNodeList = \(\) => \{[\s\S]*?closeFilterPanels\(\);[\s\S]*?listDrawer\.hidden = false/);
+  assert.match(component, /const openNodeList = \(opener: HTMLElement \| null = listToggle\) => \{[\s\S]*?closeFilterPanels\(\);[\s\S]*?listDrawer\.hidden = false/);
   assert.match(component, /document\.addEventListener\('pointerdown', \(event\) => \{[\s\S]*?target\.closest\('\.gp-home-map-controls'\)[\s\S]*?closeFilterPanels\(\)[\s\S]*?\.gp-home-map-list-drawer, \[data-home-map-list-toggle\][\s\S]*?closeNodeList\(\)/);
   assert.match(component, /if \(event\.key !== 'Escape'\) return;[\s\S]*?closeFilterPanels\(\);[\s\S]*?closeNodeList\(\)/);
   assert.match(component, /const openAddDialog = \(trigger\?: HTMLElement\) => \{[\s\S]*?closeFilterPanels\(\);[\s\S]*?closeNodeList\(\)/);
@@ -1679,6 +1684,11 @@ test('home map stacks overlapping pins across node types, counts them, and fans 
   assert.match(component, /const pick = \(vk: boolean\) => \{[\s\S]*?collapseFan\(\);[\s\S]*?activateMapNode\(m\.el, vk\);[\s\S]*?window\.setTimeout\(recomputeClustersNow, 0\);/);
   // A press on a satellite's name keeps the fan open for the pick.
   assert.match(component, /if \(targetAtPointer\(event\)\.satellite\) return;/);
+  // A click on a satellite or a marker ends there: the root's touch fallback,
+  // which opens the nearest pin within 44px, must never see it.
+  assert.match(component, /sat\.addEventListener\('click', \(event\) => \{\s*event\.stopPropagation\(\);\s*pick\(/);
+  assert.match(component, /group\.addEventListener\('click', \(event\) => \{\s*event\.stopPropagation\(\);\s*expand\(/);
+  assert.match(component, /if \(resolved\.satellite\) \{\s*takeOver\(\);\s*resolved\.satellite\.pick\(false\);\s*return;\s*\}/);
 
   // Pointer rules: geometry decides. A mouse is asked to choose only between
   // pins on the same spot; a touch is asked when more than one pin falls inside

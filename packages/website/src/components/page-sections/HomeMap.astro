@@ -2446,8 +2446,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (isTouchMap()) closeNodeList({ restoreFocus: true });
     };
 
-    const openNodeList = () => {
+    // The control that opened the list gets focus back when it closes: the
+    // List toggle, or the hero's "Find your people" link.
+    let listOpener: HTMLElement | null = null;
+    const openNodeList = (opener: HTMLElement | null = listToggle) => {
       if (!listDrawer || !listToggle) return;
+      listOpener = opener ?? listToggle;
       closeFilterPanels();
       clearMapSurfaces();
       listToggle.setAttribute('aria-expanded', 'true');
@@ -2483,7 +2487,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       } else {
         listDrawer.removeAttribute('open');
         syncNodeListClosed();
-        if (restoreListFocusOnClose) listToggle.focus({ preventScroll: true });
+        if (restoreListFocusOnClose) (listOpener ?? listToggle).focus({ preventScroll: true });
         restoreListFocusOnClose = false;
       }
     };
@@ -2577,7 +2581,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     });
     listDrawer?.addEventListener('close', () => {
       syncNodeListClosed();
-      if (restoreListFocusOnClose) listToggle?.focus({ preventScroll: true });
+      if (restoreListFocusOnClose) (listOpener ?? listToggle)?.focus({ preventScroll: true });
       restoreListFocusOnClose = false;
     });
     listDrawer?.addEventListener('click', (event) => {
@@ -2603,7 +2607,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     // so the browser brings the map into view by itself; this adds the list of
     // nodes on top.
     (Array.from(document.querySelectorAll('[data-home-map-browse]')) as HTMLElement[]).forEach((trigger) => {
-      trigger.addEventListener('click', openNodeList);
+      trigger.addEventListener('click', () => openNodeList(trigger));
     });
 
     const registerNode = (link: Element) => {
@@ -3030,7 +3034,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           // handlers that ask where it landed.
           window.setTimeout(recomputeClustersNow, 0);
         };
-        sat.addEventListener('click', () => pick(sat.matches(':focus-visible')));
+        // The click ends here: left to bubble, it would reach the map's touch
+        // fallback, which could open another pin within 44px of the satellite.
+        sat.addEventListener('click', (event) => {
+          event.stopPropagation();
+          pick(sat.matches(':focus-visible'));
+        });
         sat.addEventListener('keydown', (event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
@@ -3195,7 +3204,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         alone ? activateMapNode(members[0].el, viaKeyboard) : fanOutCluster(members, fanCenter, viaKeyboard)
       );
       const stack: OverlapStack = { members, chapters, marker: group, markerCenter, hitRadius, expand };
-      group.addEventListener('click', () => expand(group.matches(':focus-visible')));
+      // As with a satellite, the click ends at the marker.
+      group.addEventListener('click', (event) => {
+        event.stopPropagation();
+        expand(group.matches(':focus-visible'));
+      });
       group.addEventListener('keydown', (event) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
@@ -3308,11 +3321,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         event.stopImmediatePropagation();
       };
       const resolved = targetAtPointer(event);
+      // A satellite is picked here and the click consumed, even when it landed
+      // on the satellite itself, so no later handler can act on it again.
       if (resolved.satellite) {
-        if (over.closest('.gp-home-map-cluster-sat') !== resolved.satellite.el) {
-          takeOver();
-          resolved.satellite.pick(false);
-        }
+        takeOver();
+        resolved.satellite.pick(false);
         return;
       }
       const viaTouch = isRecentTouchMapClick();
