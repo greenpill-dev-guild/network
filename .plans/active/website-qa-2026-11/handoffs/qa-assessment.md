@@ -1,6 +1,6 @@
 # qa-assessment handoff (PRD-1414)
 
-Session `qa-assessment`, finding 19, decision D1 (keep and fix). Branch `claude/qa-assessment-7191ec`, PR: PENDING.
+Session `qa-assessment`, finding 19, decision D1 (keep and fix). Branch `claude/qa-assessment-7191ec`, PR: https://github.com/greenpill-dev-guild/network/pull/42 (open, not merged).
 
 ## Changed
 
