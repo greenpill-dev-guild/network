@@ -127,7 +127,7 @@ One parent issue in P-PRD-19 for this hub, and one child per session, created wh
 
 `qa-chapters` (PRD-625) is ready as a start card.
 
-Pull requests so far: #33 this hub, #34 `qa-home-garden`, #35 `qa-map-data` (its nine-row coordinate repair is approved by Afo and runs after #35 deploys), #36 `qa-guilds`, #37 `qa-stories`, #38 `qa-library` (also updates `scripts/public-content-contract.test.ts`, which pinned the old episode count; named in its PR).
+Pull requests so far: #33 this hub, #34 `qa-home-garden`, #35 `qa-map-data` (its nine-row coordinate repair is approved by Afo and runs after #35 deploys), #36 `qa-guilds` (its 42-row Directus change set: 40 rows approved by Afo on 2026-11-06 to apply after #36 merges; 2 Grant Ships rows for the dead `checker.gitcoin.co` link still need his OK), #37 `qa-stories`, #38 `qa-library` (also updates `scripts/public-content-contract.test.ts`, which pinned the old episode count; named in its PR).
 | PRD-625 | `qa-chapters` (reused) |
 | PRD-739 | `qa-map-polish` (reused) |
 
