@@ -74,7 +74,7 @@ Batch A starts first because it covers the broken interactions and the accuracy 
 - [ ] Book detail dialog on native `<dialog>`: larger cover, description, read or download the English PDF, every translation, and every store or edition link from `formats`. The cover stays a working link without JavaScript.
 - [ ] Podcast: run the feed snapshot in the scheduled build so episodes stay current; check that players work; take the episode count from the feed.
 - [ ] Remove the Knowledge Garden block and guides for protocols that are not active; ask Afo about GreenSci (I4). Keep the guild cards with `id="guilds"`.
-- [ ] Carried from `qa-home-garden`: `podcast.json` `title` reads "Learn > Podcast" on the home tile (July copy: "The Greenpill Podcast"), and `secondaryDescription` has an em dash. Expose the feed's episode count (300 items on 2026-11-06; the home tile still says 296 from `home-page.json` `proofSignals`). You also own the switch of the home tile to that count (`pages/index.astro:46-47` and the podcast entry in `home-page.json` `proofSignals`), but only after PR #34 merges: rebase on `main` first. If #34 has not merged when your PR is otherwise ready, leave the switch to `qa-system-pass` and say so in your handoff.
+- [ ] Carried from `qa-home-garden`: `podcast.json` `title` reads "Learn > Podcast" on the home tile (July copy: "The Greenpill Podcast"), and `secondaryDescription` has an em dash. Expose the feed's episode count (300 items on 2026-11-06). Done without sequencing: PR #34 (commit c69c8c3) switched the home tile to `podcastFeed.episodeCount` from `src/data/podcast-feed-snapshot.json`, which already holds that field on `main`, and PR #38 refreshes the snapshot in every Pages build.
 
 ### `qa-brand-shell` (findings 6, 7, 8, 16, 17, 20)
 
@@ -125,7 +125,7 @@ One parent issue in P-PRD-19 for this hub, and one child per session, created wh
 | PRD-1414 | `qa-assessment` (batch B, ready to start) |
 | PRD-1415 | `qa-brand-shell` (batch B, ready to start) |
 
-Pull requests so far: #33 this hub, #34 `qa-home-garden`, #35 `qa-map-data` (its nine-row coordinate repair is approved by Afo and runs after #35 deploys), #37 `qa-stories`.
+Pull requests so far: #33 this hub, #34 `qa-home-garden`, #35 `qa-map-data` (its nine-row coordinate repair is approved by Afo and runs after #35 deploys), #37 `qa-stories`, #38 `qa-library` (also updates `scripts/public-content-contract.test.ts`, which pinned the old episode count; named in its PR).
 | PRD-625 | `qa-chapters` (reused) |
 | PRD-739 | `qa-map-polish` (reused) |
 
