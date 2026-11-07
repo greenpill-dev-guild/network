@@ -12,6 +12,7 @@ import {
   toPublicOperationalContentSnapshot,
   toPublicWebsiteBuildMetadata,
 } from '@greenpill-network/shared/public-content';
+import { formatContentDate } from '../packages/website/src/lib/content-dates.ts';
 import {
   buildDirectusOperationalPermissionPlan,
 } from './directus-operational-content-setup.ts';
@@ -21,7 +22,6 @@ import {
 import {
   loadOperationalEnrichment,
 } from './directus-operational-enrichment.ts';
-import { formatContentDate } from '../packages/website/src/lib/content-dates.ts';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const editorialContentDir = join(rootDir, 'packages/website/src/content');
