@@ -95,6 +95,12 @@ Batch A starts first because it covers the broken interactions and the accuracy 
 
 - [ ] P0 items from `docs/design/map-polish-audit.md`: container sizing, clustering across node types, filter reset and empty state, stale hover and selection state, "Join the map" trigger with "Find your people" browsing instead.
 - [ ] Carried from `qa-home-garden`: at 375 the legend items are wider than the viewport, and the "Map list" heading is an h3 directly under the page h1.
+- [ ] Carried from `qa-map-data`: the selected card, hover card and thread tooltip still read `bioregion`, which is always empty after D2, so those paths can go. The location picker still clamps a dragged pin to the map edge (`pointFromLocationPointer`); ignore points dragged off the map instead of pinning them to the edge.
+
+## Follow-ups outside the sessions
+
+- After the approved coordinate repair: a migration that adds a not-0,0 check on map nodes as `NOT VALID`, then `VALIDATE` (covers Directus admin edits; needs its own production apply). Proposed by `qa-map-data`.
+- Optional tidiness: clear the ecoregion names stored in `intake.map_node_submissions.bioregion`, which are no longer published.
 
 ### `qa-system-pass`
 
@@ -115,6 +121,9 @@ One parent issue in P-PRD-19 for this hub, and one child per session, created wh
 | PRD-1411 | `qa-guilds` |
 | PRD-1412 | `qa-stories` |
 | PRD-1413 | `qa-library` (batch B, started 2026-11-07) |
+| PRD-1414 | `qa-assessment` (batch B, ready to start) |
+
+Pull requests so far: #33 this hub, #34 `qa-home-garden`, #35 `qa-map-data`.
 | PRD-625 | `qa-chapters` (reused) |
 | PRD-739 | `qa-map-polish` (reused) |
 
