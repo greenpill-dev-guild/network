@@ -72,7 +72,7 @@ Old files left in place: `images/greenpill-logo.svg` (the Garden page hero still
 ### Review follow-ups (CodeRabbit, 2026-11-07)
 
 - Applied: header mark sized with `--gp-space-xl` (32px) instead of literal pixels; named link targets (anything but `_self`, `_parent`, `_top`, `_unfencedTop`) count as able to open a new tab and get `noopener` and the description; the footer test checks every `.gp-site-footer` rule, including the mobile one; the root `astro` script runs on Bun.
-- Kept: the "Code of Conduct" label (Afo chose this link on 2026-11-06 after being told it is an unratified 2024 proposal; the thread itself is titled "Code of Conduct"); the background's `lvh` overscan and `vmax` glow radii (no tokens exist for viewport-relative background geometry, and `DESIGN.md` says not to invent tokens).
+- Kept: the "Code of Conduct" label (Afo chose this link on 2026-11-06 after being told it is an unratified 2024 proposal, and confirmed the label after CodeRabbit's review: "Keep \"Code of Conduct\""; the thread itself is titled "Code of Conduct"); the background's `lvh` overscan and `vmax` glow radii (no tokens exist for viewport-relative background geometry, and `DESIGN.md` says not to invent tokens).
 - Not done here, needs Afo's OK: run `scripts/external-links.test.ts` in the Pages workflow (workflows are security-sensitive; `qa-system-pass` plans a pull-request workflow for website checks).
 
 ## Evidence
