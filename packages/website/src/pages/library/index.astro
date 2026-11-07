@@ -157,7 +157,13 @@ function guildFootLabel(guild: typeof guilds[number]) {
         <ul class="gp-library-books-grid" role="list">
           {books.map((book, index) => (
             <li class="gp-library-book">
-              <a class="gp-library-book-link" href={book.data.ebookLink} data-book-dialog-trigger={bookDialogId(book)}>
+              <Card
+                href={book.data.ebookLink}
+                padded="sm"
+                stack="sm"
+                class="gp-library-book-link"
+                data-book-dialog-trigger={bookDialogId(book)}
+              >
                 <span class="gp-library-book-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
                 <span class="gp-library-book-cover">
                   {book.data.image && (
@@ -178,7 +184,7 @@ function guildFootLabel(guild: typeof guilds[number]) {
                     <Text variant="mono">{translationLabel(book.data.translations.length)}</Text>
                   )}
                 </span>
-              </a>
+              </Card>
             </li>
           ))}
         </ul>
@@ -421,15 +427,11 @@ function guildFootLabel(guild: typeof guilds[number]) {
 	    min-width: 0;
 	  }
 
-	  .gp-library-book-link {
-	    display: flex;
-	    flex-direction: column;
-	    gap: 14px;
-	    block-size: 100%;
-	    color: var(--gp-fg);
-	    text-decoration: none;
-	    cursor: pointer;
-	  }
+  /* Each book is a Card link (components/ui/Card.astro): a click opens its
+     dialog, and without JavaScript the link opens the English PDF. */
+  .gp-library-books-grid :global(.gp-library-book-link) {
+    block-size: 100%;
+  }
 
 	  .gp-library-book:last-child:nth-child(5n + 1) {
 	    grid-column: 5 / span 2;
@@ -448,30 +450,23 @@ function guildFootLabel(guild: typeof guilds[number]) {
 	  }
 
   .gp-library-book-index {
-    color: var(--gp-fg-dim);
+    color: var(--gp-fg-muted);
     font-family: var(--gp-font-mono);
     font-size: var(--gp-label-sm);
     letter-spacing: 0.08em;
   }
 
+  /* Covers differ in shape, so each sits whole in a 3:4 frame, the way the
+     home page frames story art. */
   .gp-library-book-cover {
     display: grid;
     place-items: center;
     width: 100%;
     aspect-ratio: 3 / 4;
-    padding: 10px;
-    border: 1px solid color-mix(in srgb, var(--gp-secondary) 14%, transparent);
+    padding: var(--gp-space-sm);
     border-radius: var(--gp-radius-md);
-    background: color-mix(in srgb, var(--gp-bg) 50%, transparent);
-    box-shadow: var(--gp-shadow-card);
+    background: var(--gp-green-800);
     overflow: hidden;
-    transition: border-color 200ms, background 200ms;
-  }
-
-  /* Hover steps the surface and border tone only (DESIGN.md: no lift, no shadow stack). */
-  .gp-library-book-link:hover .gp-library-book-cover {
-    border-color: color-mix(in srgb, var(--gp-primary) 34%, transparent);
-    background: color-mix(in srgb, var(--gp-bg) 68%, transparent);
   }
 
   .gp-library-book-cover img {
