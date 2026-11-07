@@ -50,6 +50,7 @@ const HOST_LABELS: Record<string, string> = {
   'paragraph.com': 'Paragraph',
   'hub.regencoordination.xyz': 'Regen Hub',
   'gap.karmahq.xyz': 'Karma GAP',
+  'karmahq.org': 'Karma GAP',
   'youtube.com': 'YouTube',
   'youtu.be': 'YouTube',
   'x.com': 'X',
@@ -57,7 +58,7 @@ const HOST_LABELS: Record<string, string> = {
   'lu.ma': 'Luma',
 };
 function destinationLabel(url: string): string {
-  if (url.startsWith('/')) return 'Read on this site';
+  if (url.startsWith('/')) return /\.pdf$/i.test(url) ? 'Read the PDF' : 'Read on this site';
   try {
     const host = new URL(url).hostname.replace(/^www\./, '');
     return HOST_LABELS[host] ?? host;
@@ -91,12 +92,13 @@ const LINK_GLYPHS: Record<string, string> = {
   telegram: 'TG',
   discord: 'DC',
 };
+// Returns '' when the glyph would only repeat the label (an "X" link labelled "X").
 function linkGlyph(link: any): string {
-  const mapped = LINK_GLYPHS[text(link.icon).toLowerCase()];
-  if (mapped) return mapped;
-  const words = text(link.label).split(/\s+/).filter(Boolean);
-  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
-  return (words[0] ?? '').slice(0, 2).toUpperCase();
+  const label = text(link.label);
+  const words = label.split(/\s+/).filter(Boolean);
+  const glyph = LINK_GLYPHS[text(link.icon).toLowerCase()]
+    ?? (words.length >= 2 ? words[0][0] + words[1][0] : (words[0] ?? '').slice(0, 2)).toUpperCase();
+  return glyph.toLowerCase() === label.toLowerCase() ? '' : glyph;
 }
 
 const surfaceLabel = data.type === 'guild' ? 'Guild' : 'Pod';
@@ -172,14 +174,17 @@ const projects = (await getOperationalProjects())
 
           {keyLinks.length > 0 && (
             <ul class="gp-guild-row gp-guild-key-links" aria-label="Key links">
-              {keyLinks.map((link) => (
-                <li>
-                  <Chip href={link.url} size="lg">
-                    <span class="gp-guild-key-glyph" aria-hidden="true">{linkGlyph(link)}</span>
-                    <span>{link.label}</span>
-                  </Chip>
-                </li>
-              ))}
+              {keyLinks.map((link) => {
+                const glyph = linkGlyph(link);
+                return (
+                  <li>
+                    <Chip href={link.url} size="lg">
+                      {glyph && <span class="gp-guild-key-glyph" aria-hidden="true">{glyph}</span>}
+                      <span class="gp-guild-key-label">{link.label}</span>
+                    </Chip>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -206,7 +211,7 @@ const projects = (await getOperationalProjects())
                       <span class="gp-guild-principle-num" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
                       <div class="gp-guild-stack is-tight">
                         <Text variant="title-md" as="h3">{principle.title}</Text>
-                        {principle.body && <Text variant="body">{principle.body}</Text>}
+                        {principle.body && <Text variant="body-lg">{principle.body}</Text>}
                       </div>
                     </li>
                   ))}
@@ -235,7 +240,7 @@ const projects = (await getOperationalProjects())
                     <div class="gp-guild-card-body">
                       {meta.length > 0 && <Meta items={meta} accentIndex={0} />}
                       <Text variant="title-lg" as="h3">{work.label}</Text>
-                      {work.summary && <Text variant="body">{work.summary}</Text>}
+                      {work.summary && <Text variant="body-lg">{work.summary}</Text>}
                       {credits.length > 0 && (
                         <p class="gp-guild-credit">
                           <span class="gp-guild-credit-label">Contributors</span>
@@ -269,7 +274,7 @@ const projects = (await getOperationalProjects())
                 <Card padded="lg">
                   <div class="gp-guild-card-body">
                     <Text variant="title-lg" as="h3">{project.name}</Text>
-                    {project.summary && <Text variant="body">{project.summary}</Text>}
+                    {project.summary && <Text variant="body-lg">{project.summary}</Text>}
                     {project.tech.length > 0 && <Meta items={project.tech} />}
                     {project.links.length > 0 && (
                       <div class="gp-guild-card-foot">
@@ -297,7 +302,7 @@ const projects = (await getOperationalProjects())
                 <Meta items={[text(leadAppearance.source), formatDate(leadAppearance.date)].filter(Boolean)} accentIndex={0} />
                 <Text variant="h3">{leadAppearance.title}</Text>
                 {list(leadAppearance.people).length > 0 && (
-                  <Text variant="body">With {list(leadAppearance.people).map(text).filter(Boolean).join(', ')}</Text>
+                  <Text variant="body-lg">With {list(leadAppearance.people).map(text).filter(Boolean).join(', ')}</Text>
                 )}
                 <div class="gp-guild-card-foot">
                   <ArrowLink href={leadAppearance.href}>{appearanceLinkLabel(leadAppearance)}</ArrowLink>
@@ -476,6 +481,12 @@ const projects = (await getOperationalProjects())
 
   .gp-guild-key-links {
     margin-block-start: var(--gp-space-sm);
+  }
+
+  /* Keeps a one-letter label ("X") at least 44px wide inside its pill. */
+  .gp-guild-key-label {
+    min-inline-size: 2ch;
+    text-align: center;
   }
 
   .gp-guild-key-glyph {
