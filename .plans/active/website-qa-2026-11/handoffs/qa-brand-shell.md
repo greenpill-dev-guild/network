@@ -42,7 +42,7 @@ The hint is a description rather than part of the link name, following the repo'
 - Resources: Library, Stories, Podcast (now the Library's podcast section instead of Apple Podcasts).
 - Connect: X / Twitter, Farcaster (was Warpcast), Telegram, LinkedIn, YouTube, Regen Hub. Telegram, X and YouTube are read from `content/social-links.json`, so the footer now uses the working invite and will follow the new one when PR #34 changes it.
 - The duplicate "Garden" entry under Network is gone ("Start in the Garden" remains).
-- Bottom row: "© {build year} Greenpill Network" and "Built in the open on GitHub". The repository is public but has no license file, so it does not say "open source". The ecoregion credit line is untouched; PR #35 removes it with the layer. The row is a wrapping flex row, so it lays out with or without that third item.
+- Bottom row: "© {build year} Greenpill Network" and "Built in the open on GitHub". The repository is public but has no license file, so it does not say "open source". This branch left the ecoregion credit line to PR #35, which removed it with the layer; after merging `main` on 2026-11-07 the row has these two items, copyright on the left and the GitHub link on the right. It is a wrapping flex row and stacks at 520px and below.
 
 ### Brand marks (finding 17, input I3)
 
@@ -64,7 +64,9 @@ Old files left in place: `images/greenpill-logo.svg` (the Garden page hero still
 
 ## Evidence
 
-AGENTS.md pre-PR gate, on the final commit:
+After merging `main` with #33, #35, #36, #37 and #38 on 2026-11-07 (one conflict, in the footer's bottom row, resolved to the two new items without the ecoregion credit): `bun run typecheck` exit 0, `bun test scripts/external-links.test.ts` 16 pass, `bun run test:content` 39 pass, `bun run agentic:check` exit 0, `bun run build` 50 pages. The built `dist` has 1,994 links on 50 pages; all 738 to other hosts follow the rule, no internal link opens a new tab, and no page shows the ecoregion credit. Brave at 1460: the bottom row shows the copyright left and the GitHub link right, no horizontal overflow.
+
+AGENTS.md pre-PR gate, on the commit before that merge:
 
 - `bun run typecheck`: exit 0.
 - `bun test scripts/external-links.test.ts`: 16 pass, 0 fail. A mutation that flips the host check fails 8 of them.
