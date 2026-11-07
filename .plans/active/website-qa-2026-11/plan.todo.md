@@ -106,6 +106,7 @@ Batch A starts first because it covers the broken interactions and the accuracy 
 ### `qa-system-pass`
 
 - [ ] Move page cards onto `Card` with the home treatment, markup and imports included; remove page-local card classes.
+- [ ] Carried from `qa-chapters`: two "source-backed" captions remain in `pages/chapters/[slug].astro`. After the fallback snapshot refresh, Denver and the Dominican Republic (inactive in production) stop building pages too.
 - [ ] Add a check that fails on em dashes in website copy (as PRD-1303 does for Green Goods) and sweep what is left, including a Directus change set for content rows. Wire it into CI: no workflow runs on ordinary website pull requests today (`github-pages.yml` builds only on `main` pushes and its schedule; `supply-chain-guardrails.yml` triggers only on package, lockfile and workflow paths). With Afo's OK, add a pull-request workflow for website paths that runs the check with read-only permissions. Do not fail the hourly publish on steward-edited Directus copy; clean that through the change set.
 - [ ] Refresh the fallback snapshot with `bun run content:snapshot:from-agent` after the Directus change sets are applied.
 - [ ] Full-site QA in Brave at 375, 1024 and 1440, plus 1920 for the background; `bun run ui:verify` counts as not run in the dev machine. Repeat the background check at 1920 on greenpill.network after deploy. Update this hub and Linear.
@@ -125,9 +126,9 @@ One parent issue in P-PRD-19 for this hub, and one child per session, created wh
 | PRD-1414 | `qa-assessment` (batch B, ready to start) |
 | PRD-1415 | `qa-brand-shell` (batch B, started 2026-11-07) |
 
-`qa-chapters` (PRD-625) started on 2026-11-07. `qa-assessment` (PRD-1414) is still a start card.
+`qa-chapters` (PRD-625) opened PR #40 on 2026-11-07. `qa-assessment` (PRD-1414) is still a start card.
 
-Pull requests so far: #33 this hub, #34 `qa-home-garden`, #35 `qa-map-data` (its nine-row coordinate repair is approved by Afo and runs after #35 deploys), #36 `qa-guilds` (its 42-row Directus change set: 40 rows approved by Afo on 2026-11-06 to apply after #36 merges; 2 Grant Ships rows for the dead `checker.gitcoin.co` link still need his OK), #37 `qa-stories`, #38 `qa-library` (also updates `scripts/public-content-contract.test.ts`, which pinned the old episode count; named in its PR), #39 `qa-brand-shell` (background seams fixed, build-time external-link rule in `src/middleware.ts`, footer links, brand marks from the Figma "Marketing" kit, both approved by Afo on screenshots; after #34 merges it moves the footer's literal links into `social-links.json`, whose `hub` URL `hub.greenpill.network` does not load).
+Pull requests so far: #33 this hub, #34 `qa-home-garden`, #35 `qa-map-data` (its nine-row coordinate repair is approved by Afo and runs after #35 deploys), #36 `qa-guilds` (its 42-row Directus change set: 40 rows approved by Afo on 2026-11-06 to apply after #36 merges; 2 Grant Ships rows for the dead `checker.gitcoin.co` link still need his OK), #37 `qa-stories`, #38 `qa-library` (also updates `scripts/public-content-contract.test.ts`, which pinned the old episode count; named in its PR), #39 `qa-brand-shell` (background seams fixed, build-time external-link rule in `src/middleware.ts`, footer links, brand marks from the Figma "Marketing" kit, both approved by Afo on screenshots; after #34 merges it moves the footer's literal links into `social-links.json`, whose `hub` URL `hub.greenpill.network` does not load), #40 `qa-chapters` (Afo approved the change set on 2026-11-07 and its 153 fields across all 18 chapters are live in production Directus; the live snapshot at 03:34 UTC holds no internal-note phrases; the PR stops building pages for inactive chapters and fixes the `/chapters` copy; it merges cleanly with every other open PR).
 | PRD-625 | `qa-chapters` (reused) |
 | PRD-739 | `qa-map-polish` (reused) |
 
