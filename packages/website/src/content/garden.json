@@ -1,6 +1,6 @@
 {
   "title": "Enter the garden.",
-  "summary": "Four public, low-pressure ways to meet Greenpill: subscribe to field notes, join the public conversation, self-assess your fit, then book a steward call when a human conversation is the right next step.",
+  "summary": "Four public, low-pressure ways to meet Greenpill: get our posts by email, join the public conversation, self-assess your fit, then book a steward call when a human conversation is the right next step.",
   "framing": "bridge",
   "steps": [
     {
@@ -9,14 +9,14 @@
       "levelLabel": "Start light",
       "surfaceType": "email",
       "kicker": "Step 1 · Stay in the loop",
-      "title": "Subscribe to field notes",
-      "body": "An occasional public digest with chapter updates, new resources, podcast highlights, and upcoming calls. Unsubscribe any time.",
-      "meta": "Public updates · unsubscribe anytime · no account",
+      "title": "Get Greenpill's posts by email",
+      "body": "Greenpill publishes network updates on Paragraph. Subscribe with your email address and new posts arrive in your inbox.",
+      "meta": "On Paragraph · email only",
       "friction": "Start light",
       "cta": {
-        "label": "Subscribe",
-        "href": "/garden#step-1",
-        "kind": "form"
+        "label": "Subscribe on Paragraph",
+        "href": "https://paragraph.com/@greenpill/subscribe",
+        "kind": "external"
       }
     },
     {

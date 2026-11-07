@@ -4,7 +4,6 @@ import socialLinks from '../../content/social-links.json';
 import GpLayout from '../../layouts/GpLayout.astro';
 import Button from '../../components/ui/Button.astro';
 import Container from '../../components/ui/Container.astro';
-import EmailInput from '../../components/ui/EmailInput.astro';
 import Meta from '../../components/ui/Meta.astro';
 import Overline from '../../components/ui/Overline.astro';
 import SectionHeader from '../../components/ui/SectionHeader.astro';
@@ -77,27 +76,7 @@ const isExternalHref = (href = '') => /^https?:\/\//.test(href);
                   <Meta items={[step.kicker || 'Garden', step.meta || 'Open path']} accentIndex={0} />
                   <Text variant="h3">{step.title}</Text>
                   <Text variant="body-sm">{step.body}</Text>
-                  {level === 1 ? (
-                    <form class="gp-garden-subscribe" data-garden-subscribe-form novalidate>
-                      <EmailInput
-                        label="Email address"
-                        placeholder="you@example.com"
-                        autocomplete="email"
-                        required
-                        aria-describedby="garden-subscribe-status"
-                        data-garden-subscribe-email
-                      />
-                      <Button type="submit" data-garden-subscribe-submit>
-                        {step.cta?.label || 'Subscribe'}
-                      </Button>
-                      <p
-                        id="garden-subscribe-status"
-                        class="gp-garden-subscribe-status"
-                        data-garden-subscribe-status
-                        aria-live="polite"
-                      ></p>
-                    </form>
-                  ) : level === 3 ? (
+                  {level === 3 ? (
                     <GardenAssessment stewardCallHref={stewardCallHref} />
                   ) : step.cta?.label && stepHref && (
                     <div class="gp-garden-step-action">
@@ -120,60 +99,6 @@ const isExternalHref = (href = '') => /^https?:\/\//.test(href);
     </Container>
   </main>
 </GpLayout>
-
-<script>
-  (() => {
-    const form = document.querySelector('[data-garden-subscribe-form]');
-    if (!(form instanceof HTMLFormElement)) return;
-
-    const emailInput = form.querySelector('[data-garden-subscribe-email]');
-    const submitButton = form.querySelector('[data-garden-subscribe-submit]');
-    const status = form.querySelector('[data-garden-subscribe-status]');
-    if (!(emailInput instanceof HTMLInputElement) || !(submitButton instanceof HTMLButtonElement) || !status) return;
-
-    const clean = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
-    const isLocalHost = ['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(window.location.hostname);
-    const agentBaseUrl = isLocalHost ? 'http://127.0.0.1:3303' : 'https://agent.greenpill.network';
-
-    const setStatus = (message: string, state: 'idle' | 'submitting' | 'success' | 'error') => {
-      status.textContent = message;
-      status.setAttribute('data-state', state);
-    };
-
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-
-      const email = clean(emailInput.value).toLowerCase();
-      emailInput.value = email;
-      if (!email || !emailInput.checkValidity()) {
-        setStatus('Enter a valid email address.', 'error');
-        return;
-      }
-
-      submitButton.disabled = true;
-      setStatus('Subscribing...', 'submitting');
-
-      try {
-        const response = await fetch(`${agentBaseUrl}/newsletter/subscribe`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email }),
-        });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok || payload?.ok !== true) {
-          throw new Error('newsletter_subscribe_failed');
-        }
-
-        emailInput.value = '';
-        setStatus('You are subscribed.', 'success');
-      } catch {
-        setStatus('Subscription is unavailable right now. Please try again later.', 'error');
-      } finally {
-        submitButton.disabled = false;
-      }
-    });
-  })();
-</script>
 
 <style>
   .gp-garden-page {
@@ -307,36 +232,6 @@ const isExternalHref = (href = '') => /^https?:\/\//.test(href);
     letter-spacing: 0.08em;
   }
 
-  .gp-garden-subscribe {
-    display: flex;
-    align-items: flex-end;
-    flex-wrap: wrap;
-    gap: var(--gp-space-md);
-    max-width: 620px;
-  }
-
-  .gp-garden-subscribe :global(.gp-email-field) {
-    flex: 1 1 280px;
-  }
-
-  .gp-garden-subscribe-status {
-    flex-basis: 100%;
-    min-height: 1.4em;
-    margin: 0;
-    color: var(--gp-fg-dim);
-    font-family: var(--gp-font-body);
-    font-size: var(--gp-body-sm);
-    line-height: 1.4;
-  }
-
-  .gp-garden-subscribe-status[data-state='success'] {
-    color: var(--gp-primary);
-  }
-
-  .gp-garden-subscribe-status[data-state='error'] {
-    color: var(--gp-error);
-  }
-
   @container (max-width: 980px) {
     .gp-garden-hero-grid {
       grid-template-columns: 1fr;
@@ -356,10 +251,6 @@ const isExternalHref = (href = '') => /^https?:\/\//.test(href);
 
     .gp-garden-step-index span {
       font-size: 42px;
-    }
-
-    .gp-garden-subscribe {
-      align-items: stretch;
     }
   }
 </style>
