@@ -21,6 +21,7 @@ import {
 } from '@greenpill-network/shared/map-locations';
 import { toPublicOperationalLocations } from '@greenpill-network/shared/public-content';
 import {
+  fanHasRoomForTargets,
   groupOverlappingPins,
   layoutFan,
   pickerPointToLocation,
@@ -892,8 +893,9 @@ test('home map intake requires a valid email and stores local pending only after
   assert.match(component, /querySelectorAll\('\[data-home-map-browse\]'\)[\s\S]*?addEventListener\('click', \(\) => openNodeList\(trigger\)\)/);
   // Closing the list gives focus back to whatever opened it (the hero link or
   // the List toggle), not always to the toggle.
-  assert.match(component, /const openNodeList = \(opener: HTMLElement \| null = listToggle\) => \{[\s\S]*?listOpener = opener \?\? listToggle;/);
-  assert.equal(component.match(/\(listOpener \?\? listToggle\)\??\.focus\(\{ preventScroll: true \}\)/g)?.length, 2);
+  assert.match(component, /const openNodeList = \(\s*opener: HTMLElement \| null = listToggle,\s*subset: [^)]*?\) => \{[\s\S]*?listOpener = opener \?\? listToggle;/);
+  assert.equal(component.match(/if \(restoreListFocusOnClose\) restoreListFocus\(\);/g)?.length, 2);
+  assert.match(component, /const restoreListFocus = \(\) => \{\s*if \(listOpener\?\.isConnected\) \{\s*listOpener\.focus\(\{ preventScroll: true \}\);/);
   assert.doesNotMatch(component, /restoreListFocusOnClose\) listToggle\??\.focus/);
 
   // Filtering always offers a way back, and hover never outlives the pointer.
@@ -913,7 +915,7 @@ test('home map intake requires a valid email and stores local pending only after
   // open fan and hover, so no stale card or coloured web stays under them.
   assert.match(component, /const clearMapSurfaces = \(\) => \{[\s\S]*?closeSelected\(\);[\s\S]*?closeFanNow\(\);[\s\S]*?dropPointerFocus\(\);/);
   assert.match(component, /const setFilterPanel = [\s\S]*?if \(openFilterPanel\) \{[\s\S]*?clearMapSurfaces\(\);/);
-  assert.match(component, /const openNodeList = \(opener: HTMLElement \| null = listToggle\) => \{[\s\S]*?clearMapSurfaces\(\);/);
+  assert.match(component, /const openNodeList = \(\s*opener: HTMLElement \| null = listToggle,\s*subset: [^)]*?\) => \{[\s\S]*?clearMapSurfaces\(\);/);
   assert.match(component, /const openAddDialog = \(trigger\?: HTMLElement\) => \{[\s\S]*?clearMapSurfaces\(\);/);
   assert.match(homepage, /min-block-size: calc\(100dvh - var\(--gp-header-height\)\)/);
   assert.match(homepage, /<Text variant="display" class="gp-home-hero-title">/);
@@ -1288,7 +1290,7 @@ test('home map mobile touch mode supports bounded zoom and compact connection ro
   assert.match(component, /\.gp-home-map-control-row\s*{[\s\S]*?flex-wrap:\s*nowrap/);
   assert.match(component, /const closeFilterPanels = \(\) => \{[\s\S]*?openFilterPanel = ''[\s\S]*?syncFilterPanels\(\)/);
   assert.match(component, /const setFilterPanel = \(panelName: string\) => \{[\s\S]*?if \(openFilterPanel\) \{\s*closeNodeList\(\);[\s\S]*?syncFilterPanels\(\)/);
-  assert.match(component, /const openNodeList = \(opener: HTMLElement \| null = listToggle\) => \{[\s\S]*?closeFilterPanels\(\);[\s\S]*?listDrawer\.hidden = false/);
+  assert.match(component, /const openNodeList = \(\s*opener: HTMLElement \| null = listToggle,\s*subset: [^)]*?\) => \{[\s\S]*?closeFilterPanels\(\);[\s\S]*?listDrawer\.hidden = false/);
   assert.match(component, /document\.addEventListener\('pointerdown', \(event\) => \{[\s\S]*?target\.closest\('\.gp-home-map-controls'\)[\s\S]*?closeFilterPanels\(\)[\s\S]*?\.gp-home-map-list-drawer, \[data-home-map-list-toggle\][\s\S]*?closeNodeList\(\)/);
   assert.match(component, /if \(event\.key !== 'Escape'\) return;[\s\S]*?closeFilterPanels\(\);[\s\S]*?closeNodeList\(\)/);
   assert.match(component, /const openAddDialog = \(trigger\?: HTMLElement\) => \{[\s\S]*?closeFilterPanels\(\);[\s\S]*?closeNodeList\(\)/);
@@ -1684,7 +1686,7 @@ test('home map stacks overlapping pins across node types, counts them, and fans 
   // the stacks right after the click, not on the 90 ms debounce, so a quick
   // second click finds its marker again; and not during it, because handlers
   // further along still ask where the click landed.
-  assert.match(component, /fanOutCluster\(members, fanCenter, viaKeyboard\)/);
+  assert.match(component, /fanOutCluster\(members, fanCenter, viaKeyboard, group\)/);
   assert.match(component, /gp-home-map-cluster-leader/);
   assert.match(component, /gp-home-map-cluster-sat-label/);
   assert.match(component, /const pick = \(vk: boolean\) => \{[\s\S]*?collapseFan\(\);[\s\S]*?activateMapNode\(m\.el, vk\);[\s\S]*?window\.setTimeout\(recomputeClustersNow, 0\);/);
@@ -1788,6 +1790,11 @@ test('home map stack and fan geometry: grouping, in-bounds fans and readable nam
   });
   assert.ok(Math.min(...gaps) >= phone.spacing * 0.9, `neighbouring satellites should stay about 44px apart: ${Math.min(...gaps)}`);
   assert.ok(big.hitRadius * 2 <= Math.min(...gaps) + 1e-6, 'hit areas must not overlap');
+  assert.equal(fanHasRoomForTargets(big, phone.reach), true, '12 people still get full touch targets');
+  // Forty people on the same phone-sized map would shrink every target well
+  // below a finger's width, so the map offers them as a list instead.
+  const huge = layoutFan({ ...phone, count: 40 });
+  assert.equal(fanHasRoomForTargets(huge, phone.reach), false, '40 people should go to the list');
 
   // Names that collide step apart and stay on the map, including when a name
   // pushed up from the bottom edge would land on one already placed.
@@ -1798,7 +1805,8 @@ test('home map stack and fan geometry: grouping, in-bounds fans and readable nam
     { x: 5, y: 33, width: 30, height: 6 },
     { x: 8, y: 34, width: 30, height: 6 },
   ];
-  const shifts = separateLabels(boxes, bounds, 1);
+  const { shifts, clear } = separateLabels(boxes, bounds, 1);
+  assert.equal(clear, true);
   const moved = boxes.map((box, i) => ({ ...box, y: box.y + shifts[i] }));
   moved.forEach((box, i) => {
     assert.ok(box.y >= bounds.top && box.y + box.height <= bounds.bottom, `label ${i} must stay on the map`);
@@ -1809,6 +1817,10 @@ test('home map stack and fan geometry: grouping, in-bounds fans and readable nam
     });
   });
   assert.equal(shifts[0], 0, 'a label with room stays where it is');
+  // More names than the map has rows for cannot all end apart; the result
+  // says so, and the map then offers a list instead of ambiguous names.
+  const crowded = Array.from({ length: 6 }, (_, i) => ({ x: 0, y: 2 * i, width: 30, height: 8 }));
+  assert.equal(separateLabels(crowded, { top: 0, bottom: 24 }, 1).clear, false);
 });
 
 test('home map keeps focus, hover and selection honest when stacks rebuild', async () => {
@@ -1829,13 +1841,23 @@ test('home map keeps focus, hover and selection honest when stacks rebuild', asy
   // hovered pin that is now hidden gives up the hover card.
   const recompute = component.match(/const recomputeClustersNow = \(\) => \{([\s\S]*?)\n    \};/)?.[1] ?? '';
   assert.match(recompute, /const focusKeys = keysForControl\(active\);/);
-  assert.match(recompute, /if \(active && \(!active\.isConnected \|\| active\.classList\.contains\('is-clustered'\)\)\) focusControlFor\(focusKeys\);/);
+  assert.match(recompute, /if \(active && \(!active\.isConnected \|\| active\.classList\.contains\('is-clustered'\)\) && !focusControlFor\(focusKeys\)\) \{/);
   assert.match(recompute, /if \(pointerFocusTarget\?\.classList\.contains\('is-clustered'\)\) \{\s*pointerFocusTarget = null;\s*clearFocus\(\);/);
   // Escape hands focus to whatever stands for any of the fan's people.
-  assert.match(component, /const fanKeys = activeFan\.map\(\(member\) => member\.key\);[\s\S]*?if \(!root\.contains\(document\.activeElement\)\) focusControlFor\(fanKeys\);/);
+  assert.match(component, /const fanKeys = activeFan\.map\(\(member\) => member\.key\);[\s\S]*?if \(!root\.contains\(document\.activeElement\) && !focusControlFor\(fanKeys\)\)/);
   // A mouse click on a stack opens that stack; only touch asks about every pin
   // inside its target.
   assert.match(component, /const contested = viaTouch \|\| !resolved\.stack \? pinsContestingPointer\(event, viaTouch\) : \[\];/);
+  // When an update removes everyone a focused control stood for, the legend
+  // takes focus rather than the page.
+  assert.match(recompute, /&& !focusControlFor\(focusKeys\)\) \{\s*legendItems\[0\]\?\.focus\(\{ preventScroll: true \}\);/);
+  assert.match(component, /if \(!root\.contains\(document\.activeElement\) && !focusControlFor\(fanKeys\)\) legendItems\[0\]\?\.focus/);
+  // A stack too large to fan out with full touch targets, or whose names
+  // cannot be told apart, opens the map list with just its people.
+  assert.match(component, /if \(!fanHasRoomForTargets\(\{ hitRadius \}, reach\)\) \{\s*openStackList\(members, opener\);\s*return;/);
+  assert.match(component, /if \(!labelsClear\) \{\s*openStackList\(members, opener\);\s*return;/);
+  assert.match(component, /const nodes = visibleMapNodes\(\)\.filter\(\(node\) => !listSubset \|\| listSubset\.keys\.has\(node\.dataset\.nodeId \|\| ''\)\);/);
+  assert.match(component, /<p class="gp-home-map-list-kicker" data-home-map-list-kicker>Visible nodes<\/p>/);
   // Scrolling keeps the preview of a marker or satellite that has keyboard focus.
   assert.match(component, /active\.matches\('\.gp-home-map-node-link:focus-visible, \[data-home-map-cluster\]:focus-visible, \.gp-home-map-cluster-sat:focus-visible'\)/);
   // New map controls and the compact band use spacing tokens; heights derive

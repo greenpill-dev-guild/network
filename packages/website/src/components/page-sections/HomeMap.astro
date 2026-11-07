@@ -386,7 +386,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     >
       <header class="gp-home-map-list-head">
         <div>
-          <p class="gp-home-map-list-kicker">Visible nodes</p>
+          <p class="gp-home-map-list-kicker" data-home-map-list-kicker>Visible nodes</p>
           <h2 id="gp-home-map-list-title">Map list</h2>
         </div>
         <div class="gp-home-map-list-actions">
@@ -600,6 +600,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     saveLocalPendingNode,
   } from '@greenpill-network/shared/map-node-storage';
   import {
+    fanHasRoomForTargets,
     groupOverlappingPins,
     layoutFan,
     pickerPointToLocation,
@@ -699,6 +700,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const listClose = root.querySelector('[data-home-map-list-close]') as HTMLButtonElement | null;
     const listItems = root.querySelector('[data-home-map-list-items]') as HTMLElement | null;
     const listCount = root.querySelector('[data-home-map-list-count]') as HTMLElement | null;
+    const listKicker = root.querySelector('[data-home-map-list-kicker]') as HTMLElement | null;
 
     // Theme labels/colors for member chips, serialized from SSR.
     const themeInfo: Record<string, { label: string; color: string }> = (() => {
@@ -2456,13 +2458,23 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     };
 
     // The control that opened the list gets focus back when it closes: the
-    // List toggle, or the hero's "Find your people" link.
+    // List toggle, the hero's "Find your people" link, or a stack marker.
     let listOpener: HTMLElement | null = null;
-    const openNodeList = (opener: HTMLElement | null = listToggle) => {
+    // A list of just some nodes: the people of a stack that cannot fan out on
+    // this map. Cleared when the list closes or opens for everything.
+    let listSubset: { keys: Set<string>; label: string } | null = null;
+    let listReturnKeys: string[] = [];
+    const openNodeList = (
+      opener: HTMLElement | null = listToggle,
+      subset: { keys: string[]; label: string } | null = null
+    ) => {
       if (!listDrawer || !listToggle) return;
       listOpener = opener ?? listToggle;
+      listReturnKeys = subset ? [...subset.keys] : [];
       closeFilterPanels();
       clearMapSurfaces();
+      listSubset = subset ? { keys: new Set(subset.keys), label: subset.label } : null;
+      if (listKicker) listKicker.textContent = listSubset?.label ?? 'Visible nodes';
       listToggle.setAttribute('aria-expanded', 'true');
       root.classList.add('has-list-drawer');
       listDrawer.hidden = false;
@@ -2485,6 +2497,18 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       listDrawer.setAttribute('aria-modal', 'false');
       listToggle.setAttribute('aria-expanded', 'false');
       root.classList.remove('has-list-drawer');
+      listSubset = null;
+      if (listKicker) listKicker.textContent = 'Visible nodes';
+    };
+
+    // Focus goes back to the list's opener, or, when a rebuild replaced the
+    // marker that opened it, to what now stands for the same people.
+    const restoreListFocus = () => {
+      if (listOpener?.isConnected) {
+        listOpener.focus({ preventScroll: true });
+        return;
+      }
+      if (!focusControlFor(listReturnKeys)) listToggle?.focus({ preventScroll: true });
     };
 
     let restoreListFocusOnClose = false;
@@ -2496,14 +2520,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       } else {
         listDrawer.removeAttribute('open');
         syncNodeListClosed();
-        if (restoreListFocusOnClose) (listOpener ?? listToggle).focus({ preventScroll: true });
+        if (restoreListFocusOnClose) restoreListFocus();
         restoreListFocusOnClose = false;
       }
     };
 
     renderNodeList = () => {
       if (!listItems || !listCount) return;
-      const nodes = visibleMapNodes();
+      const nodes = visibleMapNodes().filter((node) => !listSubset || listSubset.keys.has(node.dataset.nodeId || ''));
       listCount.textContent = String(nodes.length);
       if (listDrawer?.hidden) return;
       listItems.textContent = '';
@@ -2590,7 +2614,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     });
     listDrawer?.addEventListener('close', () => {
       syncNodeListClosed();
-      if (restoreListFocusOnClose) (listOpener ?? listToggle)?.focus({ preventScroll: true });
+      if (restoreListFocusOnClose) restoreListFocus();
       restoreListFocusOnClose = false;
     });
     listDrawer?.addEventListener('click', (event) => {
@@ -2929,10 +2953,42 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (!pointerFocusTarget) clearFocus();
     };
 
-    const fanOutCluster = (members: ClusterMember[], center: MapPoint, viaKeyboard: boolean) => {
+    // A stack too large to fan out with full touch targets on this map, or
+    // whose names cannot all be shown apart, opens the map list with just its
+    // people (and chapters, for a touch chooser).
+    const openStackList = (members: ClusterMember[], opener: HTMLElement | null) => {
+      const chapters = members.filter(isChapterPin).length;
+      const people = members.length - chapters;
+      const label = chapters === 0
+        ? `${peopleCount(people)} ${stackWhere(members, [])}`
+        : `${[`${chapters} ${chapters === 1 ? 'chapter' : 'chapters'}`, people ? peopleCount(people) : ''].filter(Boolean).join(' and ')} here`;
+      openNodeList(opener, { keys: members.map((member) => member.key), label });
+    };
+
+    const fanOutCluster = (
+      members: ClusterMember[],
+      center: MapPoint,
+      viaKeyboard: boolean,
+      opener: HTMLElement | null = null
+    ) => {
       if (!clustersGroup) return;
       // One fan at a time: put the last one back before laying out this one.
       if (activeFan) recomputeClustersNow();
+      // The whole ring stays on the map, with room for every satellite's touch
+      // target; a ring too tall for a small map flattens into an ellipse.
+      const reach = pxToViewBox(POINTER_TARGET_RADIUS_PX);
+      const { origin, points, hitRadius } = layoutFan({
+        count: members.length,
+        center,
+        view: currentViewBox,
+        spacing: pxToViewBox(FAN_SATELLITE_SPACING_PX),
+        minRadius: Math.max(pxToViewBox(OVERLAP_FAN_RADIUS_PX), 2.4),
+        reach,
+      });
+      if (!fanHasRoomForTargets({ hitRadius }, reach)) {
+        openStackList(members, opener);
+        return;
+      }
       // The fan takes these pins over. Their stack markers go, and any of them
       // still drawn on the map hide behind their satellite.
       const fanKeys = new Set(members.map((m) => m.key));
@@ -2949,16 +3005,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
       const dotRadius = pxToViewBox(FAN_SATELLITE_DOT_PX);
       const labelFont = pxToViewBox(FAN_LABEL_FONT_PX);
-      // The whole ring stays on the map, with room for every satellite's touch
-      // target; a ring too tall for a small map flattens into an ellipse.
-      const { origin, points, hitRadius } = layoutFan({
-        count: members.length,
-        center,
-        view: currentViewBox,
-        spacing: pxToViewBox(FAN_SATELLITE_SPACING_PX),
-        minRadius: Math.max(pxToViewBox(OVERLAP_FAN_RADIUS_PX), 2.4),
-        reach: pxToViewBox(POINTER_TARGET_RADIUS_PX),
-      });
       // Satellites take the order their pins have around the fan, so the leader
       // lines back to each pin do not cross.
       const bearing = (m: ClusterMember) => (
@@ -3069,7 +3115,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       // Names that would overlap step apart: each takes the smallest move that
       // clears every name already placed and stays on the map.
       const labelled = fanSatellites.filter((satellite) => satellite.labelBox);
-      const labelShifts = separateLabels(
+      const { shifts: labelShifts, clear: labelsClear } = separateLabels(
         labelled.map((satellite) => satellite.labelBox as MapBox),
         {
           top: currentViewBox.y + pxToViewBox(4),
@@ -3084,6 +3130,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         label.setAttribute('y', (Number(label.getAttribute('y')) + shift).toFixed(2));
         satellite.labelBox = { ...satellite.labelBox, y: satellite.labelBox.y + shift };
       });
+      // Names that would still overlap are ambiguous targets: offer the list.
+      if (!labelsClear) {
+        openStackList(members, opener);
+        return;
+      }
       if (viaKeyboard) fanSatellites[0]?.el.focus?.();
     };
 
@@ -3180,7 +3231,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
       // One person beside a chapter needs no fan: open them directly.
       const expand = (viaKeyboard: boolean) => (
-        alone ? activateMapNode(members[0].el, viaKeyboard) : fanOutCluster(members, fanCenter, viaKeyboard)
+        alone ? activateMapNode(members[0].el, viaKeyboard) : fanOutCluster(members, fanCenter, viaKeyboard, group)
       );
       const stack: OverlapStack = { members, chapters, marker: group, markerCenter, hitRadius, expand };
       // As with a satellite, the click ends at the marker.
@@ -3297,7 +3348,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           renderOverlapStack(people, chapters, center, radius, centroidOf(anchors));
           taken.push({ center, radius });
         });
-      if (active && (!active.isConnected || active.classList.contains('is-clustered'))) focusControlFor(focusKeys);
+      // When nothing stands for those people any more (an update removed
+      // them), the legend, the next control after the map, takes focus.
+      if (active && (!active.isConnected || active.classList.contains('is-clustered')) && !focusControlFor(focusKeys)) {
+        legendItems[0]?.focus({ preventScroll: true });
+      }
     };
 
     // ---- Pointer disambiguation ---------------------------------------------
@@ -3391,7 +3446,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const fanKeys = activeFan.map((member) => member.key);
       collapseFan();
       recomputeClustersNow();
-      if (!root.contains(document.activeElement)) focusControlFor(fanKeys);
+      if (!root.contains(document.activeElement) && !focusControlFor(fanKeys)) legendItems[0]?.focus({ preventScroll: true });
     });
 
     const toMember = (

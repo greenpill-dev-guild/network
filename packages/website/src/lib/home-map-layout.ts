@@ -141,13 +141,15 @@ export function layoutFan(options: {
  * Moves overlapping labels apart vertically. Labels are handled top to
  * bottom; each takes the smallest shift that clears every label placed before
  * it and keeps it within `bounds`, or, when no such spot exists, the in-bounds
- * shift with the least overlap. Returns each label's shift, in input order.
+ * shift with the least overlap. Returns each label's shift, in input order,
+ * and whether every label ended clear of the others (when not, a caller should
+ * offer the choice another way, since overlapping names are ambiguous targets).
  */
 export function separateLabels(
   boxes: readonly MapBox[],
   bounds: { top: number; bottom: number },
   gap: number
-): number[] {
+): { shifts: number[]; clear: boolean } {
   const overlapArea = (a: MapBox, b: MapBox) => {
     const width = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
     const height = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
@@ -155,6 +157,7 @@ export function separateLabels(
   };
   const shifts = boxes.map(() => 0);
   const placed: MapBox[] = [];
+  let clear = true;
   const order = boxes.map((box, index) => ({ box, index })).sort((a, b) => a.box.y - b.box.y);
   for (const { box, index } of order) {
     const candidates = new Set<number>([0]);
@@ -167,12 +170,22 @@ export function separateLabels(
     const options = [...candidates].filter(fits).sort((a, b) => Math.abs(a) - Math.abs(b));
     if (!options.length) options.push(0);
     const cost = (shift: number) => placed.reduce((sum, other) => sum + overlapArea({ ...box, y: box.y + shift }, other), 0);
-    const best = options.find((shift) => cost(shift) === 0)
-      ?? options.reduce((a, b) => (cost(b) < cost(a) ? b : a));
+    const clearShift = options.find((shift) => cost(shift) === 0);
+    if (clearShift === undefined) clear = false;
+    const best = clearShift ?? options.reduce((a, b) => (cost(b) < cost(a) ? b : a));
     shifts[index] = best;
     placed.push({ ...box, y: box.y + best });
   }
-  return shifts;
+  return { shifts, clear };
+}
+
+/**
+ * Whether a fan laid out by `layoutFan` gives each satellite a full touch
+ * target (`reach` is half of one). A stack too large for its map gets a list
+ * instead, since a fan would shrink its targets below what a finger can hit.
+ */
+export function fanHasRoomForTargets(layout: Pick<FanLayout, 'hitRadius'>, reach: number): boolean {
+  return layout.hitRadius >= reach * 0.9;
 }
 
 /**
