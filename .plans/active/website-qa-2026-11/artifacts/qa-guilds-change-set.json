@@ -3,7 +3,7 @@
   "session": "qa-guilds",
   "linear": "PRD-1411",
   "status": "approved by Afo on 2026-11-06 in the qa-guilds session; apply after PR #36 merges",
-  "note": "One entry per record field. `current` is the production value from https://agent.greenpill.network/content/public-snapshot read on 2026-11-06 (generatedAt 2026-11-06T23:42:53Z); it matched the committed fallback snapshot field for field. publication_status is not in the public snapshot; every listed record is published today. Apply only after Afo approves, in Directus or through the admin API, then update the seed files to match. Rows with afoDecision were changed or settled by Afo's answers that day; the rest were approved as drafted.",
+  "note": "One entry per record field. `current` is the production value from https://agent.greenpill.network/content/public-snapshot read on 2026-11-06 (generatedAt 2026-11-06T23:42:53Z); it matched the committed fallback snapshot field for field. publication_status is not in the public snapshot; every listed record is published today. Apply only after Afo approves, in Directus or through the admin API, then update the seed files to match. Rows with afoDecision were changed or settled by Afo's answers that day; rows with pendingAfo were added afterwards and still need his OK; the rest were approved as drafted.",
   "changes": [
     {
       "collection": "guilds",
@@ -1222,6 +1222,52 @@
         "https://forum.arbitrum.foundation/t/grant-ships-weekly-dev-log/20191",
         "https://hub.regencoordination.xyz/t/greenpill-dev-guild-2024-recap/162"
       ]
+    },
+    {
+      "collection": "projects",
+      "slug": "grant-ships",
+      "directusField": "live_url",
+      "snapshotField": "liveUrl",
+      "current": "https://checker.gitcoin.co/public/project/show/greenpill-dev-guild",
+      "proposed": "",
+      "reason": "checker.gitcoin.co no longer resolves (DNS failure in Brave on 2026-11-06, reported by qa-home-garden and the research agent). Grant Ships has no working home of its own (grantships.fun failed TLS), and the project is inactive, so the link is cleared rather than replaced.",
+      "sources": [
+        "https://forum.arbitrum.foundation/t/grant-ships-weekly-dev-log/20191"
+      ],
+      "pendingAfo": "Added after the 2026-11-06 approval at the orchestrator's request; needs Afo's OK."
+    },
+    {
+      "collection": "projects",
+      "slug": "grant-ships",
+      "directusField": "proof_signals",
+      "snapshotField": "proofSignals",
+      "current": [
+        {
+          "href": "https://checker.gitcoin.co/public/project/show/greenpill-dev-guild",
+          "label": "Gitcoin project",
+          "value": "Greenpill Dev Guild",
+          "source": "S010"
+        },
+        {
+          "href": "https://paragraph.com/@greenpilldevguild/the-allo-alliance-innovating-capital-allocation-on-chain",
+          "label": "Allo Alliance article",
+          "value": "Grant ships allocation context",
+          "source": "S062"
+        }
+      ],
+      "proposed": [
+        {
+          "href": "https://paragraph.com/@greenpilldevguild/the-allo-alliance-innovating-capital-allocation-on-chain",
+          "label": "Allo Alliance article",
+          "value": "Grant ships allocation context",
+          "source": "S062"
+        }
+      ],
+      "reason": "Drops the proof signal that links the dead checker.gitcoin.co page; keeps the Allo Alliance article.",
+      "sources": [
+        "https://paragraph.com/@greenpilldevguild/the-allo-alliance-innovating-capital-allocation-on-chain"
+      ],
+      "pendingAfo": "Added after the 2026-11-06 approval at the orchestrator's request; needs Afo's OK."
     },
     {
       "collection": "projects",

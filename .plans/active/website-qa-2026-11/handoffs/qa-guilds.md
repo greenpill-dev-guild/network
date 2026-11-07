@@ -22,13 +22,18 @@ Template, `packages/website/src/pages/guilds/[slug].astro` (both guild pages):
 
 Hub files: this handoff, `artifacts/qa-guilds-change-set.json`, and three preview screenshots in `artifacts/qa-guilds/`.
 
-Seed files: `src/data/operational-content-seed/guilds/dev-guild.json` and `writers-guild.json` now hold the approved values, so local seeding and `content:snapshot` match what production will have. `bun run test:content` (33 tests, which validate the guild seeds) passes. The committed fallback snapshot is unchanged; `qa-system-pass` refreshes it from the agent after the change set is applied.
+Seed files: `src/data/operational-content-seed/guilds/dev-guild.json` and `writers-guild.json` now hold the approved values, so local seeding and `content:snapshot` match what production will have. The committed fallback snapshot is unchanged; `qa-system-pass` refreshes it from the agent after the change set is applied.
 
 ## Evidence
 
-- `bun run ui:check`: 0 hard, 0 warn.
-- `bun run build:website`: 47 pages built. `astro check`: 0 errors, 0 warnings, 5 hints (none in this file).
-- `bun run ui:verify`: **blocked**. Bun runs inside the network dev machine, which has no Chrome or Chromium, and CI does not run `ui:verify`. Its layout checks were run by hand in Brave instead.
+Gate (AGENTS.md), on the final commit:
+
+- `bun run typecheck`: exit 0.
+- `bun run test:content`: 33 pass, 0 fail (it validates the guild seed files).
+- `bun run agentic:check`: exit 0 (Modern Web Guidance, browser-verification policy, `plans:validate` 11 hubs, `ui:check` 0 hard and 0 warn).
+- `bun run build` (`build:website`): 47 pages. `astro check`: 0 errors, 0 warnings, 5 hints (none in this file).
+- `bun run test:agent`: not needed; the agent's guild projection is unchanged.
+- `bun run ui:verify`: **not run**. Bun runs inside the network dev machine, which has no Chrome or Chromium, so the command skips every channel, and CI does not run it. The rendered proof is the Brave check below.
 - Brave QA (Claude in Chrome, Afo's profile) against my dev server on port 3324. Brave's window ignores resizing on this laptop (1014px viewport), so each width ran in a same-origin iframe of exactly 375, 1024 and 1440px, as `qa-home-garden` and `qa-map-data` did. Both guild pages were checked with today's production content and with the change set applied to a local copy of the snapshot (never committed):
   - No horizontal overflow, no wrapped pills or arrow links, at every width on both pages.
   - Contributors 2 / 3 / 4 columns, published work 1 / 2 / 2, projects 1 / 2 / 3, media lead card above its rows below 980px.
@@ -94,7 +99,7 @@ Project activity judgement (GitHub API and the sources above, read 2026-11-06):
 
 ## Production change set
 
-**Approved by Afo on 2026-11-06 in this session. Not applied yet: apply after PR #36 merges** (the old template would render the new links as two "Visit" buttons). Exact values for every row, with each full current value, are in [`artifacts/qa-guilds-change-set.json`](../artifacts/qa-guilds-change-set.json) (40 field changes). Afo approved the rows as drafted, except the seven marked †: those were settled or changed by his answers, recorded per row in `afoDecision`.
+**Approved by Afo on 2026-11-06 in this session. Not applied yet: apply after PR #36 merges** (the old template would render the new links as two "Visit" buttons). Exact values for every row, with each full current value, are in [`artifacts/qa-guilds-change-set.json`](../artifacts/qa-guilds-change-set.json) (42 field changes). Afo approved 40 of them: as drafted, except the seven marked †, which his answers settled or changed (recorded per row in `afoDecision`). The two rows marked ‡ were added afterwards at the orchestrator's request (the dead `checker.gitcoin.co` link on Grant Ships) and **still need his OK** (`pendingAfo`).
 
 How to apply: change only the listed fields, in Directus or with targeted PATCH requests to `/items/guilds/<slug>` and `/items/projects/<slug>` using the admin token. Do not use `scripts/directus-operational-enrichment.ts` for this: it re-sends every field of all three guilds and every visible chapter initiative from the seed files, which would overwrite steward edits made since. The website picks the changes up on the next hourly build. The guild seed files already match the approved values (this PR); the project seed files and the fallback snapshot are for `qa-system-pass`.
 
@@ -134,14 +139,16 @@ Preview screenshots (Brave, local dev server with the approved change set applie
 | 30 | projects/greenwill | `tech_stack` | 3: Farcaster; Reputation; Public goods | 3: Badges; Reputation; Green Goods | [hub.regencoordination.xyz](https://hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411) |
 | 31 | projects/impact-reef | `entity_status` | experimental | archived | [github.com](https://github.com/greenpill-dev-guild/impact-reef) |
 | 32 | projects/grant-ships | `entity_status` | active | inactive | [forum.arbitrum.foundation](https://forum.arbitrum.foundation/t/grant-ships-weekly-dev-log/20191)<br>[hub.regencoordination.xyz](https://hub.regencoordination.xyz/t/greenpill-dev-guild-2024-recap/162) |
-| 33 | projects/green-goods | `live_url` | https://docs.greengoods.app/community/why-we-build | https://greengoods.app | [github.com](https://github.com/greenpill-dev-guild/green-goods)<br>[greengoods.app](https://greengoods.app) |
-| 34 | projects/public-goods-staking-protocol | `description` | The Public Goods Staking Protocol is a Greenpill Dev Guild workstream sourced from the Dev Guild Paragraph series. Public sources describe a path whe… | The Public Goods Staking Protocol coordinates validator squads to create long-term funding for public goods, drawing on validator infrastructure, Dap… | [paragraph.com](https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0) |
-| 35 | projects/greenpill-impact-framework | `description` | The public companion thread frames the Greenpill Impact Framework as a way to connect Green Goods v1, impact, strategy, measurement, coordination, an… | A framework connecting Green Goods with impact strategy, measurement, coordination and capital formation. Work in 2026 starts with GreenWill badges i… | [hub.regencoordination.xyz](https://hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411) |
-| 36 | projects/greenpill-v2-website | `name` | Greenpill Network V2 Website | Greenpill Network website | docs/design/claude-design-wireframe-prompts.md (Prompt 3 and appendix) |
-| 37 | projects/greenpill-v2-website | `summary` | Public front-door rebuild for chapters, Library, Stories, Guilds, Garden, map, and impact surfaces. | Public front door for chapters, Library, Stories, Guilds, and the map. | docs/design/claude-design-wireframe-prompts.md (Prompt 3 and appendix) |
-| 38 | projects/greenpill-v2-website | `repo_url` | https://github.com/greenpill-dev-guild | https://github.com/greenpill-dev-guild/network | [github.com](https://github.com/greenpill-dev-guild/network) |
-| 39 | projects/greenpill-v2-website | `live_url` | https://hub.regencoordination.xyz/t/greenpill-network-website-revamp/414 | https://greenpill.network | [greenpill.network](https://greenpill.network) |
-| 40 | projects/greenpill-v2-website | `tech_stack` | 4: Astro; Keystatic; Public agent routes; Source-backed content | 3: Astro; Directus; Hono | [github.com](https://github.com/greenpill-dev-guild/network) |
+| 33 | projects/grant-ships | `live_url` ‡ | https://checker.gitcoin.co/public/project/show/greenpill-dev-guild | "" | [forum.arbitrum.foundation](https://forum.arbitrum.foundation/t/grant-ships-weekly-dev-log/20191) |
+| 34 | projects/grant-ships | `proof_signals` ‡ | 2: Gitcoin project; Allo Alliance article | 1: Allo Alliance article | [paragraph.com](https://paragraph.com/@greenpilldevguild/the-allo-alliance-innovating-capital-allocation-on-chain) |
+| 35 | projects/green-goods | `live_url` | https://docs.greengoods.app/community/why-we-build | https://greengoods.app | [github.com](https://github.com/greenpill-dev-guild/green-goods)<br>[greengoods.app](https://greengoods.app) |
+| 36 | projects/public-goods-staking-protocol | `description` | The Public Goods Staking Protocol is a Greenpill Dev Guild workstream sourced from the Dev Guild Paragraph series. Public sources describe a path whe… | The Public Goods Staking Protocol coordinates validator squads to create long-term funding for public goods, drawing on validator infrastructure, Dap… | [paragraph.com](https://paragraph.com/@greenpilldevguild/the-public-goods-staking-protocol-v0) |
+| 37 | projects/greenpill-impact-framework | `description` | The public companion thread frames the Greenpill Impact Framework as a way to connect Green Goods v1, impact, strategy, measurement, coordination, an… | A framework connecting Green Goods with impact strategy, measurement, coordination and capital formation. Work in 2026 starts with GreenWill badges i… | [hub.regencoordination.xyz](https://hub.regencoordination.xyz/t/growing-the-greenpill-impact-framework/411) |
+| 38 | projects/greenpill-v2-website | `name` | Greenpill Network V2 Website | Greenpill Network website | docs/design/claude-design-wireframe-prompts.md (Prompt 3 and appendix) |
+| 39 | projects/greenpill-v2-website | `summary` | Public front-door rebuild for chapters, Library, Stories, Guilds, Garden, map, and impact surfaces. | Public front door for chapters, Library, Stories, Guilds, and the map. | docs/design/claude-design-wireframe-prompts.md (Prompt 3 and appendix) |
+| 40 | projects/greenpill-v2-website | `repo_url` | https://github.com/greenpill-dev-guild | https://github.com/greenpill-dev-guild/network | [github.com](https://github.com/greenpill-dev-guild/network) |
+| 41 | projects/greenpill-v2-website | `live_url` | https://hub.regencoordination.xyz/t/greenpill-network-website-revamp/414 | https://greenpill.network | [greenpill.network](https://greenpill.network) |
+| 42 | projects/greenpill-v2-website | `tech_stack` | 4: Astro; Keystatic; Public agent routes; Source-backed content | 3: Astro; Directus; Hono | [github.com](https://github.com/greenpill-dev-guild/network) |
 
 Notes on specific rows:
 
@@ -165,21 +172,22 @@ Afo's answers (2026-11-06):
 
 Still open:
 
-- Coop (`greenpill-dev-guild/coop`, last push 2026-06-19) is not a project row. Ask Afo whether to add it to the Dev Guild.
+- The two Grant Ships rows marked ‡: clear its `live_url` and drop the proof signal that links `checker.gitcoin.co`, which no longer resolves. Grant Ships is hidden from the page either way (inactive).
+- Coop (`greenpill-dev-guild/coop`, last push 2026-06-19) is not a project row. Asked Afo whether to add it to the Dev Guild.
 - Applying the change set after PR #36 merges (production write, approved). Then `qa-system-pass` refreshes the fallback snapshot from the agent.
 
 Requests to other sessions:
 
 - `qa-brand-shell`: `content/social-links.json` still has `"hub": "https://hub.greenpill.network"`. Afo says it no longer exists, so remove it or point anything that reads it at `https://hub.regencoordination.xyz`. Afo has not named a network-level LinkedIn yet; the Dev Guild's own page is `https://www.linkedin.com/company/greenpilldevguild`.
-- `qa-home-garden` (sent): the home Dev Guild tile prints `{outputs.length} public outputs`; the change set empties Dev Guild outputs, so use a static label.
+- `qa-home-garden`: done in PR #34. The home Dev Guild tile now has a static label and no longer reads `outputs`.
 - `qa-library` (sent, done in its branch per its reply): `id="guilds"` on the guild cards; a guild card label that doesn't count `proofSignals`; the Carbon Copy resource now links the published series; `writers-guild` removed from the podcast resource's `relatedGuildSlugs`.
-- `qa-stories` (sent): `stories/greenpill-2026-thesis.json` cites the unpublished Paragraph draft as S071; the published series is `https://carboncopy.news/content/web3-tooling-series`.
-- `qa-system-pass`: after the change set is applied, update the project seed files (`src/data/operational-content-seed/projects/*`, outside this session's files) and refresh the fallback snapshot.
+- `qa-stories`: done in PR #37. `greenpill-2026-thesis` is now a draft, as Afo decided, because its only source was the unpublished Paragraph preview. qa-stories also removed the Garden Season One story's `relatedGuild: writers-guild` (the Hub thread only plans a Writers Guild recap); its handoff records that as a judgment call Afo can reverse. The Web3 Tooling Series is listed there as a story candidate.
+- `qa-system-pass`: after the change set is applied, update the project seed files (`src/data/operational-content-seed/projects/*`, outside this session's files; `grant-ships.json` also carries the dead `checker.gitcoin.co` link) and refresh the fallback snapshot.
 - Whoever owns `scripts/directus-studio-setup.ts`: the guild `stewards` field note says "Public steward cards"; it now also drives the Hats list (`group`, `role`, `name` or `holders`, optional `href`), and `media` now holds `appearances` (`kind`, `source`, `title`, `href`, `date`, `people`). Field notes would help stewards.
 
 Other notes:
 
-- `ui:verify` is blocked locally: the dev machine has no Chrome and CI does not run it. Brave QA covered the same checks by hand.
+- `ui:verify` was not run (no Chrome in the dev machine, not in CI). Brave QA covered its layout checks by hand.
 - No embedded YouTube player: no Builder Space recording exists, and an embed would add third-party requests. The lead card links out instead. Revisit if a recording is published.
 - The external-link rule (new tab, `rel`, hint) is `qa-brand-shell`'s. This PR removed the hand-set `target` and `rel` attributes from the guild cards, so until that rule lands those links open in the same tab, like most links on the site today.
 - Process note: a dev server started with `NETWORK_WEBSITE_PORT=3324` bound 3301, because the dev-machine shim does not pass environment variables (see the shared notes). It was stopped. Pass `--port` to `astro dev`, and run dev servers in a Terminal tab so Ctrl-C reaches the process in the machine.
