@@ -54,7 +54,13 @@ export function formatStoryDate(value?: string) {
   const [, year, month, day] = match;
   if (!month) return year;
 
-  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day ?? 1)));
+  const y = Number(year);
+  const m = Number(month);
+  const d = Number(day ?? 1);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  // Date.UTC rolls impossible parts over (2026-13 would become Jan 2027), so a
+  // date that does not survive the round trip is shown exactly as written.
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return text;
   return day ? dayFormat.format(date) : monthFormat.format(date);
 }
 
