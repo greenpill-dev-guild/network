@@ -215,7 +215,6 @@ const translationLinks = translations.filter((translation) => translation.langua
     if (!(dialog instanceof HTMLDialogElement) || typeof dialog.showModal !== 'function') continue;
 
     trigger.setAttribute('aria-haspopup', 'dialog');
-    trigger.setAttribute('aria-controls', dialog.id);
     trigger.addEventListener('click', (event) => {
       if (event.defaultPrevented || !isPlainPrimaryClick(event)) return;
       event.preventDefault();
