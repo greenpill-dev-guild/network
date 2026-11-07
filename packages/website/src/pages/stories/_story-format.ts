@@ -64,7 +64,7 @@ export function formatStoryDate(value?: string) {
   return day ? dayFormat.format(date) : monthFormat.format(date);
 }
 
-/** Reading time from the story body, so it cannot drift from the copy. */
+/** Reading time estimated from the story body, used when the editor leaves Read Time empty. */
 export function storyReadTime(body?: string) {
   const words = (body ?? '').split(/\s+/).filter(Boolean).length;
   return `${Math.max(1, Math.round(words / WORDS_PER_MINUTE))} min read`;
