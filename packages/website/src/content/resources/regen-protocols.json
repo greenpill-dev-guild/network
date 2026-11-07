@@ -1,9 +1,9 @@
 {
   "title": "Regen Protocols",
   "kind": "guide",
-  "status": "published",
-  "summary": "Public Garden-supporting thread describing regenerative onchain protocols, capital flows, and steward support systems.",
-  "description": "The Regen Protocols Hub thread is editorial context for Greenpill Garden. It frames onchain protocols as support infrastructure for stewards and regenerative initiatives without making them guild-owned projects.",
+  "status": "archived",
+  "summary": "The November 2025 Hub thread on the four protocols that supported Garden Season One: Greenpill IRL, Regen Reservoir, Public Goods Staking and the Greenpill Impact Framework.",
+  "description": "The Regen Protocols thread set leads, tooling and success metrics for each protocol through the end of Q1 2026. Archived on 2026-11-06 with Garden Season One.",
   "author": "Greenpill Network",
   "publishDate": "2025-11",
   "updatedDate": "",
@@ -37,8 +37,8 @@
   "card": {
     "eyebrow": "Garden",
     "title": "Regen Protocols",
-    "summary": "The public source for Garden-adjacent protocol and steward-support context.",
-    "badge": "Source S050",
+    "summary": "The four protocols that supported Garden Season One.",
+    "badge": "",
     "surfaceType": "garden",
     "image": "/images/hifi/garden-overlay.jpg",
     "imageAlt": "Garden texture from the high-fidelity design package",

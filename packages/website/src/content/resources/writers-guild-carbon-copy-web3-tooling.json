@@ -1,13 +1,13 @@
 {
-  "title": "Writers Guild / Carbon Copy Web3 Tooling Series",
+  "title": "Web3 Tooling Series with CARBON Copy",
   "kind": "article",
   "status": "published",
-  "summary": "Approved Paragraph preview context for the Writers Guild and Carbon Copy Web3 Tooling Series.",
-  "description": "The 2026 thesis preview documents Writers Guild collaboration with Carbon Copy on Web3 tooling research, including survey, interview, writing, and public-data context.",
-  "author": "Greenpill Network",
-  "publishDate": "2026",
-  "updatedDate": "2026",
-  "primaryUrl": "https://paragraph.com/@greenpill/preview/rN8MvIeOa4RGvE8kJN9L",
+  "summary": "A three-part research series by the Greenpill Writers Guild and CARBON Copy on how ReFi communities use Web3 tools.",
+  "description": "Understanding Web3 Tooling Challenges for ReFi Communities, a joint initiative by CARBON Copy and the Greenpill Network Writers Guild, draws on interviews, surveys and case studies. Its three parts cover the data, the experience and recommendations, published from January 26 to February 9, 2026.",
+  "author": "Greenpill Writers Guild",
+  "publishDate": "2026-01-26",
+  "updatedDate": "2026-02-09",
+  "primaryUrl": "https://carboncopy.news/content/web3-tooling-series",
   "resourcePath": "",
   "image": "/images/hifi/topo-bg.png",
   "imageAlt": "Topographic map texture",
@@ -34,13 +34,13 @@
   "featuredWeight": 70,
   "card": {
     "eyebrow": "Writers Guild",
-    "title": "Carbon Copy Web3 Tooling Series",
+    "title": "Web3 Tooling Series",
     "summary": "Research collaboration on how ReFi communities use Web3 tools.",
-    "badge": "Source S071",
+    "badge": "",
     "surfaceType": "article",
     "image": "/images/hifi/topo-bg.png",
     "imageAlt": "Topographic map texture",
-    "href": "https://paragraph.com/@greenpill/preview/rN8MvIeOa4RGvE8kJN9L"
+    "href": "https://carboncopy.news/content/web3-tooling-series"
   },
   "media": {
     "image": "/images/hifi/topo-bg.png",
@@ -48,8 +48,8 @@
     "ogImage": ""
   },
   "seo": {
-    "title": "Writers Guild Carbon Copy Web3 Tooling Series · Greenpill Library",
-    "description": "Approved source context for the Writers Guild and Carbon Copy Web3 Tooling Series.",
+    "title": "Web3 Tooling Series with CARBON Copy · Greenpill Library",
+    "description": "A three-part research series by the Greenpill Writers Guild and CARBON Copy on how ReFi communities use Web3 tools.",
     "ogImage": "",
     "canonicalPath": "",
     "noindex": false
