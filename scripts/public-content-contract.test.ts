@@ -671,6 +671,45 @@ test('scheduled Pages builds refresh the podcast snapshot without blocking the p
   );
 });
 
+test('Garden assessment counts every pick and restores answers saved in either shape', async () => {
+  const { scoreAssessment, storedAssessmentPicks } = await import('../packages/website/src/lib/garden-assessment.ts');
+
+  // Single choices score as they did before any question took several answers.
+  assert.deepEqual(
+    scoreAssessment({ q1: ['build'], q2: ['build'], q3: ['story'], q4: ['story'], q5: ['local'], q6: ['learn'], q7: ['steward'] }),
+    { primary: 'build', secondary: 'story', score: 2 },
+  );
+
+  // Every ticked box counts. Without the two checkbox groups these single
+  // choices would tie all five paths; with them, Build leads on 3 of 7.
+  assert.deepEqual(
+    scoreAssessment({ q1: ['build', 'story'], q2: ['local'], q3: ['build', 'steward'], q4: ['build'], q5: ['story'], q6: ['steward'], q7: ['learn'] }),
+    { primary: 'build', secondary: null, score: 3 },
+  );
+
+  // A question adds at most one point to a path: ticking every box lifts all
+  // five paths equally, and a repeated pick counts once.
+  assert.deepEqual(
+    scoreAssessment({
+      q1: ['learn', 'local', 'build', 'story', 'steward'],
+      q2: ['local'],
+      q3: ['story', 'story'],
+      q4: ['story'],
+      q5: ['learn'],
+      q6: ['story'],
+      q7: ['local'],
+    }),
+    { primary: 'story', secondary: null, score: 4 },
+  );
+
+  // Answers saved before this change held one path string per question.
+  assert.deepEqual(storedAssessmentPicks('learn', true), ['learn']);
+  assert.deepEqual(storedAssessmentPicks(['local', 'unknown', 'local', 'build'], true), ['local', 'build']);
+  assert.deepEqual(storedAssessmentPicks(['story', 'build'], false), ['story']);
+  assert.deepEqual(storedAssessmentPicks(undefined, false), []);
+  assert.deepEqual(storedAssessmentPicks({ path: 'learn' }, true), []);
+});
+
 test('operational content snapshot generation quarantines unsafe records and rejects non-published input', () => {
   const quarantined = [];
   const snapshot = toPublicOperationalContentSnapshot({
