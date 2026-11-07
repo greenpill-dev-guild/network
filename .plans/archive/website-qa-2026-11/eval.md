@@ -23,7 +23,7 @@ Each finding in `reports/2026-11-06-qa-findings.md` is closed when its check bel
 | 15 | The Writers Guild page lists only verified Writers Guild work, credits contributors, and does not claim the podcast. |
 | 16 | The footer says Farcaster and includes LinkedIn; the unmaintained website link is gone. |
 | 17 | Header, favicon, touch icon and default share image use the current brand kit. |
-| 18 | A pull-request workflow runs the em-dash check on website changes and it passes on `main`; no em dashes in website copy; Directus content is cleaned through an approved change set, and the hourly publish never fails on steward copy. |
+| 18 | A pull-request workflow runs the em-dash check on website changes and it passes on `main`; no em dashes in website copy; Directus content is cleaned through an approved change set, and the hourly publish never fails on steward copy. When the hub closed on 2026-11-07, everything here was met except the pull-request workflow, which waits on Afo's OK and moved to PRD-1419. |
 | 19 | The assessment stays (D1). Its legends sit inside their cards. The questions Afo marks as multi-answer accept several answers, and both the stored answers and the result use every selected answer under the scoring he agrees. Checked at all three widths and with keyboard and screen reader. |
 | 20 | The footer's bottom row is friendly and accurate; no retired "friction" labels. |
 

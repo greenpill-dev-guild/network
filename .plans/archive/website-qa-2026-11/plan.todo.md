@@ -16,14 +16,14 @@ Every session's pull request is merged into `main`, and each change was checked 
 | `qa-brand-shell` | #39 | 11-07 19:42 | PRD-1415: Done | |
 | `qa-map-polish` | #41 | 11-07 19:42 | PRD-739: Backlog (P0 shipped) | P1 and P2 below |
 | `qa-assessment` | #42 | 11-07 19:54 | PRD-1414: Done | |
-| `qa-system-pass` | #44 | 11-07 22:23 | PRD-1418: Done | The pull-request workflow for the em-dash check waits on Afo's OK |
+| `qa-system-pass` | #44 | 11-07 22:23 | PRD-1418: Done | The pull-request workflow for the em-dash check waits on Afo's OK: PRD-1419 |
 
 Open follow-ups:
 
 - **PRD-1417 (Todo):** Directus approvals write straight to the database, so a pending submission or update request saved at 0,0 or an edge point can still reach the map. Run the read-only exposure count, decide on the guard (a not-0,0 check plus a trigger that refuses approvals at bad points; one migration, rehearsed locally, applied with Afo's approval), and confirm `MAP_LOCATION_CONFIRMATION_REQUIRED` on `network-agent`.
 - **PRD-739 P1, information layout** (one redesign, best designed together first): hover as a compact tooltip with rich content in a docked side inspector on desktop and a bottom sheet on mobile; themes as a chip strip with Clear and All, the panel only for editing; the list as a non-modal drawer with compact grouped rows, map highlight on hover and search; a single-row compact chrome with the map at 60svh or more, and the 520 versus 720/480 breakpoint reconciled with DESIGN.md; chapter labels at rest, 44px targets, and deduplicated node data.
 - **PRD-739 P2, polish and live trust:** theme tags on chapters so theme filters apply to them; a live status line, a fetch error state and polling backoff; thread clipping; the walkthrough title and close button at 375; roles on overlay wrappers; pressed versus focus styling on pills; the two walkthrough buttons that lift 1px on hover (found by `qa-system-pass`).
-- **From `qa-system-pass`:** the em-dash pull-request workflow (Afo's OK); the CTA strips on `/chapters`, chapter and guild pages, which keep their own panels (a design call, since `ui/CtaStrip.astro` looks different); `/map/edit` and `/map/moderate`, which sit outside the site shell with their own card styles; the steward booking link kept in four places.
+- **From `qa-system-pass`:** the em-dash pull-request workflow (PRD-1419, waits on Afo's OK); the CTA strips on `/chapters`, chapter and guild pages, which keep their own panels (a design call, since `ui/CtaStrip.astro` looks different); `/map/edit` and `/map/moderate`, which sit outside the site shell with their own card styles; the steward booking link kept in four places.
 - **Optional tidiness:** clear the ecoregion names stored in `intake.map_node_submissions.bioregion`, which are no longer published.
 
 ## Session roster
@@ -138,7 +138,7 @@ Open with Afo for the map: confirm `MAP_LOCATION_CONFIRMATION_REQUIRED` is `true
 - [x] Move page cards onto `Card` with the home treatment, markup and imports included; remove page-local card classes. (#44; also fixes the `/chapters` region filter, which is broken live.)
 - [x] Carried from `qa-chapters`: two "source-backed" captions remain in `pages/chapters/[slug].astro`. After the fallback snapshot refresh, Denver and the Dominican Republic (inactive in production) stop building pages too. (Both captions removed; the fallback build makes 12 chapter pages.)
 - [x] Add a check that fails on em dashes in website copy (as PRD-1303 does for Green Goods) and sweep what is left, including a Directus change set for content rows. (`bun run check:em-dashes`, also inside `agentic:check`; four em dashes left in copy, fixed; production Directus holds none, so no change set.)
-- [ ] Wire it into CI: no workflow runs on ordinary website pull requests today (`github-pages.yml` builds only on `main` pushes and its schedule; `supply-chain-guardrails.yml` triggers only on package, lockfile and workflow paths). With Afo's OK, add a pull-request workflow for website paths that runs the check with read-only permissions. Do not fail the hourly publish on steward-edited Directus copy; clean that through the change set. (Proposed in the `qa-system-pass` handoff; waits on Afo's OK.)
+- [ ] Wire it into CI: no workflow runs on ordinary website pull requests today (`github-pages.yml` builds only on `main` pushes and its schedule; `supply-chain-guardrails.yml` triggers only on package, lockfile and workflow paths). With Afo's OK, add a pull-request workflow for website paths that runs the check with read-only permissions. Do not fail the hourly publish on steward-edited Directus copy; clean that through the change set. (Proposed in the `qa-system-pass` handoff; waits on Afo's OK. Moved to PRD-1419 when the hub closed, so it is tracked outside this archive.)
 - [x] Refresh the fallback snapshot with `bun run content:snapshot:from-agent` after the Directus change sets are applied. (From the live snapshot of 2026-11-07 20:51 UTC, through the same script.)
 - [x] Full-site QA in Brave at 375, 1024 and 1440, plus 1920 for the background; `bun run ui:verify` counts as not run in the dev machine. Update this hub and Linear.
 - [x] After deploy: repeat the background check at 1920 and the card checks on greenpill.network (orchestrating session). (11-07 22:26 UTC, after Pages run 42420430610 deployed merge `8075333`: every card on home, `/chapters`, a chapter, both guilds, `/stories`, a story, `/library` and `/garden` is a `.gp-card`; the `/chapters` region filter hides the right cards (Africa shows 4 of 12, Americas 5, Asia 2, Europe 1); no em dash left in page copy apart from one podcast episode title from the RSS feed on `/library`; no "source-backed" caption; the 18 footer links match `social-links.json`; no page overflows at 375, where the Library book rail scrolls inside itself; the background at 1920 shows no seams; `network-agent` `/ready` is ok after its redeploy.)
@@ -161,6 +161,7 @@ One parent issue in P-PRD-19 for this hub, and one child per session, created wh
 | PRD-739 | `qa-map-polish` (reused) |
 | PRD-1417 | Follow-up from `qa-map-data`: Directus approvals at bad coordinates |
 | PRD-1418 | `qa-system-pass` |
+| PRD-1419 | Follow-up from `qa-system-pass`: run the em-dash check on pull requests (finding 18) |
 
 States on 2026-11-07 are in the Final state table at the top. When the hub closed, PRD-739 and PRD-1417 were moved out from under PRD-1408 and linked to it as related issues, so the parent could close while they stay open.
 
