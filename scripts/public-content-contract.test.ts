@@ -596,6 +596,30 @@ test('site shell keeps the graphic page background visible', async () => {
   assert.doesNotMatch(footer, /background:\s*var\(--gp-green-950\)/);
 });
 
+test('footer links come from social-links.json, with Keystatic fields to edit them', async () => {
+  const [footer, socialLinksSource, keystaticConfig] = await Promise.all([
+    readFile(join(websiteShellDir, 'SiteFooter.astro'), 'utf8'),
+    readFile(join(editorialContentDir, 'social-links.json'), 'utf8'),
+    readFile(keystaticConfigPath, 'utf8'),
+  ]);
+  const socialLinks = JSON.parse(socialLinksSource);
+  const frontmatter = footer.slice(0, footer.indexOf('<footer'));
+
+  // Outside links live in content/social-links.json; the footer keeps none.
+  assert.doesNotMatch(frontmatter, /href: '(?:https?:)?\/\//);
+  for (const key of ['twitter', 'farcaster', 'telegram', 'linkedin', 'youtube', 'hub', 'codeOfConduct', 'events']) {
+    assert.match(socialLinks[key], /^https:\/\//, `social-links.json ${key}`);
+    assert.match(frontmatter, new RegExp(`socialLinks\\.${key}\\b`), `footer reads ${key}`);
+  }
+  // hub.greenpill.network does not load; the footer's Hub is the Regen Coordination Hub.
+  assert.equal(socialLinks.hub, 'https://hub.regencoordination.xyz');
+
+  const schemaBlock = /socialLinks: singleton\(\{[\s\S]*?schema: \{([\s\S]*?)\n\s*\},\n\s*\}\),/.exec(keystaticConfig)?.[1] ?? '';
+  for (const key of Object.keys(socialLinks)) {
+    assert.match(schemaBlock, new RegExp(`\\b${key}: fields\\.`), `Keystatic socialLinks field ${key}`);
+  }
+});
+
 test('library podcast section uses RSS snapshot and in-page audio', async () => {
   const [libraryPage, podcastSnapshotSource] = await Promise.all([
     readFile(libraryPagePath, 'utf8'),
