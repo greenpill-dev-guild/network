@@ -66,7 +66,6 @@ function linkifyText(text: string) {
 }
 
 const bodyBlocks = bodyToBlocks(data.body || '');
-const categoryLabel = storyCategoryLabel(data.category);
 const heroMeta = [...storyMetaItems(data), storyReadTime(data.body)];
 const sources = (data.proofSignals ?? []).filter((signal) => signal.value || signal.label);
 
@@ -97,7 +96,7 @@ const storyImageAlt = data.media?.imageAlt || `${data.title} story image`;
       <Container size="lg">
         <Breadcrumb
           back={{ label: 'All stories', href: '/stories' }}
-          crumbs={[{ label: categoryLabel }, { label: data.title }]}
+          crumbs={[{ label: data.title }]}
         />
         <div class="gp-story-hero-inner">
           <Meta items={heroMeta} accentIndex={0} />

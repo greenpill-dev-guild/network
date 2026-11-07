@@ -128,7 +128,7 @@ function storyImageAlt(story: typeof published[number]) {
             <Container size="2xl">
               <div class="gp-stories-section-head">
                 <Overline>All stories</Overline>
-                <Text variant="caption">{rest.length} {rest.length === 1 ? 'story' : 'stories'}</Text>
+                <Text variant="caption">{`${rest.length} ${rest.length === 1 ? 'story' : 'stories'}`}</Text>
               </div>
               <div class="gp-stories-grid">
                 {rest.map((story) => (
