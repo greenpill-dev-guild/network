@@ -1,0 +1,135 @@
+# Handoff: `qa-home-garden` (PRD-1410)
+
+Findings 2, 3, 5, 6 and 20 from `reports/2026-11-06-qa-findings.md`.
+
+## Changed
+
+Pull request: https://github.com/greenpill-dev-guild/network/pull/34 (not merged)
+
+- **Subscribe (finding 5, D3).** Afo chose Paragraph ("Paragraph subscribe", 2026-11-06). Step 1 on home and `/garden` is now "Get Greenpill's posts by email" with a "Subscribe on Paragraph" button to `https://paragraph.com/@greenpill/subscribe`, the publication's signup page. The copy promises no cadence, and the Garden summary matches. The Garden page's Resend form, its script and its CSS are gone; the agent's `POST /newsletter/subscribe` route stays, unused. Nothing was written to production.
+- **Telegram (finding 6).** Home and Garden take the invite from `content/social-links.json` (`telegram`), which now holds the approval-gated invite Afo created on 2026-11-07 (I1, below). Garden step 2 says so: "Ask to join the shared Greenpill chat. An admin approves new members to keep out spam. Lurk as long as you like." The Telegram step's own `cta.href` in `garden.json` is empty, and so is the unused `telegramPreview` copy. The Garden page's fallback step list, which held a third copy, is gone. Before this PR the buttons used a hard-coded invite (`t.me/+e-aa…`) that opens a generic t.me page with no group name, which suggests it was revoked. The footer still hard-codes it on `main`; `qa-brand-shell`'s PR #39 makes the footer read `social-links.json` too.
+- **Commons bento (finding 2).** The "Knowledge map · In design" and "Open the toolkit" tiles are removed. The grid is two rows: books on the left spanning both, podcast over the guild pair on the right. At 1440 the heights match (books 609px; podcast 322px, 20px gap, guild pair 267px). The dek no longer mentions field guides, since no guide tile remains. At `qa-guilds`' request, the Dev Guild tile's footer is now a static label, "Open-source coordination tools" (from the guild's public summary), instead of counting `outputs`, which their pending Directus change set clears. The podcast tile's count now comes from `src/data/podcast-feed-snapshot.json` (`episodeCount`, as the Library does), and its "Listen on Apple Podcasts" button opens Apple Podcasts; it used to open the raw Libsyn RSS XML via a `home-page.json` proof signal, which is now removed.
+- **Ecosystem (finding 3).** Two labeled rows read from `home-page.json` (`ecosystem.partners`, `ecosystem.tools`), each tile linking to the organization's own site. Partners and collaborators: Regen Coordination, ReFi DAO, Bloom Network, Bread Cooperative, Gitcoin, Artizen, VDAO, Network Nations, JournoDAO. Tools we build with: Gardens, Hypercerts, Karma. Every entry has a public source from 2025 or 2026 (below). Octant and Giveth were dropped (latest sourced joint activity is 2024); Bloom Network and Artizen are new. The page skips any entry without a name or an `https://` link.
+- **Ramp labels (finding 20).** "Lowest friction" to "Highest friction" become Start light, Listen first, Find your fit, When you're ready. All four cards stay (D1). Card 03 is reworded and shorter, so the home card's four-line clamp no longer cuts it mid-sentence.
+- **Em dashes.** None left in copy these files render: the commons dek, the ecosystem dek, and Garden steps 2 and 3.
+- **No ramp steps (review on PR #34).** If `garden.json` has no `steps` list, or an empty one, home and `/garden` now build and leave the ramp out, and the Garden hero drops its "Start with Step 1" button rather than link to a missing `#step-1`. Before, a missing list failed the build (`find` on `undefined`). Both pages read the ramp through `src/lib/garden-ramp.ts`, which also holds the Telegram rule they used to define separately. It does not bring back an in-code copy of the ramp; the last one drifted from `garden.json`.
+
+Shared files touched, per the hub's "Shared files" rules:
+
+- `packages/website/keystatic.config.ts`: the `homePage` block gains an `ecosystem` object, plus one helper (`ecosystemEntriesField`) placed after the Garden's `previewCardField`. Keystatic rejects keys its schema does not define (`Key on object value "…" is not allowed`, `@keystatic/core` 0.5.50 `parseProps`), so without it the Home Page editor would not load. The editor also requires an `https://` site address.
+- `scripts/data/ui-source-baseline.tsv`: pruned the four `index.astro` rows that belonged to the removed tiles (two `rgba` values on the "In design" tile, the pill's border and its `font-size: 10px`). The other `font-size: 10px` row still covers the book captions.
+- `scripts/public-content-contract.test.ts`: two Garden ramp tests, placed after the content-reference test, and one import placed between the shared imports, away from the lines PRs #36 and #40 insert on.
+
+No change to `package.json`, the lockfile, `.github/workflows/**`, `CLAUDE.md`, `AGENTS.md` or `.claude/**`.
+
+## Evidence
+
+AGENTS.md pre-PR gate on the final tree (2026-11-07): the I1 invite commit `adeb3b1`, merged with `main` in `55581b5` after #33, #35, #36, #37, #38 and #40 landed:
+
+- `bun run typecheck`: exit 0.
+- `bun run test:content`: 43 pass, 0 fail (the merged PRs added tests).
+- `bun run agentic:check`: exit 0; policy check passed, 11 plan hubs valid, `ui:check` 0 hard, 0 warn.
+- `bun run build`: exit 0, 46 pages.
+- `astro check`: 1 error, not in this PR's files: `src/lib/operational-content.ts:114` (`hasChapterPage(item.data)`, ts(2559)), which matches `main` and came with #40 (`03ca9c5`). On `adeb3b1` before the merge it was 0 errors, 0 warnings.
+
+Brave QA of the I1 change on that merged build (Afo's profile; 1460 is the window, 1024 and 375 through the same-origin iframe harness): home and `/garden` have no horizontal overflow at any width; step 2 shows the new copy, unclamped and without em dashes; both "Open Telegram" buttons link to `https://t.me/+Ff6zs580IVs2MzEx` (166 x 48px at 1460; at 375, 277 x 48px on home and 327 x 48px on `/garden`); the home ramp is two columns at 1024. The footer still links `t.me/+e-aa…` on this build, as expected until #39 merges.
+
+Earlier gate, on the empty-ramp fix (also passed on `c69c8c3`, `658b2aa` and `1255293`, with 33 content tests before the two Garden ramp tests):
+
+- `bun run typecheck`: exit 0, no diagnostics.
+- `bun run test:content`: 35 pass, 0 fail.
+- `bun run agentic:check`: exit 0. Guidance retrieved; "Authenticated browser QA policy check passed for 3 guidance file(s)"; 11 plan hubs valid; `ui:check` 0 hard, 0 warn.
+- `bun run build`: exit 0, 47 pages.
+- `astro check`: 0 errors, 0 warnings; 6 hints, none in files this PR touches.
+
+Ramp without steps (review on PR #34): I built the site with `garden.json`'s `steps` key removed, then with `"steps": []`. Both builds pass (47 pages). In both, `/garden` has no step articles, no ramp heading and no `#step-` link, the home page has no `#garden-ramp` section, and the hero and other `/garden` links remain. With the real content, the built home page matches the previous commit's, ignoring Astro's generated ids and asset hashes. The Garden page differs only in where Astro inlines the Button CSS (before the page stylesheet instead of after it); the only rules that tie both set `width: 100%`, so no computed style changes. Brave QA was not rerun for this fix for that reason.
+
+Brave QA of the D3 change (the window was 1014px wide by then and still ignored resizing; 1440 and 375 via the iframe harness): home step 1 shows the new title, body and "Subscribe on Paragraph" link with no clamped copy at 375, 1014 and 1440; on `/garden`, step 1 has no form or email field, the button links to the signup page, there is no horizontal overflow at any width, and the 375 button is 327 x 48px.
+
+Other commands (run in this worktree; `bun` runs inside the dev machine):
+
+- `bun install --frozen-lockfile`: 1362 packages, no lockfile change.
+- `bun run agentic:guidance`: read before the UI work (lists for repeated content, `role="list"` on flex lists for Safari, sequential headings).
+- `bun run ui:check`: 0 hard, 0 warn.
+- `bun run test:content`: 33 pass, 0 fail.
+- `bun run --cwd packages/website check` (astro check): 0 errors, 0 warnings; 6 hints, none in files this PR touches.
+- `bun run build:website`: 47 pages built.
+- `bun run plans:validate`: 11 hubs valid.
+- `bun run ui:verify / /garden`: **not run** (spec rule 3). The build ran, then every rendering check was skipped: "No Chrome/Chromium binary found". The dev machine (linux/arm64) has no Chrome, Chromium or Playwright browser, and installing one needs Afo's OK. The Brave checks below cover its layout and accessibility channels by hand, but not axe.
+- `fly secrets list -a network-agent`: names only (see D3).
+
+Brave QA (Afo's profile through Claude in Chrome, `Browser 1`), against the built site exported with `dm-export` and served on the Mac at `http://localhost:3321`:
+
+- Brave's window is maximized here and ignores resize requests, so 1440 is the window itself (1460px wide) and 375 and 1024 are the page inside a same-origin iframe of that width.
+- 1440: commons bento balanced as above. Ramp shows the four new labels; links go to `/garden#step-1`, the `social-links.json` invite, `/garden#assessment` and the steward calendar. Ecosystem: partners 5 + 4, tools 3, no blurb cut off.
+- 1024: no horizontal overflow (scroll width 1024). Ramp 2 x 2; bento stacked; ecosystem partners 3 + 3 + 3, tools 3.
+- 375: no horizontal overflow on `/` or `/garden` (scroll width 375). Ecosystem tiles full width, no blurb cut off; ramp cards and guild tiles stack; ramp buttons full width; the Garden signup form stacks. The only elements wider than the viewport are HomeMap legend items, which belong to the map sessions.
+- Accessibility spot checks on `/`: one `main`; no links or buttons without an accessible name; no images without `alt`; ecosystem rows are `h3` headings under the section `h2`, each over a `ul role="list"`; row labels are #E8E2D4 on #0A2D21. The one heading skip ("Map list", an h3 after the h1) is inside HomeMap.
+
+## Sources
+
+All opened on 2026-11-06, in Brave unless marked "subagent". The bar for "current": a sourced joint activity in 2025 or 2026; podcast interviews alone do not count.
+
+Partners and collaborators:
+
+- **Regen Coordination** (`https://hub.regencoordination.xyz/`; `regencoordination.xyz` redirects there). "Regen Coordination: Governance & Structure for the Rest of 2026", hub post from October 2026 (ratification set for 18 September 2026): "Member orgs are Greenpill, ReFi DAO and Bloom." https://hub.regencoordination.xyz/t/regen-coordination-governance-structure-for-the-rest-of-2026/472
+- **ReFi DAO** (`https://refidao.com/`, "a network society focused on … the Regenerative Finance ecosystem"). Same post: a member org alongside Greenpill. Subagent also found the September 2025 structure proposal naming ReFi DAO and Greenpill Network founding Leading Organizations: https://hub.regencoordination.xyz/t/proposal-regen-coordination-network-structure-roles/352
+- **Bloom Network** (`https://bloomnetwork.earth/`, "a member-run social network that helps local communities collaborate and share resources"). Same post: a member org alongside Greenpill. Not on the July list.
+- **Bread Cooperative** (`https://bread.coop/`, "a worker collective building technology"). Same post: "Bread Co-op is our other active partner." Greenpill's own Paragraph post, November 5, 2025, announces Regen Coordination joining the Bread Solidarity Fund: https://paragraph.com/@greenpill/celebrating-evolution-and-alignment-bread-cooperative-regen-coordination. The tie runs through Regen Coordination, as the blurb says.
+- **Gitcoin** (`https://gitcoin.co/`; `www` redirects). Greenpill's "Greenpill Q1 2025: Laying The Groundwork", April 30, 2025, has a "Greenpill Gitcoin Rounds" section on community-led Gitcoin rounds across the network during GG23: https://paragraph.com/@greenpill/q1-2025-laying-the-groundwork. Gitcoin's own homepage links "Greenpill Podcast" to greenpill.network and lists the case study "GreenPill Hypercerts Experiment — Impact Certificates in Practice".
+- **Artizen** (`https://artizen.fund/`). Hub post, September 6, 2026: congratulations to "30+ project leads and organizers" on Season 6 of the Greenpill Fund for Regenerative Gatherings, title "… participants on Artizen season 6": https://hub.regencoordination.xyz/t/welcome-greenpill-fund-for-regenerative-gatherings-participants-on-artizen-season-6-submit-your-impact-reports-here/464. Not on the July list. Brave is signed in to Artizen, so I did not see the public homepage; the domain matches the podcast episode "Artizen.Fund w Rene Pinnell" (2024-05-28).
+- **VDAO** (`https://www.youtube.com/@joinvdao`, page title "V DAO - YouTube"). Greenpill podcast feed (https://rss.libsyn.com/shows/400481/destinations/3304589.xml): 13 items from "Introducing VDAO: Building Antifragile Network States" (2025-11-03) to "VDAO Ep 12" (2026-04-27). The show notes link `vdao.org`, which now redirects to an unrelated GitHub repository (a video-downloader script), so the tile links VDAO's YouTube channel instead.
+- **Network Nations** (`https://networknations.network/`, "A global alliance building self-sovereign communities in the network age"; the site has a "Greenpill Podcast Transcripts" section). Feed: 15 episodes, "Network Nations Ep:1" (2025-10-24) to "NN Ep:15" (2026-02-06).
+- **JournoDAO** (`https://journodao.xyz/`, "a professional network and incubator working at the intersection of Web3 and traditional media and news"). Feed: Season 9, four episodes with `itunes:author` JournoDAO, 2025-07-02 to 2025-07-23.
+
+Tools we build with:
+
+- **Gardens** (`https://www.gardens.fund/`; `gardens.fund` redirects). `https://app.gardens.fund/gardens` lists Greenpill communities, for example Greenpill Gov Guild (55 members, 3 pools) and Greenpill Brasil (27 members, 6 pools). The Q1 2025 post describes a Gardens-powered treasury round and the "Gardens Network Funding Pool".
+- **Hypercerts** (`https://hypercerts.org/`). Hypercert "Greenpill Nigeria-Project Water Cup Mapping" on Celo, work dated June 30 to July 13, 2025: https://app.hypercerts.org/hypercerts/42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-86091438830997431256233775680237357498368. Subagent also found a Dev Guild Karma update "Milestone 2 – Hypercerts Integration" dated May 31, 2026.
+- **Karma** (`https://www.karmahq.org/`; `gap.karmahq.xyz` and `karmahq.xyz` redirect there, and the site now calls the product "Karma", not "Karma GAP"). https://www.karmahq.org/project/greenpill-brasil lists GreenPill Brasil grants (GG20 Climate Round, Local Grant Programs Round 01) and updates dated April 2025. The Q1 2025 post says new chapters were trained on "Karma GAP for impact tracking".
+
+Dropped or not added (decision for Afo):
+
+- **Octant.** Real, but the latest sourced joint activity is 2024: the "GreenPill x Octant Community Round" (March 2024, per a Gitcoin governance forum post the subagent opened: https://gov.gitcoin.co/t/gg21-community-round-proposal-regen-coordi-nation/19114) and Octant funding for the Dev Guild (Crypto Altruists "Trailblazers of Octant Episode 4", 2024-12-28, subagent). Octant's app loads (Epoch 13) with no Greenpill project visible. Re-add with a past-tense blurb, or point me to a current tie.
+- **Giveth.** GreenPill Phangan's verified Giveth project raised $1,867.07 from 11 contributors, with donations dated February to July 2024 (https://www.giveth.io/project/greenpill-phangan); GreenSofa's project page shows no dated donations. The podcast hosted Giveth's co-founder in 2026, which is coverage, not a joint activity.
+- Seen, not added: Celo Public Goods (the 2026 Regen Coordination post says "CeloPG removed"), Regen Commons (a Regen Coordination partner, not a Greenpill tie), Carbon Copy (a Writers Guild tie; `qa-guilds` territory). Grassroots Economics and Sarafu: not checked.
+
+## Production change set
+
+None. Nothing was written to production, and no signup was submitted.
+
+## Open items and decisions needed
+
+### I1: Telegram invite (done)
+
+Afo created a new invite for the Greenpill.network group with "Request admin approval" on, and the orchestrating session relayed it on 2026-11-07: `https://t.me/+Ff6zs580IVs2MzEx`. It replaces the plain join link `t.me/+g9TM…` in `social-links.json` (`telegram`), and step 2's copy now says an admin approves new members. In Brave, the invite's t.me page shows "Greenpill.network", "1 037 members" and a "Join Group" button; that public page does not say whether approval is on, so the approval gate rests on Afo's setup. I did not open the invite in Telegram or send a join request.
+
+Revoke the old links only after the new invite is deployed and verified on home, Garden and the footer; revoking earlier breaks the live buttons in between. Afo handles the revocation. The footer picks up `social-links.json` when `qa-brand-shell`'s PR #39 merges.
+
+### D3: newsletter (decided: Paragraph)
+
+Afo chose option B, "Paragraph subscribe", on 2026-11-06 (relayed by the orchestrating session). Implemented in commit `1255293`.
+
+What the signup asks for: `https://paragraph.com/@greenpill/subscribe` shows "Subscribe to Greenpill Network", the line "Stay updated by getting the latest posts delivered directly to your inbox.", one email field and a Subscribe button; no wallet option. I opened it in Brave without submitting. Brave is signed in to Paragraph as Afo, so the field was prefilled and the publication page showed no Subscribe button; a signed-out visitor's view was not checked.
+
+Facts behind the decision (read-only checks, 2026-11-06):
+
+- `fly secrets list -a network-agent` lists `RESEND_API_KEY` but neither `RESEND_NEWSLETTER_SEGMENT_ID` nor `RESEND_NEWSLETTER_TOPIC_ID`, so the old form would have created Resend contacts with no segment or topic.
+- `paragraph.com/@greenpill` shows 400+ subscribers and 3 published posts: "Greenpill 2024: A Year in Review" (December 31, 2024), "Greenpill Q1 2025: Laying The Groundwork" (April 30, 2025) and the Bread Cooperative post (November 5, 2025). The 2025 year in review and the 2026 thesis exist only as unpublished `/preview/` links, so subscribers hear from Greenpill only when someone publishes there.
+- No other Greenpill Network newsletter with a 2025 or 2026 issue was found (subagent: `greenpill.substack.com` is Kevin Owocki's "Green Pill" episode posts, newest March 7, 2023).
+
+Follow-ups outside this PR: publishing the 2025 review or 2026 thesis would give the 400+ subscribers something; the agent's newsletter route and `newsletter.ts` could be removed in a later agent change.
+
+### Requests to other sessions
+
+- **`qa-brand-shell`:** handled in PR #39, whose footer reads `social-links.json` `telegram`; on `main`, `SiteFooter.astro:34` still hard-codes `t.me/+e-aa2Ed3LWVlYjNh`, which looks revoked. The ecosystem tiles (`index.astro`) and the Garden step buttons (`garden/index.astro`) still carry their existing hand-set `target="_blank"` and `rel`; your site-wide rule can replace them. The home ramp's Telegram button sets no `target` and relies on your rule in PR #39 (CodeRabbit flagged it on PR #34).
+- **`qa-library`:** resolved. Your PR fixes `podcast.json` (title and em dash). The home tile now reads `podcastFeed.episodeCount`, so your build-time feed refresh updates it too; until that lands it shows the committed June count (296).
+- **`qa-chapters`, `qa-guilds`, `qa-stories`:** `checker.gitcoin.co` no longer resolves (DNS failure in Brave on 2026-11-06). It is linked from the Kenya and Brasil chapter seeds, the Grant Ships project seed, the Brasil GG20 story and the committed snapshot.
+- **`qa-assessment`:** an option label in `GardenAssessment.astro` has an em dash ("Understanding the ideas — regen, public goods, coordination").
+- **Map sessions:** at 375 the HomeMap legend items are wider than the viewport, and HomeMap's "Map list" heading is an h3 directly under the page h1.
+
+### Not done here
+
+- `ui:verify` not run: it cannot render in the dev machine (no browser), so axe-core did not run.
+- Suggested follow-up, not in this scope: the `/garden` step body runs about 1,100px wide at 1440 (September audit, line length); a `max-inline-size: 65ch` on step copy would fix it.
+- Suggested follow-up: the Keystatic Garden editor still lets an editor save an empty step list; the pages now handle that, but the editor could refuse it. `@keystatic/core` 0.5.50 array fields take `validation: { length: { min: 1 } }` (error "Must have at least 1 element"). Not added here, because the Keystatic editor can't be exercised in this session (the shared dev ports).

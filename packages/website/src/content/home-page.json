@@ -153,12 +153,6 @@
   },
   "proofSignals": [
     {
-      "label": "Podcast archive",
-      "value": "296 episodes",
-      "source": "Libsyn RSS snapshot 2026-06-11",
-      "href": "https://rss.libsyn.com/shows/400481/destinations/3304589.xml"
-    },
-    {
       "label": "Dev Guild grant",
       "value": "2.5 ETH",
       "source": "S013 Crypto Altruists",
@@ -214,6 +208,72 @@
     "dev-guild-public-goods-staking-protocol-v0",
     "bread-cooperative-regen-coordination"
   ],
+  "ecosystem": {
+    "partners": [
+      {
+        "name": "Regen Coordination",
+        "blurb": "Shared hub where Greenpill is a member network",
+        "href": "https://hub.regencoordination.xyz/"
+      },
+      {
+        "name": "ReFi DAO",
+        "blurb": "Regenerative finance network, Regen Coordination member",
+        "href": "https://refidao.com/"
+      },
+      {
+        "name": "Bloom Network",
+        "blurb": "Local action network, Regen Coordination member",
+        "href": "https://bloomnetwork.earth/"
+      },
+      {
+        "name": "Bread Cooperative",
+        "blurb": "Solidarity finance co-op, Regen Coordination partner",
+        "href": "https://bread.coop/"
+      },
+      {
+        "name": "Gitcoin",
+        "blurb": "Grants rounds led by Greenpill chapters",
+        "href": "https://gitcoin.co/"
+      },
+      {
+        "name": "Artizen",
+        "blurb": "Home of the Greenpill Fund for Regenerative Gatherings",
+        "href": "https://artizen.fund/"
+      },
+      {
+        "name": "VDAO",
+        "blurb": "Podcast series on antifragile network states",
+        "href": "https://www.youtube.com/@joinvdao"
+      },
+      {
+        "name": "Network Nations",
+        "blurb": "Podcast series on networked communities",
+        "href": "https://networknations.network/"
+      },
+      {
+        "name": "JournoDAO",
+        "blurb": "Podcast season on journalism and community",
+        "href": "https://journodao.xyz/"
+      }
+    ],
+    "tools": [
+      {
+        "name": "Gardens",
+        "blurb": "Community funding pools and conviction voting",
+        "href": "https://www.gardens.fund/"
+      },
+      {
+        "name": "Hypercerts",
+        "blurb": "Onchain certificates for impact work",
+        "href": "https://hypercerts.org/"
+      },
+      {
+        "name": "Karma",
+        "blurb": "Grant milestones and impact updates",
+        "href": "https://www.karmahq.org/"
+      }
+    ]
+  },
   "media": {
     "image": "/images/hifi/pill-3d.png",
     "imageAlt": "Greenpill capsule motif",
