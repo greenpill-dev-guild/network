@@ -21,6 +21,7 @@ import {
 import {
   loadOperationalEnrichment,
 } from './directus-operational-enrichment.ts';
+import { hasChapterPage } from '../packages/website/src/lib/chapter-pages.ts';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const editorialContentDir = join(rootDir, 'packages/website/src/content');
@@ -348,6 +349,23 @@ test('noindex chapters keep their own page while staying out of discovery', asyn
     /getStaticPaths\(\)[\s\S]*?getOperationalChapterPages\(\)/
   );
   assert.match(chapterPage, /noindex=\{data\.seo\?\.noindex\}/);
+});
+
+test('inactive and archived chapters get no page anywhere; forming and active chapters keep theirs', async () => {
+  assert.equal(hasChapterPage({ status: 'active' }), true);
+  assert.equal(hasChapterPage({ status: 'forming' }), true);
+  assert.equal(hasChapterPage({}), true);
+  assert.equal(hasChapterPage({ status: 'inactive' }), false);
+  assert.equal(hasChapterPage({ status: ' Archived ' }), false);
+
+  // The page route, the chapter index, the home map, the sitemap and related
+  // chapters all read chapters through getOperationalChapterPages, so the
+  // rule has to live there for no link to point at a page that is not built.
+  const librarySource = await readFile(operationalContentLibraryPath, 'utf8');
+  assert.match(
+    librarySource,
+    /getOperationalChapterPages\(\)[\s\S]*?getOperationalCollection\('chapters'\)[\s\S]*?hasChapterPage\(item\.data\)/
+  );
 });
 
 test('chapter pages render approved media and steward avatar cards', async () => {

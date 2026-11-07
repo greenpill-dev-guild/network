@@ -12,6 +12,7 @@ import {
   DEFAULT_DIRECTUS_PUBLIC_URL,
   type DroppedChapterImage,
 } from './chapter-image-copies.js';
+import { hasChapterPage } from './chapter-pages.js';
 
 const snapshotUrl = (
   process.env.OPERATIONAL_CONTENT_SNAPSHOT_URL ||
@@ -109,7 +110,8 @@ export async function getOperationalCollection(collection: PublicOperationalCont
 }
 
 export async function getOperationalChapterPages() {
-  return getOperationalCollection('chapters');
+  const chapters = await getOperationalCollection('chapters');
+  return chapters.filter((item) => hasChapterPage(item.data));
 }
 
 export async function getOperationalChapters() {
