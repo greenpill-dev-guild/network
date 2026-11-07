@@ -88,6 +88,24 @@ describe('.astro files', () => {
   test('copy in frontmatter, template, scripts and CSS content is reported; comments are not', () => {
     assert.deepEqual(lines(emDashHits('src/pages/x.astro', page)), [3, 8, 9, 13, 17]);
   });
+
+  test('an end tag with a space or attributes still ends the script, so template copy after it is reported', () => {
+    // Read as script, the URL's // would start a comment and hide the dash.
+    const source = [
+      '<script>',
+      '  const a = 1;',
+      '</script >',
+      `<p>Read more at https://hub.regencoordination.xyz ${DASH} the Regen Hub</p>`,
+      '<style>',
+      `  /* Style comment ${DASH} skipped */`,
+      '</style foo>',
+      `<p>After the style ${DASH} copy</p>`,
+      '<script>',
+      '  const b = 2;',
+      '</script>',
+    ].join('\n');
+    assert.deepEqual(lines(emDashHits('src/pages/x.astro', source)), [4, 8]);
+  });
 });
 
 describe('other file types', () => {

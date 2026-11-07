@@ -203,7 +203,8 @@ export function stripAstroComments(source: string): string {
     out += frontmatter[1] + stripScriptComments(frontmatter[2]) + frontmatter[3];
     rest = rest.slice(frontmatter[0].length);
   }
-  const blocks = /(<script\b[^>]*>)([\s\S]*?)(<\/script>)|(<style\b[^>]*>)([\s\S]*?)(<\/style>)/gi;
+  // Browsers end these elements at `</script >` and `</script foo>` too.
+  const blocks = /(<script\b[^>]*>)([\s\S]*?)(<\/script[^>]*>)|(<style\b[^>]*>)([\s\S]*?)(<\/style[^>]*>)/gi;
   let last = 0;
   let match: RegExpExecArray | null;
   const template = (text: string) => stripMarkupComments(text).replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, blank);
