@@ -1358,7 +1358,7 @@ async function runSmoke(): Promise<void> {
         const chapterLink = links.find((a) => (a.getAttribute('href') || '').startsWith('/chapters/'));
         return {
           text: selected?.innerText || '',
-          bioregionHidden: document.querySelector('[data-selected-bioregion]')?.hidden,
+          bioregionGone: !document.querySelector('[data-selected-bioregion]'),
           profileNewTab: links.some((a) => a.target === '_blank' && a.getAttribute('href') === 'https://example.org/trusted-steward'),
           chapterHref: chapterLink ? chapterLink.getAttribute('href') : '',
           chapterJumpIsButton: Boolean(chapterJump),
@@ -1379,7 +1379,8 @@ async function runSmoke(): Promise<void> {
     assert.equal(selectedCard.chapterJumpIsButton, true, 'steward chapter affiliation should be an in-map jump button');
     assert.match(selectedCard.chapterJumpText, /→/, 'chapter jump should be labelled with the chapter name');
     assert.match(selectedCard.text, /Edit this node/);
-    assert.equal(selectedCard.bioregionHidden, true, 'empty deferred bioregion should not be a selected-card centerpiece');
+    // D2 removed the ecoregion layer; the card no longer has a region line.
+    assert.equal(selectedCard.bioregionGone, true, 'the selected card should carry no ecoregion line');
 
     // The steward is selected, so both its person-to-person edges are adjacent.
     // Theme colour is the only relationship signal, so they must render in more

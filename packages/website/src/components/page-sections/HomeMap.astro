@@ -305,7 +305,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       <p class="gp-home-map-selected-kicker" data-selected-kicker>Network node</p>
       <p class="gp-home-map-selected-name" data-selected-name></p>
       <p class="gp-home-map-selected-place" data-selected-place></p>
-      <p class="gp-home-map-selected-bioregion" data-selected-bioregion></p>
       <div class="gp-home-map-selected-links" data-selected-links hidden></div>
       <div class="gp-home-map-selected-themes" data-selected-themes></div>
       <p class="gp-home-map-selected-note" data-selected-note></p>
@@ -388,7 +387,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       <header class="gp-home-map-list-head">
         <div>
           <p class="gp-home-map-list-kicker">Visible nodes</p>
-          <h3 id="gp-home-map-list-title">Map list</h3>
+          <h2 id="gp-home-map-list-title">Map list</h2>
         </div>
         <div class="gp-home-map-list-actions">
           <span data-home-map-list-count>0</span>
@@ -610,9 +609,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     name: string;
     place: string;
     chapterSlug: string;
-    bioregion: string;
-    bioregionId: string;
-    bioregionSource: string;
     publicNote: string;
     profileUrl: string;
     themes: string[];
@@ -646,9 +642,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     themeColor: string;
     source: string;
     weight: number;
-    bioregion: string;
-    bioregionId: string;
-    bioregionSource: string;
   };
 
   (() => {
@@ -744,9 +737,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const num = typeof value === 'number' ? value : Number(value);
       return Number.isFinite(num) ? num : null;
     };
-    const publicBioregion = (value: unknown) => clean(value);
-    const publicBioregionId = (value: unknown) => clean(value);
-    const publicBioregionSource = (value: unknown) => clean(value);
     // Public profile/social/chapter links only; reject javascript:/data: and other
     // unsafe schemes so a link can only ever be http(s) or a same-site path.
     const cleanHref = (value: unknown) => {
@@ -1128,7 +1118,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (!edge || !edgeTooltip || !edgeTooltipKicker || !edgeTooltipTitle || !edgeTooltipMeta || isTouchMap()) return;
       edgeTooltipKicker.textContent = edgePairLabel(edge);
       edgeTooltipTitle.textContent = `${edge.from.name} → ${edge.to.name}`;
-      edgeTooltipMeta.textContent = edge.themeLabel + (edge.bioregion ? ` · ${edge.bioregion}` : '');
+      edgeTooltipMeta.textContent = edge.themeLabel;
       edgeTooltip.style.setProperty('--edge-color', edge.themeColor);
       edgeTooltip.setAttribute('aria-hidden', 'false');
       positionEdgeTooltip(event);
@@ -1335,13 +1325,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         const roleLabel = clean(targetEl.dataset.nodeRole) || focusType.charAt(0).toUpperCase() + focusType.slice(1);
         const placeLabel = clean(targetEl.dataset.nodePlace) || parts.slice(1).join(' · ');
         focusRole.textContent = placeLabel ? `${roleLabel} · ${placeLabel}` : roleLabel;
-        const bioregion = publicBioregion(targetEl.dataset.nodeBioregion);
-        const note = clean(targetEl.dataset.nodePublicNote);
-        focusMeta.textContent = focusType === 'chapter'
-          ? ''
-          : bioregion && note
-            ? `${bioregion} · ${note}`
-            : bioregion || note;
+        focusMeta.textContent = focusType === 'chapter' ? '' : clean(targetEl.dataset.nodePublicNote);
         if (focusThemes) {
           focusThemes.textContent = '';
           nodeThemes(target).slice(0, 4).forEach((slug) => {
@@ -1688,7 +1672,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const selectedKicker = scope.querySelector('[data-selected-kicker]') as HTMLElement | null;
     const selectedName = scope.querySelector('[data-selected-name]') as HTMLElement | null;
     const selectedPlace = scope.querySelector('[data-selected-place]') as HTMLElement | null;
-    const selectedBioregion = scope.querySelector('[data-selected-bioregion]') as HTMLElement | null;
     const selectedThemesEl = scope.querySelector('[data-selected-themes]') as HTMLElement | null;
     const selectedNote = scope.querySelector('[data-selected-note]') as HTMLElement | null;
     const selectedLinks = scope.querySelector('[data-selected-links]') as HTMLElement | null;
@@ -1918,11 +1901,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         selectedPlace.textContent = member.place;
         selectedPlace.hidden = !member.place;
       }
-      if (selectedBioregion) {
-        const bioregion = publicBioregion(member.bioregion);
-        selectedBioregion.textContent = bioregion;
-        selectedBioregion.hidden = isChapter || !bioregion;
-      }
       if (selectedThemesEl) {
         selectedThemesEl.textContent = '';
         if (!isChapter) {
@@ -1993,9 +1971,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         name: clean(el.dataset.nodeName) || 'Chapter',
         place: clean(el.dataset.nodePlace),
         chapterSlug: slug,
-        bioregion: publicBioregion(el.dataset.nodeBioregion),
-        bioregionId: publicBioregionId(el.dataset.nodeBioregionId),
-        bioregionSource: publicBioregionSource(el.dataset.nodeBioregionSource),
         publicNote: '',
         profileUrl: '',
         themes: [],
@@ -2317,9 +2292,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         name: clean((link as HTMLElement).dataset.nodeName) || clean(link.querySelector('title')?.textContent).split('·')[0].trim(),
         place: clean((link as HTMLElement).dataset.nodePlace),
         chapterSlug: clean((link as HTMLElement).dataset.nodeChapterSlug),
-        bioregion: publicBioregion((link as HTMLElement).dataset.nodeBioregion),
-        bioregionId: publicBioregionId((link as HTMLElement).dataset.nodeBioregionId),
-        bioregionSource: publicBioregionSource((link as HTMLElement).dataset.nodeBioregionSource),
         publicNote: clean((link as HTMLElement).dataset.nodePublicNote),
         profileUrl: cleanHref((link as HTMLElement).dataset.nodeProfileUrl),
         themes: nodeThemes(link),
@@ -2659,9 +2631,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       group.setAttribute('data-node-place', member.place);
       if (member.chapterSlug) group.setAttribute('data-node-chapter-slug', member.chapterSlug);
       if (member.profileUrl) group.setAttribute('data-node-profile-url', member.profileUrl);
-      group.setAttribute('data-node-bioregion', publicBioregion(member.bioregion));
-      group.setAttribute('data-node-bioregion-id', publicBioregionId(member.bioregionId));
-      group.setAttribute('data-node-bioregion-source', publicBioregionSource(member.bioregionSource));
       group.setAttribute('data-node-public-note', member.publicNote);
       group.setAttribute('data-node-themes', member.themes.join(' '));
       group.dataset.memberKey = member.key;
@@ -2924,9 +2893,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         name,
         place,
         chapterSlug: clean(raw.chapterSlug || raw.chapter_slug),
-        bioregion: publicBioregion(raw.bioregion),
-        bioregionId: publicBioregionId(raw.bioregionId ?? raw.bioregion_id),
-        bioregionSource: publicBioregionSource(raw.bioregionSource ?? raw.bioregion_source),
         publicNote: clean(raw.publicNote || raw.public_note),
         profileUrl: cleanHref(raw.profileUrl || raw.profile_url || raw.href),
         themes,
@@ -3005,9 +2971,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         const growDelay = `${(idx % 12) * 0.12}s`;
         const kind = clean(edge?.kind) || 'related';
         const source = clean(edge?.source);
-        const bioregion = publicBioregion(edge?.bioregion);
-        const bioregionId = publicBioregionId(edge?.bioregionId ?? edge?.bioregion_id);
-        const bioregionSource = publicBioregionSource(edge?.bioregionSource ?? edge?.bioregion_source);
         const weight = toFiniteNumber(edge?.weight) ?? 1;
         const meta: EdgeMeta = {
           edgeId,
@@ -3019,11 +2982,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           themeColor: color,
           source,
           weight,
-          bioregion,
-          bioregionId,
-          bioregionSource,
         };
-        return { edgeId, from, to, theme, color, d, growDelay, kind, source, bioregion, bioregionId, bioregionSource, weight, meta };
+        return { edgeId, from, to, theme, color, d, growDelay, kind, source, weight, meta };
       }).filter(Boolean) as Array<{
         edgeId: string;
         from: string;
@@ -3034,15 +2994,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         growDelay: string;
         kind: string;
         source: string;
-        bioregion: string;
-        bioregionId: string;
-        bioregionSource: string;
         weight: number;
         meta: EdgeMeta;
       }>;
 
       const signature = nextThreadSpecs.map((spec) => (
-        `${spec.edgeId}|${spec.from}|${spec.to}|${spec.theme}|${spec.color}|${spec.d}|${spec.kind}|${spec.source}|${spec.bioregion}|${spec.bioregionId}|${spec.weight}`
+        `${spec.edgeId}|${spec.from}|${spec.to}|${spec.theme}|${spec.color}|${spec.d}|${spec.kind}|${spec.source}|${spec.weight}`
       )).join('~');
       if (signature === lastDynamicThreadSignature) return;
       lastDynamicThreadSignature = signature;
@@ -3077,8 +3034,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         setThreadAttribute(path, 'data-theme', spec.theme);
         setThreadAttribute(path, 'data-kind', spec.kind);
         setThreadAttribute(path, 'data-source', spec.source);
-        setThreadAttribute(path, 'data-bioregion-id', spec.bioregionId);
-        setThreadAttribute(path, 'data-bioregion-source', spec.bioregionSource);
         setThreadAttribute(path, 'data-weight', String(spec.weight));
         setThreadAttribute(path, 'd', spec.d);
         setThreadAttribute(path, 'pathLength', '1');
@@ -3100,8 +3055,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           setThreadAttribute(hit, 'data-to', spec.to);
           setThreadAttribute(hit, 'data-theme', spec.theme);
           setThreadAttribute(hit, 'data-kind', spec.kind);
-          setThreadAttribute(hit, 'data-bioregion-id', spec.bioregionId);
-          setThreadAttribute(hit, 'data-bioregion-source', spec.bioregionSource);
           setThreadAttribute(hit, 'd', spec.d);
           setThreadAttribute(hit, 'pathLength', '1');
           hit.style.setProperty('--thread-color', spec.color);
@@ -3772,15 +3725,19 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       void findLocation();
     });
 
+    // A pointer outside the drawn map is not a place. A drag that leaves the
+    // map is ignored, so the pin stays at its last point on the map instead of
+    // snapping to the edge, where it would read as latitude 90 or longitude
+    // -180 and send the geocoder a point it cannot confirm.
     const pointFromLocationPointer = (event: PointerEvent) => {
       const matrix = locationSvg?.getScreenCTM();
       if (!locationSvg || !matrix) return null;
       const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse());
-      const x = Math.min(VIEW_W, Math.max(0, point.x));
-      const y = Math.min(MAP_VIEW_H, Math.max(0, point.y));
+      const onMap = point.x >= 0 && point.x <= VIEW_W && point.y >= 0 && point.y <= MAP_VIEW_H;
+      if (!onMap) return null;
       return {
-        lat: yToLat(y),
-        long: (x / VIEW_W) * 360 - 180,
+        lat: yToLat(point.y),
+        long: (point.x / VIEW_W) * 360 - 180,
       };
     };
 
@@ -5210,7 +5167,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     text-transform: uppercase;
   }
 
-  .gp-home-map-list-head h3 {
+  .gp-home-map-list-head h2 {
     margin: 0;
     color: var(--gp-secondary);
     font-family: var(--gp-font-display);
@@ -5437,7 +5394,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   }
 
   .gp-home-map-selected[data-selected-type='chapter'] .gp-home-map-selected-kicker,
-  .gp-home-map-selected[data-selected-type='chapter'] .gp-home-map-selected-bioregion,
   .gp-home-map-selected[data-selected-type='chapter'] .gp-home-map-selected-note,
   .gp-home-map-selected[data-selected-type='chapter'] .gp-home-map-selected-themes,
   .gp-home-map-selected[data-selected-type='chapter'] .gp-home-map-selected-edge-list,
@@ -5474,23 +5430,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   .gp-home-map-selected-place:empty,
   .gp-home-map-selected-place[hidden] { display: none; }
 
-  .gp-home-map-selected-bioregion,
   .gp-home-map-selected-note {
     margin: 0;
     color: var(--gp-fg-muted);
     font-size: 13px;
     line-height: 1.4;
     overflow-wrap: anywhere;
-  }
-
-  .gp-home-map-selected-bioregion {
-    color: var(--gp-map-member);
-    font-family: var(--gp-font-mono);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    line-height: 1.2;
-    text-transform: uppercase;
   }
 
   .gp-home-map-selected-note[hidden] {
@@ -7076,7 +7021,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     .gp-home-map-selected-kicker,
     .gp-home-map-selected-place,
-    .gp-home-map-selected-bioregion,
     .gp-home-map-selected-note {
       display: none;
     }

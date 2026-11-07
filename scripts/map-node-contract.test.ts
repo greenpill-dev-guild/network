@@ -1638,6 +1638,45 @@ test('home map uses exact-overlap fan-out instead of broad cluster bubbles', asy
   assert.match(component, /reducedMotionPref\(\)/);
 });
 
+test('home map location picker ignores a pin dragged off the map instead of clamping it to the edge', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  const picker = component.match(/const pointFromLocationPointer = \(event: PointerEvent\) => \{([\s\S]*?)\n    \};/)?.[1] ?? '';
+  assert.ok(picker, 'pointFromLocationPointer must exist');
+  // The June client clamped a drag to the mini-map edge and saved latitude 90
+  // or longitude -180 (qa-map-data handoff). Off the map is now no point at all.
+  assert.doesNotMatch(picker, /Math\.min\(VIEW_W, Math\.max\(0, point\.x\)\)/);
+  assert.doesNotMatch(picker, /Math\.min\(MAP_VIEW_H, Math\.max\(0, point\.y\)\)/);
+  assert.match(picker, /const onMap = point\.x >= 0 && point\.x <= VIEW_W && point\.y >= 0 && point\.y <= MAP_VIEW_H;/);
+  assert.match(picker, /if \(!onMap\) return null;/);
+  // A drag that leaves the map keeps the last point it had on the map.
+  assert.match(component, /const updateDraggedPin = \(event: PointerEvent\) => \{\s*const point = pointFromLocationPointer\(event\);\s*if \(!point\) return;/);
+});
+
+test('home map no longer reads ecoregion names into its cards or thread tooltips', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  // D2 removed the ecoregion layer, so `bioregion` is always empty in the
+  // public payload; the selected card, hover card and thread tooltip that
+  // printed it are gone.
+  assert.doesNotMatch(component, /bioregion/i);
+  assert.match(component, /edgeTooltipMeta\.textContent = edge\.themeLabel;/);
+});
+
+test('home map list heading follows the page h1', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  // The home page's h1 is the hero title; the map list is the next level.
+  assert.match(component, /<h2 id="gp-home-map-list-title">Map list<\/h2>/);
+  assert.doesNotMatch(component, /<h3 id="gp-home-map-list-title">/);
+});
+
 // ---------------------------------------------------------------------------
 // PRD-1409 (qa-map-data): nodes saved at impossible coordinates.
 // Live /map/state on 2026-11-06 held these public points. The June 2026
