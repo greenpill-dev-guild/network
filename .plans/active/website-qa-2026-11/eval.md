@@ -23,13 +23,13 @@ Each finding in `reports/2026-11-06-qa-findings.md` is closed when its check bel
 | 15 | The Writers Guild page lists only verified Writers Guild work, credits contributors, and does not claim the podcast. |
 | 16 | The footer says Farcaster and includes LinkedIn; the unmaintained website link is gone. |
 | 17 | Header, favicon, touch icon and default share image use the current brand kit. |
-| 18 | The em-dash check passes in CI; no em dashes in website copy or Directus content. |
+| 18 | A pull-request workflow runs the em-dash check on website changes and it passes on `main`; no em dashes in website copy; Directus content is cleaned through an approved change set, and the hourly publish never fails on steward copy. |
 | 19 | The assessment stays (D1). Its legends sit inside their cards. The questions Afo marks as multi-answer accept several answers, and both the stored answers and the result use every selected answer under the scoring he agrees. Checked at all three widths and with keyboard and screen reader. |
 | 20 | The footer's bottom row is friendly and accurate; no retired "friction" labels. |
 
 ## Proof
 
 - The repository's pre-PR gate from `AGENTS.md` on every session PR: `bun run typecheck`, the focused `bun run test:*` for the surface (for example `test:map-nodes`, `test:agent`, `test:content`), `bun run agentic:check` for website work (it runs `plans:validate` and `ui:check`), then `bun run build`. `bun run ui:verify` skips rendering inside the dev machine (no Chrome there), so it counts as not run; the Brave check below is the rendered proof.
-- Visual QA in Afo's authenticated Brave profile at 375, 1024 and 1440, with screenshots referenced in each handoff. Isolated-browser output counts only as clean-room proof.
+- Visual QA in Afo's authenticated Brave profile at 375, 1024 and 1440, plus 1920 for the background (finding 8), with screenshots referenced in each handoff. Isolated-browser output counts only as clean-room proof.
 - For content: the source list in each handoff, and Afo's approval recorded for every production change set.
 - After merge: the same checks against greenpill.network once GitHub Pages and Fly report the deploy.

@@ -15,7 +15,7 @@ Each session runs Opus 5.5 at extra-high effort in its own worktree, cut from th
 | `qa-brand-shell` | Brand kit and logo, background, external links, footer | `layouts/GpLayout.astro`, `styles/gp-tokens.css` (background and brand tokens only), `components/shell/*` (except the ecoregion credit line), `content/social-links.json` (after `qa-home-garden` merges), `content/site-settings.json`, brand assets under `public/` (logo, favicon, touch icon, share image) | 3326 | 1B |
 | `qa-chapters` | PRD-625: chapter copy accuracy and locations | Directus change set for chapters, initiatives and locations; no code unless a template bug blocks the content | 3327 | 1B |
 | `qa-map-polish` | PRD-739 P0: sizing, clustering, reset and empty states, stale state, "Join the map" | `HomeMap.astro`, home hero CTA in `content/home-page.json` and `pages/index.astro` | 3301 | 2, after `qa-map-data` and `qa-home-garden` merge |
-| `qa-system-pass` | One card treatment, em-dash check and sweep, fallback snapshot refresh, full-site QA | card CSS on every page, `components/ui/Card.astro`, a copy check in `scripts/`, `src/data/operational-content-snapshot.json`, and, for the em-dash sweep only, any website file that still has one (for example `pages/chapters/index.astro`, `components/ui/Text.astro`, `content/resources/*`) | 3321 | 2, last: after wave 1 and `qa-map-polish` merge, so no other session holds those files |
+| `qa-system-pass` | One card treatment, em-dash check and sweep, fallback snapshot refresh, full-site QA | card CSS, card markup and the imports it needs on every page, `components/ui/Card.astro`, a copy check in `scripts/` with its `package.json` script, a new pull-request workflow under `.github/workflows/` that runs it (both security-sensitive: Afo's OK first, named in the PR), `src/data/operational-content-snapshot.json`, and, for the em-dash sweep only, any website file that still has one (for example `pages/chapters/index.astro`, `components/ui/Text.astro`, `content/resources/*`) | 3321 | 2, last: after wave 1 and `qa-map-polish` merge, so no other session holds those files |
 
 Ports are for each session's Mac-side preview server (spec rule 7); nothing runs a dev server inside the dev machine except on 3301, which only `qa-map-data` and later `qa-map-polish` use.
 
@@ -41,7 +41,7 @@ Batch A starts first because it covers the broken interactions and the accuracy 
 
 ### `qa-home-garden` (findings 2, 3, 5, 6, 20)
 
-- [ ] Make Subscribe work from the home ramp (link to `/garden#step-1` or share the form). Check production readiness without writing: `fly secrets list -a network-agent` names, and whether a Resend segment or topic exists and anyone sends to it. Report options for D3.
+- [ ] Subscribe follows D3 (decided 2026-11-06: Paragraph). Step 1 on home and `/garden` links to `https://paragraph.com/@greenpill` and says what subscribers get; the Resend route stays in the agent, unused. Describe the Paragraph flow accurately (email, wallet or both) after opening it without submitting; a real signup is tested by Afo or with an address he names.
 - [ ] Read the Telegram link from `content/social-links.json` everywhere you own; remove hard-coded copies.
 - [ ] Remove the "Knowledge map · In design" and "Open the toolkit" tiles from the home commons bento.
 - [ ] Ecosystem: verify each listed organization is a current, real relationship with a public source; find missing ones; group into partners and tools rows as decided in July. Move the list into `home-page.json` so it is editable.
@@ -74,11 +74,11 @@ Batch A starts first because it covers the broken interactions and the accuracy 
 - [ ] Book detail dialog on native `<dialog>`: larger cover, description, read or download the English PDF, every translation, and every store or edition link from `formats`. The cover stays a working link without JavaScript.
 - [ ] Podcast: run the feed snapshot in the scheduled build so episodes stay current; check that players work; take the episode count from the feed.
 - [ ] Remove the Knowledge Garden block and guides for protocols that are not active; ask Afo about GreenSci (I4). Keep the guild cards with `id="guilds"`.
-- [ ] Carried from `qa-home-garden`: `podcast.json` `title` reads "Learn > Podcast" on the home tile (July copy: "The Greenpill Podcast"), and `secondaryDescription` has an em dash. Expose the feed's episode count (300 items on 2026-11-06; the home tile still says 296 from `home-page.json` `proofSignals`) and name the field in your handoff so the home tile can read it.
+- [ ] Carried from `qa-home-garden`: `podcast.json` `title` reads "Learn > Podcast" on the home tile (July copy: "The Greenpill Podcast"), and `secondaryDescription` has an em dash. Expose the feed's episode count (300 items on 2026-11-06; the home tile still says 296 from `home-page.json` `proofSignals`). You also own the switch of the home tile to that count (`pages/index.astro:46-47` and the podcast entry in `home-page.json` `proofSignals`), but only after PR #34 merges: rebase on `main` first. If #34 has not merged when your PR is otherwise ready, leave the switch to `qa-system-pass` and say so in your handoff.
 
 ### `qa-brand-shell` (findings 6, 7, 8, 16, 17, 20)
 
-- [ ] Plain background on every page (D4); remove the glow and texture layers that cause the seams.
+- [ ] Plain background on every page (D4); remove the glow and texture layers that cause the seams. The seam showed at wide widths, so check 1920 as well as 375, 1024 and 1440 (Brave's window is about 1460 wide, so load 1920 in a same-origin iframe of that width scaled down to fit).
 - [ ] One rule for external links: new tab, `rel="noopener"`, and an accessible "opens in a new tab" hint. Prefer a build-time step over client script.
 - [ ] Footer: Farcaster instead of Warpcast, LinkedIn, YouTube, Luma, Code of Conduct; Telegram from `social-links.json`; friendlier bottom row. Leave the ecoregion credit line to `qa-map-data` (it goes with the layer); rebase on `main` before editing the bottom row if that PR has merged. Edit `social-links.json` only after the `qa-home-garden` PR has merged, rebased on `main`.
 - [ ] Brand kit (I3): current logo in the header, favicon, touch icon and default share image; book art only where a book is the subject.
@@ -104,10 +104,10 @@ Batch A starts first because it covers the broken interactions and the accuracy 
 
 ### `qa-system-pass`
 
-- [ ] Move page cards onto `Card` with the home treatment; remove page-local card classes.
-- [ ] Add a check that fails on em dashes in website copy (as PRD-1303 does for Green Goods) and sweep what is left, including a Directus change set for content rows.
+- [ ] Move page cards onto `Card` with the home treatment, markup and imports included; remove page-local card classes.
+- [ ] Add a check that fails on em dashes in website copy (as PRD-1303 does for Green Goods) and sweep what is left, including a Directus change set for content rows. Wire it into CI: no workflow runs on ordinary website pull requests today (`github-pages.yml` builds only on `main` pushes and its schedule; `supply-chain-guardrails.yml` triggers only on package, lockfile and workflow paths). With Afo's OK, add a pull-request workflow for website paths that runs the check with read-only permissions. Do not fail the hourly publish on steward-edited Directus copy; clean that through the change set.
 - [ ] Refresh the fallback snapshot with `bun run content:snapshot:from-agent` after the Directus change sets are applied.
-- [ ] Full-site QA at 375, 1024 and 1440 in Brave plus `bun run ui:verify`; update this hub and Linear.
+- [ ] Full-site QA in Brave at 375, 1024 and 1440, plus 1920 for the background; `bun run ui:verify` counts as not run in the dev machine. Repeat the background check at 1920 on greenpill.network after deploy. Update this hub and Linear.
 
 ## Linear mirror
 
