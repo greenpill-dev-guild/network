@@ -2,8 +2,8 @@
   "hero": {
     "overline": "Library",
     "title": "Everything we have made public.",
-    "dek": "Books, podcast conversations, working guilds, and Garden guides from across the Greenpill network.",
-    "body": "Use the Library as the public knowledge commons. Keep private Drive docs as research references until they have a public mirror or steward approval.",
+    "dek": "Books, podcast conversations, and working guilds from across the Greenpill network.",
+    "body": "",
     "primaryCta": {
       "label": "Browse books",
       "href": "/library#books",
@@ -26,7 +26,7 @@
       "overline": "Books",
       "title": "The foundation shelf.",
       "dek": "Greenpilled, Impact DAOs, Onchain Impact Networks, Pathways to Regeneration, Grassroots Economics, Ethereum Localism, and adjacent Greenpill books remain core public material.",
-      "body": "Book counts should be derived from the content collection, not hardcoded from the HiFi constants.",
+      "body": "",
       "cta": {
         "label": "Browse books",
         "href": "/library#books",
@@ -54,8 +54,8 @@
       "key": "podcast",
       "overline": "Podcast",
       "title": "A long-running public conversation.",
-      "dek": "The podcast archive has 296 public episodes in the current Libsyn RSS snapshot.",
-      "body": "Render recent episodes from the build-time RSS snapshot and keep archive links clearly external.",
+      "dek": "Recent episodes from the Greenpill podcast feed, playable on the site.",
+      "body": "",
       "cta": {
         "label": "Open Apple Podcasts archive",
         "href": "https://podcasts.apple.com/us/podcast/greenpill/id1609313639",
@@ -73,40 +73,6 @@
           "label": "Trailblazers of Octant Episode 4"
         }
       ]
-    },
-    {
-      "key": "tools-guides",
-      "overline": "Guilds and Garden",
-      "title": "Working circles and living guides.",
-      "dek": "Guild cards should show public working circles, while Knowledge Garden cards stay focused on onboarding, stewardship, and living guides.",
-      "body": "Use source-backed guide cards for the Garden and keep generic project docs out of that section.",
-      "cta": {
-        "label": "Open Garden",
-        "href": "/garden",
-        "kind": "internal"
-      },
-      "featuredRefs": [
-        {
-          "collection": "resources",
-          "slug": "green-goods-docs",
-          "label": "Green Goods docs"
-        },
-        {
-          "collection": "resources",
-          "slug": "regen-coordination-hub",
-          "label": "Regen Coordination Hub"
-        },
-        {
-          "collection": "resources",
-          "slug": "regen-protocols",
-          "label": "Regen Protocols"
-        },
-        {
-          "collection": "resources",
-          "slug": "dev-guild-public-goods-staking-protocol-v0",
-          "label": "PGSP v0"
-        }
-      ]
     }
   ],
   "featuredBookSlugs": [
@@ -120,8 +86,6 @@
     "trailblazers-octant-ep4-gpdg",
     "green-goods-docs",
     "regen-coordination-hub",
-    "greenpill-garden-season-one",
-    "regen-protocols",
     "dev-guild-public-goods-staking-protocol-v0",
     "dev-guild-pioneering-regenerative-stack",
     "bread-cooperative-regen-coordination",
@@ -132,27 +96,10 @@
     "writers-guild",
     "greensci"
   ],
-  "gardenCard": {
-    "eyebrow": "Garden",
-    "title": "Enter the Garden",
-    "summary": "A public onboarding ramp from a light newsletter subscription to a high-intent steward call.",
-    "badge": "Public onboarding",
-    "surfaceType": "garden",
-    "image": "/images/hifi/garden-overlay.jpg",
-    "imageAlt": "Garden texture from the high-fidelity design package",
-    "href": "/garden"
-  },
-  "proofSignals": [
-    {
-      "label": "Podcast archive",
-      "value": "296 episodes",
-      "source": "Libsyn RSS snapshot",
-      "href": "https://rss.libsyn.com/shows/400481/destinations/3304589.xml"
-    }
-  ],
+  "proofSignals": [],
   "seo": {
     "title": "Library · Greenpill Network",
-    "description": "Browse Greenpill books, recent podcast episodes, public guilds, and Garden onboarding material.",
+    "description": "Browse Greenpill books and translations, recent podcast episodes, and the network's working guilds.",
     "ogImage": "",
     "canonicalPath": "/library",
     "noindex": false

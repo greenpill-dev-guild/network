@@ -368,7 +368,6 @@ export default config({
         featuredBookSlugs: slugListField('Featured Book Slugs', 'Book Slug'),
         featuredResourceSlugs: slugListField('Featured Resource Slugs', 'Resource Slug'),
         featuredGuildSlugs: slugListField('Featured Guild Slugs', 'Guild Slug'),
-        gardenCard: libraryCardField,
         proofSignals: proofSignalsField,
         seo: seoField,
       },
