@@ -63,70 +63,70 @@ Open with Afo for the map: confirm `MAP_LOCATION_CONFIRMATION_REQUIRED` is `true
 
 ### `qa-map-data` (findings 1, 2)
 
-- [ ] Pull live `/map/state` and list every node whose coordinates are suspect (exactly 0,0, latitude ±90 or longitude ±180) or fall outside the country its `place` names.
-- [ ] Find how each got there: intake submission, edit link (`/map/edit`), click-to-place, geocoder fallback or seed. Reproduce on the local stack.
-- [ ] At the agent boundary and in the shared contract, reject out-of-range and non-finite coordinates, and stop 0,0 or a clamped edge value from being stored in place of a real location. Rejection is explicit, never a silent clamp. A real location on the 180th meridian (Fiji) must still save, so longitude ±180 on its own is not an error. Tests in `scripts/map-node-contract.test.ts`.
-- [ ] Write a repair change set for the affected rows (node id, place, current and proposed coordinates, how the new value was derived) and stop for approval.
-- [ ] D2 (decided: remove): drop the ecoregion layer and dataset from the map and the shared package, and remove the footer's ecoregion credit line in the same PR, so the attribution never leaves before the licensed data does.
+- [x] Pull live `/map/state` and list every node whose coordinates are suspect (exactly 0,0, latitude ±90 or longitude ±180) or fall outside the country its `place` names.
+- [x] Find how each got there: intake submission, edit link (`/map/edit`), click-to-place, geocoder fallback or seed. Reproduce on the local stack.
+- [x] At the agent boundary and in the shared contract, reject out-of-range and non-finite coordinates, and stop 0,0 or a clamped edge value from being stored in place of a real location. Rejection is explicit, never a silent clamp. A real location on the 180th meridian (Fiji) must still save, so longitude ±180 on its own is not an error. Tests in `scripts/map-node-contract.test.ts`.
+- [x] Write a repair change set for the affected rows (node id, place, current and proposed coordinates, how the new value was derived) and stop for approval.
+- [x] D2 (decided: remove): drop the ecoregion layer and dataset from the map and the shared package, and remove the footer's ecoregion credit line in the same PR, so the attribution never leaves before the licensed data does.
 
 ### `qa-home-garden` (findings 2, 3, 5, 6, 20)
 
-- [ ] Subscribe follows D3 (decided 2026-11-06: Paragraph). Step 1 on home and `/garden` links to `https://paragraph.com/@greenpill` and says what subscribers get; the Resend route stays in the agent, unused. Describe the Paragraph flow accurately (email, wallet or both) after opening it without submitting; a real signup is tested by Afo or with an address he names.
-- [ ] Read the Telegram link from `content/social-links.json` everywhere you own; remove hard-coded copies.
-- [ ] Remove the "Knowledge map · In design" and "Open the toolkit" tiles from the home commons bento.
-- [ ] Ecosystem: verify each listed organization is a current, real relationship with a public source; find missing ones; group into partners and tools rows as decided in July. Move the list into `home-page.json` so it is editable.
-- [ ] Replace the "Lowest friction" to "Highest friction" ramp labels.
-- [ ] D1 (decided: keep): keep the assessment card and its `/garden` step; reword card 03 only. `qa-assessment` owns the component.
+- [ ] Subscribe follows D3 (decided 2026-11-06: Paragraph). Step 1 on home and `/garden` links to `https://paragraph.com/@greenpill` and says what subscribers get; the Resend route stays in the agent, unused. Describe the Paragraph flow accurately (email, wallet or both) after opening it without submitting; a real signup is tested by Afo or with an address he names. (Done in #34 except the real signup, which has not been tested.)
+- [x] Read the Telegram link from `content/social-links.json` everywhere you own; remove hard-coded copies.
+- [x] Remove the "Knowledge map · In design" and "Open the toolkit" tiles from the home commons bento.
+- [x] Ecosystem: verify each listed organization is a current, real relationship with a public source; find missing ones; group into partners and tools rows as decided in July. Move the list into `home-page.json` so it is editable.
+- [x] Replace the "Lowest friction" to "Highest friction" ramp labels.
+- [x] D1 (decided: keep): keep the assessment card and its `/garden` step; reword card 03 only. `qa-assessment` owns the component.
 
 ### `qa-guilds` (findings 13, 14, 15, 16)
 
-- [ ] Dev Guild template changes from the July call: key links in the hero, active projects only, a media and appearances section in place of "Public proof", Hats as a structured list, contributor credits, 17 to 18px body text.
-- [ ] Breadcrumb parent becomes Library, linking to `/library#guilds`.
-- [ ] Writers Guild: research what the guild has published (books, translations, newsletters, the Carbon Copy Web3 tooling series and other writing) with sources; remove the podcast attribution; add a section for its written work with contributor credits.
-- [ ] Replace the unmaintained website link with LinkedIn once Afo names it (I2).
-- [ ] Directus change set for guild and project rows; stop for approval. Keep the seed files in step with the approved values.
+- [x] Dev Guild template changes from the July call: key links in the hero, active projects only, a media and appearances section in place of "Public proof", Hats as a structured list, contributor credits, 17 to 18px body text.
+- [x] Breadcrumb parent becomes Library, linking to `/library#guilds`.
+- [x] Writers Guild: research what the guild has published (books, translations, newsletters, the Carbon Copy Web3 tooling series and other writing) with sources; remove the podcast attribution; add a section for its written work with contributor credits.
+- [x] Replace the unmaintained website link with LinkedIn once Afo names it (I2). (The unmaintained link was `hub.greenpill.network`, a footer link rather than a guild one; the Dev Guild's Connect links gained LinkedIn, and the footer's Hub link moved in #44.)
+- [x] Directus change set for guild and project rows; stop for approval. Keep the seed files in step with the approved values.
 
 ### `qa-stories` (finding 4)
 
-- [ ] Review all 18 stories section by section against their sources. Remove or correct anything unsupported; list what needs a steward.
-- [ ] Find stories from roughly the last 12 months (Greenpill Paragraph, chapter posts, Regen Coordination Hub, Luma, X) and draft new story files only from verifiable sources. Give exact dates.
-- [ ] Fix the "storyies" caption, the "Source-backed seed copy" byline and raw category slugs in breadcrumbs and meta.
+- [x] Review all 18 stories section by section against their sources. Remove or correct anything unsupported; list what needs a steward.
+- [x] Find stories from roughly the last 12 months (Greenpill Paragraph, chapter posts, Regen Coordination Hub, Luma, X) and draft new story files only from verifiable sources. Give exact dates.
+- [x] Fix the "storyies" caption, the "Source-backed seed copy" byline and raw category slugs in breadcrumbs and meta.
 
 ### `qa-assessment` (finding 19; D1 decided: keep and fix)
 
-- [ ] Fix the legend overflow with the standard fieldset reset.
-- [ ] Decide with Afo which questions take several answers; convert those to checkbox groups and adjust scoring and the result copy.
-- [ ] Keep answers on the device as today; keyboard and screen reader behavior verified.
-- [ ] Carried from `qa-home-garden`: the option label "Understanding the ideas … regen, public goods, coordination" uses an em dash.
+- [x] Fix the legend overflow with the standard fieldset reset.
+- [x] Decide with Afo which questions take several answers; convert those to checkbox groups and adjust scoring and the result copy.
+- [x] Keep answers on the device as today; keyboard and screen reader behavior verified. (Keyboard checked with real key presses; screen-reader names checked with axe's accessible-name code, not with a running screen reader.)
+- [x] Carried from `qa-home-garden`: the option label "Understanding the ideas … regen, public goods, coordination" uses an em dash.
 
 ### `qa-library` (findings 10, 11, 12)
 
-- [ ] Book detail dialog on native `<dialog>`: larger cover, description, read or download the English PDF, every translation, and every store or edition link from `formats`. The cover stays a working link without JavaScript.
-- [ ] Podcast: run the feed snapshot in the scheduled build so episodes stay current; check that players work; take the episode count from the feed.
-- [ ] Remove the Knowledge Garden block and guides for protocols that are not active; ask Afo about GreenSci (I4). Keep the guild cards with `id="guilds"`.
-- [ ] Carried from `qa-home-garden`: `podcast.json` `title` reads "Learn > Podcast" on the home tile (July copy: "The Greenpill Podcast"), and `secondaryDescription` has an em dash. Expose the feed's episode count (300 items on 2026-11-06). Done without sequencing: PR #34 (commit c69c8c3) switched the home tile to `podcastFeed.episodeCount` from `src/data/podcast-feed-snapshot.json`, which already holds that field on `main`, and PR #38 refreshes the snapshot in every Pages build.
+- [x] Book detail dialog on native `<dialog>`: larger cover, description, read or download the English PDF, every translation, and every store or edition link from `formats`. The cover stays a working link without JavaScript.
+- [x] Podcast: run the feed snapshot in the scheduled build so episodes stay current; check that players work; take the episode count from the feed.
+- [x] Remove the Knowledge Garden block and guides for protocols that are not active; ask Afo about GreenSci (I4). Keep the guild cards with `id="guilds"`.
+- [x] Carried from `qa-home-garden`: `podcast.json` `title` reads "Learn > Podcast" on the home tile (July copy: "The Greenpill Podcast"), and `secondaryDescription` has an em dash. Expose the feed's episode count (300 items on 2026-11-06). Done without sequencing: PR #34 (commit c69c8c3) switched the home tile to `podcastFeed.episodeCount` from `src/data/podcast-feed-snapshot.json`, which already holds that field on `main`, and PR #38 refreshes the snapshot in every Pages build.
 
 ### `qa-brand-shell` (findings 6, 7, 8, 16, 17, 20)
 
-- [ ] Background (D4, changed on 2026-11-07): Afo kept the illustrated background, so remove what causes the seams (glows painted in boxes narrower than the screen, and the tiled texture) instead of going plain. The seam showed at wide widths, so check 1920 as well as 375, 1024 and 1440 (Brave's window is about 1460 wide, so load 1920 in a same-origin iframe of that width scaled down to fit).
-- [ ] One rule for external links: new tab, `rel="noopener"`, and an accessible "opens in a new tab" hint. Prefer a build-time step over client script.
-- [ ] Footer: Farcaster instead of Warpcast, LinkedIn, YouTube, Luma, Code of Conduct; Telegram from `social-links.json`; friendlier bottom row. Leave the ecoregion credit line to `qa-map-data` (it goes with the layer); rebase on `main` before editing the bottom row if that PR has merged. Edit `social-links.json` only after the `qa-home-garden` PR has merged, rebased on `main`.
-- [ ] Brand kit (I3): current logo in the header, favicon, touch icon and default share image; book art only where a book is the subject.
-- [ ] Carried from `qa-home-garden`: `SiteFooter.astro:34` still hard-codes `t.me/+e-aa2Ed3LWVlYjNh`, which now opens a generic page (likely revoked); read `social-links.json` `telegram`. The ecosystem tiles (`index.astro`) and Garden step buttons (`garden/index.astro`) keep hand-set `target` and `rel` that the site-wide rule should replace.
+- [x] Background (D4, changed on 2026-11-07): Afo kept the illustrated background, so remove what causes the seams (glows painted in boxes narrower than the screen, and the tiled texture) instead of going plain. The seam showed at wide widths, so check 1920 as well as 375, 1024 and 1440 (Brave's window is about 1460 wide, so load 1920 in a same-origin iframe of that width scaled down to fit).
+- [x] One rule for external links: new tab, `rel="noopener"`, and an accessible "opens in a new tab" hint. Prefer a build-time step over client script.
+- [x] Footer: Farcaster instead of Warpcast, LinkedIn, YouTube, Luma, Code of Conduct; Telegram from `social-links.json`; friendlier bottom row. Leave the ecoregion credit line to `qa-map-data` (it goes with the layer); rebase on `main` before editing the bottom row if that PR has merged. Edit `social-links.json` only after the `qa-home-garden` PR has merged, rebased on `main`.
+- [x] Brand kit (I3): current logo in the header, favicon, touch icon and default share image; book art only where a book is the subject.
+- [ ] Carried from `qa-home-garden`: `SiteFooter.astro:34` still hard-codes `t.me/+e-aa2Ed3LWVlYjNh`, which now opens a generic page (likely revoked); read `social-links.json` `telegram`. The ecosystem tiles (`index.astro`) and Garden step buttons (`garden/index.astro`) keep hand-set `target` and `rel` that the site-wide rule should replace. (Telegram done in #39; the ecosystem tiles' own `target` and `rel` went in #44. The Garden step buttons and the home book links still set `target` themselves, which the site-wide rule keeps.)
 
 ### `qa-chapters` (PRD-625)
 
-- [ ] For each of the 18 chapters, check the public copy, links and location against public sources. Remove internal-note copy (the September audit lists 10 affected rows).
-- [ ] Decide with Afo how dormant and forming chapters should read.
-- [ ] Directus change set; stop for approval.
-- [ ] Carried from `qa-home-garden`: `checker.gitcoin.co` no longer resolves (DNS failure on 2026-11-06); the Kenya and Brasil chapter rows link it.
-- [ ] Carried from `qa-stories`: the Uncommons chapter row (`featuredStorySlugs`) and the `uncommons-publications-learning-series` initiative (`relatedStorySlugs`) point at `greenpill-2025-year-in-review`, which PR #37 makes a draft. Neither field renders today; drop the reference in your change set.
+- [x] For each of the 18 chapters, check the public copy, links and location against public sources. Remove internal-note copy (the September audit lists 10 affected rows).
+- [x] Decide with Afo how dormant and forming chapters should read.
+- [x] Directus change set; stop for approval.
+- [x] Carried from `qa-home-garden`: `checker.gitcoin.co` no longer resolves (DNS failure on 2026-11-06); the Kenya and Brasil chapter rows link it.
+- [x] Carried from `qa-stories`: the Uncommons chapter row (`featuredStorySlugs`) and the `uncommons-publications-learning-series` initiative (`relatedStorySlugs`) point at `greenpill-2025-year-in-review`, which PR #37 makes a draft. Neither field renders today; drop the reference in your change set.
 
 ### `qa-map-polish` (PRD-739)
 
-- [ ] P0 items from `docs/design/map-polish-audit.md`: container sizing, clustering across node types, filter reset and empty state, stale hover and selection state, "Join the map" trigger with "Find your people" browsing instead.
-- [ ] Carried from `qa-home-garden`: at 375 the legend items are wider than the viewport, and the "Map list" heading is an h3 directly under the page h1.
-- [ ] Carried from `qa-map-data`: the selected card, hover card and thread tooltip still read `bioregion`, which is always empty after D2, so those paths can go. The location picker still clamps a dragged pin to the map edge (`pointFromLocationPointer`); ignore points dragged off the map instead of pinning them to the edge.
+- [x] P0 items from `docs/design/map-polish-audit.md`: container sizing, clustering across node types, filter reset and empty state, stale hover and selection state, "Join the map" trigger with "Find your people" browsing instead.
+- [x] Carried from `qa-home-garden`: at 375 the legend items are wider than the viewport, and the "Map list" heading is an h3 directly under the page h1.
+- [x] Carried from `qa-map-data`: the selected card, hover card and thread tooltip still read `bioregion`, which is always empty after D2, so those paths can go. The location picker still clamps a dragged pin to the map edge (`pointFromLocationPointer`); ignore points dragged off the map instead of pinning them to the edge.
 
 ## Follow-ups outside the sessions
 
