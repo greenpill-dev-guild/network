@@ -14,6 +14,7 @@ import {
   toPublicWebsiteBuildMetadata,
 } from '@greenpill-network/shared/public-content';
 import { formatContentDate } from '../packages/website/src/lib/content-dates.ts';
+import { chapterPageSlugs, hasChapterPage } from '../packages/website/src/lib/chapter-pages.ts';
 import {
   buildDirectusOperationalPermissionPlan,
 } from './directus-operational-content-setup.ts';
@@ -356,6 +357,49 @@ test('noindex chapters keep their own page while staying out of discovery', asyn
     /getStaticPaths\(\)[\s\S]*?getOperationalChapterPages\(\)/
   );
   assert.match(chapterPage, /noindex=\{data\.seo\?\.noindex\}/);
+});
+
+test('inactive and archived chapters get no page anywhere; forming and active chapters keep theirs', async () => {
+  assert.equal(hasChapterPage({ status: 'active' }), true);
+  assert.equal(hasChapterPage({ status: 'forming' }), true);
+  assert.equal(hasChapterPage({}), true);
+  assert.equal(hasChapterPage({ status: 'inactive' }), false);
+  assert.equal(hasChapterPage({ status: ' Archived ' }), false);
+
+  // The page route, the chapter index, the home map, the sitemap and related
+  // chapters all read chapters through getOperationalChapterPages, so the
+  // rule has to live there for no link to point at a page that is not built.
+  const librarySource = await readFile(operationalContentLibraryPath, 'utf8');
+  assert.match(
+    librarySource,
+    /getOperationalChapterPages\(\)[\s\S]*?getOperationalCollection\('chapters'\)[\s\S]*?hasChapterPage\(item\.data\)/
+  );
+});
+
+test('locations and impact-source feeds only list chapters that get a page', async () => {
+  assert.deepEqual(
+    [...chapterPageSlugs([
+      { slug: 'open', status: 'active' },
+      { slug: 'starting', status: 'forming' },
+      { slug: 'paused', status: 'inactive' },
+      { slug: 'closed', status: 'archived' },
+      { status: 'active' },
+    ])].sort(),
+    ['open', 'starting']
+  );
+
+  // The snapshot's precomputed locations and impact-source bindings leave out
+  // only noindex chapters, and both link to /chapters/<slug>, so the website
+  // filters them against the chapters that get a page.
+  const librarySource = await readFile(operationalContentLibraryPath, 'utf8');
+  assert.match(
+    librarySource,
+    /getOperationalLocations\(\)[\s\S]*?chapterPageSlugs\(snapshot\.chapters\)[\s\S]*?locations\.filter\(/
+  );
+  assert.match(
+    librarySource,
+    /getOperationalImpactSourceBindings\(\)[\s\S]*?chapterPageSlugs\(snapshot\.chapters\)[\s\S]*?bindings\.chapters\.filter\(/
+  );
 });
 
 test('chapter pages render approved media and steward avatar cards', async () => {
