@@ -4,7 +4,7 @@ Session `qa-guilds`, Linear PRD-1411, findings 13 to 16. The template PR is open
 
 ## Changed
 
-PR: pending (this file is committed in it)
+PR: https://github.com/greenpill-dev-guild/network/pull/36 (not merged).
 
 Template, `packages/website/src/pages/guilds/[slug].astro` (both guild pages):
 
