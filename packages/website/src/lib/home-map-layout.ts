@@ -1,0 +1,205 @@
+// Geometry for the home map's stacks, fans and location picker, in map units
+// (the SVG viewBox's units). It has no DOM, so its rules are tested directly
+// (scripts/map-node-contract.test.ts); HomeMap.astro converts screen px to map
+// units before calling it.
+
+export type MapPoint = { x: number; y: number };
+export type MapBox = { x: number; y: number; width: number; height: number };
+
+/**
+ * Groups pins whose centres lie within `radius` of another pin in the same
+ * group, chaining through neighbours. Every pin lands in exactly one group; a
+ * pin with no neighbour is a group of one.
+ */
+export function groupOverlappingPins<T extends { center: MapPoint }>(pins: readonly T[], radius: number): T[][] {
+  const grouped = new Set<T>();
+  const groups: T[][] = [];
+  for (const pin of pins) {
+    if (grouped.has(pin)) continue;
+    const group = [pin];
+    grouped.add(pin);
+    for (let i = 0; i < group.length; i += 1) {
+      for (const other of pins) {
+        if (grouped.has(other)) continue;
+        if (Math.hypot(group[i].center.x - other.center.x, group[i].center.y - other.center.y) > radius) continue;
+        grouped.add(other);
+        group.push(other);
+      }
+    }
+    groups.push(group);
+  }
+  return groups;
+}
+
+export type FanLayout = {
+  origin: MapPoint;
+  /** Satellite centres in fan order: clockwise from the top. `angle` is the direction outward from the origin. */
+  points: Array<MapPoint & { angle: number }>;
+  /** Hit radius that keeps neighbouring satellites' targets apart. */
+  hitRadius: number;
+  radiusX: number;
+  radiusY: number;
+};
+
+// Ramanujan's approximation of an ellipse's perimeter.
+const ellipsePerimeter = (a: number, b: number) => (
+  Math.PI * (3 * (a + b) - Math.sqrt((3 * a + b) * (a + 3 * b)))
+);
+
+/**
+ * Lays out `count` satellites around `center`, about `spacing` apart along the
+ * ring, on a circle no smaller than `minRadius`. A circle that would not fit
+ * the view, with `reach` kept clear around each satellite for its touch
+ * target, flattens into an ellipse that keeps the spacing where the view has
+ * room, and the fan moves inward so every satellite stays on the map.
+ * Satellites sit at equal distances along the ring, starting at the top.
+ */
+export function layoutFan(options: {
+  count: number;
+  center: MapPoint;
+  view: MapBox;
+  spacing: number;
+  minRadius: number;
+  reach: number;
+}): FanLayout {
+  const { center, view, spacing, minRadius, reach } = options;
+  const count = Math.max(1, Math.floor(options.count));
+  const wanted = Math.max(minRadius, (count * spacing) / (2 * Math.PI));
+  const roomX = Math.max(0.5, view.width / 2 - reach);
+  const roomY = Math.max(0.5, view.height / 2 - reach);
+  let radiusX = Math.min(wanted, roomX);
+  let radiusY = Math.min(wanted, roomY);
+  const needed = count * spacing;
+  if (ellipsePerimeter(radiusX, radiusY) < needed) {
+    // Lengthen whichever axis still has room, as little as the ring needs.
+    const growX = radiusX < roomX;
+    const fixed = growX ? radiusY : radiusX;
+    let low = growX ? radiusX : radiusY;
+    let high = growX ? roomX : roomY;
+    if (ellipsePerimeter(high, fixed) <= needed) {
+      low = high;
+    } else {
+      for (let i = 0; i < 40; i += 1) {
+        const mid = (low + high) / 2;
+        if (ellipsePerimeter(mid, fixed) < needed) low = mid;
+        else high = mid;
+      }
+      low = high;
+    }
+    if (growX) radiusX = low;
+    else radiusY = low;
+  }
+
+  const clampAxis = (value: number, start: number, size: number, radius: number) => {
+    const margin = radius + reach;
+    return size < margin * 2 ? start + size / 2 : Math.min(Math.max(value, start + margin), start + size - margin);
+  };
+  const origin = {
+    x: clampAxis(center.x, view.x, view.width, radiusX),
+    y: clampAxis(center.y, view.y, view.height, radiusY),
+  };
+
+  // Walk the ring in small steps from the top, clockwise in screen terms, and
+  // drop a satellite every perimeter / count along it.
+  const steps = 720;
+  const samples: Array<{ t: number; length: number }> = [{ t: -Math.PI / 2, length: 0 }];
+  let previous = { x: 0, y: -radiusY };
+  let length = 0;
+  for (let i = 1; i <= steps; i += 1) {
+    const t = -Math.PI / 2 + (i / steps) * Math.PI * 2;
+    const next = { x: Math.cos(t) * radiusX, y: Math.sin(t) * radiusY };
+    length += Math.hypot(next.x - previous.x, next.y - previous.y);
+    samples.push({ t, length });
+    previous = next;
+  }
+  const perimeter = length;
+  const points: FanLayout['points'] = [];
+  let sample = 0;
+  for (let k = 0; k < count; k += 1) {
+    const target = (k / count) * perimeter;
+    while (sample < samples.length - 2 && samples[sample + 1].length < target) sample += 1;
+    const a = samples[sample];
+    const b = samples[sample + 1];
+    const span = b.length - a.length;
+    const t = span > 0 ? a.t + ((target - a.length) / span) * (b.t - a.t) : a.t;
+    points.push({
+      x: origin.x + Math.cos(t) * radiusX,
+      y: origin.y + Math.sin(t) * radiusY,
+      angle: Math.atan2(Math.sin(t) * radiusX, Math.cos(t) * radiusY),
+    });
+  }
+  return {
+    origin,
+    points,
+    hitRadius: Math.min(reach, 0.45 * (perimeter / count)),
+    radiusX,
+    radiusY,
+  };
+}
+
+/**
+ * Moves overlapping labels apart vertically. Labels are handled top to
+ * bottom; each takes the smallest shift that clears every label placed before
+ * it and keeps it within `bounds`, or, when no such spot exists, the in-bounds
+ * shift with the least overlap. Returns each label's shift, in input order,
+ * and whether every label ended clear of the others (when not, a caller should
+ * offer the choice another way, since overlapping names are ambiguous targets).
+ */
+export function separateLabels(
+  boxes: readonly MapBox[],
+  bounds: { top: number; bottom: number },
+  gap: number
+): { shifts: number[]; clear: boolean } {
+  const overlapArea = (a: MapBox, b: MapBox) => {
+    const width = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
+    const height = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
+    return width > 0 && height > 0 ? width * height : 0;
+  };
+  const shifts = boxes.map(() => 0);
+  const placed: MapBox[] = [];
+  let clear = true;
+  const order = boxes.map((box, index) => ({ box, index })).sort((a, b) => a.box.y - b.box.y);
+  for (const { box, index } of order) {
+    const candidates = new Set<number>([0]);
+    for (const other of placed) {
+      if (box.x >= other.x + other.width || other.x >= box.x + box.width) continue;
+      candidates.add(other.y + other.height + gap - box.y);
+      candidates.add(other.y - gap - (box.y + box.height));
+    }
+    const fits = (shift: number) => box.y + shift >= bounds.top && box.y + shift + box.height <= bounds.bottom;
+    const options = [...candidates].filter(fits).sort((a, b) => Math.abs(a) - Math.abs(b));
+    if (!options.length) options.push(0);
+    const cost = (shift: number) => placed.reduce((sum, other) => sum + overlapArea({ ...box, y: box.y + shift }, other), 0);
+    const clearShift = options.find((shift) => cost(shift) === 0);
+    if (clearShift === undefined) clear = false;
+    const best = clearShift ?? options.reduce((a, b) => (cost(b) < cost(a) ? b : a));
+    shifts[index] = best;
+    placed.push({ ...box, y: box.y + best });
+  }
+  return { shifts, clear };
+}
+
+/**
+ * Whether a fan laid out by `layoutFan` gives each satellite a full touch
+ * target (`reach` is half of one). A stack too large for its map gets a list
+ * instead, since a fan would shrink its targets below what a finger can hit.
+ */
+export function fanHasRoomForTargets(layout: Pick<FanLayout, 'hitRadius'>, reach: number): boolean {
+  return layout.hitRadius >= reach * 0.9;
+}
+
+/**
+ * The place a point on the location picker's map stands for, or null when the
+ * point lies off the drawn map. A drag past the map's edge is no place, so it
+ * must never read as latitude 90 or longitude -180.
+ */
+export function pickerPointToLocation(
+  point: MapPoint,
+  map: { width: number; height: number; worldHeight: number }
+): { lat: number; long: number } | null {
+  if (!(point.x >= 0 && point.x <= map.width && point.y >= 0 && point.y <= map.height)) return null;
+  return {
+    lat: 90 - (point.y / map.worldHeight) * 180,
+    long: (point.x / map.width) * 360 - 180,
+  };
+}

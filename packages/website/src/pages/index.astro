@@ -71,7 +71,11 @@ const heroTitle = homePage.hero?.title || homePage.title || 'A global regenerati
 const heroDek = homePage.hero?.body || homePage.hero?.dek ||
   `Drop in to see who you connect with - by theme, role, and what you bring or seek. ${activeChapterCount} chapters and counting.`;
 
-const primaryCta = homePage.hero?.primaryCta ?? { label: 'Find your people', href: '/garden' };
+// The hero's primary action browses the map when it points at it; HomeMap
+// then opens its node list. Any other URL is an ordinary link.
+const MAP_ANCHOR = '#network-map';
+const primaryCta = homePage.hero?.primaryCta ?? { label: 'Find your people', href: MAP_ANCHOR };
+const primaryBrowsesMap = primaryCta.href === MAP_ANCHOR;
 const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', href: '/chapters' };
 ---
 
@@ -97,7 +101,11 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
           <Text variant="body-lg" class="gp-home-hero-dek">{heroDek}</Text>
 
           <div class="gp-home-hero-actions">
-            <Button type="button" data-home-map-open aria-haspopup="dialog">{primaryCta.label}</Button>
+            <Button
+              href={primaryCta.href}
+              data-home-map-browse={primaryBrowsesMap ? '' : undefined}
+              aria-haspopup={primaryBrowsesMap ? 'dialog' : undefined}
+            >{primaryCta.label}</Button>
             <Button href={secondaryCta.href} variant="ghost">{secondaryCta.label}</Button>
           </div>
         </div>
@@ -382,9 +390,9 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
     }
   }
 
+  /* The map sizes itself (see HomeMap); the hero only gives it the full row. */
   .gp-home-hero-map {
-    width: min(100%, 128dvh);
-    margin: 0 auto;
+    width: 100%;
   }
 
   .gp-home-hero-inner :global(.gp-home-hero-dek) {
