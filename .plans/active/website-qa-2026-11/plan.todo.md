@@ -24,7 +24,7 @@ Batch A starts first because it covers the broken interactions and the accuracy 
 ## Merge order
 
 1. This hub (plans only).
-2. Website-only pull requests in any order: `qa-stories`, `qa-guilds`, `qa-home-garden`, `qa-library`, `qa-assessment`, `qa-brand-shell`. Two pairs have an order: `qa-home-garden` before `qa-brand-shell` (both touch `social-links.json`), and the ecoregion credit leaves the footer only in the `qa-map-data` PR, together with the licensed layer, so the site never shows the layer without its CC BY 4.0 attribution.
+2. Website-only pull requests in any order: `qa-stories`, `qa-guilds`, `qa-home-garden`, `qa-library`, `qa-assessment`, `qa-brand-shell`. Two pairs have an order: `qa-home-garden` before `qa-brand-shell` (both touch `social-links.json`), and the ecoregion credit leaves the footer only in the `qa-map-data` PR, together with the licensed layer, so the site never shows the layer without its CC BY 4.0 attribution. A merge check on 2026-11-07 found exactly one conflict among the open PRs: #35 and #39 both edit the footer's bottom row in `SiteFooter.astro`. Merge #35 first, then rebase #39 on `main`, keeping its new bottom row without the credit line.
 3. `qa-map-data`: it changes `network-agent`, so merging it deploys the agent. Watch the deploy, then apply the approved data repair.
 4. Directus change sets from `qa-guilds` and `qa-chapters`, applied after Afo approves them. They reach the site on the next hourly build.
 5. Wave 2: `qa-map-polish`, then `qa-system-pass` last.
@@ -78,7 +78,7 @@ Batch A starts first because it covers the broken interactions and the accuracy 
 
 ### `qa-brand-shell` (findings 6, 7, 8, 16, 17, 20)
 
-- [ ] Plain background on every page (D4); remove the glow and texture layers that cause the seams. The seam showed at wide widths, so check 1920 as well as 375, 1024 and 1440 (Brave's window is about 1460 wide, so load 1920 in a same-origin iframe of that width scaled down to fit).
+- [ ] Background (D4, changed on 2026-11-07): Afo kept the illustrated background, so remove what causes the seams (glows painted in boxes narrower than the screen, and the tiled texture) instead of going plain. The seam showed at wide widths, so check 1920 as well as 375, 1024 and 1440 (Brave's window is about 1460 wide, so load 1920 in a same-origin iframe of that width scaled down to fit).
 - [ ] One rule for external links: new tab, `rel="noopener"`, and an accessible "opens in a new tab" hint. Prefer a build-time step over client script.
 - [ ] Footer: Farcaster instead of Warpcast, LinkedIn, YouTube, Luma, Code of Conduct; Telegram from `social-links.json`; friendlier bottom row. Leave the ecoregion credit line to `qa-map-data` (it goes with the layer); rebase on `main` before editing the bottom row if that PR has merged. Edit `social-links.json` only after the `qa-home-garden` PR has merged, rebased on `main`.
 - [ ] Brand kit (I3): current logo in the header, favicon, touch icon and default share image; book art only where a book is the subject.
@@ -125,9 +125,9 @@ One parent issue in P-PRD-19 for this hub, and one child per session, created wh
 | PRD-1414 | `qa-assessment` (batch B, ready to start) |
 | PRD-1415 | `qa-brand-shell` (batch B, started 2026-11-07) |
 
-`qa-chapters` (PRD-625) is ready as a start card.
+`qa-chapters` (PRD-625) started on 2026-11-07. `qa-assessment` (PRD-1414) is still a start card.
 
-Pull requests so far: #33 this hub, #34 `qa-home-garden`, #35 `qa-map-data` (its nine-row coordinate repair is approved by Afo and runs after #35 deploys), #36 `qa-guilds` (its 42-row Directus change set: 40 rows approved by Afo on 2026-11-06 to apply after #36 merges; 2 Grant Ships rows for the dead `checker.gitcoin.co` link still need his OK), #37 `qa-stories`, #38 `qa-library` (also updates `scripts/public-content-contract.test.ts`, which pinned the old episode count; named in its PR).
+Pull requests so far: #33 this hub, #34 `qa-home-garden`, #35 `qa-map-data` (its nine-row coordinate repair is approved by Afo and runs after #35 deploys), #36 `qa-guilds` (its 42-row Directus change set: 40 rows approved by Afo on 2026-11-06 to apply after #36 merges; 2 Grant Ships rows for the dead `checker.gitcoin.co` link still need his OK), #37 `qa-stories`, #38 `qa-library` (also updates `scripts/public-content-contract.test.ts`, which pinned the old episode count; named in its PR), #39 `qa-brand-shell` (background seams fixed, build-time external-link rule in `src/middleware.ts`, footer links, brand marks from the Figma "Marketing" kit, both approved by Afo on screenshots; after #34 merges it moves the footer's literal links into `social-links.json`, whose `hub` URL `hub.greenpill.network` does not load).
 | PRD-625 | `qa-chapters` (reused) |
 | PRD-739 | `qa-map-polish` (reused) |
 
