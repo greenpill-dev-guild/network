@@ -4,7 +4,7 @@ Findings 6, 7, 8, 16, 17 and 20 from `reports/2026-11-06-qa-findings.md`, decisi
 
 ## Changed
 
-Pull request: see the PR linked from PRD-1415 (branch `claude/awesome-yalow-9e4216`, not merged).
+Pull request: https://github.com/greenpill-dev-guild/network/pull/39 (branch `claude/awesome-yalow-9e4216`, not merged).
 
 ### Background (finding 8, D4)
 
