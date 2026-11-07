@@ -41,12 +41,39 @@ export function scoreAssessment(answers: AssessmentAnswers): AssessmentResult {
 }
 
 /**
- * One question's picks as stored on the device, from either payload shape:
+ * One question's picks, from the page or from either stored payload shape:
  * version 1 kept one path string per question, version 2 keeps an array of
  * paths. Unknown and repeated values are dropped, and a single-choice
  * question keeps only its first valid pick.
  */
-export function storedAssessmentPicks(value: unknown, multiple: boolean): AssessmentPath[] {
+export function assessmentPicks(value: unknown, multiple: boolean): AssessmentPath[] {
   const picks = [...new Set((Array.isArray(value) ? value : [value]).filter(isAssessmentPath))];
   return multiple ? picks : picks.slice(0, 1);
+}
+
+/**
+ * The answers to show once the browser script starts. On a slow load a
+ * visitor can pick answers before the script runs, so a question that
+ * already has a pick on the page keeps it, and stored picks fill only the
+ * questions without one. `changed` is true when the merged answers differ
+ * from the stored ones, so the caller saves them and the early picks
+ * survive a reload.
+ */
+export function restoreAssessmentAnswers(
+  questions: ReadonlyArray<{ id: string; multiple: boolean }>,
+  pagePicks: Readonly<Record<string, readonly unknown[]>>,
+  storedAnswers: unknown,
+): { answers: AssessmentAnswers; changed: boolean } {
+  const stored: Record<string, unknown> =
+    storedAnswers && typeof storedAnswers === 'object' ? (storedAnswers as Record<string, unknown>) : {};
+  const answers: AssessmentAnswers = {};
+  let changed = false;
+  for (const { id, multiple } of questions) {
+    const saved = assessmentPicks(stored[id], multiple);
+    const onPage = assessmentPicks(pagePicks[id] ?? [], multiple);
+    const picks = onPage.length > 0 ? onPage : saved;
+    if (picks.length !== saved.length || picks.some((path) => !saved.includes(path))) changed = true;
+    if (picks.length > 0) answers[id] = picks;
+  }
+  return { answers, changed };
 }

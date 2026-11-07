@@ -274,8 +274,8 @@ const questionCount = QUESTIONS.length;
 <script>
   import {
     isAssessmentPath,
+    restoreAssessmentAnswers,
     scoreAssessment,
-    storedAssessmentPicks,
     type AssessmentAnswers as Answers,
     type AssessmentResult as Result,
   } from '../../lib/garden-assessment';
@@ -445,19 +445,20 @@ const questionCount = QUESTIONS.length;
       firstOption?.focus();
     });
 
-    // Restore the latest local state: re-check saved answers, and if the
-    // assessment was completed, show the recomputed result after refresh.
+    // Restore the latest local state. Picks made before this script ran (a
+    // slow load) stay; saved answers fill only the questions without one,
+    // and a merged state is saved. If every question is answered, show the
+    // recomputed result.
     const stored = loadStored();
-    if (stored?.answers && typeof stored.answers === 'object') {
-      const storedAnswers = stored.answers;
-      for (const { id, multiple } of questions) {
-        const picks: string[] = storedAssessmentPicks(storedAnswers[id], multiple);
-        for (const input of inputsFor(id)) input.checked = picks.includes(input.value);
-      }
-      const answers = readAnswers();
-      if (Object.keys(answers).length === questionCount) {
-        showResult(scoreAssessment(answers), typeof stored.updatedAt === 'string' ? stored.updatedAt : undefined);
-      }
+    const restored = restoreAssessmentAnswers(questions, readAnswers(), stored?.answers);
+    for (const { id } of questions) {
+      const picks: string[] = restored.answers[id] ?? [];
+      for (const input of inputsFor(id)) input.checked = picks.includes(input.value);
+    }
+    if (restored.changed) save(restored.answers, null);
+    if (Object.keys(restored.answers).length === questionCount) {
+      const savedAt = !restored.changed && typeof stored?.updatedAt === 'string' ? stored.updatedAt : undefined;
+      showResult(scoreAssessment(restored.answers), savedAt);
     }
     syncProgress();
 
