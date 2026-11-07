@@ -16,6 +16,7 @@ import podcastFeed from '../data/podcast-feed-snapshot.json';
 import socialLinks from '../content/social-links.json';
 import { getOperationalChapters, getOperationalGuilds } from '../lib/operational-content';
 import { publicGuildPath } from '../lib/public-routes';
+import { gardenRampSteps, gardenStepHref } from '../lib/garden-ramp';
 
 const chapters = await getOperationalChapters();
 const guilds = await getOperationalGuilds();
@@ -63,10 +64,8 @@ const ecosystemRows = [
   .map((row) => ({ ...row, items: (row.items as EcosystemEntry[]).filter(isListableOrg) }))
   .filter((row) => row.items.length > 0);
 
-const gardenSteps = (garden.steps ?? []).slice(0, 4);
-// The Telegram invite lives only in social-links.json (see garden/index.astro).
-const gardenStepHref = (step: (typeof gardenSteps)[number]) =>
-  step.surfaceType === 'telegram' ? socialLinks.telegram : step.cta?.href || '';
+// With no steps in garden.json the home page leaves the ramp section out.
+const gardenSteps = gardenRampSteps(garden.steps).slice(0, 4);
 
 const heroTitle = homePage.hero?.title || homePage.title || 'A global regenerative network.';
 const heroDek = homePage.hero?.body || homePage.hero?.dek ||
@@ -301,41 +300,43 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
       </Container>
     </section>
 
-    <section class="gp-home-section gp-home-garden" id="garden-ramp">
-      <Container size="2xl">
-        <div class="gp-home-section-head">
-          <div class="gp-home-section-head-copy">
-            <Overline>Participate · Enter the Garden</Overline>
-            <Text variant="h2">Meet the network where you are.</Text>
-            <Text variant="body" class="gp-home-section-dek">
-              Four public, low-pressure ways into Greenpill. Pick whichever matches the moment you are in.
-            </Text>
+    {gardenSteps.length > 0 && (
+      <section class="gp-home-section gp-home-garden" id="garden-ramp">
+        <Container size="2xl">
+          <div class="gp-home-section-head">
+            <div class="gp-home-section-head-copy">
+              <Overline>Participate · Enter the Garden</Overline>
+              <Text variant="h2">Meet the network where you are.</Text>
+              <Text variant="body" class="gp-home-section-dek">
+                Four public, low-pressure ways into Greenpill. Pick whichever matches the moment you are in.
+              </Text>
+            </div>
+            <ArrowLink href="/garden">Open the Garden</ArrowLink>
           </div>
-          <ArrowLink href="/garden">Open the Garden</ArrowLink>
-        </div>
 
-        <div class="gp-home-garden-grid">
-          {gardenSteps.map((step, index) => {
-            const href = gardenStepHref(step);
-            return (
-              <article class="gp-home-garden-card">
-                <header class="gp-home-garden-head">
-                  <span class="gp-home-garden-num">{String(step.level ?? index + 1).padStart(2, '0')}</span>
-                  {step.friction && <Text variant="mono">{step.friction}</Text>}
-                </header>
-                <Text variant="h3" class="gp-home-garden-title">{step.title}</Text>
-                <Text variant="body-sm" class="gp-home-garden-body">{step.body}</Text>
-                <footer class="gp-home-garden-foot">
-                  {href && step.cta?.label && (
-                    <Button href={href} variant="ghost">{step.cta.label}</Button>
-                  )}
-                </footer>
-              </article>
-            );
-          })}
-        </div>
-      </Container>
-    </section>
+          <div class="gp-home-garden-grid">
+            {gardenSteps.map((step, index) => {
+              const href = gardenStepHref(step, socialLinks.telegram);
+              return (
+                <article class="gp-home-garden-card">
+                  <header class="gp-home-garden-head">
+                    <span class="gp-home-garden-num">{String(step.level ?? index + 1).padStart(2, '0')}</span>
+                    {step.friction && <Text variant="mono">{step.friction}</Text>}
+                  </header>
+                  <Text variant="h3" class="gp-home-garden-title">{step.title}</Text>
+                  <Text variant="body-sm" class="gp-home-garden-body">{step.body}</Text>
+                  <footer class="gp-home-garden-foot">
+                    {href && step.cta?.label && (
+                      <Button href={href} variant="ghost">{step.cta.label}</Button>
+                    )}
+                  </footer>
+                </article>
+              );
+            })}
+          </div>
+        </Container>
+      </section>
+    )}
   </main>
 </GpLayout>
 

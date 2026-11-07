@@ -16,6 +16,13 @@ import {
   buildDirectusOperationalPermissionPlan,
 } from './directus-operational-content-setup.ts';
 import {
+  DEFAULT_STEWARD_CALL_HREF,
+  gardenHeroCta,
+  gardenRampSteps,
+  gardenStepHref,
+  gardenStewardCallHref,
+} from '../packages/website/src/lib/garden-ramp.ts';
+import {
   loadChapterEnrichment,
 } from './directus-chapter-enrichment.ts';
 import {
@@ -202,6 +209,45 @@ test('public content references only generated chapters and published stories', 
   }
 
   assert.deepEqual(problems, []);
+});
+
+test('the Garden ramp is left out, not broken, when garden.json has no steps', () => {
+  // garden.json without a steps list, with an empty list, and with null.
+  for (const configured of [undefined, [], null]) {
+    const steps = gardenRampSteps(configured);
+    assert.deepEqual(steps, []);
+    assert.equal(gardenStewardCallHref(steps), DEFAULT_STEWARD_CALL_HREF);
+    // "Start with Step 1" would point at an anchor the page no longer has.
+    assert.equal(gardenHeroCta({ label: 'Start with Step 1', href: '#step-1' }, steps.length), null);
+    assert.equal(gardenHeroCta(undefined, steps.length), null);
+  }
+  // A hero button that leads elsewhere still renders.
+  assert.deepEqual(gardenHeroCta({ label: 'Browse chapters', href: '/chapters' }, 0), {
+    label: 'Browse chapters',
+    href: '/chapters',
+  });
+});
+
+test('the Garden ramp keeps configured steps and takes the Telegram invite from social links', () => {
+  const telegramInvite = 'https://t.me/+approvalGatedInvite';
+  const configured = [
+    { level: 1, surfaceType: 'email', cta: { label: 'Subscribe on Paragraph', href: 'https://paragraph.com/@greenpill/subscribe' } },
+    { level: 2, surfaceType: 'telegram', cta: { label: 'Open Telegram', href: 'https://t.me/+staleInvite' } },
+    { level: 4, surfaceType: 'steward-call', cta: { label: 'Book a call', href: 'https://calendar.example/steward' } },
+  ];
+  const steps = gardenRampSteps(configured);
+
+  assert.deepEqual(steps, configured);
+  assert.deepEqual(
+    steps.map((step) => gardenStepHref(step, telegramInvite)),
+    ['https://paragraph.com/@greenpill/subscribe', telegramInvite, 'https://calendar.example/steward'],
+  );
+  assert.equal(gardenStewardCallHref(steps), 'https://calendar.example/steward');
+  assert.deepEqual(gardenHeroCta({ label: 'Start with Step 1', href: '#step-1' }, steps.length), {
+    label: 'Start with Step 1',
+    href: '#step-1',
+  });
+  assert.deepEqual(gardenHeroCta(undefined, steps.length), { label: 'Start with Step 1', href: '#step-1' });
 });
 
 test('operational content snapshot is public-safe and derived from approved operational collections', async () => {
