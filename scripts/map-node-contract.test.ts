@@ -1495,7 +1495,14 @@ test('home map location picker searches, confirms, then reverse-confirms a dragg
   assert.match(component, /searchVersion !== locationSearchVersion/);
   assert.match(component, /locationQuery\?\.addEventListener\('input',[\s\S]*?invalidateLocationRequests\(\)[\s\S]*?clearLocationSelection\(\)/);
   assert.match(component, /const clearLocationConfirmation[\s\S]*?locationConfirmationInput\.value = ''/);
-  assert.match(component, /const clearLocationSelection[\s\S]*?clearLocationConfirmation\(\)[\s\S]*?locationPin\.hidden = true/);
+  // Keep the ordering check inside this function so later pin resets cannot satisfy it,
+  // and compare against the first pin hide so an earlier hide cannot slip through.
+  const clearLocationSelection = component.match(/const clearLocationSelection = \(\) => \{([\s\S]*?)\n    \};/)?.[1] ?? '';
+  const confirmationClearedAt = clearLocationSelection.search(/clearLocationConfirmation\(\)/);
+  const firstPinHideAt = clearLocationSelection.search(/locationPin(?:\.setAttribute\(['"]hidden['"],\s*['"][^'"]*['"]\)|\.hidden\s*=\s*true\b)/);
+  assert.ok(confirmationClearedAt >= 0, 'clearLocationSelection should clear the location confirmation');
+  assert.ok(firstPinHideAt >= 0, 'clearLocationSelection should hide the location pin');
+  assert.ok(firstPinHideAt > confirmationClearedAt, 'clearLocationSelection should clear the confirmation before it first hides the pin');
   assert.match(component, /resetWalkthrough[\s\S]*?invalidateLocationRequests\(\)/);
   assert.match(component, /pointerdown[\s\S]*?invalidateLocationRequests\(\)/);
   assert.match(component, /pointercancel[\s\S]*?Pin adjustment canceled/);
