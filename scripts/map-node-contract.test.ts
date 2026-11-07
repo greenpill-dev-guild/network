@@ -889,6 +889,7 @@ test('home map intake requires a valid email and stores local pending only after
   assert.match(component, /<button type="button" class="gp-home-map-legend-reset" data-home-map-filter-reset hidden>Show all<\/button>/);
   assert.match(component, /const resetMapFilters = \(\) => \{[\s\S]*?activeTypeFilter = '';[\s\S]*?activeThemes\.add\(theme\)[\s\S]*?applyMapFilters\(\);/);
   assert.match(component, /syncFilterStatus\(visibleNodeIds\.size, nodeTypeById\.size\)/);
+  assert.match(component, /filterNote\.dataset\.empty = visibleCount === 0 \? 'true' : 'false'/);
   assert.match(component, /const dropPointerFocus = \(\) => \{[\s\S]*?pointerFocusTarget = null;[\s\S]*?hoveredStackKey = '';[\s\S]*?if \(selectedFocusTarget\) return;/);
   assert.match(component, /root\.addEventListener\('mouseleave', dropPointerFocus\)/);
   assert.match(component, /window\.addEventListener\('scroll', \(\) => \{[\s\S]*?dropPointerFocus\(\);[\s\S]*?\{ passive: true \}\)/);
@@ -1243,7 +1244,21 @@ test('home map mobile touch mode supports bounded zoom and compact connection ro
   assert.match(component, /@container \(max-width: 720px\)/);
   assert.match(component, /\.gp-home-map-thread\.is-entering\s*{[\s\S]*?animation:\s*none/);
   assert.match(component, /\.gp-home-map-selected-edge-list:not\(\[hidden\]\)\s*{[\s\S]*?display:\s*block/);
-  assert.match(component, /\.gp-home-map-canvas\.has-selected-node \.gp-home-map-controls\s*{[\s\S]*?--gp-map-selected-clearance/);
+  // Compact maps keep their chrome off the drawing: the canvas adds a band
+  // below the map for the legend row and the controls row, and the band grows
+  // to fit the selected node's bar, which takes the controls' place.
+  const compactCss = component.match(/@container \(max-width: 720px\) \{([\s\S]*?)\n  \}\n/)?.[1] ?? '';
+  assert.match(compactCss, /\.gp-home-map-canvas\s*{[\s\S]*?aspect-ratio:\s*auto;[\s\S]*?block-size:\s*calc\(44cqw \+ var\(--gp-map-edge\) \* 4 \+ var\(--gp-map-row\) \+ var\(--gp-map-lower\)\)/);
+  assert.match(compactCss, /\.gp-home-map-canvas\.has-selected-node\s*{[\s\S]*?--gp-map-lower:\s*max\(var\(--gp-map-row\), calc\(var\(--gp-map-selected-clearance, 186px\) - 18px\)\)/);
+  assert.match(compactCss, /\.gp-home-map-svg\s*{[\s\S]*?inset:\s*var\(--gp-map-edge\) 0 auto;[\s\S]*?aspect-ratio:\s*var\(--gp-map-aspect\)/);
+  assert.match(compactCss, /\.gp-home-map-legend,\s*\.gp-home-map-canvas\.has-selected-node \.gp-home-map-legend\s*{[\s\S]*?inset-block-end:\s*calc\(var\(--gp-map-edge\) \* 2 \+ var\(--gp-map-lower\)\)/);
+  assert.match(compactCss, /\.gp-home-map-canvas\.has-selected-node \.gp-home-map-controls\s*{\s*display:\s*none;/);
+  assert.doesNotMatch(compactCss, /aspect-ratio:\s*4 \/ 3/);
+  // Narrow maps show legend dots and counts only (DESIGN.md), keeping the
+  // label for assistive technology, and the Show all chip ends the row.
+  assert.match(component, /@container \(max-width: 520px\) \{\s*\.gp-home-map-legend-label\s*{[\s\S]*?clip:\s*rect\(0 0 0 0\)/);
+  assert.match(compactCss, /\.gp-home-map-legend-reset\s*{\s*order:\s*1;/);
+  assert.match(compactCss, /\.gp-home-map-filter-note\[data-empty='true'\]:not\(\[hidden\]\)\s*{[\s\S]*?display:\s*flex/);
   assert.match(component, /\.gp-home-map-selected-edge-items\s*{[\s\S]*?overflow-x:\s*auto/);
   assert.match(component, /new ResizeObserver\(scheduleMapResizeSync\)\.observe\(root\)/);
   assert.doesNotMatch(component, /data-filter-toggle="type"/);
