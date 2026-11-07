@@ -1,6 +1,6 @@
 # Handoff: qa-map-data (PRD-1409)
 
-Findings 1 and 2 (decision D2). Branch `claude/qa-map-data-5361dc`, pull request https://github.com/greenpill-dev-guild/network/pull/35 (not merged; merging deploys `network-agent`). Evidence files are in `../artifacts/qa-map-data/`.
+Findings 1 and 2 (decision D2). Branch `claude/qa-map-data-5361dc`, pull request https://github.com/greenpill-dev-guild/network/pull/35 (merged as `1358466` on 2026-11-07, deployed as `network-agent` v79; the approved repair ran right after). Evidence files are in `../artifacts/qa-map-data/`.
 
 ## Changed
 
@@ -83,9 +83,16 @@ Proposed points come from OpenStreetMap through Nominatim, the geocoder the map'
 
 ## Production change set
 
-**Status: approved by Afo on 2026-11-06 in the `qa-map-data` session ("Approve all nine"), to run right after #35 deploys `network-agent`.** Not applied yet; nothing has been written to production. A read-only check of live `/map/state` at 2026-11-07 00:31 UTC found all nine rows still at the reviewed place text and coordinates. Only latitude and longitude change; place text, names and private fields stay as they are. Values are rounded to the column's six decimals.
+**Status: applied on 2026-11-07 at about 07:01 UTC, run id `0f27b0a7-439b-494b-bbbb-201c5a01f930`.** Afo approved it in the `qa-map-data` session on 2026-11-06 ("Approve all nine"), to run right after #35 deployed `network-agent`.
 
-| Node id | Public name | Place (unchanged) | Current | Proposed | Moves | Derived from |
+- #35 merged as `1358466` at 06:54:38 UTC. Release v79 finished at 07:00:31, and `/ready` and the Fly health check passed. Live `/map/state` then left out the two 0,0 nodes and every region label, so the new code was serving.
+- The dry run found 9 of 9 rows still at the reviewed place text and coordinates. `--apply` changed 9 of 9 in one transaction and wrote nine audit rows. A second dry run found none left at the old values.
+- Live `/map/state` at 07:02:16 UTC: 29 nodes (12 chapters, 17 people), all nine at the proposed points, none at 0,0 or on an edge, no region labels.
+- Output: `../artifacts/qa-map-data/prod-repair-2026-11-07.out`. To undo, run the same runner with `--revert 0f27b0a7-439b-494b-bbbb-201c5a01f930`. This runner's revert takes only the run id and restores every row still at its repaired point, without comparing place text, so it cannot leave a row out: before running it, compare each row's current place with the place in that output, and **stop if any place differs**, or the old point returns beside the corrected place. The repo's `bun run db:repair:map-node-locations -- --revert <run-id>` is the guarded alternative: in one statement it reverts only rows whose place and point both still match the run (this run recorded the same place before and after), and it also writes the recorded place back, so review it before use. It needs a database connection, which the dev machine does not have.
+
+Only latitude and longitude changed; place text, names and private fields stayed as they were. Values are rounded to the column's six decimals.
+
+| Node id | Public name | Place (unchanged) | Before repair | After repair (2026-11-07) | Moves | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | `f52473d0-4d12-4e4e-a726-0dbb62d870d2` | Ash | Florida | 90, 97.76261 | 27.756767, -81.463984 | 6,921 km | OSM relation 162050 (state) |
 | `79b7119a-6d6f-4680-9d6d-30fc7b509f43` | Swift Evo | Taiwan | 90, 176.912492 | 23.973937, 120.982018 | 7,342 km | OSM relation 449220 (country) |
@@ -106,7 +113,7 @@ Not in the change set:
 
 ## Open items and decisions needed
 
-1. **Change set (input I5): approved** by Afo on 2026-11-06, all nine rows, to run after #35 deploys. Order: merge #33, then #35; check the `network-agent` release and `/ready`; run the dry run, then `--apply`; keep the printed run id; check live `/map/state`.
+1. **Change set (input I5): done.** Applied on 2026-11-07 with run id `0f27b0a7-439b-494b-bbbb-201c5a01f930` and checked on live `/map/state` (see Production change set). One side effect: the repair changed these nine nodes, so a pending owner update request for any of them would now fail as stale when approved. The steward declines it and then tells the owner to send it again: declining does not notify the owner (the agent sends owners no decline notice), so without that message the update stays unapplied. The blocked count in item 5 would show whether any exist.
 2. **Duplicates: settled by that approval.** Both Victor Porton rows and the kitblake Rotterdam row move; none are archived. Archiving a duplicate later stays possible in Directus.
 3. **Production flag.** Please confirm `MAP_LOCATION_CONFIRMATION_REQUIRED` on `network-agent` is `true` or unset. Its value is a secret (Fly shows only a digest), and a validation-only production probe was blocked by the permission classifier, so I could not check it. After this change the raw path refuses 0,0, out-of-range and edge points either way, but while it is open it still accepts any free-text place with any plausible point, which is how the Eve, Victor Porton and Dida rows happened.
 4. **Decision needed: a database guard for approvals made in Directus.** Stewards approve pending submissions and owner update requests in Directus, which writes straight to the database, so none of the agent's checks run. Migration 007's trigger copies an update request's proposed point into the node as it is. Stewards cannot edit coordinates there (they may change `status`, notes and review fields only), so the exposure is approving a row saved with a bad point before this change deploys. Proposed, not in this PR: one trigger on `intake.map_node_submissions` that refuses any write leaving an approved node at a missing, out-of-range or 0,0 point. Approving such a pending node then fails, and so does approving an update request that would move a node there, because the apply function updates the node inside the same statement and the whole approval rolls back. Declining, archiving and the approved repair still work. It replaces the earlier idea of a not-0,0 `NOT VALID` check, which would also have blocked declining a 0,0 row. Limits:

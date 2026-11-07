@@ -131,16 +131,16 @@ function primaryInitiativeHref(initiative: any) {
           )}
 
           {chapterImage && (
-            <figure class="gp-chapter-hero-media">
+            <Card as="figure" padded="none" class="gp-chapter-hero-media">
               {chapterImageSource ? (
-                <a href={chapterImageSource} target="_blank" rel="noopener">
+                <a href={chapterImageSource}>
                   <img src={chapterImage} alt={chapterImageAlt} loading="eager" decoding="async" />
                 </a>
               ) : (
                 <img src={chapterImage} alt={chapterImageAlt} loading="eager" decoding="async" />
               )}
               {media.imageCredit && <figcaption>{media.imageCredit}</figcaption>}
-            </figure>
+            </Card>
           )}
         </div>
       </Container>
@@ -151,15 +151,14 @@ function primaryInitiativeHref(initiative: any) {
         <Container size="2xl">
           <div class="gp-chapter-section-head">
             <Overline>Public proof</Overline>
-            <Text variant="caption">Source-backed evidence anchoring this chapter profile.</Text>
           </div>
           <div class="gp-chapter-proof-grid">
             {proofSignals.map((signal: any) => (
-              <a class="gp-chapter-proof" href={signal.href || '#'} target={signal.href ? '_blank' : undefined} rel="noopener">
+              <Card href={signal.href || undefined} stack="sm">
                 <Text variant="mono">{signal.source || 'Public source'}</Text>
-                <Text variant="title-md" class="gp-chapter-proof-value">{signal.value}</Text>
+                <Text variant="title-md">{signal.value}</Text>
                 <Text variant="body-sm">{signal.label}</Text>
-              </a>
+              </Card>
             ))}
           </div>
         </Container>
@@ -181,7 +180,7 @@ function primaryInitiativeHref(initiative: any) {
               const initiativeContent = (
                 <>
                   <Meta items={['Initiative', initiative.data.status || 'active']} accentIndex={1} />
-                  <Text variant="title-lg" class="gp-chapter-initiative-title">{initiative.data.title}</Text>
+                  <Text variant="title-lg">{initiative.data.title}</Text>
                   {initiative.data.summary && <Text variant="body-sm">{initiative.data.summary}</Text>}
                   {initiativeThemes.length > 0 && (
                     <div class="gp-chapter-initiative-themes">
@@ -199,22 +198,10 @@ function primaryInitiativeHref(initiative: any) {
                   )}
                 </>
               );
-              if (!href) {
-                return (
-                  <article class="gp-chapter-initiative">
-                    {initiativeContent}
-                  </article>
-                );
-              }
               return (
-                <a
-                  class="gp-chapter-initiative"
-                  href={href}
-                  target={href?.startsWith('http') ? '_blank' : undefined}
-                  rel={href?.startsWith('http') ? 'noopener' : undefined}
-                >
+                <Card href={href || undefined} as="article" stack="sm">
                   {initiativeContent}
-                </a>
+                </Card>
               );
             })}
           </div>
@@ -227,7 +214,6 @@ function primaryInitiativeHref(initiative: any) {
         <Container size="2xl">
           <div class="gp-chapter-section-head">
             <Overline>Public links</Overline>
-            <Text variant="caption">{links.length} source-backed destinations</Text>
           </div>
           <Card padded="lg">
             {links.map((link: any, index: number) => (
@@ -328,17 +314,17 @@ function primaryInitiativeHref(initiative: any) {
           </div>
           <div class="gp-chapter-stewards">
             {stewardEntries.map((s) => (
-              <article class="gp-chapter-steward-card">
+              <Card as="article" padded="sm" class="gp-chapter-steward-card">
                 <Avatar name={s.name} size={48} />
-                <div>
-                  <Text variant="title-md" class="gp-chapter-steward-name">{s.name}</Text>
+                <div class="gp-chapter-steward-copy">
+                  <Text variant="title-md">{s.name}</Text>
                   {(s.role || s.location) && (
-                    <Text variant="caption" class="gp-chapter-steward-meta">
+                    <Text variant="caption">
                       {[s.role, s.location].filter(Boolean).join(' · ')}
                     </Text>
                   )}
                 </div>
-              </article>
+              </Card>
             ))}
           </div>
         </Container>
@@ -354,14 +340,14 @@ function primaryInitiativeHref(initiative: any) {
           </div>
           <div class="gp-chapter-related-grid">
             {relatedChapters.map((c) => (
-              <a class="gp-chapter-related-card" href={`/chapters/${c.id}`}>
+              <Card href={`/chapters/${c.id}`} stack="sm">
                 <Meta items={[regionLabel(c.data.region || 'global'), c.data.status || 'active']} accentIndex={1} />
-                <Text variant="title-lg" class="gp-chapter-related-title">{c.data.name}</Text>
+                <Text variant="title-lg">{c.data.name}</Text>
                 {c.data.city && (
                   <Text variant="caption">{c.data.city}{c.data.country && `, ${c.data.country}`}</Text>
                 )}
                 <Text variant="body-sm">{c.data.summary}</Text>
-              </a>
+              </Card>
             ))}
           </div>
         </Container>
@@ -529,27 +515,26 @@ function primaryInitiativeHref(initiative: any) {
     margin-top: var(--gp-space-md);
   }
 
-  .gp-chapter-hero-media {
+  /* The hero photo sits in a Card figure (components/ui/Card.astro); the clip
+     keeps the photo inside the rounded corners. */
+  .gp-chapter-hero-inner :global(.gp-chapter-hero-media) {
     width: min(100%, 920px);
-    margin: var(--gp-space-lg) 0 0;
+    margin-block-start: var(--gp-space-lg);
     overflow: hidden;
-    border: 1px solid var(--gp-border-soft);
-    border-radius: 8px;
-    background: var(--gp-card);
   }
 
-  .gp-chapter-hero-media a,
-  .gp-chapter-hero-media img {
+  .gp-chapter-hero-inner :global(.gp-chapter-hero-media) a,
+  .gp-chapter-hero-inner :global(.gp-chapter-hero-media) img {
     display: block;
     width: 100%;
   }
 
-  .gp-chapter-hero-media img {
+  .gp-chapter-hero-inner :global(.gp-chapter-hero-media) img {
     aspect-ratio: 16 / 9;
     object-fit: cover;
   }
 
-  .gp-chapter-hero-media figcaption {
+  .gp-chapter-hero-inner :global(.gp-chapter-hero-media) figcaption {
     padding: 10px 14px;
     border-top: 1px solid var(--gp-border-soft);
     color: var(--gp-fg-dim);
@@ -579,92 +564,26 @@ function primaryInitiativeHref(initiative: any) {
     gap: var(--gp-space-md);
   }
 
-  .gp-chapter-proof {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: var(--gp-space-lg);
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-lg);
-    background: var(--gp-card);
-    color: var(--gp-fg);
-    text-decoration: none;
-    transition: border-color 200ms, background 200ms;
-  }
-
-  .gp-chapter-proof:hover {
-    border-color: rgba(184, 232, 53, 0.42);
-    background: var(--gp-card-elev);
-  }
-
-  .gp-chapter-proof-value {
-    color: var(--gp-primary);
-    font-family: var(--gp-font-display);
-    font-size: var(--gp-h3-size);
-    font-weight: 500;
-    letter-spacing: 0;
-  }
-
   .gp-chapter-stewards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: var(--gp-space-md);
   }
 
-  .gp-chapter-steward-card {
+  .gp-chapter-stewards :global(.gp-chapter-steward-card) {
     display: flex;
     align-items: center;
     gap: var(--gp-space-sm);
+  }
+
+  .gp-chapter-steward-copy {
     min-width: 0;
-    padding: var(--gp-space-md);
-    border: 1px solid var(--gp-border-soft);
-    border-radius: 8px;
-    background: var(--gp-card);
-  }
-
-  .gp-chapter-steward-card > div {
-    min-width: 0;
-  }
-
-  .gp-chapter-steward-card :global(.gp-chapter-steward-name) {
-    letter-spacing: 0;
-  }
-
-  .gp-chapter-steward-card :global(.gp-chapter-steward-meta) {
-    color: var(--gp-fg-dim);
   }
 
   .gp-chapter-initiative-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: var(--gp-space-md);
-  }
-
-  .gp-chapter-initiative {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gp-space-sm);
-    padding: var(--gp-space-lg);
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-lg);
-    background: var(--gp-card);
-    color: var(--gp-fg);
-    text-decoration: none;
-    transition: border-color 200ms, background 200ms;
-  }
-
-  .gp-chapter-initiative:hover {
-    border-color: rgba(184, 232, 53, 0.32);
-    background: var(--gp-card-elev);
-  }
-
-  article.gp-chapter-initiative:hover {
-    border-color: var(--gp-border-soft);
-    background: var(--gp-card);
-  }
-
-  .gp-chapter-initiative :global(.gp-chapter-initiative-title) {
-    letter-spacing: 0;
   }
 
   .gp-chapter-initiative-themes {
@@ -751,28 +670,6 @@ function primaryInitiativeHref(initiative: any) {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: var(--gp-space-md);
-  }
-
-  .gp-chapter-related-card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gp-space-sm);
-    padding: var(--gp-space-lg);
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-lg);
-    background: var(--gp-card);
-    color: var(--gp-fg);
-    text-decoration: none;
-    transition: border-color 200ms, background 200ms;
-  }
-
-  .gp-chapter-related-card:hover {
-    border-color: rgba(184, 232, 53, 0.32);
-    background: var(--gp-card-elev);
-  }
-
-  .gp-chapter-related-card :global(.gp-chapter-related-title) {
-    letter-spacing: 0;
   }
 
   .gp-chapter-cta {

@@ -38,9 +38,15 @@ export function gardenStepHref(step: GardenRampStep, telegramHref: string): stri
   return step.surfaceType === 'telegram' ? telegramHref : step.cta?.href || '';
 }
 
-/** The steward call link: step 4's button, or the default booking calendar. */
+/**
+ * The steward call link: the button of the step whose surface is the steward
+ * call, wherever an editor moves it; failing that, step 4's button; failing
+ * that, the default booking calendar.
+ */
 export function gardenStewardCallHref(steps: readonly GardenRampStep[]): string {
-  return steps.find((step) => (step.level ?? 0) === 4)?.cta?.href || DEFAULT_STEWARD_CALL_HREF;
+  const step = steps.find((candidate) => candidate.surfaceType === 'steward-call')
+    ?? steps.find((candidate) => (candidate.level ?? 0) === 4);
+  return step?.cta?.href || DEFAULT_STEWARD_CALL_HREF;
 }
 
 /**

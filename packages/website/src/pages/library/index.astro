@@ -5,6 +5,7 @@ import { getOperationalGuilds } from '../../lib/operational-content';
 import { publicGuildPath } from '../../lib/public-routes';
 import Container from '../../components/ui/Container.astro';
 import Button from '../../components/ui/Button.astro';
+import Card from '../../components/ui/Card.astro';
 import ArrowLink from '../../components/ui/ArrowLink.astro';
 import Overline from '../../components/ui/Overline.astro';
 import Text from '../../components/ui/Text.astro';
@@ -79,7 +80,7 @@ function guildHref(guild: typeof guilds[number]) {
     publicGuildPath(guild.id || guild.slug) ||
     (guild.data.links ?? []).find((link: any) => link.url)?.url ||
     (guild.data.connectLinks ?? []).find((link: any) => link.url)?.url ||
-    '#'
+    ''
   );
 }
 
@@ -156,7 +157,13 @@ function guildFootLabel(guild: typeof guilds[number]) {
         <ul class="gp-library-books-grid" role="list">
           {books.map((book, index) => (
             <li class="gp-library-book">
-              <a class="gp-library-book-link" href={book.data.ebookLink} data-book-dialog-trigger={bookDialogId(book)}>
+              <Card
+                href={book.data.ebookLink}
+                padded="sm"
+                stack="sm"
+                class="gp-library-book-link"
+                data-book-dialog-trigger={bookDialogId(book)}
+              >
                 <span class="gp-library-book-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
                 <span class="gp-library-book-cover">
                   {book.data.image && (
@@ -177,7 +184,7 @@ function guildFootLabel(guild: typeof guilds[number]) {
                     <Text variant="mono">{translationLabel(book.data.translations.length)}</Text>
                   )}
                 </span>
-              </a>
+              </Card>
             </li>
           ))}
         </ul>
@@ -219,7 +226,7 @@ function guildFootLabel(guild: typeof guilds[number]) {
           </div>
 
           <div class="gp-library-podcast-layout">
-            <article class="gp-library-podcast-feature">
+            <Card as="article" variant="elevated" padded="sm" class="gp-library-podcast-feature">
               <div class="gp-library-podcast-cover">
                 <img
                   src={featuredEpisode.image || podcastCoverImage}
@@ -241,7 +248,7 @@ function guildFootLabel(guild: typeof guilds[number]) {
                 <a href={featuredEpisode.link}>Episode notes</a>
                 {podcastUpdated && <span>Feed updated {podcastUpdated}</span>}
               </div>
-            </article>
+            </Card>
 
             <ul class="gp-library-episode-list" role="list" aria-label="More recent episodes">
               {listedEpisodes.map((episode) => (
@@ -286,20 +293,26 @@ function guildFootLabel(guild: typeof guilds[number]) {
 
           <div class="gp-library-guild-grid">
             {guilds.map((guild, index) => {
+              // A guild with neither a page nor a link gets a card that is not a link.
               const href = guildHref(guild);
-              // Existing per-link new-tab handling, kept until the site-wide
-              // external-link rule (qa-brand-shell) replaces it.
-              const isExternal = href.startsWith('http');
               return (
-                <a class:list={['gp-library-guild-card', { 'is-bento-wide': guilds.length === 3 && index === 2 }]} href={href} target={isExternal ? '_blank' : undefined} rel={isExternal ? 'noopener' : undefined}>
+                <Card
+                  href={href || undefined}
+                  as="article"
+                  padded="lg"
+                  stack="md"
+                  class={guilds.length === 3 && index === 2 ? 'gp-library-guild-card is-bento-wide' : 'gp-library-guild-card'}
+                >
                   <span class="gp-library-status">{guild.data.status || 'active'}</span>
-                  <Text variant="h3" class="gp-library-guild-title">{guild.data.name}</Text>
+                  <Text variant="h3">{guild.data.name}</Text>
                   <Text variant="body-sm">{guild.data.summary || guild.data.oneliner || guild.data.description}</Text>
-                  <span class="gp-library-guild-foot">
-                    <span>{guildFootLabel(guild)}</span>
-                    <span aria-hidden="true">→</span>
-                  </span>
-                </a>
+                  {href && (
+                    <span class="gp-library-guild-foot">
+                      <span>{guildFootLabel(guild)}</span>
+                      <span aria-hidden="true">→</span>
+                    </span>
+                  )}
+                </Card>
               );
             })}
           </div>
@@ -421,15 +434,11 @@ function guildFootLabel(guild: typeof guilds[number]) {
 	    min-width: 0;
 	  }
 
-	  .gp-library-book-link {
-	    display: flex;
-	    flex-direction: column;
-	    gap: 14px;
-	    block-size: 100%;
-	    color: var(--gp-fg);
-	    text-decoration: none;
-	    cursor: pointer;
-	  }
+  /* Each book is a Card link (components/ui/Card.astro): a click opens its
+     dialog, and without JavaScript the link opens the English PDF. */
+  .gp-library-books-grid :global(.gp-library-book-link) {
+    block-size: 100%;
+  }
 
 	  .gp-library-book:last-child:nth-child(5n + 1) {
 	    grid-column: 5 / span 2;
@@ -448,30 +457,23 @@ function guildFootLabel(guild: typeof guilds[number]) {
 	  }
 
   .gp-library-book-index {
-    color: var(--gp-fg-dim);
+    color: var(--gp-fg-muted);
     font-family: var(--gp-font-mono);
     font-size: var(--gp-label-sm);
     letter-spacing: 0.08em;
   }
 
+  /* Covers differ in shape, so each sits whole in a 3:4 frame, the way the
+     home page frames story art. */
   .gp-library-book-cover {
     display: grid;
     place-items: center;
     width: 100%;
     aspect-ratio: 3 / 4;
-    padding: 10px;
-    border: 1px solid color-mix(in srgb, var(--gp-secondary) 14%, transparent);
+    padding: var(--gp-space-sm);
     border-radius: var(--gp-radius-md);
-    background: color-mix(in srgb, var(--gp-bg) 50%, transparent);
-    box-shadow: var(--gp-shadow-card);
+    background: var(--gp-green-800);
     overflow: hidden;
-    transition: border-color 200ms, background 200ms;
-  }
-
-  /* Hover steps the surface and border tone only (DESIGN.md: no lift, no shadow stack). */
-  .gp-library-book-link:hover .gp-library-book-cover {
-    border-color: color-mix(in srgb, var(--gp-primary) 34%, transparent);
-    background: color-mix(in srgb, var(--gp-bg) 68%, transparent);
   }
 
   .gp-library-book-cover img {
@@ -523,26 +525,15 @@ function guildFootLabel(guild: typeof guilds[number]) {
 	    gap: var(--gp-space-md);
 	  }
 
-	  .gp-library-podcast-feature {
-	    display: grid;
-	    grid-template-columns: minmax(88px, 112px) minmax(0, 1fr);
-	    gap: var(--gp-space-md);
-	    align-items: start;
-	    justify-self: start;
-	    width: min(100%, 460px);
-	    padding: var(--gp-space-md);
-	    border: 1px solid rgba(184, 232, 53, 0.28);
-	    border-radius: var(--gp-radius-lg);
-	    background: linear-gradient(145deg, rgba(184, 232, 53, 0.08), rgba(15, 61, 46, 0.56));
-	    color: var(--gp-fg);
-	    text-decoration: none;
-	    transition: border-color 200ms, transform 200ms, background 200ms;
-	  }
-
-  .gp-library-podcast-feature:hover {
-    border-color: rgba(184, 232, 53, 0.48);
-    background: linear-gradient(145deg, rgba(184, 232, 53, 0.12), rgba(15, 61, 46, 0.68));
-    transform: translateY(-2px);
+  /* The latest episode is an elevated Card (components/ui/Card.astro) with
+     the cover beside the copy. It is not a link, so it has no hover. */
+  .gp-library-podcast-layout :global(.gp-library-podcast-feature) {
+    display: grid;
+    grid-template-columns: minmax(88px, 112px) minmax(0, 1fr);
+    gap: var(--gp-space-md);
+    align-items: start;
+    justify-self: start;
+    width: min(100%, 460px);
   }
 
   .gp-library-podcast-cover {
@@ -676,30 +667,15 @@ function guildFootLabel(guild: typeof guilds[number]) {
     gap: var(--gp-space-md);
   }
 
-  .gp-library-guild-card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gp-space-md);
+  /* Guild cards are Card links (components/ui/Card.astro). */
+  .gp-library-guild-grid :global(.gp-library-guild-card) {
     min-height: 280px;
-    padding: var(--gp-space-xl);
-    border: 1px solid rgba(184, 232, 53, 0.24);
-    border-radius: var(--gp-radius-lg);
-    background: linear-gradient(155deg, rgba(184, 232, 53, 0.06), rgba(20, 63, 48, 0.48));
-    color: var(--gp-fg);
-    text-decoration: none;
-    transition: border-color 200ms, background 200ms, transform 200ms;
   }
 
-  .gp-library-guild-card:hover {
-    border-color: rgba(184, 232, 53, 0.44);
-    background: linear-gradient(155deg, rgba(184, 232, 53, 0.1), rgba(20, 63, 48, 0.66));
-    transform: translateY(-2px);
+  .gp-library-guild-grid :global(.gp-library-guild-card.is-bento-wide) {
+    grid-column: 1 / -1;
+    min-height: 220px;
   }
-
-	  .gp-library-guild-card.is-bento-wide {
-	    grid-column: 1 / -1;
-	    min-height: 220px;
-	  }
 
   .gp-library-status {
     width: fit-content;
@@ -711,10 +687,6 @@ function guildFootLabel(guild: typeof guilds[number]) {
     font-size: 10px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-  }
-
-  .gp-library-guild-title {
-    color: var(--gp-secondary);
   }
 
   .gp-library-guild-foot {
@@ -761,10 +733,6 @@ function guildFootLabel(guild: typeof guilds[number]) {
       grid-template-columns: 1fr;
     }
 
-    .gp-library-podcast-feature {
-      min-height: 0;
-    }
-
 	    .gp-library-podcast-cover {
 	      max-width: 240px;
 	    }
@@ -806,10 +774,6 @@ function guildFootLabel(guild: typeof guilds[number]) {
 	      scroll-snap-align: start;
 	    }
 
-    .gp-library-podcast-feature {
-      padding: var(--gp-space-md);
-    }
-
 	    .gp-library-episode-row {
 	      grid-template-columns: 56px minmax(0, 1fr);
 	      gap: var(--gp-space-sm);
@@ -829,7 +793,8 @@ function guildFootLabel(guild: typeof guilds[number]) {
 	      grid-template-columns: 1fr;
 	    }
 
-	    .gp-library-guild-card {
+	    .gp-library-guild-grid :global(.gp-library-guild-card),
+	    .gp-library-guild-grid :global(.gp-library-guild-card.is-bento-wide) {
 	      min-height: 0;
 	    }
   }

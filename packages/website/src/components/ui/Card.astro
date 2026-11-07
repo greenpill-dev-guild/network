@@ -1,25 +1,85 @@
 ---
-interface Props {
-  variant?: 'default' | 'elevated';
-  padded?: 'md' | 'lg';
-  class?: string;
-}
+import type { HTMLAttributes } from 'astro/types';
 
-const { variant = 'default', padded = 'md', class: className } = Astro.props;
-const classes = ['gp-card', `is-${variant}`, `pad-${padded}`, className].filter(Boolean).join(' ');
+/**
+ * Card: the site's one card surface (DESIGN.md > Components > Cards), with
+ * the home page's treatment.
+ *
+ * - Surface: 1px soft border, `radius-lg`, the `card` tone. `elevated` uses
+ *   `card-elev` and the card shadow, for featured content.
+ * - Padding: `md` (default) is the home tiles' 24px, growing to 32px on wide
+ *   screens; `lg` is 32px; `sm` is 16px for compact tiles; `none` leaves the
+ *   spacing to the content.
+ * - `stack` lays the children out in a column with an `sm` or `md` gap. A
+ *   child with `margin-block-start: auto` then sits at the bottom.
+ * - `href` makes the whole card one link. Hover steps the surface to
+ *   `card-elev` and tints the border lime; nothing moves (DESIGN.md > Motion:
+ *   no translate, no scale, no shadow stack).
+ * - `as` picks the element for a card that is not a link (`article`, `li`,
+ *   `fieldset` and so on). Other attributes pass through to that element.
+ *
+ * Classes passed in land on this component's element, outside the calling
+ * page's style scope, so a page styles them through one of its own elements:
+ * `.my-grid :global(.my-card) { grid-column: span 2; }`. Keep the surface
+ * itself (border, radius, background, hover) here.
+ */
+type CardTag = 'div' | 'article' | 'section' | 'aside' | 'figure' | 'li' | 'ul' | 'ol' | 'fieldset';
+
+type Props = Omit<HTMLAttributes<'a'>, 'class'> & {
+  variant?: 'default' | 'elevated';
+  padded?: 'none' | 'sm' | 'md' | 'lg';
+  stack?: 'sm' | 'md';
+  as?: CardTag;
+  class?: string;
+};
+
+const {
+  variant = 'default',
+  padded = 'md',
+  stack,
+  href,
+  as,
+  class: className,
+  ...attrs
+} = Astro.props;
+
+const Tag = href ? 'a' : (as ?? 'div');
+const classes = [
+  'gp-card',
+  `is-${variant}`,
+  `pad-${padded}`,
+  stack ? `stack-${stack}` : '',
+  href ? 'is-link' : '',
+  className,
+].filter(Boolean).join(' ');
 ---
 
-<div class={classes}>
+<Tag class={classes} href={href} {...attrs}>
   <slot />
-</div>
+</Tag>
 
 <style>
   .gp-card {
-    min-width: 0;
+    display: block;
+    min-inline-size: 0;
+    margin: 0;
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-lg);
     color: var(--gp-fg);
-    transition: background 200ms cubic-bezier(0.2, 0, 0, 1), border-color 200ms cubic-bezier(0.2, 0, 0, 1);
+    transition:
+      background 200ms cubic-bezier(0.2, 0, 0, 1),
+      border-color 200ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  /* The display rules here win over the browser's own [hidden] rule, so a
+     card that a filter hides (chapters directory) needs this. */
+  .gp-card[hidden] {
+    display: none;
+  }
+
+  /* A card that is itself a list (`as="ul"`) shows no markers. */
+  .gp-card:where(ul, ol) {
+    list-style: none;
   }
 
   .gp-card.is-default {
@@ -31,11 +91,53 @@ const classes = ['gp-card', `is-${variant}`, `pad-${padded}`, className].filter(
     box-shadow: var(--gp-shadow-card);
   }
 
+  .gp-card.pad-none {
+    padding: 0;
+  }
+
+  .gp-card.pad-sm {
+    padding: var(--gp-space-md);
+  }
+
   .gp-card.pad-md {
-    padding: var(--gp-space-lg);
+    padding: clamp(var(--gp-space-lg), 2vw, var(--gp-space-xl));
   }
 
   .gp-card.pad-lg {
     padding: var(--gp-space-xl);
+  }
+
+  /* :where() keeps these at the base rule's weight, below [hidden] above, and
+     lets a page still lay a card out as a grid (see the note at the top). */
+  .gp-card:where(.stack-sm, .stack-md) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .gp-card:where(.stack-sm) {
+    gap: var(--gp-space-sm);
+  }
+
+  .gp-card:where(.stack-md) {
+    gap: var(--gp-space-md);
+  }
+
+  .gp-card.is-link {
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .gp-card.is-link:hover {
+    border-color: color-mix(in srgb, var(--gp-primary) 32%, transparent);
+  }
+
+  .gp-card.is-default.is-link:hover {
+    background: var(--gp-card-elev);
+  }
+
+  /* The global focus ring is a box-shadow (gp-tokens.css); an elevated card's
+     own shadow would replace it, so keep both. */
+  .gp-card.is-elevated:focus-visible {
+    box-shadow: var(--gp-shadow-focus), var(--gp-shadow-card);
   }
 </style>

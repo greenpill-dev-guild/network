@@ -380,8 +380,46 @@ test('chapter initiatives are operational records and projects stay guild-owned'
 test('chapter initiative cards do not render dead links when no URL is present', async () => {
   const source = await readFile(chapterPagePath, 'utf8');
 
-  assert.match(source, /<article class="gp-chapter-initiative">/);
+  // Card renders an <article> when there is no href, and a link otherwise.
+  assert.match(source, /<Card href=\{href \|\| undefined\} as="article"/);
   assert.doesNotMatch(source, /href=\{href \|\| '#'\}/);
+});
+
+test('cards on every page come from the Card primitive and do not move on hover', async () => {
+  // Website QA, November 2026, finding 9: one card treatment. Pages place cards
+  // and lay out what sits inside them; the surface (border, radius, card tone,
+  // hover) lives in components/ui/Card.astro. The map edit and moderation pages
+  // are standalone tools outside the site shell and keep their own styles.
+  const standalonePages = new Set(['map/edit.astro', 'map/moderate.astro']);
+  const pageFiles = (await readdir(websitePagesDir, { recursive: true }))
+    .map((file) => String(file).replaceAll('\\', '/'))
+    .filter((file) => file.endsWith('.astro') && !standalonePages.has(file));
+  const sourcePaths = [
+    ...pageFiles.map((file) => join(websitePagesDir, file)),
+    join(rootDir, 'packages/website/src/components/page-sections/GardenAssessment.astro'),
+    join(rootDir, 'packages/website/src/components/page-sections/BookDialog.astro'),
+  ];
+  const problems = [];
+  for (const path of sourcePaths) {
+    const source = await readFile(path, 'utf8');
+    const styles = [...source.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((match) => match[1]).join('\n');
+    for (const [, selectorText, body] of styles.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const selector = selectorText.trim().replace(/\s+/g, ' ');
+      if (/background:\s*var\(--gp-card(-elev)?\)/.test(body) && /border-radius:/.test(body)) {
+        problems.push(`${path}: ${selector} repeats the card surface; use Card`);
+      }
+      if (/:hover/.test(selector) && /transform:/.test(body)) {
+        problems.push(`${path}: ${selector} moves on hover (DESIGN.md Motion)`);
+      }
+    }
+  }
+  assert.deepEqual(problems, []);
+
+  const card = await readFile(join(rootDir, 'packages/website/src/components/ui/Card.astro'), 'utf8');
+  const cardStyles = card.slice(card.indexOf('<style>'));
+  assert.doesNotMatch(cardStyles, /transform\s*:|box-shadow:\s*var\(--gp-shadow-card-lg\)/);
+  assert.match(cardStyles, /\.gp-card\[hidden\]/, 'a filtered card must still hide');
+  assert.match(card, /const Tag = href \? 'a' : \(as \?\? 'div'\);/);
 });
 
 test('noindex chapters keep their own page while staying out of discovery', async () => {
@@ -556,6 +594,44 @@ test('site shell keeps the graphic page background visible', async () => {
     assert.doesNotMatch(declarations, /background/);
   }
   assert.doesNotMatch(footer, /background:\s*var\(--gp-green-950\)/);
+});
+
+test('footer links come from social-links.json, with Keystatic fields to edit them', async () => {
+  const [footer, socialLinksSource, keystaticConfig] = await Promise.all([
+    readFile(join(websiteShellDir, 'SiteFooter.astro'), 'utf8'),
+    readFile(join(editorialContentDir, 'social-links.json'), 'utf8'),
+    readFile(keystaticConfigPath, 'utf8'),
+  ]);
+  const socialLinks = JSON.parse(socialLinksSource);
+  const frontmatter = footer.slice(0, footer.indexOf('<footer'));
+
+  // Outside links live in content/social-links.json; the footer keeps none,
+  // and leaves out a link whose URL an editor removed.
+  assert.doesNotMatch(footer, /https?:\/\//);
+  assert.match(footer, /\.filter\(\(item\) => item\.href\)/);
+  const footerKeys = ['twitter', 'farcaster', 'telegram', 'linkedin', 'youtube', 'hub', 'codeOfConduct', 'events', 'github'];
+  for (const key of footerKeys) {
+    assert.match(socialLinks[key], /^https:\/\//, `social-links.json ${key}`);
+    assert.match(footer, new RegExp(`socialLinks\\.${key}\\b`), `footer reads ${key}`);
+  }
+  // hub.greenpill.network does not load; the footer's Hub is the Regen Coordination Hub.
+  assert.equal(socialLinks.hub, 'https://hub.regencoordination.xyz');
+
+  const schemaBlock = /socialLinks: singleton\(\{[\s\S]*?schema: \{([\s\S]*?)\n\s*\},\n\s*\}\),/.exec(keystaticConfig)?.[1] ?? '';
+  for (const key of Object.keys(socialLinks)) {
+    assert.match(schemaBlock, new RegExp(`\\b${key}: fields\\.`), `Keystatic socialLinks field ${key}`);
+  }
+  for (const key of footerKeys) {
+    assert.match(schemaBlock, new RegExp(`\\b${key}: fields\\.url\\(\\{[^}]*validation: \\{ isRequired: true \\}`), `Keystatic requires ${key}`);
+  }
+});
+
+test('the steward booking link follows the steward-call step, wherever it sits', () => {
+  const call = { surfaceType: 'steward-call', level: 2, cta: { href: 'https://example.org/book' } };
+  const community = { surfaceType: 'telegram', level: 4, cta: { href: 'https://example.org/community' } };
+  assert.equal(gardenStewardCallHref([community, call]), 'https://example.org/book');
+  assert.equal(gardenStewardCallHref([{ level: 4, cta: { href: 'https://example.org/level-4' } }]), 'https://example.org/level-4');
+  assert.equal(gardenStewardCallHref([]), DEFAULT_STEWARD_CALL_HREF);
 });
 
 test('library podcast section uses RSS snapshot and in-page audio', async () => {

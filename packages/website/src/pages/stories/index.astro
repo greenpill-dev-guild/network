@@ -78,7 +78,7 @@ function storyImageAlt(story: typeof published[number]) {
     {published.length === 0 ? (
       <section class="gp-stories-section">
         <Container size="2xl">
-          <Card padded="lg" class="gp-stories-empty-card">
+          <Card padded="lg">
             <div class="gp-stories-empty-copy">
               <Meta items={['Coming soon']} accentIndex={0} />
               <Text variant="h2">New stories are on the way.</Text>
@@ -102,7 +102,7 @@ function storyImageAlt(story: typeof published[number]) {
               <div class="gp-stories-section-head">
                 <Overline>Featured</Overline>
               </div>
-              <a class:list={['gp-stories-feature', { 'has-media': Boolean(featuredImage) }]} href={`/stories/${featured.id}`}>
+              <Card href={`/stories/${featured.id}`} padded="lg" class={featuredImage ? 'gp-stories-feature has-media' : 'gp-stories-feature'}>
                 {featuredImage && (
                   <figure class="gp-stories-feature-media">
                     <img src={featuredImage} alt={featuredImageAlt} loading="eager" decoding="async" />
@@ -110,7 +110,7 @@ function storyImageAlt(story: typeof published[number]) {
                 )}
                 <div class="gp-stories-feature-copy">
                   <Meta items={storyMetaItems(featured.data)} accentIndex={0} />
-                  <Text variant="h2" class="gp-stories-feature-title">{featured.data.title}</Text>
+                  <Text variant="h2">{featured.data.title}</Text>
                   {featured.data.dek && <Text variant="body-lg">{featured.data.dek}</Text>}
                   {featured.data.excerpt && !featured.data.dek && <Text variant="body-lg">{featured.data.excerpt}</Text>}
                   <footer class="gp-stories-feature-foot">
@@ -118,7 +118,7 @@ function storyImageAlt(story: typeof published[number]) {
                     <ArrowLink size="md">Read the story</ArrowLink>
                   </footer>
                 </div>
-              </a>
+              </Card>
             </Container>
           </section>
         )}
@@ -132,20 +132,20 @@ function storyImageAlt(story: typeof published[number]) {
               </div>
               <div class="gp-stories-grid">
                 {rest.map((story) => (
-                  <a class="gp-stories-card" href={`/stories/${story.id}`}>
+                  <Card href={`/stories/${story.id}`} stack="md">
                     {storyImage(story) && (
                       <figure class="gp-stories-card-media">
                         <img src={storyImage(story)} alt={storyImageAlt(story)} loading="lazy" decoding="async" />
                       </figure>
                     )}
                     <Meta items={storyMetaItems(story.data)} accentIndex={0} />
-                    <Text variant="h3" class="gp-stories-card-title">{story.data.title}</Text>
+                    <Text variant="h3">{story.data.title}</Text>
                     {story.data.excerpt && <Text variant="body-sm">{story.data.excerpt}</Text>}
                     <footer class="gp-stories-card-foot">
                       {story.data.author && <Text variant="mono">{story.data.author}</Text>}
                       <ArrowLink size="sm">Read</ArrowLink>
                     </footer>
-                  </a>
+                  </Card>
                 ))}
               </div>
             </Container>
@@ -156,7 +156,7 @@ function storyImageAlt(story: typeof published[number]) {
 
     <section class="gp-stories-section" id="submit">
       <Container size="2xl">
-        <Card padded="lg" class="gp-stories-submit">
+        <Card padded="lg">
           <div class="gp-stories-submit-copy">
             <Overline>Contribute</Overline>
             <Text variant="h2">Share a chapter or guild update.</Text>
@@ -235,27 +235,6 @@ function storyImageAlt(story: typeof published[number]) {
     max-width: 60ch;
   }
 
-  .gp-stories-empty-card,
-  .gp-stories-submit {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gp-space-md);
-  }
-
-  .gp-stories-empty-card {
-    background: rgba(20, 63, 48, 0.7);
-    border-color: rgba(240, 220, 160, 0.18);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-  }
-
-  :global(.gp-stories-empty-card),
-  :global(.gp-stories-submit) {
-    background: rgba(20, 63, 48, 0.7);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-  }
-
   .gp-stories-empty-copy {
     display: flex;
     flex-direction: column;
@@ -270,30 +249,17 @@ function storyImageAlt(story: typeof published[number]) {
     gap: 12px;
   }
 
-  .gp-stories-feature {
+  /* The featured story is a Card link (components/ui/Card.astro) laid out as
+     image beside copy. */
+  .gp-stories-section :global(.gp-stories-feature) {
     display: grid;
     grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
     gap: clamp(var(--gp-space-lg), 3vw, var(--gp-space-2xl));
     align-items: stretch;
-    padding: clamp(var(--gp-space-xl), 3vw, var(--gp-space-3xl));
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-xl);
-    background: rgba(20, 63, 48, 0.72);
-    color: var(--gp-fg);
-    text-decoration: none;
-    min-width: 0;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    transition: border-color 200ms, background 200ms;
   }
 
-  .gp-stories-feature:not(.has-media) {
+  .gp-stories-section :global(.gp-stories-feature:not(.has-media)) {
     grid-template-columns: 1fr;
-  }
-
-  .gp-stories-feature:hover {
-    border-color: rgba(184, 232, 53, 0.32);
-    background: rgba(35, 92, 70, 0.84);
   }
 
   .gp-stories-feature-media,
@@ -311,7 +277,7 @@ function storyImageAlt(story: typeof published[number]) {
 
   .gp-stories-feature-media {
     min-height: clamp(320px, 36vw, 520px);
-    border-radius: var(--gp-radius-lg);
+    border-radius: var(--gp-radius-md);
   }
 
   .gp-stories-card-media {
@@ -327,20 +293,12 @@ function storyImageAlt(story: typeof published[number]) {
     object-fit: cover;
   }
 
-  .gp-stories-feature :global(.gp-stories-feature-title) {
-    letter-spacing: 0;
-  }
-
   .gp-stories-feature-copy {
     display: flex;
     min-width: 0;
     flex-direction: column;
     justify-content: center;
     gap: var(--gp-space-md);
-  }
-
-  .gp-stories-feature-copy :global(.gp-body-lg) {
-    color: var(--gp-fg-muted);
   }
 
   .gp-stories-feature-foot {
@@ -355,30 +313,6 @@ function storyImageAlt(story: typeof published[number]) {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: clamp(14px, 1.5vw, 20px);
-  }
-
-  .gp-stories-card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gp-space-md);
-    padding: clamp(var(--gp-space-lg), 2vw, var(--gp-space-xl));
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-lg);
-    background: rgba(20, 63, 48, 0.72);
-    color: var(--gp-fg);
-    text-decoration: none;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    transition: border-color 200ms, background 200ms;
-  }
-
-  .gp-stories-card:hover {
-    border-color: rgba(184, 232, 53, 0.32);
-    background: rgba(35, 92, 70, 0.84);
-  }
-
-  .gp-stories-card :global(.gp-stories-card-title) {
-    letter-spacing: 0;
   }
 
   .gp-stories-card-foot {
@@ -401,7 +335,7 @@ function storyImageAlt(story: typeof published[number]) {
   }
 
   @container (max-width: 1100px) {
-    .gp-stories-feature {
+    .gp-stories-section :global(.gp-stories-feature.has-media) {
       grid-template-columns: 1fr;
     }
 

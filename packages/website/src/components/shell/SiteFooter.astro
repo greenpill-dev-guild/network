@@ -1,9 +1,14 @@
 ---
 import socialLinks from '../../content/social-links.json';
+import garden from '../../content/garden.json';
+import { gardenRampSteps, gardenStewardCallHref } from '../../lib/garden-ramp';
 
 // Footer links follow the July 16 call (Farcaster, LinkedIn, YouTube, Luma,
-// Code of Conduct, "Join the map"). Telegram, X and YouTube come from
-// content/social-links.json so every page shares one invite link.
+// Code of Conduct, "Join the map"). Outside links, the GitHub one in the
+// bottom row included, come from content/social-links.json, so an editor
+// changes each in one place. The steward booking link comes from the Garden
+// ramp's steward-call step, as on /garden. A link left without a URL is not
+// shown (Keystatic also requires these fields).
 const columns = [
   {
     heading: 'Network',
@@ -11,16 +16,16 @@ const columns = [
       { label: 'Chapters', href: '/chapters' },
       { label: 'Dev Guild', href: '/guilds/dev-guild' },
       { label: 'Writers Guild', href: '/guilds/writers-guild' },
-      { label: 'Code of Conduct', href: 'https://hub.regencoordination.xyz/t/code-of-conduct/37' },
+      { label: 'Code of Conduct', href: socialLinks.codeOfConduct },
     ],
   },
   {
     heading: 'Get involved',
     items: [
       { label: 'Start in the Garden', href: '/garden' },
-      { label: 'Events calendar', href: 'https://luma.com/greenpill-network' },
+      { label: 'Events calendar', href: socialLinks.events },
       { label: 'Join the map', href: '/#join-map' },
-      { label: 'Talk to a steward', href: 'https://calendar.app.google/gia7UpaSVKwwEKxy5' },
+      { label: 'Talk to a steward', href: gardenStewardCallHref(gardenRampSteps(garden.steps)) },
     ],
   },
   {
@@ -35,11 +40,11 @@ const columns = [
     heading: 'Connect',
     items: [
       { label: 'X / Twitter', href: socialLinks.twitter },
-      { label: 'Farcaster', href: 'https://farcaster.xyz/~/channel/green-pill' },
+      { label: 'Farcaster', href: socialLinks.farcaster },
       { label: 'Telegram', href: socialLinks.telegram },
-      { label: 'LinkedIn', href: 'https://www.linkedin.com/company/greenpill-network' },
+      { label: 'LinkedIn', href: socialLinks.linkedin },
       { label: 'YouTube', href: socialLinks.youtube },
-      { label: 'Regen Hub', href: 'https://hub.regencoordination.xyz' },
+      { label: 'Regen Hub', href: socialLinks.hub },
     ],
   },
 ];
@@ -54,7 +59,7 @@ const year = new Date().getFullYear();
       <div class="gp-footer-column">
         <div class="gp-footer-heading">{column.heading}</div>
         <nav aria-label={column.heading}>
-          {column.items.map((item) => (
+          {column.items.filter((item) => item.href).map((item) => (
             <a href={item.href}>{item.label}</a>
           ))}
         </nav>
@@ -64,7 +69,7 @@ const year = new Date().getFullYear();
 
   <div class="gp-footer-bottom">
     <span>© {year} Greenpill Network</span>
-    <a href="https://github.com/greenpill-dev-guild/network">Built in the open on GitHub</a>
+    {socialLinks.github && <a href={socialLinks.github}>Built in the open on GitHub</a>}
   </div>
 </footer>
 
