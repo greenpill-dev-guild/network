@@ -40,6 +40,11 @@ Gate (AGENTS.md), on the final commit:
   - axe-core (`runOnly: ['wcag2a', 'wcag2aa', 'best-practice']`, the same rules `ui:verify` uses): 0 violations.
   - Cumulative layout shift over load: 0.
   - Accessibility basics: one `main`, one `h1`, every `nav` labelled (Primary, Mobile primary, Breadcrumb, and the four footer groups), and no link or button without an accessible name.
+- Second pass after the Codex fixes (dda5b41), same setup, to cover every `ui:verify` channel:
+  - Channels 1 and 4: `ui:verify`'s own in-page assertion script (`DOM_ASSERTIONS`, extracted unchanged from `scripts/ui-verify.ts`) evaluated in each iframe. It covers page and element overflow, 44px targets, wrapped pills and arrow links, off-token colours, non-semantic controls, focusable SVGs, unlabelled inputs and layout shift. Result: 0 findings on both pages at 375, 1024 and 1440.
+  - Channel 2 equivalent (the CDP accessibility tree is not reachable from Brave): one `main` and 6 or 7 navigation landmarks, and every rendered control has an accessible name by axe's name computation (key links read "GitHub", "Karma GAP" and so on, with the glyphs hidden). The only empty names are the four links inside the shared header's closed `<details>` mobile menu, which browsers keep out of the accessibility tree until it opens.
+  - Channel 3: axe-core again 0 violations.
+  - Not reproducible this way: `ui:verify`'s own screenshot files. The Brave screenshots in `artifacts/qa-guilds/` stand in for them.
 - Brave QA (Claude in Chrome, Afo's profile) against my dev server on port 3324. Brave's window ignores resizing on this laptop (1014px viewport), so each width ran in a same-origin iframe of exactly 375, 1024 and 1440px, as `qa-home-garden` and `qa-map-data` did. Both guild pages were checked with today's production content and with the change set applied to a local copy of the snapshot (never committed):
   - No horizontal overflow, no wrapped pills or arrow links, at every width on both pages.
   - Contributors 2 / 3 / 4 columns, published work 1 / 2 / 2, projects 1 / 2 / 3, media lead card above its rows below 980px.
