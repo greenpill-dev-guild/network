@@ -104,6 +104,34 @@ async function unusableReason(address: string, source: { fetch: typeof fetch }, 
   return outcome.kind === 'unusable' ? outcome.reason : '';
 }
 
+// Exercise the decoders covered by the sharp advisories through the actual
+// chapter copier, independently of Astro's passthrough image service.
+// The fixtures start from a 600px copy of the photo: encoding the full
+// 3000px photo as AVIF took 18 s in the dev machine, past the 5 s test limit,
+// and the abandoned encode kept the CPU busy for the tests after it.
+const decoderSource = () => sharp(photo).resize({ width: 600 });
+const decoderFixtures = {
+  avif: () => decoderSource().avif().toBuffer(),
+  gif: () => decoderSource().gif().toBuffer(),
+  tiff: () => decoderSource().tiff().toBuffer(),
+  svg: async () => Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="green"/></svg>'),
+};
+
+for (const [format, fixture] of Object.entries(decoderFixtures)) {
+  test(`a remote ${format} image is decoded into safe site-hosted output formats`, async () => {
+    const bytes = await fixture();
+    const address = `${ELSEWHERE}/chapter.${format}`;
+    const copy = await expectCopy(address, imageSources({ [address]: serves(() => bytes, `image/${format}`) }));
+    const display = await sharp(Buffer.from(copy.display.bytes)).metadata();
+    const social = await sharp(Buffer.from(copy.social.bytes)).metadata();
+    assert.equal(display.format, 'webp');
+    assert.ok(display.width <= 1600 && display.height <= 1600);
+    assert.deepEqual([social.format, social.width, social.height], ['jpeg', 1200, 630]);
+    assert.equal(display.exif, undefined);
+    assert.equal(social.exif, undefined);
+  });
+}
+
 function stringValues(value: unknown): string[] {
   if (typeof value === 'string') return [value];
   if (Array.isArray(value)) return value.flatMap(stringValues);
