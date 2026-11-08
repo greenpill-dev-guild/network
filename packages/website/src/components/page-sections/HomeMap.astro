@@ -506,6 +506,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       </section>
     </div>
 
+    {/* The map list (PRD-1438): the visible nodes, grouped by type, with a
+        search. On a wide map it docks inside the stage's end edge and the map
+        stays usable; at an 860px container and narrower it is a sheet inside
+        the stage; on a phone, a full-height modal sheet. Its head and search
+        stay put while the rows scroll. */}
     <dialog
       class="gp-home-map-list-drawer"
       id="gp-home-map-node-list"
@@ -519,10 +524,25 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           <h2 id="gp-home-map-list-title">Map list</h2>
         </div>
         <div class="gp-home-map-list-actions">
-          <span data-home-map-list-count>0</span>
-          <button type="button" data-home-map-list-close aria-label="Close map list">×</button>
+          <span class="gp-home-map-list-count" data-home-map-list-count>0</span>
+          <button type="button" class="gp-home-map-list-close" data-home-map-list-close aria-label="Close map list">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
+          </button>
         </div>
       </header>
+      <div class="gp-home-map-list-search">
+        <label class="gp-home-map-sr" for="gp-home-map-list-search">Search the map</label>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5" /><line x1="16" y1="16" x2="20" y2="20" /></svg>
+        <input
+          id="gp-home-map-list-search"
+          type="search"
+          data-home-map-list-search
+          placeholder="Name or place"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+      <p class="gp-home-map-sr" data-home-map-list-live aria-live="polite"></p>
       <div class="gp-home-map-list-items" data-home-map-list-items></div>
     </dialog>
   </div>
@@ -744,6 +764,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     type MapEdge,
   } from '../../lib/home-map-layout';
   import {
+    entryMatchesSearch,
+    groupListEntries,
+    listSearchAnnouncement,
+    rowToFocusAfterRebuild,
+    searchWords,
+  } from '../../lib/home-map-list';
+  import {
     ALL_THEMES_NAME,
     chipsThatFit,
     nodeThemesAreShown,
@@ -877,31 +904,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       }
     })();
     const themeLabel = (slug: string) => themeInfo[slug]?.label ?? slug.replace(/-/g, ' ');
-    const themeCompactLabel = (slug: string) => ({
-      water: 'Water',
-      waste: 'Waste',
-      opensrc: 'Open Src',
-      impact: 'Impact',
-      trees: 'Biodiv',
-      food: 'Food',
-      energy: 'Energy',
-      education: 'Edu',
-      events: 'Events',
-      funding: 'Funding',
-      mutual: 'Mutual',
-      stories: 'Stories',
-      ai: 'AI',
-      desci: 'DeSci',
-      gov: 'Gov',
-      public: 'Public',
-      currency: 'Mutual',
-      'public-goods': 'Public',
-      'local-regeneration': 'Regen',
-      'knowledge-commons': 'Edu',
-      'coordination-tools': 'Open Src',
-      opensource: 'Open Src',
-      'open-source': 'Open Src',
-    } as Record<string, string>)[slug] ?? themeLabel(slug);
     const themeColor = (slug: string) => themeInfo[slug]?.color ?? '#B8E835';
     const normalizeThemeSlug = (slug: unknown) => normalizePublicMapThemeSlug(slug);
     const normalizeThemeSlugs = (themes: unknown) => normalizePublicMapThemeSlugs(themes);
@@ -1136,11 +1138,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     let syncEdgePills: () => void = () => {};
 
     // The layout the map's container picked, as its CSS says: 'phone' at a
-    // 520px container and narrower (DESIGN.md:403), else 'wide'. Only the
-    // width decides; the kind of pointer never does.
-    const mapLayout = () => (
-      window.getComputedStyle(root).getPropertyValue('--gp-map-layout').trim() === 'phone' ? 'phone' : 'wide'
-    );
+    // 520px container and narrower (DESIGN.md:403), 'sheet' at 860px and
+    // narrower, else 'dock'. Only the width decides; the kind of pointer
+    // never does.
+    const mapLayout = (): 'phone' | 'sheet' | 'dock' => {
+      const layout = window.getComputedStyle(root).getPropertyValue('--gp-map-layout').trim();
+      return layout === 'phone' || layout === 'sheet' ? layout : 'dock';
+    };
 
     const formatViewBox = (box: MapViewBox) => (
       `${box.x.toFixed(2)} ${box.y.toFixed(2)} ${box.width.toFixed(2)} ${box.height.toFixed(2)}`
@@ -1536,6 +1540,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const id = target.getAttribute('data-node-id');
       const type = target.getAttribute('data-node-type');
       if (!id || !type) return;
+      // A selected chapter keeps the map at rest, as openSelected leaves it:
+      // no line reaches a chapter, so focusing one would only dim the rest.
+      // A blur, a resize or a list preview ending comes back here.
+      if (target === selectedFocusTarget && target.classList.contains('is-chapter')) {
+        clearFocusState();
+        return;
+      }
 
       root.classList.add('is-focused');
       const revealFocus = activeFocusNodeId !== id;
@@ -1546,6 +1557,10 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       }
 
       const adjacentIds = new Set<string>([id]);
+      // A list row previewed beside the selected node leaves that node lit;
+      // its coloured web stays too (.is-selected-adj).
+      const selectedId = selectedFocusTarget?.getAttribute('data-node-id');
+      if (selectedId) adjacentIds.add(selectedId);
       root.querySelectorAll<SVGPathElement>('.gp-home-map-thread').forEach((t) => {
         const from = t.getAttribute('data-from');
         const to = t.getAttribute('data-to');
@@ -2048,7 +2063,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const anchorY = (yPct / 100) * rootRect.height;
       const desiredX = xPct < 60 ? anchorX + offset : anchorX - cardRect.width - offset;
       const desiredY = yPct < 50 ? anchorY + offset : anchorY - cardRect.height - offset;
-      selectedEl.style.setProperty('--gp-selected-x', `${clampNumber(desiredX, inset, rootRect.width - cardRect.width - inset)}px`);
+      // Beside a docked list the card keeps to the map's side of it, so it
+      // never covers the search or the rows. Step 4 moves the card into the
+      // dock itself.
+      const dockRect = mapLayout() === 'dock' && listDrawer && !listDrawer.hidden ? listDrawer.getBoundingClientRect() : null;
+      const besideDock = dockRect && dockRect.width > 0 ? dockRect.left - rootRect.left - cardRect.width - inset : Number.NaN;
+      const maxX = besideDock >= inset ? besideDock : rootRect.width - cardRect.width - inset;
+      selectedEl.style.setProperty('--gp-selected-x', `${clampNumber(desiredX, inset, maxX)}px`);
       selectedEl.style.setProperty('--gp-selected-y', `${clampNumber(desiredY, inset, rootRect.height - cardRect.height - inset)}px`);
       selectedEl.style.setProperty('--gp-selected-transform', 'none');
     };
@@ -3009,9 +3030,92 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       setFocus(node);
     };
 
-    const activateListNode = (node: HTMLElement) => {
-      activateMapNode(node, true);
-      if (isTouchMap()) closeNodeList({ restoreFocus: true });
+    // ---- Map list ------------------------------------------------------------
+    // The visible nodes, grouped by type, with a search (lib/home-map-list.ts).
+    // On a wide map it docks inside the stage and the map stays usable; at an
+    // 860px container and narrower it is a sheet inside the stage; on a phone
+    // a full-height modal sheet. Layout follows the container's width.
+    const listSearch = scope.querySelector('[data-home-map-list-search]') as HTMLInputElement | null;
+    const listLive = scope.querySelector('[data-home-map-list-live]') as HTMLElement | null;
+    const LIST_ANNOUNCE_DELAY_MS = 600;
+    const LIST_GROUP_LABELS: Record<MapNodeType, string> = { chapter: 'Chapters', steward: 'Stewards', member: 'Members' };
+    let listQuery = '';
+    let listAnnounceTimer = 0;
+    // The node a hovered or focused row previews, and the pin or stack marker
+    // that stands for it on the map, which wears the ring.
+    let listTargetNode: HTMLElement | null = null;
+    let listTarget: Element | null = null;
+
+    // Rings the node's pin, or the stack marker that stands for it now.
+    const ringListTarget = (node: HTMLElement | null) => {
+      listTarget?.classList.remove('is-list-target');
+      listTarget = null;
+      listTargetNode = node;
+      if (!node) return;
+      const marker = node.classList.contains('is-clustered')
+        ? overlapStacks.find((stack) => stack.members.some((member) => member.el === node))?.marker
+        : null;
+      listTarget = marker ?? node;
+      listTarget.classList.add('is-list-target');
+    };
+
+    // When a row's preview ends, the map goes back to the selected node, or
+    // to rest.
+    const clearListTarget = () => {
+      if (!listTargetNode) return;
+      ringListTarget(null);
+      if (pointerFocusTarget || hoveredStackKey) return;
+      clearFocus();
+    };
+
+    // Hovering or focusing a row rings its pin and shows what hover shows,
+    // beside a selected node too. A node an update has removed ends it.
+    const previewListNode = (node: HTMLElement) => {
+      if (!node.isConnected) {
+        clearListTarget();
+        return;
+      }
+      ringListTarget(node);
+      setFocus(node);
+    };
+
+    // The rows the pointer hovers and keyboard focus is on, each previewing
+    // its node, the latest in front. When one ends, the other's preview
+    // comes back; with neither, the map goes back to the selection or rest.
+    let hoveredListNode: HTMLElement | null = null;
+    let focusedListNode: HTMLElement | null = null;
+    const restoreListPreview = () => {
+      const node = hoveredListNode ?? focusedListNode;
+      if (node) previewListNode(node);
+      else clearListTarget();
+    };
+
+    // Picking a row selects its node. A docked list stays open beside the
+    // map, and a mouse pick leaves focus in it for the next row; a keyboard
+    // pick moves focus into the node's card. A sheet or a phone's modal list
+    // gives way to the node first, and focus moves into its card.
+    const activateListNode = (node: HTMLElement, viaKeyboard: boolean) => {
+      clearListTarget();
+      const docked = mapLayout() === 'dock';
+      if (!docked) closeNodeList();
+      activateMapNode(node, viaKeyboard || !docked);
+    };
+
+    // A docked list and a selected card share the map; a sheet or a phone
+    // has room for one. When the layout leaves the dock with both open, the
+    // list gives way as it does to a pick there: the selection stays, and
+    // focus that was in the list moves to the card.
+    const yieldListToSelection = () => {
+      const focusWasInList = Boolean(listDrawer?.contains(document.activeElement));
+      closeNodeList();
+      if (focusWasInList) selectedClose?.focus({ preventScroll: true });
+    };
+
+    // The list's first control: its search with a keyboard at hand, Close on
+    // a touch screen, so no on-screen keyboard rises unasked.
+    const listEntryControl = () => {
+      const typing = !window.matchMedia('(pointer: coarse)').matches;
+      return (typing ? listSearch : listClose) ?? (listDrawer?.querySelector('button') as HTMLButtonElement | null);
     };
 
     // The control that opened the list gets focus back when it closes: the
@@ -3021,6 +3125,33 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     // this map. Cleared when the list closes or opens for everything.
     let listSubset: { keys: Set<string>; label: string } | null = null;
     let listReturnKeys: string[] = [];
+
+    // Modal only on a phone, where the sheet covers the page. A dock or a
+    // sheet inside the stage leaves the map usable. An open list that the
+    // map's width carries across 520px reopens in the new mode with its
+    // search, scroll and focus; the close event that follows finds it open.
+    let listShownModal = false;
+    const showNodeListForLayout = () => {
+      if (!listDrawer) return;
+      const modal = mapLayout() === 'phone';
+      listDrawer.setAttribute('aria-modal', modal ? 'true' : 'false');
+      if (typeof listDrawer.show !== 'function' || typeof listDrawer.showModal !== 'function') {
+        listDrawer.setAttribute('open', '');
+        return;
+      }
+      if (listDrawer.open && listShownModal === modal) return;
+      const focused = document.activeElement instanceof HTMLElement && listDrawer.contains(document.activeElement)
+        ? document.activeElement
+        : null;
+      const scrollTop = listItems?.scrollTop ?? 0;
+      if (listDrawer.open) listDrawer.close();
+      if (modal) listDrawer.showModal();
+      else listDrawer.show();
+      listShownModal = modal;
+      if (listItems) listItems.scrollTop = scrollTop;
+      focused?.focus({ preventScroll: true });
+    };
+
     const openNodeList = (
       opener: HTMLElement | null = listToggle,
       subset: { keys: string[]; label: string } | null = null
@@ -3032,20 +3163,19 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       clearMapSurfaces();
       listSubset = subset ? { keys: new Set(subset.keys), label: subset.label } : null;
       if (listKicker) listKicker.textContent = listSubset?.label ?? 'Visible nodes';
+      // Each opening starts with an empty search and no old announcement.
+      listQuery = '';
+      if (listSearch) listSearch.value = '';
+      if (listLive) listLive.textContent = '';
       listToggle.setAttribute('aria-expanded', 'true');
       root.classList.add('has-list-drawer');
       listDrawer.hidden = false;
-      listDrawer.setAttribute('aria-modal', isTouchMap() ? 'true' : 'false');
       renderNodeList();
-      if (isTouchMap() && typeof listDrawer.showModal === 'function' && !listDrawer.open) {
-        listDrawer.showModal();
-      } else if (!listDrawer.open) {
-        listDrawer.setAttribute('open', '');
-      }
-      window.requestAnimationFrame(() => {
-        const first = listDrawer.querySelector('button') as HTMLButtonElement | null;
-        first?.focus({ preventScroll: true });
-      });
+      showNodeListForLayout();
+      // The strip has less room beside a docked list.
+      layoutThemeStrip();
+      // The list starts at its first control.
+      window.requestAnimationFrame(() => listEntryControl()?.focus({ preventScroll: true }));
     };
 
     const syncNodeListClosed = () => {
@@ -3056,6 +3186,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       root.classList.remove('has-list-drawer');
       listSubset = null;
       if (listKicker) listKicker.textContent = 'Visible nodes';
+      window.clearTimeout(listAnnounceTimer);
+      hoveredListNode = null;
+      focusedListNode = null;
+      clearListTarget();
+      layoutThemeStrip();
+      // A selected node's card may sit where the dock no longer is.
+      syncSelectedOverlay();
     };
 
     // Focus goes back to the list's opener, or, when a rebuild replaced the
@@ -3082,82 +3219,137 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       }
     };
 
+    const listNodes = () => {
+      const nodes = visibleMapNodes().filter((node) => !listSubset || listSubset.keys.has(node.dataset.nodeId || ''));
+      return nodes;
+    };
+
+    const makeListPart = <K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text = '') => {
+      const el = document.createElement(tag);
+      applyScope(el);
+      if (className) el.className = className;
+      if (text) el.textContent = text;
+      return el;
+    };
+
     renderNodeList = () => {
       if (!listItems || !listCount) return;
-      const nodes = visibleMapNodes().filter((node) => !listSubset || listSubset.keys.has(node.dataset.nodeId || ''));
-      listCount.textContent = String(nodes.length);
+      const words = searchWords(listQuery);
+      const nodes = listNodes();
+      const entries = nodes
+        .map((node) => ({
+          node,
+          type: filterTypeFor(node.dataset.nodeType),
+          name: clean(node.dataset.nodeName) || 'Map node',
+          place: clean(node.dataset.nodePlace),
+        }))
+        .filter((entry) => entryMatchesSearch(entry, words));
+      listCount.textContent = String(entries.length);
       if (listDrawer?.hidden) return;
+      // A rebuild (a filter, a live update) keeps keyboard focus on the same
+      // node's row. When that node has gone, focus moves to the next row that
+      // remains, or to the list's first control when none follows, so it
+      // never leaves the list (or a phone's modal sheet).
+      const active = document.activeElement instanceof HTMLElement && listItems.contains(document.activeElement)
+        ? document.activeElement
+        : null;
+      const previousIds = active
+        ? Array.from(listItems.querySelectorAll<HTMLElement>('.gp-home-map-list-row'), (row) => clean(row.dataset.listNodeId))
+        : [];
+      const focusId = active
+        ? rowToFocusAfterRebuild(previousIds, clean(active.dataset.listNodeId), entries.map((entry) => clean(entry.node.dataset.nodeId)))
+        : null;
+      // The old rows go, and with them what they previewed.
+      hoveredListNode = null;
+      focusedListNode = null;
+      clearListTarget();
       listItems.textContent = '';
-      if (!nodes.length) {
-        const empty = document.createElement('p');
-        applyScope(empty);
-        empty.className = 'gp-home-map-list-empty';
-        empty.textContent = 'No visible nodes match these filters.';
-        listItems.append(empty);
+      if (!entries.length) {
+        listItems.append(makeListPart(
+          'p',
+          'gp-home-map-list-empty',
+          nodes.length ? 'No nodes match this search.' : 'No visible nodes match these filters.'
+        ));
+        if (active) listEntryControl()?.focus({ preventScroll: true });
         return;
       }
 
-      nodes.forEach((node) => {
-        const row = document.createElement('button');
-        applyScope(row);
-        row.type = 'button';
-        row.className = 'gp-home-map-list-row';
-        const type = filterTypeFor(node.dataset.nodeType);
-        row.dataset.nodeType = type;
-        row.setAttribute('aria-label', `Select ${node.dataset.nodeName || 'map node'} on the map`);
-
-        const mark = document.createElement('span');
-        applyScope(mark);
-        mark.className = `gp-home-map-list-mark is-${type}`;
-        mark.setAttribute('aria-hidden', 'true');
-
-        const copy = document.createElement('span');
-        applyScope(copy);
-        copy.className = 'gp-home-map-list-copy';
-
-        const heading = document.createElement('span');
-        applyScope(heading);
-        heading.className = 'gp-home-map-list-name';
-        heading.textContent = clean(node.dataset.nodeName) || 'Map node';
-
-        const meta = document.createElement('span');
-        applyScope(meta);
-        meta.className = 'gp-home-map-list-meta';
-        const place = clean(node.dataset.nodePlace);
-        meta.textContent = `${endpointRoleLabel(type)}${place ? ` · ${place}` : ''}`;
-
-        const themes = document.createElement('span');
-        applyScope(themes);
-        themes.className = 'gp-home-map-list-themes';
-        const themeSlugs = nodeThemes(node);
-        const visibleThemeSlugs = themeSlugs.slice(0, 2);
-        visibleThemeSlugs.forEach((slug) => {
-          const chip = document.createElement('span');
-          applyScope(chip);
-          const label = themeLabel(slug);
-          chip.textContent = themeCompactLabel(slug);
-          chip.title = label;
-          chip.setAttribute('aria-label', label);
-          chip.style.setProperty('--chip-color', themeColor(slug));
-          themes.append(chip);
+      let focusRow: HTMLButtonElement | null = null;
+      groupListEntries(entries).forEach((group) => {
+        const section = makeListPart('section', 'gp-home-map-list-group');
+        const heading = makeListPart('h3', 'gp-home-map-list-group-title');
+        heading.id = `gp-home-map-list-group-${group.type}`;
+        section.setAttribute('aria-labelledby', heading.id);
+        heading.append(
+          makeListPart('span', '', LIST_GROUP_LABELS[group.type]),
+          makeListPart('span', 'gp-home-map-list-group-count', String(group.entries.length))
+        );
+        const rows = makeListPart('ul', 'gp-home-map-list-rows');
+        group.entries.forEach(({ node, type, name, place }) => {
+          const row = makeListPart('button', 'gp-home-map-list-row');
+          row.type = 'button';
+          row.dataset.nodeType = type;
+          row.dataset.listNodeId = clean(node.dataset.nodeId);
+          row.setAttribute('aria-label', `Select ${name}${place ? `, ${place},` : ''} on the map`);
+          const mark = makeListPart('span', `gp-home-map-list-mark is-${type}`);
+          mark.setAttribute('aria-hidden', 'true');
+          row.append(mark, makeListPart('span', 'gp-home-map-list-name', name), makeListPart('span', 'gp-home-map-list-place', place));
+          row.addEventListener('click', (event) => activateListNode(node, event.detail === 0 || row.matches(':focus-visible')));
+          row.addEventListener('pointerenter', () => {
+            hoveredListNode = node;
+            previewListNode(node);
+          });
+          row.addEventListener('pointerleave', () => {
+            hoveredListNode = null;
+            restoreListPreview();
+          });
+          // Keyboard focus previews as hover does; the focus a click leaves
+          // does not, as on the map's pins.
+          row.addEventListener('focus', () => {
+            if (!row.matches(':focus-visible')) return;
+            focusedListNode = node;
+            previewListNode(node);
+          });
+          row.addEventListener('blur', () => {
+            if (focusedListNode !== node) return;
+            focusedListNode = null;
+            restoreListPreview();
+          });
+          const item = makeListPart('li');
+          item.append(row);
+          rows.append(item);
+          if (focusId && row.dataset.listNodeId === focusId) focusRow = row;
         });
-        const hiddenThemeCount = themeSlugs.length - visibleThemeSlugs.length;
-        if (hiddenThemeCount > 0) {
-          const more = document.createElement('span');
-          applyScope(more);
-          more.className = 'is-more';
-          more.textContent = `+${hiddenThemeCount}`;
-          more.setAttribute('aria-label', `${hiddenThemeCount} more ${hiddenThemeCount === 1 ? 'theme' : 'themes'}`);
-          themes.append(more);
-        }
-
-        copy.append(heading, meta, themes);
-
-        row.append(mark, copy);
-        row.addEventListener('click', () => activateListNode(node));
-        listItems.append(row);
+        section.append(heading, rows);
+        listItems.append(section);
       });
+      // Assigned in the loop above, which narrowing cannot see.
+      const keepFocusOn = focusRow as HTMLButtonElement | null;
+      if (keepFocusOn) keepFocusOn.focus({ preventScroll: true });
+      else if (active) listEntryControl()?.focus({ preventScroll: true });
     };
+
+    // Search narrows the rows at once; one polite announcement follows once
+    // typing pauses, not one per key.
+    listSearch?.addEventListener('input', () => {
+      listQuery = listSearch.value;
+      renderNodeList();
+      window.clearTimeout(listAnnounceTimer);
+      listAnnounceTimer = window.setTimeout(() => {
+        if (!listLive || listDrawer?.hidden) return;
+        const announcement = listSearchAnnouncement(Number(listCount?.textContent) || 0, listNodes().length, listQuery);
+        listLive.textContent = listLive.textContent === announcement ? `${announcement} ` : announcement;
+      }, LIST_ANNOUNCE_DELAY_MS);
+    });
+    // Escape empties a search first, wherever focus is in the list; the next
+    // press closes it.
+    listDrawer?.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || !listSearch?.value) return;
+      event.preventDefault();
+      event.stopPropagation();
+      listSearch.value = '';
+      listSearch.dispatchEvent(new Event('input', { bubbles: true }));
+    });
 
     listToggle?.addEventListener('click', () => {
       if (!listDrawer) return;
@@ -3169,7 +3361,10 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       event.preventDefault();
       closeNodeList({ restoreFocus: true });
     });
+    // A list reopened before its close event arrives (a new mode, or opened
+    // again at once) is still open, so that close changes nothing.
     listDrawer?.addEventListener('close', () => {
+      if (listDrawer.open) return;
       syncNodeListClosed();
       if (restoreListFocusOnClose) restoreListFocus();
       restoreListFocusOnClose = false;
@@ -3177,14 +3372,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     listDrawer?.addEventListener('click', (event) => {
       if (event.target === listDrawer) closeNodeList({ restoreFocus: true });
     });
+    // A press outside the theme editor closes it. The list stays open: it sits
+    // beside a map that stays usable, so a press on empty map is not a close.
     document.addEventListener('pointerdown', (event) => {
       const target = event.target instanceof Element ? event.target : null;
       if (!target) return;
       if (openFilterPanel && !target.closest('.gp-home-map-controls')) {
         closeFilterPanels();
-      }
-      if (listDrawer && !listDrawer.hidden && !target.closest('.gp-home-map-list-drawer, [data-home-map-list-toggle], [data-home-map-browse]')) {
-        closeNodeList({ restoreFocus: true });
       }
     });
     document.addEventListener('keydown', (event) => {
@@ -3905,6 +4099,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           renderOverlapStack(people, chapters, center, radius, centroidOf(anchors));
           taken.push({ center, radius });
         });
+      // A row's preview moves to the marker that now stands for its node.
+      if (listTargetNode) previewListNode(listTargetNode);
       // When nothing stands for those people any more (an update removed
       // them), the legend, the next control after the map, takes focus.
       if (active && (!active.isConnected || active.classList.contains('is-clustered')) && !focusControlFor(focusKeys)) {
@@ -5181,6 +5377,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const scheduleMapResizeSync = () => {
       // Before the debounce: focus must not wait on a control that just hid.
       keepChromeFocus();
+      // Nor must an open list wait to take the new width's mode. Out of the
+      // dock, a list open beside a selected card gives way to it.
+      if (listDrawer?.open && !listDrawer.hidden) {
+        if (mapLayout() !== 'dock' && selectedEl && !selectedEl.hidden) yieldListToSelection();
+        else showNodeListForLayout();
+      }
       window.clearTimeout(mapResizeTimer);
       mapResizeTimer = window.setTimeout(() => {
         syncViewToStage();
@@ -5189,7 +5391,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         keepChromeFocus();
         syncAlertBlock();
         applyNodeDensityScale();
-        const activeFocusTarget = selectedFocusTarget ?? pointerFocusTarget;
+        // A row's preview outranks the selection it sits beside.
+        const activeFocusTarget = listTargetNode ?? selectedFocusTarget ?? pointerFocusTarget;
         if (activeFocusTarget && !activeFocusTarget.classList.contains('is-filtered-out')) {
           setFocus(activeFocusTarget);
         }
@@ -5276,13 +5479,23 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   .gp-home-map-canvas {
     --gp-map-card-width: 280px;
     --gp-map-card-offset: 22px;
-    /* The layout the container picks; the script reads it (mapLayout). */
-    --gp-map-layout: wide;
+    /* The layout the container picks, which the script reads (mapLayout):
+       a dock beside the map, a sheet at 860px and narrower, a phone at 520px
+       and narrower. */
+    --gp-map-layout: dock;
     /* The bars' distance from the stage's edge, their chips, and their
-       height: a chip, the bar's padding and its border. */
+       height: a chip, the bar's padding and its border. The end edge moves
+       in while a dock is open. */
     --gp-map-inset: calc(var(--gp-space-sm) + var(--gp-space-xs));
+    --gp-map-end: var(--gp-map-inset);
+    --gp-map-dock-width: 340px;
     --gp-map-chip: 30px;
     --gp-map-bar-block: calc(var(--gp-map-chip) + var(--gp-space-xs) * 2 + 2px);
+    /* Sizes the list's parts share, set once here: a touch target (a row,
+       the search field, Close), an icon, and a node's mark. */
+    --gp-map-target: 44px;
+    --gp-map-icon: 16px;
+    --gp-map-mark: 10px;
     position: relative;
     width: 100%;
     aspect-ratio: var(--gp-map-aspect);
@@ -5932,12 +6145,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   .gp-home-map-filter-note {
     position: absolute;
     inset-block-start: calc(var(--gp-map-inset) + var(--gp-map-bar-block) + var(--gp-space-sm));
-    inset-inline-end: var(--gp-map-inset);
+    inset-inline-end: var(--gp-map-end);
     z-index: 3;
     display: flex;
     align-items: center;
     gap: var(--gp-space-sm);
-    max-width: calc(100% - var(--gp-map-inset) * 2);
+    max-width: calc(100% - var(--gp-map-inset) - var(--gp-map-end));
     padding: var(--gp-space-xs) var(--gp-space-xs) var(--gp-space-xs) var(--gp-space-md);
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-pill);
@@ -5957,12 +6170,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   .gp-home-map-state-error {
     position: absolute;
     inset-block-start: calc(var(--gp-map-inset) + var(--gp-map-bar-block) + var(--gp-space-sm));
-    inset-inline-end: var(--gp-map-inset);
+    inset-inline-end: var(--gp-map-end);
     z-index: 3;
     display: flex;
     align-items: center;
     gap: var(--gp-space-sm);
-    max-width: calc(100% - var(--gp-map-inset) * 2);
+    max-width: calc(100% - var(--gp-map-inset) - var(--gp-map-end));
     padding: var(--gp-space-xs) var(--gp-space-xs) var(--gp-space-xs) var(--gp-space-md);
     border: 1px solid var(--gp-error);
     border-radius: var(--gp-radius-pill);
@@ -6225,6 +6438,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   .gp-home-map-controls {
     position: absolute;
     inset: var(--gp-map-inset);
+    inset-inline-end: var(--gp-map-end);
     z-index: 5;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;
@@ -6714,19 +6928,25 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     padding-inline: var(--gp-space-lg);
   }
 
+  /* The map list. On a wide map it docks inside the stage's end edge: inset
+     like the bars, the stage's full height, about 340px wide. The map never
+     resizes and stays usable beside it; both bars end at its edge. Its head
+     and search stay put while the rows scroll. */
   .gp-home-map-list-drawer {
     position: absolute;
-    inset-inline-start: 12px;
-    inset-block-end: 72px;
+    inset-block: var(--gp-map-inset);
+    inset-inline-start: auto;
+    inset-inline-end: var(--gp-map-inset);
     z-index: 7;
-    width: min(380px, calc(100% - 24px));
-    max-height: min(420px, calc(100% - 96px));
+    box-sizing: border-box;
+    width: min(var(--gp-map-dock-width), calc(100% - var(--gp-map-inset) * 2));
+    height: auto;
     max-width: none;
+    max-height: none;
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 12px;
+    padding: 0;
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-lg);
     background: color-mix(in srgb, var(--gp-green-950) 96%, transparent);
@@ -6734,6 +6954,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     box-shadow: var(--gp-map-pop-shadow);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
+    overflow: hidden;
+    text-align: start;
     pointer-events: auto;
   }
 
@@ -6751,21 +6973,28 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     -webkit-backdrop-filter: blur(3px);
   }
 
+  /* While the list is docked, the bars and the notes under the legend end at
+     its edge. */
+  .gp-home-map-canvas.has-list-drawer {
+    --gp-map-end: calc(var(--gp-map-inset) * 2 + var(--gp-map-dock-width));
+  }
+
   .gp-home-map-list-head {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
+    gap: var(--gp-space-sm);
+    padding: var(--gp-space-md) var(--gp-space-md) 0 var(--gp-space-lg);
   }
 
   .gp-home-map-list-kicker {
-    margin: 0 0 4px;
+    margin: 0 0 var(--gp-space-xs);
     color: var(--gp-map-member);
     font-family: var(--gp-font-mono);
     font-size: var(--gp-caption);
     font-weight: 800;
     letter-spacing: 0.12em;
-    line-height: 1;
+    line-height: 1.4;
     text-transform: uppercase;
   }
 
@@ -6776,80 +7005,164 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     font-size: var(--gp-title-lg);
     font-weight: 500;
     letter-spacing: 0;
-    line-height: 1;
+    line-height: 1.15;
   }
 
   .gp-home-map-list-actions {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--gp-space-sm);
   }
 
-  .gp-home-map-list-actions span {
+  .gp-home-map-list-count {
     min-width: 4ch;
     display: inline-flex;
     justify-content: center;
-    padding: 4px 8px;
+    padding: var(--gp-space-xs) var(--gp-space-sm);
     border: 1px solid color-mix(in srgb, var(--gp-primary) 36%, transparent);
     border-radius: var(--gp-radius-pill);
     color: var(--gp-fg);
     font-family: var(--gp-font-mono);
     font-size: var(--gp-caption);
     font-weight: 800;
+    font-variant-numeric: tabular-nums;
   }
 
-  .gp-home-map-list-actions button {
-    width: 38px;
-    height: 38px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+  .gp-home-map-list-close {
+    width: var(--gp-map-target);
+    height: var(--gp-map-target);
+    flex: none;
+    display: inline-grid;
+    place-items: center;
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-pill);
-    background: color-mix(in srgb, var(--gp-green-950) 62%, transparent);
-    color: var(--gp-fg-muted);
-    font: inherit;
-    font-size: var(--gp-title-md);
-    line-height: 1;
+    background: transparent;
+    color: var(--gp-fg);
     cursor: pointer;
+  }
+
+  .gp-home-map-list-close:hover {
+    border-color: color-mix(in srgb, var(--gp-primary) 45%, transparent);
+  }
+
+  .gp-home-map-list-close svg,
+  .gp-home-map-list-search svg {
+    width: var(--gp-map-icon);
+    height: var(--gp-map-icon);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+  }
+
+  /* The search: DESIGN.md's pill input, with its label in the accessibility
+     tree. 16px text, so a phone does not zoom in on it. */
+  .gp-home-map-list-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: var(--gp-space-sm) var(--gp-space-md);
+    color: var(--gp-fg-muted);
+  }
+
+  .gp-home-map-list-search svg {
+    position: absolute;
+    inset-inline-start: calc(var(--gp-space-md) + var(--gp-space-md));
+    pointer-events: none;
+  }
+
+  .gp-home-map-list-search input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--gp-map-target);
+    padding-block: 0;
+    padding-inline: calc(var(--gp-space-md) * 2 + var(--gp-space-xs)) var(--gp-space-md);
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-pill);
+    background: color-mix(in srgb, var(--gp-green-900) 70%, transparent);
+    color: var(--gp-fg);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-body-md);
+  }
+
+  .gp-home-map-list-search input::placeholder {
+    color: var(--gp-fg-muted);
   }
 
   .gp-home-map-list-items {
-    display: grid;
-    gap: 7px;
+    flex: 1 1 auto;
     min-height: 0;
-    overflow: auto;
-    padding-inline-end: 2px;
+    display: grid;
+    align-content: start;
+    gap: var(--gp-space-md);
+    padding: var(--gp-space-xs) var(--gp-space-sm) var(--gp-space-md);
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
-  .gp-home-map-list-row {
+  .gp-home-map-list-group {
     display: grid;
-    grid-template-columns: 12px minmax(0, 1fr);
+    gap: var(--gp-space-xs);
+  }
+
+  .gp-home-map-list-group-title {
+    display: flex;
     align-items: center;
-    gap: 10px;
-    min-block-size: calc(var(--gp-space-lg) * 3);
-    padding: 10px 12px;
-    border: 1px solid color-mix(in srgb, var(--gp-off-white) 12%, transparent);
+    justify-content: space-between;
+    margin: 0;
+    padding-inline: var(--gp-space-sm);
+    color: var(--gp-primary);
+    font-family: var(--gp-font-mono);
+    font-size: var(--gp-caption);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+
+  .gp-home-map-list-group-count {
+    color: var(--gp-fg-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .gp-home-map-list-rows {
+    display: grid;
+    gap: calc(var(--gp-space-xs) / 2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* One line a row, at least 44px: the mark, the name, and the place, which
+     gives way first with an ellipsis. */
+  .gp-home-map-list-row {
+    box-sizing: border-box;
+    width: 100%;
+    min-block-size: var(--gp-map-target);
+    display: grid;
+    grid-template-columns: var(--gp-map-mark) minmax(0, max-content) minmax(0, 1fr);
+    align-items: center;
+    gap: var(--gp-space-sm);
+    padding: 0 var(--gp-space-sm);
+    border: 1px solid transparent;
     border-radius: var(--gp-radius-md);
-    background: color-mix(in srgb, var(--gp-off-white) 4%, transparent);
+    background: transparent;
     color: var(--gp-fg);
     font: inherit;
-    text-align: left;
+    text-align: start;
     cursor: pointer;
+    transition: background 160ms ease, border-color 160ms ease;
   }
 
-  .gp-home-map-list-row:hover,
-  .gp-home-map-list-row:focus-visible {
-    border-color: color-mix(in srgb, var(--gp-primary) 48%, transparent);
-    background: color-mix(in srgb, var(--gp-off-white) 7%, transparent);
-    outline: none;
+  .gp-home-map-list-row:hover {
+    border-color: color-mix(in srgb, var(--gp-primary) 32%, transparent);
+    background: color-mix(in srgb, var(--gp-off-white) 6%, transparent);
   }
 
   .gp-home-map-list-mark {
-    width: 10px;
-    height: 10px;
-    margin-block-start: var(--gp-space-xs);
-    border-radius: 999px;
+    width: var(--gp-map-mark);
+    height: var(--gp-map-mark);
+    border-radius: var(--gp-radius-pill);
     background: var(--gp-map-member);
     box-shadow: 0 0 0 1.5px var(--gp-green-950);
   }
@@ -6863,74 +7176,89 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     background: var(--gp-map-steward);
   }
 
-  .gp-home-map-list-copy {
-    display: grid;
-    gap: var(--gp-space-xs);
+  .gp-home-map-list-name,
+  .gp-home-map-list-place {
     min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .gp-home-map-list-name {
-    color: var(--gp-fg);
-    font-size: var(--gp-label-sm);
-    font-weight: 800;
-    line-height: 1.2;
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-
-  .gp-home-map-list-meta {
-    color: var(--gp-fg-dim);
-    font-family: var(--gp-font-mono);
-    font-size: 10px;
-    font-weight: 750;
-    letter-spacing: 0.07em;
-    line-height: 1.2;
-    text-transform: uppercase;
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-
-  .gp-home-map-list-themes {
-    display: flex;
-    flex-wrap: nowrap;
-    align-items: center;
-    gap: 4px;
-    min-width: 0;
-    max-width: 100%;
-  }
-
-  .gp-home-map-list-themes:empty {
-    display: none;
-  }
-
-  .gp-home-map-list-themes span {
-    display: inline-flex;
-    align-items: center;
-    flex: none;
-    min-height: 20px;
-    padding: 2px 7px;
-    border: 1px solid color-mix(in srgb, var(--chip-color, var(--gp-map-member)) 50%, transparent);
-    border-radius: var(--gp-radius-pill);
-    background: color-mix(in srgb, var(--chip-color, var(--gp-map-member)) 13%, transparent);
-    color: var(--gp-fg);
-    font-size: var(--gp-caption);
+    font-size: var(--gp-label-md);
     font-weight: 700;
-    line-height: 1;
-    white-space: nowrap;
   }
 
-  .gp-home-map-list-themes span.is-more {
-    border-color: var(--gp-border-soft);
-    background: color-mix(in srgb, var(--gp-green-950) 62%, transparent);
+  .gp-home-map-list-place {
     color: var(--gp-fg-muted);
-    white-space: nowrap;
+    font-size: var(--gp-caption);
+    text-align: end;
   }
 
   .gp-home-map-list-empty {
     margin: 0;
+    padding: var(--gp-space-sm);
     color: var(--gp-fg-muted);
-    font-size: var(--gp-label-sm);
+    font-size: var(--gp-label-md);
     line-height: 1.35;
+  }
+
+  /* A row's pin, or the marker standing for it, rings while the row is
+     hovered or focused. */
+  .gp-home-map-node-link.is-list-target .gp-home-map-node-ring {
+    stroke: var(--gp-primary);
+    stroke-width: 0.6;
+    opacity: 1;
+  }
+
+  .gp-home-map-node-link.is-list-target .gp-home-map-node-halo {
+    opacity: 0.62;
+  }
+
+  .gp-home-map-overlap-stack.is-list-target .gp-home-map-overlap-disc {
+    stroke: var(--gp-primary);
+    stroke-width: 2.5px;
+  }
+
+  /* At an 860px container and narrower a 340px dock would cover most of the
+     map, so the list is a sheet inside the stage, under the top bars, and
+     the bars keep their width. */
+  @container (max-width: 860px) {
+    .gp-home-map-canvas {
+      --gp-map-layout: sheet;
+    }
+
+    .gp-home-map-canvas.has-list-drawer {
+      --gp-map-end: var(--gp-map-inset);
+    }
+
+    .gp-home-map-list-drawer {
+      inset-block-start: calc(var(--gp-map-inset) + var(--gp-map-bar-block) + var(--gp-space-sm));
+      inset-inline: var(--gp-map-inset);
+      width: auto;
+    }
+
+    /* A short stage keeps more of its rows: the kicker sits beside the
+       heading, and the head and search are tighter. */
+    .gp-home-map-list-head {
+      align-items: center;
+      padding-block-start: var(--gp-space-sm);
+    }
+
+    .gp-home-map-list-head > div {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      column-gap: var(--gp-space-sm);
+    }
+
+    .gp-home-map-list-kicker {
+      margin: 0;
+    }
+
+    .gp-home-map-list-search {
+      padding-block: var(--gp-space-xs);
+    }
   }
 
   /* Selected-node card: a stable floating card anchored near the active node.
@@ -8525,35 +8853,21 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       min-height: 44px;
     }
 
+    /* On a phone the list is a full-height modal sheet over the page (the
+       dialog's top layer), its search fixed and its rows scrolling. */
     .gp-home-map-list-drawer {
       position: fixed;
       inset-inline: 0;
-      inset-block-start: auto;
-      inset-block-end: 0;
+      inset-block: auto 0;
       z-index: 40;
       width: min(100vw, 520px);
-      max-height: min(72svh, 680px);
+      height: calc(100dvh - var(--gp-space-2xl));
       margin-block: auto 0;
       margin-inline: auto;
-      padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+      padding-block-end: env(safe-area-inset-bottom, 0px);
       border-block-end: 0;
       border-radius: var(--gp-radius-lg) var(--gp-radius-lg) 0 0;
       overscroll-behavior: contain;
-    }
-
-    .gp-home-map-list-head {
-      align-items: flex-start;
-    }
-
-    .gp-home-map-list-items {
-      max-height: min(58svh, 560px);
-      gap: 6px;
-      overscroll-behavior: contain;
-    }
-
-    .gp-home-map-list-row {
-      min-block-size: 58px;
-      padding: 8px 10px;
     }
 
     /* Until the bottom sheet (PRD-1438's inspector step), a selected node is

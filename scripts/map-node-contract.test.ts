@@ -49,6 +49,13 @@ import {
   type MapNodeType,
 } from '../packages/website/src/lib/home-map-filters.ts';
 import {
+  entryMatchesSearch,
+  groupListEntries,
+  listSearchAnnouncement,
+  rowToFocusAfterRebuild,
+  searchWords,
+} from '../packages/website/src/lib/home-map-list.ts';
+import {
   describeMapStateFeed,
   formatUpdatedAgo,
   LIVE_POLL_INTERVAL_MS,
@@ -1724,24 +1731,23 @@ test('home map mobile touch mode supports bounded zoom and compact connection ro
   assert.match(component, /const closeFilterPanels = \(\) => \{[\s\S]*?openFilterPanel = ''[\s\S]*?syncFilterPanels\(\)/);
   assert.match(component, /const setFilterPanel = \(panelName: string\) => \{[\s\S]*?if \(openFilterPanel\) \{\s*closeNodeList\(\);[\s\S]*?syncFilterPanels\(\)/);
   assert.match(component, /const openNodeList = \(\s*opener: HTMLElement \| null = listToggle,\s*subset: [^)]*?\) => \{[\s\S]*?closeFilterPanels\(\);[\s\S]*?listDrawer\.hidden = false/);
-  assert.match(component, /document\.addEventListener\('pointerdown', \(event\) => \{[\s\S]*?target\.closest\('\.gp-home-map-controls'\)[\s\S]*?closeFilterPanels\(\)[\s\S]*?\.gp-home-map-list-drawer, \[data-home-map-list-toggle\][\s\S]*?closeNodeList\(\)/);
+  // Changed on purpose (map-polish-audit.md § 5): "the outside click (1294)
+  // keeps closing the theme editor but no longer closes the list". The list
+  // is non-modal on a wide map: "the map stays usable, and a click on empty
+  // map no longer closes it."
+  const outsidePress = component.match(/document\.addEventListener\('pointerdown', \(event\) => \{([\s\S]*?)\n    \}\);/)?.[1] ?? '';
+  assert.match(outsidePress, /if \(openFilterPanel && !target\.closest\('\.gp-home-map-controls'\)\) \{\s*closeFilterPanels\(\);/);
+  assert.doesNotMatch(outsidePress, /closeNodeList/);
   assert.match(component, /if \(event\.key !== 'Escape'\) return;[\s\S]*?closeFilterPanels\(\);[\s\S]*?closeNodeList\(\)/);
   assert.match(component, /const openAddDialog = \(trigger\?: HTMLElement\) => \{[\s\S]*?closeFilterPanels\(\);[\s\S]*?closeNodeList\(\)/);
-  assert.match(component, /const visibleThemeSlugs = themeSlugs\.slice\(0, 2\)/);
-  assert.match(component, /const themeCompactLabel = \(slug: string\)/);
-  assert.match(component, /chip\.textContent = themeCompactLabel\(slug\)/);
-  assert.match(component, /chip\.title = label/);
-  assert.match(component, /chip\.setAttribute\('aria-label', label\)/);
-  assert.match(component, /const hiddenThemeCount = themeSlugs\.length - visibleThemeSlugs\.length/);
-  assert.match(component, /more\.textContent = `\+\$\{hiddenThemeCount\}`/);
-  assert.match(component, /more\.setAttribute\('aria-label', `\$\{hiddenThemeCount\} more/);
+  // Reversed on purpose (§ 5): "the list rows' two theme chips with +N (1297
+  // to 1304) and their wrapping rules (1306 to 1311), since compact rows show
+  // the name and place on one line". A row is the mark, the name and the
+  // place, which gives way first with an ellipsis.
+  assert.doesNotMatch(component, /themeCompactLabel|visibleThemeSlugs|hiddenThemeCount|gp-home-map-list-themes|gp-home-map-list-meta/);
   assert.doesNotMatch(component, /gp-home-map-list-action['"]/);
-  assert.match(component, /\.gp-home-map-list-name\s*{[\s\S]*?overflow-wrap:\s*anywhere/);
-  assert.match(component, /\.gp-home-map-list-meta\s*{[\s\S]*?overflow-wrap:\s*anywhere/);
-  assert.match(component, /\.gp-home-map-list-themes\s*{[\s\S]*?flex-wrap:\s*nowrap/);
-  assert.doesNotMatch(component, /\.gp-home-map-list-themes\s*{[^}]*overflow:\s*hidden/);
-  assert.doesNotMatch(component, /\.gp-home-map-list-themes span\s*{[^}]*text-overflow:\s*ellipsis/);
-  assert.match(component, /\.gp-home-map-list-themes span\s*{[\s\S]*?white-space:\s*nowrap/);
+  assert.match(component, /row\.append\(mark, makeListPart\('span', 'gp-home-map-list-name', name\), makeListPart\('span', 'gp-home-map-list-place', place\)\);/);
+  assert.match(component, /\.gp-home-map-list-name,\s*\.gp-home-map-list-place \{[\s\S]*?text-overflow: ellipsis;\s*white-space: nowrap;/);
 });
 
 test('home map uses shared semantic theme colours and derived aliases', async () => {
@@ -2609,7 +2615,7 @@ test('home map chrome: bars in the stage, a theme strip toolbar, one phone row, 
   assert.match(phoneCss, /\.gp-home-map-themes-toggle \{\s*display: inline-flex;/);
   // "Layout follows the container's width only; the kind of pointer never
   // picks it": the script reads the layout the CSS picked.
-  assert.match(component, /const mapLayout = \(\) => \(\s*window\.getComputedStyle\(root\)\.getPropertyValue\('--gp-map-layout'\)/);
+  assert.match(component, /const mapLayout = \(\): 'phone' \| 'sheet' \| 'dock' => \{\s*const layout = window\.getComputedStyle\(root\)\.getPropertyValue\('--gp-map-layout'\)/);
   // The phone's stage pans and resets without dragging: the edge pills, and
   // "Reset the map view", which "returns to the default view and leaves the
   // filters alone".
@@ -2665,6 +2671,173 @@ test('home map chrome: bars in the stage, a theme strip toolbar, one phone row, 
   // every theme shows.
   assert.match(webmcp, /activeThemes: \(pickedThemes\.length \? pickedThemes : themeFilters\)/);
   assert.doesNotMatch(webmcp, /\.click\(|dispatchEvent|setAttribute/);
+});
+
+test('home map list: search matches names and places, and groups follow the legend', () => {
+  // map-polish-audit.md § 5: "Search matches names and places, and one polite
+  // live region announces the count once typing pauses. Rows ... grouped by
+  // type with counts".
+  assert.deepEqual(searchWords("  Côte  D'IVOIRE "), ['cote', "d'ivoire"]);
+  assert.equal(entryMatchesSearch({ name: "Greenpill Côte d'Ivoire", place: 'Abidjan' }, searchWords('cote')), true, 'accents do not matter');
+  assert.equal(entryMatchesSearch({ name: 'Greenpill Nigeria', place: 'Awka' }, searchWords('awka')), true, 'places match');
+  assert.equal(entryMatchesSearch({ name: 'Greenpill Nigeria', place: 'Awka' }, searchWords('greenpill awka')), true, 'every word matches, in the name or the place');
+  assert.equal(entryMatchesSearch({ name: 'Greenpill Nigeria', place: 'Awka' }, searchWords('greenpill kenya')), false);
+  assert.equal(entryMatchesSearch({ name: 'Anyone', place: '' }, searchWords('   ')), true, 'an empty search keeps every row');
+  const groups = groupListEntries([
+    { type: 'member', name: 'zed', place: '' },
+    { type: 'chapter', name: 'Greenpill NYC', place: 'New York City' },
+    { type: 'member', name: 'Ash', place: 'Florida' },
+    { type: 'chapter', name: 'Greenpill Brasil', place: 'Rio de Janeiro' },
+  ]);
+  assert.deepEqual(
+    groups.map((group) => [group.type, group.entries.map((entry) => entry.name)]),
+    [['chapter', ['Greenpill Brasil', 'Greenpill NYC']], ['member', ['Ash', 'zed']]],
+    "the legend's order, names sorted, and no empty group"
+  );
+  assert.equal(listSearchAnnouncement(3, 29, 'awka '), '3 of 29 nodes match "awka".');
+  assert.equal(listSearchAnnouncement(1, 29, 'awka'), '1 of 29 nodes matches "awka".');
+  assert.equal(listSearchAnnouncement(0, 29, 'xyz'), 'No nodes match "xyz".');
+  assert.equal(listSearchAnnouncement(29, 29, ''), '29 nodes in the list.');
+  // A rebuild keeps focus on the same node's row; when an update removed it,
+  // on the next row that remains; with nothing after it, on no row, and the
+  // list's first control takes it (Codex on #59).
+  const before = ['chapter:a', 'chapter:b', 'steward:c', 'member:d', 'member:e'];
+  assert.equal(rowToFocusAfterRebuild(before, 'steward:c', before), 'steward:c');
+  assert.equal(rowToFocusAfterRebuild(before, 'steward:c', ['chapter:a', 'chapter:b', 'member:d', 'member:e']), 'member:d');
+  assert.equal(rowToFocusAfterRebuild(before, 'steward:c', ['chapter:a', 'chapter:b', 'member:e']), 'member:e');
+  assert.equal(rowToFocusAfterRebuild(before, 'member:e', ['chapter:a', 'chapter:b', 'steward:c', 'member:d']), null);
+  assert.equal(rowToFocusAfterRebuild(before, 'steward:c', ['chapter:a', 'chapter:b']), null);
+  assert.equal(rowToFocusAfterRebuild(before, '', before), null);
+  // A node that arrives with the update is never the "next" row.
+  assert.equal(rowToFocusAfterRebuild(before, 'member:d', ['chapter:a', 'member:new', 'member:e']), 'member:e');
+});
+
+test('home map list: a dock beside the map, a sheet inside the stage, a modal sheet on phones', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  // § 5: "The list opens in the same dock: the kicker 'Visible nodes', the
+  // heading 'Map list' (an h2, as today), a count, and a search field labelled
+  // 'Search the map' with the placeholder 'Name or place'."
+  assert.match(component, /<p class="gp-home-map-list-kicker" data-home-map-list-kicker>Visible nodes<\/p>\s*<h2 id="gp-home-map-list-title">Map list<\/h2>/);
+  assert.match(component, /<span class="gp-home-map-list-count" data-home-map-list-count>0<\/span>/);
+  assert.match(component, /<label class="gp-home-map-sr" for="gp-home-map-list-search">Search the map<\/label>/);
+  assert.match(component, /id="gp-home-map-list-search"\s+type="search"\s+data-home-map-list-search\s+placeholder="Name or place"/);
+  // "one polite live region announces the count once typing pauses"
+  assert.match(component, /<p class="gp-home-map-sr" data-home-map-list-live aria-live="polite"><\/p>/);
+  assert.match(component, /window\.clearTimeout\(listAnnounceTimer\);\s*listAnnounceTimer = window\.setTimeout\(\(\) => \{[\s\S]*?listSearchAnnouncement\(/);
+  // Each opening clears the last announcement along with the search, so a
+  // reopened list never reads out an old count (Codex on #59).
+  assert.match(component, /listQuery = '';\s*if \(listSearch\) listSearch\.value = '';\s*if \(listLive\) listLive\.textContent = '';/);
+  // "Rows are at least 44px tall (mark, name, place cut with an ellipsis),
+  // grouped by type with counts".
+  // The list's sizes are set once as map properties (CodeRabbit on #59):
+  // a 44px target for rows, the search field and Close, a 16px icon and a
+  // 10px mark, with the shared pill radius and spacing tokens beside them.
+  assert.match(component, /--gp-map-target: 44px;\s*--gp-map-icon: 16px;\s*--gp-map-mark: 10px;/);
+  assert.match(component, /\.gp-home-map-list-row \{[\s\S]*?min-block-size: var\(--gp-map-target\);/);
+  assert.match(component, /\.gp-home-map-list-close \{\s*width: var\(--gp-map-target\);\s*height: var\(--gp-map-target\);/);
+  assert.match(component, /\.gp-home-map-list-search input \{[\s\S]*?min-height: var\(--gp-map-target\);/);
+  assert.match(component, /\.gp-home-map-list-mark \{\s*width: var\(--gp-map-mark\);\s*height: var\(--gp-map-mark\);\s*border-radius: var\(--gp-radius-pill\);/);
+  const listCss = component.match(/\n  \.gp-home-map-list-drawer \{[\s\S]*?\n  \.gp-home-map-list-mark\.is-chapter \{/)?.[0] ?? '';
+  assert.ok(listCss.length > 0, 'list CSS block found');
+  assert.doesNotMatch(listCss, /\b(?:44|16|10|2)px;|999px/);
+  assert.match(component, /groupListEntries\(entries\)\.forEach\(\(group\) => \{[\s\S]*?makeListPart\('h3', 'gp-home-map-list-group-title'\)[\s\S]*?makeListPart\('span', 'gp-home-map-list-group-count', String\(group\.entries\.length\)\)[\s\S]*?makeListPart\('ul', 'gp-home-map-list-rows'\)/);
+  // "Hovering or focusing a row rings its pin and shows its tooltip." The
+  // hovered row and the keyboard-focused row are tracked apart, the latest
+  // in front: when the pointer leaves, a row that keeps focus previews
+  // again, and on blur a row still under the pointer does (Codex on #59).
+  // The focus a click leaves previews nothing, as on the map's pins.
+  assert.match(component, /row\.addEventListener\('pointerenter', \(\) => \{\s*hoveredListNode = node;\s*previewListNode\(node\);\s*\}\);/);
+  assert.match(component, /row\.addEventListener\('pointerleave', \(\) => \{\s*hoveredListNode = null;\s*restoreListPreview\(\);\s*\}\);/);
+  assert.match(component, /row\.addEventListener\('focus', \(\) => \{\s*if \(!row\.matches\(':focus-visible'\)\) return;\s*focusedListNode = node;\s*previewListNode\(node\);\s*\}\);/);
+  assert.match(component, /row\.addEventListener\('blur', \(\) => \{\s*if \(focusedListNode !== node\) return;\s*focusedListNode = null;\s*restoreListPreview\(\);\s*\}\);/);
+  assert.match(component, /const restoreListPreview = \(\) => \{\s*const node = hoveredListNode \?\? focusedListNode;\s*if \(node\) previewListNode\(node\);\s*else clearListTarget\(\);\s*\};/);
+  assert.doesNotMatch(component, /row\.addEventListener\('(?:pointerleave|blur)', clearListTarget\)/);
+  // A row previews beside a selected node too, and the selection's state
+  // comes back when the preview ends (Codex on #59). The selected node stays
+  // lit meanwhile, and a selected chapter's state is the map at rest.
+  assert.match(component, /const previewListNode = \(node: HTMLElement\) => \{[\s\S]*?ringListTarget\(node\);\s*setFocus\(node\);\s*\};/);
+  assert.doesNotMatch(component, /if \(!selectedFocusTarget\) setFocus\(node\);/);
+  assert.match(component, /const clearListTarget = \(\) => \{\s*if \(!listTargetNode\) return;\s*ringListTarget\(null\);\s*if \(pointerFocusTarget \|\| hoveredStackKey\) return;\s*clearFocus\(\);\s*\};/);
+  assert.match(component, /const selectedId = selectedFocusTarget\?\.getAttribute\('data-node-id'\);\s*if \(selectedId\) adjacentIds\.add\(selectedId\);/);
+  assert.match(component, /if \(target === selectedFocusTarget && target\.classList\.contains\('is-chapter'\)\) \{\s*clearFocusState\(\);\s*return;\s*\}/);
+  // Rebuilt stack markers take the ring over from the ones they replace,
+  // and a resize keeps the preview in front of the selection (Codex on #59).
+  const recomputeClusters = component.match(/const recomputeClustersNow = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(recomputeClusters, /if \(listTargetNode\) previewListNode\(listTargetNode\);/);
+  assert.match(component, /const activeFocusTarget = listTargetNode \?\? selectedFocusTarget \?\? pointerFocusTarget;/);
+  assert.match(component, /\.gp-home-map-node-link\.is-list-target \.gp-home-map-node-ring \{/);
+  assert.match(component, /\.gp-home-map-overlap-stack\.is-list-target \.gp-home-map-overlap-disc \{/);
+  // A live update rebuilding the rows keeps keyboard focus on the same node.
+  // When the update removed that node, focus moves to the next row that
+  // remains, else to the list's first control, also when no row is left:
+  // it never drops out of the list or a phone's modal sheet (Codex on #59).
+  const renderList = component.match(/\n    renderNodeList = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(renderList, /const focusId = active\s*\? rowToFocusAfterRebuild\(previousIds, clean\(active\.dataset\.listNodeId\), entries\.map\(\(entry\) => clean\(entry\.node\.dataset\.nodeId\)\)\)\s*: null;/);
+  assert.match(renderList, /if \(focusId && row\.dataset\.listNodeId === focusId\) focusRow = row;/);
+  assert.match(renderList, /if \(keepFocusOn\) keepFocusOn\.focus\(\{ preventScroll: true \}\);\s*else if \(active\) listEntryControl\(\)\?\.focus\(\{ preventScroll: true \}\);/);
+  assert.match(renderList, /'No visible nodes match these filters\.'\s*\)\);\s*if \(active\) listEntryControl\(\)\?\.focus\(\{ preventScroll: true \}\);\s*return;/);
+  assert.match(renderList, /hoveredListNode = null;\s*focusedListNode = null;\s*clearListTarget\(\);\s*listItems\.textContent = '';/);
+  // The first control is the search, or Close on a touch screen, as when
+  // the list opens.
+  assert.match(component, /const listEntryControl = \(\) => \{\s*const typing = !window\.matchMedia\('\(pointer: coarse\)'\)\.matches;\s*return \(typing \? listSearch : listClose\)/);
+  assert.match(component, /window\.requestAnimationFrame\(\(\) => listEntryControl\(\)\?\.focus\(\{ preventScroll: true \}\)\);/);
+  // "The list is non-modal on desktop: the map stays usable" and on phones
+  // "The list opens as a full-height sheet, modal on phones as today". Width
+  // picks the layout, never the pointer.
+  const showList = component.match(/const showNodeListForLayout = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(showList, /const modal = mapLayout\(\) === 'phone';/);
+  assert.match(showList, /if \(modal\) listDrawer\.showModal\(\);\s*else listDrawer\.show\(\);/);
+  assert.match(component, /renderNodeList\(\);\s*showNodeListForLayout\(\);/);
+  assert.doesNotMatch(component, /listDrawer\.setAttribute\('aria-modal', isTouchMap\(\)/);
+  // An open list that crosses 520px reopens in the new mode, keeping its
+  // search, scroll and focus, and the close event that follows changes
+  // nothing (Codex on #59).
+  assert.match(showList, /if \(listDrawer\.open && listShownModal === modal\) return;/);
+  assert.match(showList, /if \(listDrawer\.open\) listDrawer\.close\(\);/);
+  assert.match(showList, /if \(listItems\) listItems\.scrollTop = scrollTop;\s*focused\?\.focus\(\{ preventScroll: true \}\);/);
+  assert.match(component, /const scheduleMapResizeSync = \(\) => \{[\s\S]*?if \(listDrawer\?\.open && !listDrawer\.hidden\) \{\s*if \(mapLayout\(\) !== 'dock' && selectedEl && !selectedEl\.hidden\) yieldListToSelection\(\);\s*else showNodeListForLayout\(\);\s*\}[\s\S]*?window\.clearTimeout\(mapResizeTimer\);/);
+  // A docked list can sit beside a selected card; a sheet or a phone has
+  // room for one. Leaving the dock with both open settles as a pick on a
+  // sheet does: the list closes, the selection stays, and focus that was in
+  // the list moves to the card (Codex on #59).
+  assert.match(component, /const yieldListToSelection = \(\) => \{\s*const focusWasInList = Boolean\(listDrawer\?\.contains\(document\.activeElement\)\);\s*closeNodeList\(\);\s*if \(focusWasInList\) selectedClose\?\.focus\(\{ preventScroll: true \}\);\s*\};/);
+  assert.match(component, /listDrawer\?\.addEventListener\('close', \(\) => \{\s*if \(listDrawer\.open\) return;\s*syncNodeListClosed\(\);/);
+  // The dock: "inset 12px, the stage's full height, about 340px wide", and
+  // "While the dock is open, both bars end at its edge."
+  const drawerCss = component.match(/\n  \.gp-home-map-list-drawer \{([^}]*)\}/)?.[1] ?? '';
+  assert.match(drawerCss, /inset-block: var\(--gp-map-inset\);/);
+  assert.match(drawerCss, /inset-inline-end: var\(--gp-map-inset\);/);
+  assert.match(drawerCss, /width: min\(var\(--gp-map-dock-width\), calc\(100% - var\(--gp-map-inset\) \* 2\)\);/);
+  assert.match(component, /--gp-map-dock-width: 340px;/);
+  assert.match(component, /\.gp-home-map-canvas\.has-list-drawer \{\s*--gp-map-end: calc\(var\(--gp-map-inset\) \* 2 \+ var\(--gp-map-dock-width\)\);/);
+  assert.match(component, /\.gp-home-map-controls \{[\s\S]*?inset-inline-end: var\(--gp-map-end\);/);
+  // "Containers from 521 to 860px: ... the list open[s] as a bottom sheet
+  // inside the stage, because a 340px dock would cover most of the map."
+  assert.match(component, /@container \(max-width: 860px\) \{\s*\.gp-home-map-canvas \{\s*--gp-map-layout: sheet;/);
+  const phoneCss = component.match(/@container \(max-width: 520px\) \{([\s\S]*?)\n  \}\n/)?.[1] ?? '';
+  assert.match(phoneCss, /\.gp-home-map-list-drawer \{\s*position: fixed;[\s\S]*?height: calc\(100dvh - var\(--gp-space-2xl\)\);/);
+  // "The list scrolls the same way under its search field".
+  assert.match(component, /\.gp-home-map-list-items \{[\s\S]*?min-height: 0;[\s\S]*?overflow-y: auto;/);
+  // Picking a row selects its node; a docked list stays open beside it, and a
+  // sheet or a phone's modal list gives way to it.
+  assert.match(component, /const activateListNode = \(node: HTMLElement, viaKeyboard: boolean\) => \{\s*clearListTarget\(\);\s*const docked = mapLayout\(\) === 'dock';\s*if \(!docked\) closeNodeList\(\);\s*activateMapNode\(node, viaKeyboard \|\| !docked\);/);
+  // A mouse pick in the dock keeps focus on the list for the next row.
+  assert.match(component, /row\.addEventListener\('click', \(event\) => activateListNode\(node, event\.detail === 0 \|\| row\.matches\(':focus-visible'\)\)\);/);
+  // Escape empties a search before it closes the list, wherever focus is in
+  // the list, a row included (CodeRabbit on #59).
+  assert.match(component, /listDrawer\?\.addEventListener\('keydown', \(event\) => \{\s*if \(event\.key !== 'Escape' \|\| !listSearch\?\.value\) return;\s*event\.preventDefault\(\);\s*event\.stopPropagation\(\);/);
+  assert.doesNotMatch(component, /listSearch\?\.addEventListener\('keydown'/);
+  // Until step 4 moves it into the dock, a selected node's card keeps to the
+  // map's side of a docked list (CodeRabbit on #59), and finds its place
+  // again when the list closes.
+  assert.match(component, /const dockRect = mapLayout\(\) === 'dock' && listDrawer && !listDrawer\.hidden \? listDrawer\.getBoundingClientRect\(\) : null;/);
+  assert.match(component, /selectedEl\.style\.setProperty\('--gp-selected-x', `\$\{clampNumber\(desiredX, inset, maxX\)\}px`\);/);
+  assert.match(component, /const syncNodeListClosed = \(\) => \{[\s\S]*?layoutThemeStrip\(\);\s*\/\/[^\n]*\n\s*syncSelectedOverlay\(\);\s*\};/);
+  // A touch screen opens the list at Close, so no on-screen keyboard rises.
+  assert.match(component, /const typing = !window\.matchMedia\('\(pointer: coarse\)'\)\.matches;/);
 });
 
 // ---------------------------------------------------------------------------
