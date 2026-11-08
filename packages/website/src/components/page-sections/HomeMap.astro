@@ -2144,7 +2144,9 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const selectChapterBySlug = (slug: string, viaKeyboard = false) => {
       if (!slug) return;
       const chapterEl = root.querySelector(`.gp-home-map-node-link.is-chapter[data-node-id="${CSS.escape('chapter:' + slug)}"]`);
-      if (chapterEl) openChapterNode(chapterEl, viaKeyboard);
+      if (!chapterEl) return;
+      revealFilteredNode(chapterEl);
+      openChapterNode(chapterEl, viaKeyboard);
     };
 
     // ---- Embedded map filters ---------------------------------------------
@@ -2186,6 +2188,26 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const nodeMatchesThemeFilters = (node: Element) => {
       if (!allThemeCount || activeThemes.size === allThemeCount) return true;
       return nodeThemes(node).some((theme) => activeThemes.has(theme));
+    };
+
+    // A steward's card jumps to their chapter, and since chapters follow the
+    // theme filters (PRD-1423) a filter can hide it. Widen the filters just
+    // enough to show it before it opens, with the pills in step: the type
+    // filter lets it through, and one of its own themes is switched on, or
+    // every theme when it has none.
+    const revealFilteredNode = (node: Element) => {
+      if (!node.classList.contains('is-filtered-out')) return;
+      const type = filterTypeFor(node.getAttribute('data-node-type'));
+      if (activeTypeFilter && activeTypeFilter !== type) activeTypeFilter = '';
+      if (!nodeMatchesThemeFilters(node)) {
+        const filterThemes = themeFilterButtons.map((button) => clean(button.dataset.themeFilter)).filter(Boolean);
+        const ownTheme = nodeThemes(node).find((theme) => filterThemes.includes(theme));
+        (ownTheme ? [ownTheme] : filterThemes).forEach((theme) => activeThemes.add(theme));
+        themeFilterButtons.forEach((button) => {
+          button.setAttribute('aria-pressed', activeThemes.has(clean(button.dataset.themeFilter)) ? 'true' : 'false');
+        });
+      }
+      applyMapFilters();
     };
 
     const setNodeVisibility = (node: Element, visible: boolean) => {
@@ -5393,7 +5415,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     display: flex;
     align-items: center;
     gap: var(--gp-space-sm);
-    max-width: calc(100% - 24px);
+    max-width: calc(100% - var(--gp-space-lg));
     padding: var(--gp-space-xs) var(--gp-space-xs) var(--gp-space-xs) var(--gp-space-md);
     border: 1px solid var(--gp-error);
     border-radius: var(--gp-radius-pill);
@@ -5407,10 +5429,10 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   }
 
   /* On a wide map a sparse-filter note shares that spot; it moves below the
-     error note, which is 54px tall: Try again, its padding and border. */
+     error note: Try again, the note's padding and its border. */
   @container (width > 720px) {
     .gp-home-map-state-error:not([hidden]) ~ .gp-home-map-filter-note {
-      inset-block-start: calc(72px + 54px + var(--gp-space-sm));
+      inset-block-start: calc(72px + 44px + var(--gp-space-xs) * 2 + 2px + var(--gp-space-sm));
     }
   }
 

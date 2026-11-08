@@ -65,6 +65,7 @@ import {
 import {
   assertPublicMapStatePayload,
   containsPrivateMapStateField,
+  generatePublicMapEdges,
   PUBLIC_MAP_THEMES,
   toPublicAggregateCountsPayload,
   toPublicMapStatePayload,
@@ -569,6 +570,12 @@ test('public map-state: no hub wins over everyone having a line (Codex on #50)',
   assert.equal(lines('hub'), 3, 'the hub stops at three');
   assert.deepEqual(leaves.map((leaf) => lines(leaf.id)), [1, 1, 1, 0], 'the farthest leaf stays without a line');
   assert.equal(payload.edges.length, 3);
+
+  // A caller's cap of zero means no lines: the last pass does not run
+  // (CodeRabbit on #50). A cap of one still lets it add one over the cap.
+  assert.deepEqual(generatePublicMapEdges(payload.nodes, { perNodeLimit: 0 }), []);
+  const capOne = generatePublicMapEdges(payload.nodes, { perNodeLimit: 1 });
+  assert.equal(capOne.filter((edge) => edge.from === 'submission:hub' || edge.to === 'submission:hub').length, 2, 'the hub gets one line plus one from the last pass');
 });
 
 test('public map-state includes real opt-in stewards without anonymous density', () => {
@@ -1343,7 +1350,12 @@ test('home map live feed: the Live pill tells freshness, failures show on the ma
   assert.equal(mapStateHasPeopleLayer(nobodyYet), true);
   assert.equal(mapStateHasPeopleLayer(null), false, 'an answer that is no map state fails too');
   assert.equal(mapStateHasPeopleLayer('maintenance'), false);
-  assert.equal(mapStateHasPeopleLayer({ nodes: [] }), true, 'an answer without source statuses is taken as it comes');
+  // A 200 carrying an error instead of a map state must not clear the people
+  // (CodeRabbit on #50): without a list of nodes it is a failed refresh.
+  assert.equal(mapStateHasPeopleLayer({ error: 'maintenance' }), false);
+  assert.equal(mapStateHasPeopleLayer({ error: { message: 'maintenance' }, counts: { sources: [] } }), false);
+  assert.equal(mapStateHasPeopleLayer({ nodes: 'none' }), false);
+  assert.equal(mapStateHasPeopleLayer({ nodes: [] }), true, 'a map state without source statuses is taken as it comes');
 
   // A screen reader hears the changes that matter, once each; the age ticking
   // up is not one of them.
@@ -1859,6 +1871,21 @@ test('home map chapters open an inspect card and carry one link (progressive enh
   assert.match(component, /const shownThemes = isChapter \? member\.themes : member\.themes\.slice\(0, 4\);/);
   assert.match(component, /selectedThemesEl\.hidden = selectedThemesEl\.childElementCount === 0;/);
   assert.doesNotMatch(component, /\[data-selected-type='chapter'\] \.gp-home-map-selected-themes/);
+
+  // A steward's card jumps to their chapter. Since chapters follow the theme
+  // filters, a filter can hide that chapter (CodeRabbit on #50), so the jump
+  // widens the filters just enough to show it first, with the pills in step.
+  const jump = component.match(/const selectChapterBySlug = \(slug: string, viaKeyboard = false\) => \{([\s\S]*?)\n    \};/)?.[1] ?? '';
+  assert.match(jump, /if \(!chapterEl\) return;\s*revealFilteredNode\(chapterEl\);\s*openChapterNode\(chapterEl, viaKeyboard\);/);
+  const reveal = component.match(/const revealFilteredNode = \(node: Element\) => \{([\s\S]*?)\n    \};/)?.[1] ?? '';
+  assert.match(reveal, /if \(!node\.classList\.contains\('is-filtered-out'\)\) return;/, 'a visible chapter leaves the filters alone');
+  assert.match(reveal, /if \(activeTypeFilter && activeTypeFilter !== type\) activeTypeFilter = '';/);
+  // Only themes that have a pill are switched on, so "all themes" still means
+  // every pill pressed; a chapter without themes brings every theme back.
+  assert.match(reveal, /const ownTheme = nodeThemes\(node\)\.find\(\(theme\) => filterThemes\.includes\(theme\)\);/);
+  assert.match(reveal, /\(ownTheme \? \[ownTheme\] : filterThemes\)\.forEach\(\(theme\) => activeThemes\.add\(theme\)\);/);
+  assert.match(reveal, /button\.setAttribute\('aria-pressed', activeThemes\.has\(clean\(button\.dataset\.themeFilter\)\) \? 'true' : 'false'\);/);
+  assert.match(reveal, /applyMapFilters\(\);\s*$/);
 
   // Still no redundant "Chapter node" label and no relationship/edit rows.
   assert.match(component, /selectedEl\.dataset\.selectedType = member\.type/);

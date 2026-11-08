@@ -500,7 +500,8 @@ export function generatePublicMapEdges(
   // themed a, b, c and d, and four people who each share just one of those
   // themes. The first pass links two of them, this pass a third, and the
   // fourth stays without a line. On the live map of 2026-11-07 this pass
-  // added nothing.
+  // added nothing. A cap of zero means no lines, so it does not run.
+  if (perNodeLimit < 1) return edges;
   for (const candidate of ranked) {
     if (nodeEdgeCounts.has(candidate.a.id) && nodeEdgeCounts.has(candidate.b.id)) continue;
     addCandidate(candidate, perNodeLimit + 1);

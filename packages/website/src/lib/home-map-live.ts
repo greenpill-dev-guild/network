@@ -31,16 +31,18 @@ const PEOPLE_SOURCE = 'approved-map-nodes';
 const FAILED_SOURCE_STATUSES = new Set(['unavailable', 'not_configured']);
 
 /**
- * Whether a /map/state answer carries the people layer. The agent answers
- * 200 even while its database is down: `counts.sources` then marks
+ * Whether a /map/state answer carries the people layer. Only a map state
+ * does: an answer without a list of nodes, such as a 200 carrying
+ * `{"error":"maintenance"}`, is a failed refresh. The agent also answers 200
+ * while its database is down: `counts.sources` then marks
  * `approved-map-nodes` as unavailable (or not configured), there are no
- * people, and intake falls back to moderated. Such an answer is a failed
- * refresh, not an empty map, so the people already drawn stay and the error
- * and backoff carry on. An answer that is not a map state at all fails too;
- * one without source statuses is taken as it comes.
+ * people, and intake falls back to moderated. That too is a failed refresh,
+ * not an empty map, so the people already drawn stay and the error and
+ * backoff carry on. A map state without source statuses is taken as it
+ * comes.
  */
 export function mapStateHasPeopleLayer(state: unknown): boolean {
-  if (!state || typeof state !== 'object') return false;
+  if (!state || typeof state !== 'object' || !Array.isArray((state as { nodes?: unknown }).nodes)) return false;
   const sources = (state as { counts?: { sources?: unknown } }).counts?.sources;
   if (!Array.isArray(sources)) return true;
   const people = sources.find((source) => source?.source === PEOPLE_SOURCE);
