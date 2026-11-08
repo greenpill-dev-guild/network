@@ -3691,12 +3691,22 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const placePinsInsideDrawing = () => {
       if (!mapIsDrawn()) return;
       const inset = pinHitRadius();
+      // The stage clips the drawing to rounded corners, inside its border: a
+      // pin there keeps its whole circle inside that curve too.
+      const stage = window.getComputedStyle(root);
+      const clipRadius = (Number.parseFloat(stage.borderTopLeftRadius) || 0) - (Number.parseFloat(stage.borderTopWidth) || 0);
+      const corner = pxToViewBox(Math.max(0, clipRadius));
+      // The drawing as the stage shows it at its widest: all of its width
+      // (a phone pans across it), and its height less what a wide stage crops
+      // from the top and bottom, so the corners are the stage's own.
+      const widest = largestMapView(stageAspect(), FULL_VIEW_BOX);
+      const shownDrawing = { x: FULL_VIEW_BOX.x, y: widest.y, width: FULL_VIEW_BOX.width, height: widest.height };
       let moved = false;
       root.querySelectorAll<SVGElement>('.gp-home-map-node-link').forEach((pin) => {
         const x = toFiniteNumber(pin.dataset.mapX);
         const y = toFiniteNumber(pin.dataset.mapY);
         if (x === null || y === null) return;
-        const drawn = clampPinToDrawing({ x, y }, inset);
+        const drawn = clampPinToDrawing({ x, y }, inset, shownDrawing, corner);
         const dot = pin.querySelector('.gp-home-map-node-dot');
         const close = (attribute: string, value: number) => Math.abs(Number(dot?.getAttribute(attribute)) - value) < 0.005;
         if (close('cx', drawn.x) && close('cy', drawn.y)) return;

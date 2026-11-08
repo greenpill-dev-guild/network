@@ -2867,6 +2867,23 @@ test('home map edge pins and labels at rest: the clamp and the placement rules',
   // On a small map the 44px hit circle is wider than 4.8 map units, and the
   // inset follows it (Codex on #60): at a 521px sheet, about 8.5 units.
   assert.deepEqual(clampPinToDrawing({ x: lonToX(180), y: 40 }, 8.5), { x: 191.5, y: 40 });
+  // The stage clips to rounded corners (Codex on #60). In a corner's square
+  // the centre stays within `cornerRadius - inset` of the arc's centre, so
+  // the whole circle fits inside the curve; along an edge nothing changes,
+  // and a corner rounder than the inset changes nothing.
+  const cornered = clampPinToDrawing({ x: 200, y: 88 }, 4.8, MAP_DRAWING, 12);
+  const arc = { x: 200 - 12, y: 88 - 12 };
+  assert.ok(Math.abs(Math.hypot(cornered.x - arc.x, cornered.y - arc.y) - (12 - 4.8)) < 1e-9);
+  assert.ok(cornered.x > arc.x && cornered.y > arc.y, 'the pin stays toward its corner');
+  assert.ok(cornered.x <= 200 - 4.8 && cornered.y <= 88 - 4.8, 'and inside the rectangular inset');
+  assert.deepEqual(clampPinToDrawing({ x: 200, y: 40 }, 4.8, MAP_DRAWING, 12), { x: 195.2, y: 40 });
+  assert.deepEqual(clampPinToDrawing({ x: 200, y: 88 }, 4.8, MAP_DRAWING, 4), { x: 195.2, y: 83.2 });
+  // Every corner keeps the circle inside: no point of it lies beyond the curve.
+  for (const corner of [{ x: 0, y: 0 }, { x: 200, y: 0 }, { x: 0, y: 88 }, { x: 200, y: 88 }]) {
+    const pin = clampPinToDrawing(corner, 4.8, MAP_DRAWING, 12);
+    const arcCenter = { x: corner.x === 0 ? 12 : 188, y: corner.y === 0 ? 12 : 76 };
+    assert.ok(Math.hypot(pin.x - arcCenter.x, pin.y - arcCenter.y) + 4.8 <= 12 + 1e-9, `circle inside the curve at ${corner.x},${corner.y}`);
+  }
 
   // § 5: "Each label tries right, left, above and below its dot, and hides
   // when it would touch another label, a pin, a badge, a bar or the dock."
@@ -2944,7 +2961,9 @@ test('home map labels and hit targets: chapter labels at rest, 44px pins and bad
   assert.match(component, /group\.dataset\.mapX = mapPoint\.x\.toFixed\(3\);\s*group\.dataset\.mapY = mapPoint\.y\.toFixed\(3\);/);
   const placePins = component.match(/const placePinsInsideDrawing = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
   assert.match(placePins, /const inset = pinHitRadius\(\);/);
-  assert.match(placePins, /const drawn = clampPinToDrawing\(\{ x, y \}, inset\);/);
+  assert.match(placePins, /const clipRadius = \(Number\.parseFloat\(stage\.borderTopLeftRadius\) \|\| 0\) - \(Number\.parseFloat\(stage\.borderTopWidth\) \|\| 0\);\s*const corner = pxToViewBox\(Math\.max\(0, clipRadius\)\);/);
+  assert.match(placePins, /const widest = largestMapView\(stageAspect\(\), FULL_VIEW_BOX\);\s*const shownDrawing = \{ x: FULL_VIEW_BOX\.x, y: widest\.y, width: FULL_VIEW_BOX\.width, height: widest\.height \};/);
+  assert.match(placePins, /const drawn = clampPinToDrawing\(\{ x, y \}, inset, shownDrawing, corner\);/);
   assert.match(placePins, /if \(!moved\) return;\s*if \(lastThreadInputs\) renderDynamicThreads\(lastThreadInputs\.nodes, lastThreadInputs\.edges\);/);
   // What is drawn at a moved pin follows it: the selected web and card, and
   // the tooltip of the node it shows (Codex on #60).

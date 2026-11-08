@@ -317,12 +317,32 @@ export const PIN_HIT_RADIUS = 4.8;
  * Where a pin is drawn: its point, kept `inset` map units inside the
  * drawing so the pin and its hit circle never cross the edge. Only the
  * drawing moves; the node keeps its true coordinate.
+ *
+ * The stage clips the drawing to rounded corners. With `cornerRadius` (in
+ * map units) larger than the inset, a pin in a corner's square also keeps
+ * its circle inside the curve: its centre stays within `cornerRadius -
+ * inset` of the corner's arc centre.
  */
-export function clampPinToDrawing(point: MapPoint, inset = PIN_HIT_RADIUS, drawing: MapBox = MAP_DRAWING): MapPoint {
-  return {
-    x: Math.min(Math.max(point.x, drawing.x + inset), drawing.x + drawing.width - inset),
-    y: Math.min(Math.max(point.y, drawing.y + inset), drawing.y + drawing.height - inset),
-  };
+export function clampPinToDrawing(
+  point: MapPoint,
+  inset = PIN_HIT_RADIUS,
+  drawing: MapBox = MAP_DRAWING,
+  cornerRadius = 0
+): MapPoint {
+  const x = Math.min(Math.max(point.x, drawing.x + inset), drawing.x + drawing.width - inset);
+  const y = Math.min(Math.max(point.y, drawing.y + inset), drawing.y + drawing.height - inset);
+  if (cornerRadius <= inset) return { x, y };
+  const left = drawing.x + cornerRadius;
+  const right = drawing.x + drawing.width - cornerRadius;
+  const top = drawing.y + cornerRadius;
+  const bottom = drawing.y + drawing.height - cornerRadius;
+  const arcX = x < left ? left : x > right ? right : null;
+  const arcY = y < top ? top : y > bottom ? bottom : null;
+  if (arcX === null || arcY === null) return { x, y };
+  const reach = cornerRadius - inset;
+  const distance = Math.hypot(x - arcX, y - arcY);
+  if (distance <= reach) return { x, y };
+  return { x: arcX + ((x - arcX) / distance) * reach, y: arcY + ((y - arcY) / distance) * reach };
 }
 
 // ---- Labels at rest -------------------------------------------------------
