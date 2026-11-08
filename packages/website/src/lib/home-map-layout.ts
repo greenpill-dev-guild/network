@@ -214,3 +214,91 @@ export function formatPickerCoordinate(value: number): string {
   const fixed = value.toFixed(6);
   return Number(fixed) === 0 ? (0).toFixed(6) : fixed;
 }
+
+// ---- The map's view: what part of the drawing the stage shows -------------
+// A stage as wide as the drawing (200 by 88 map units) shows all of it. A
+// phone's stage is at least 60svh tall (docs/design/map-polish-audit.md § 5),
+// so it shows the drawing's full height and part of its width, centred on the
+// Atlantic; the map is never letterboxed.
+
+/** The drawn map in map units: the whole width, cropped below about 68°S. */
+export const MAP_DRAWING: MapBox = { x: 0, y: 0, width: 200, height: 88 };
+
+/**
+ * Map x of the mid-Atlantic, about 32°W. A phone's map opens centred on it:
+ * from the Great Lakes to Cape Town on a 375 by 812 phone.
+ */
+export const ATLANTIC_CENTER_X = 82;
+
+export type MapEdge = 'west' | 'east';
+
+const safeAspect = (aspect: number, drawing: MapBox) => (
+  Number.isFinite(aspect) && aspect > 0 ? aspect : drawing.width / drawing.height
+);
+
+/**
+ * The largest view in the stage's shape (`aspect`, its width over its
+ * height) that stays inside the drawing, centred on it.
+ */
+export function largestMapView(aspect: number, drawing: MapBox = MAP_DRAWING): MapBox {
+  const shape = safeAspect(aspect, drawing);
+  // A stage in the drawing's shape sees exactly the drawing, without the
+  // float error of multiplying back through its aspect.
+  const snap = (value: number, edge: number) => (Math.abs(value - edge) < 1e-9 ? edge : value);
+  const width = snap(Math.min(drawing.width, drawing.height * shape), drawing.width);
+  const height = snap(width / shape, drawing.height);
+  return {
+    x: drawing.x + (drawing.width - width) / 2,
+    y: drawing.y + (drawing.height - height) / 2,
+    width,
+    height,
+  };
+}
+
+/**
+ * Keeps a view inside the drawing and in the stage's shape, no wider than the
+ * largest view and no closer than `maxZoom` times it.
+ */
+export function clampMapView(box: MapBox, aspect: number, maxZoom: number, drawing: MapBox = MAP_DRAWING): MapBox {
+  const largest = largestMapView(aspect, drawing);
+  const width = Math.min(largest.width, Math.max(largest.width / Math.max(1, maxZoom), box.width));
+  const height = width * (largest.height / largest.width);
+  return {
+    x: Math.min(Math.max(drawing.x, box.x), drawing.x + drawing.width - width),
+    y: Math.min(Math.max(drawing.y, box.y), drawing.y + drawing.height - height),
+    width,
+    height,
+  };
+}
+
+/**
+ * The view the map opens on, and the one "Reset the map view" returns to:
+ * the largest view, centred on `centerX` as far as the drawing allows. On a
+ * stage as wide as the drawing that is the whole map, wherever the centre.
+ */
+export function defaultMapView(aspect: number, centerX: number, drawing: MapBox = MAP_DRAWING): MapBox {
+  const largest = largestMapView(aspect, drawing);
+  return clampMapView({ ...largest, x: centerX - largest.width / 2 }, aspect, 1, drawing);
+}
+
+/**
+ * Moves a view toward one side by most of its width, keeping a sliver of
+ * what it showed so the move can be followed, and stopping at the drawing's
+ * edge.
+ */
+export function panMapView(view: MapBox, edge: MapEdge, drawing: MapBox = MAP_DRAWING, keep = 0.15): MapBox {
+  const step = view.width * (1 - keep);
+  const x = edge === 'east' ? view.x + step : view.x - step;
+  return { ...view, x: Math.min(Math.max(drawing.x, x), drawing.x + drawing.width - view.width) };
+}
+
+/** How many points lie past a view's west and east edges. */
+export function pointsBeyondView(view: MapBox, points: readonly MapPoint[]): Record<MapEdge, number> {
+  let west = 0;
+  let east = 0;
+  for (const point of points) {
+    if (point.x < view.x) west += 1;
+    else if (point.x > view.x + view.width) east += 1;
+  }
+  return { west, east };
+}

@@ -4,6 +4,8 @@ import { isPublicMapCoordinate } from '@greenpill-network/shared/map-locations';
 import { normalizePublicMapThemeSlugs } from '@greenpill-network/shared/map-nodes';
 import { PUBLIC_MAP_THEMES } from '@greenpill-network/shared/map-state';
 import { WORLD_LAND_RINGS, type WorldLandRing } from '../../data/world-land-rings';
+import Button from '../ui/Button.astro';
+import Chip from '../ui/Chip.astro';
 
 // Add-node walkthrough theme choices use the canonical public theme list.
 const mapThemes = PUBLIC_MAP_THEMES;
@@ -162,10 +164,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   <div class="gp-home-map-canvas" data-home-map>
     <div class="gp-home-map-topo" aria-hidden="true"></div>
 
+    {/* The script keeps the view in the stage's shape. A phone's stage is
+        taller than the world, so before the script runs (and without it) the
+        map fills the stage by cropping its sides rather than letterboxing. */}
     <svg
       class="gp-home-map-svg"
       viewBox={`0 0 ${VIEW_W} ${MAP_VIEW_H}`}
-      preserveAspectRatio="xMidYMid meet"
+      preserveAspectRatio="xMidYMid slice"
       role="group"
       aria-label={statsA11y}
     >
@@ -258,60 +263,24 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       <g class="gp-home-map-clusters" data-home-map-clusters></g>
     </svg>
 
-    {/* Counts reflect the current theme-filtered dataset and stay stable while
-        the type toggles isolate chapters, stewards, or members. Chapters render
-        from the public snapshot; steward/member counts update from /map/state
-        as approved public submissions arrive. */}
-    <div class="gp-home-map-legend" aria-label="Filter visible map node type">
-      {nodeTypeFilters.map((type) => (
-        <button
-          type="button"
-          class={`gp-home-map-legend-item is-${type.id}`}
-          data-legend-type={type.id}
-          data-legend-filter={type.id}
-          aria-pressed="false"
-        >
-          <span class={`gp-home-map-legend-mark is-${type.id}`} aria-hidden="true"></span>
-          <span class="gp-home-map-legend-label">{type.label}</span>
-          <span class="gp-home-map-legend-count" data-home-map-type-count={type.id}>
-            {type.id === 'chapter' ? chapterCount : 0}
-          </span>
-        </button>
-      ))}
-      {/* Present only while a type or theme filter is narrowing the map. */}
-      <button type="button" class="gp-home-map-legend-reset" data-home-map-filter-reset hidden>Show all</button>
-    </div>
-
     {/* The map's error state: stewards and members could not be loaded or
         refreshed. Chapters come with the page and keep working. It comes
-        before the filter note, which moves below it on a wide map. */}
+        before the filter note, which moves below it on a wide map. Try again
+        is DESIGN.md's error action, the shared ghost Button. */}
     <div class="gp-home-map-state-error" data-home-map-state-error hidden>
       <span data-home-map-state-error-text></span>
-      <button type="button" data-home-map-state-retry>Try again</button>
+      <Button variant="ghost" class="gp-home-map-state-retry" data-home-map-state-retry>Try again</Button>
     </div>
     <p class="gp-home-map-sr" data-home-map-state-live aria-live="polite"></p>
 
     {/* Says how many nodes a filter leaves and offers the way back. On a wide
         map it appears only when three or fewer remain, because that reads as an
-        empty map; the compact map shows it for any filter, in place of the
-        legend chip. */}
+        empty map; a phone shows it only when nothing is left. */}
     <div class="gp-home-map-filter-note" data-home-map-filter-note hidden>
       <span data-home-map-filter-note-text></span>
-      <button type="button" data-home-map-filter-reset>Show all</button>
+      <Chip as="button" class="gp-home-map-filter-note-reset" data-home-map-filter-reset>Show all</Chip>
     </div>
     <p class="gp-home-map-sr" data-home-map-filter-live aria-live="polite"></p>
-
-    {/* The Live pill says how current the stewards and members on the map
-        are: "Live · Updated just now" while live intake is on, "Updated 5 min
-        ago" once refreshes keep failing. Its age changes every minute, so it
-        is not a live region; the status line with the error note announces
-        what matters. The rules are in lib/home-map-live.ts. */}
-    <div class="gp-home-map-freshness" data-home-map-freshness data-state="live" hidden>
-      <span class="gp-home-map-freshness-dot" aria-hidden="true"></span>
-      <span class="gp-home-map-freshness-label" data-home-map-freshness-label>Live</span>
-      <span class="gp-home-map-freshness-sep" data-home-map-freshness-sep aria-hidden="true" hidden>·</span>
-      <span class="gp-home-map-freshness-age" data-home-map-freshness-age hidden></span>
-    </div>
 
     {/* Focus card — populated by inline script on hover/focus */}
     <div class="gp-home-map-focus" data-home-map-focus role="status" aria-live="polite" aria-hidden="true">
@@ -366,46 +335,175 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       <p class="gp-home-map-selected-live gp-home-map-sr" data-selected-live aria-live="polite"></p>
     </div>
 
-    <div class="gp-home-map-controls" data-home-map-controls aria-label="Map controls">
-      <div class="gp-home-map-filter-panel is-themes" data-filter-panel="theme" hidden>
+    {/* The map's chrome, a layer over the stage that lets every press between
+        its bars reach the map (PRD-1438, map-polish-audit.md § 5). On a wide
+        map: the theme strip at the top start, the type legend at the top end,
+        List at the bottom start, and the live status, zoom and Join the map
+        at the bottom end. On a phone it is one row along the bottom of the
+        stage, in DESIGN.md's order: the type counts, Show all, Themes, List,
+        Reset the map view, Join the map. */}
+    <div class="gp-home-map-controls" data-home-map-controls>
+      {/* Phones only: an edge with nodes beyond it gets a pill that pans the
+          map that way. After a pan the other edge has one that leads back.
+          West and east are the map's sides in any reading direction. */}
+      <div class="gp-home-map-edge-pills" dir="ltr">
+        <Chip as="button" mono class="gp-home-map-edge-pill is-west" data-home-map-pan="west" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="11 6 5 12 11 18" /></svg>
+          <span data-home-map-pan-label>more west</span>
+        </Chip>
+        <Chip as="button" mono class="gp-home-map-edge-pill is-east" data-home-map-pan="east" hidden>
+          <span data-home-map-pan-label>more east</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="13 6 19 12 13 18" /></svg>
+        </Chip>
+      </div>
+
+      {/* The theme strip: All, the most-used themes as they fit (picked ones
+          first), and +N for the rest, which opens the theme editor. One tab
+          stop; the arrow keys move along it. */}
+      <div class="gp-home-map-theme-strip" role="toolbar" aria-label="Filter by theme" data-home-map-theme-strip>
+        <Chip as="button" class="gp-home-map-strip-chip is-all" data-home-map-theme-all aria-pressed="true" aria-label="All, show every theme">All</Chip>
         {mapThemes.map((theme) => (
-          <button
-            type="button"
-            class="gp-home-map-filter-option is-theme"
-            data-theme-filter={theme.id}
-            aria-pressed="true"
+          <Chip
+            as="button"
+            class="gp-home-map-strip-chip"
+            data-theme-strip={theme.id}
+            aria-pressed="false"
+            tabindex="-1"
+            hidden
             style={`--theme-color: ${theme.color};`}
           >
-            <span class="gp-home-map-filter-marker" aria-hidden="true"></span>
+            <span class="gp-home-map-strip-dot" aria-hidden="true"></span>
             <span>{theme.label}</span>
-          </button>
+          </Chip>
         ))}
+        <Chip
+          as="button"
+          class="gp-home-map-strip-chip is-more"
+          data-filter-toggle="theme"
+          data-home-map-theme-more
+          aria-expanded="false"
+          aria-controls="gp-home-map-theme-editor"
+          aria-label={`${mapThemes.length} more themes`}
+          tabindex="-1"
+        ><span>+<span data-home-map-theme-more-count>{mapThemes.length}</span></span></Chip>
       </div>
 
       <div class="gp-home-map-control-row">
-        <div class="gp-home-map-filter-tabs">
-          <button type="button" data-filter-toggle="theme" aria-expanded="false">Themes</button>
-          <button type="button" data-home-map-list-toggle aria-expanded="false" aria-controls="gp-home-map-node-list">List</button>
+        {/* Counts reflect the theme filters and stay stable while the type
+            pills narrow the map. Chapters render from the public snapshot;
+            steward and member counts update from /map/state as approved
+            public submissions arrive. */}
+        <div class="gp-home-map-legend" role="group" aria-label="Filter by node type">
+          {nodeTypeFilters.map((type) => (
+            <Chip
+              as="button"
+              class={`gp-home-map-legend-item is-${type.id}`}
+              data-legend-type={type.id}
+              data-legend-filter={type.id}
+              aria-pressed="false"
+            >
+              <span class={`gp-home-map-legend-mark is-${type.id}`} aria-hidden="true"></span>
+              <span class="gp-home-map-legend-label">{type.label}</span>
+              <span class="gp-home-map-legend-count" data-home-map-type-count={type.id}>
+                {type.id === 'chapter' ? chapterCount : 0}
+              </span>
+            </Chip>
+          ))}
+          {/* Present only while a type or theme filter is narrowing the map. */}
+          <Chip as="button" class="gp-home-map-legend-reset" data-home-map-filter-reset hidden>Show all</Chip>
         </div>
-        <div class="gp-home-map-zoom-controls" data-home-map-zoom-controls aria-label="Map zoom controls">
-          <button type="button" data-home-map-zoom="out" aria-label="Zoom out">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><line x1="5" y1="12" x2="19" y2="12" /></svg>
-          </button>
-          <button type="button" data-home-map-zoom="reset" aria-label="Reset to full map">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M4 9V5a1 1 0 0 1 1-1h4" />
-              <path d="M20 9V5a1 1 0 0 0-1-1h-4" />
-              <path d="M4 15v4a1 1 0 0 0 1 1h4" />
-              <path d="M20 15v4a1 1 0 0 1-1 1h-4" />
-            </svg>
-          </button>
-          <button type="button" data-home-map-zoom="in" aria-label="Zoom in">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-          </button>
+
+        {/* Phones only: the strip does not fit, so Themes opens the editor. */}
+        <button type="button" class="gp-home-map-themes-toggle" data-filter-toggle="theme" aria-expanded="false" aria-controls="gp-home-map-theme-editor">Themes</button>
+        <button type="button" class="gp-home-map-list-toggle" data-home-map-list-toggle aria-expanded="false" aria-controls="gp-home-map-node-list">
+          <span>List</span>
+          <span class="gp-home-map-list-toggle-count" data-home-map-list-toggle-count>{chapterCount}</span>
+          <span class="gp-home-map-sr"> visible nodes</span>
+        </button>
+
+        <div class="gp-home-map-end-group">
+          <div class="gp-home-map-zoom-controls" data-home-map-zoom-controls role="group" aria-label="Map zoom">
+            <button type="button" data-home-map-zoom="out" aria-label="Zoom out">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            </button>
+            {/* Back to the view the map opened on: the whole map, or on a
+                phone the Atlantic. The filters stay as they are. */}
+            <button type="button" data-home-map-zoom="reset" aria-label="Reset the map view">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M4 9V5a1 1 0 0 1 1-1h4" />
+                <path d="M20 9V5a1 1 0 0 0-1-1h-4" />
+                <path d="M4 15v4a1 1 0 0 0 1 1h4" />
+                <path d="M20 15v4a1 1 0 0 1-1 1h-4" />
+              </svg>
+            </button>
+            <button type="button" data-home-map-zoom="in" aria-label="Zoom in">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            </button>
+          </div>
+          {/* The way onto the map: opens the join walkthrough below. */}
+          <button type="button" class="gp-home-map-join" data-home-map-open aria-haspopup="dialog">Join the map</button>
         </div>
-        {/* The way onto the map: opens the join walkthrough below. */}
-        <button type="button" class="gp-home-map-join" data-home-map-open aria-haspopup="dialog">Join the map</button>
       </div>
+
+      {/* The Live pill says how current the stewards and members on the map
+          are: "Live · Updated just now" while live intake is on, "Updated 5
+          min ago" once refreshes keep failing. Its age changes every minute,
+          so it is not a live region; the status line with the error note
+          announces what matters. The rules are in lib/home-map-live.ts. On a
+          wide map it stands before the zoom bar; on a phone, over the stage
+          above the row (never inside the row, whose edge fade would mask it). */}
+      <div class="gp-home-map-freshness" data-home-map-freshness data-state="live" hidden>
+        <span class="gp-home-map-freshness-dot" aria-hidden="true"></span>
+        <span class="gp-home-map-freshness-label" data-home-map-freshness-label>Live</span>
+        <span class="gp-home-map-freshness-sep" data-home-map-freshness-sep aria-hidden="true" hidden>·</span>
+        <span class="gp-home-map-freshness-age" data-home-map-freshness-age hidden></span>
+      </div>
+
+      {/* The theme editor, opened from +N (or Themes on a phone): the only
+          place that lists all the themes. Below the strip on a wide map, a
+          sheet on a phone. Its head stays put while the toggles scroll. */}
+      <section
+        class="gp-home-map-theme-editor"
+        id="gp-home-map-theme-editor"
+        data-filter-panel="theme"
+        aria-labelledby="gp-home-map-theme-editor-title"
+        hidden
+      >
+        <header class="gp-home-map-theme-editor-head">
+          <div>
+            <p class="gp-home-map-theme-editor-kicker">Map filters</p>
+            <h2 id="gp-home-map-theme-editor-title" class="gp-home-map-theme-editor-title">Themes</h2>
+          </div>
+          <button type="button" class="gp-home-map-theme-editor-close" data-theme-editor-close aria-label="Close themes">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
+          </button>
+        </header>
+        <div class="gp-home-map-theme-editor-body">
+          <p class="gp-home-map-theme-editor-note">Show nodes that work on any theme you pick. Nothing picked shows everything.</p>
+          <div class="gp-home-map-filter-panel is-themes">
+            {mapThemes.map((theme) => (
+              <Chip
+                as="button"
+                class="gp-home-map-filter-option is-theme"
+                data-theme-filter={theme.id}
+                aria-pressed="false"
+                style={`--theme-color: ${theme.color};`}
+              >
+                <span class="gp-home-map-filter-marker" aria-hidden="true"></span>
+                <span class="gp-home-map-filter-option-label">{theme.label}</span>
+                <span class="gp-home-map-filter-option-count" data-theme-filter-count aria-hidden="true"></span>
+              </Chip>
+            ))}
+          </div>
+        </div>
+        <footer class="gp-home-map-theme-editor-foot">
+          <p class="gp-home-map-theme-editor-summary" data-theme-editor-summary></p>
+          <div class="gp-home-map-theme-editor-actions">
+            <Button variant="ghost" class="gp-home-map-theme-editor-action" data-theme-editor-clear>Clear</Button>
+            <Button variant="ghost" class="gp-home-map-theme-editor-action" data-theme-editor-done>Done</Button>
+          </div>
+        </footer>
+      </section>
     </div>
 
     <dialog
@@ -631,13 +729,32 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     saveLocalPendingNode,
   } from '@greenpill-network/shared/map-node-storage';
   import {
+    ATLANTIC_CENTER_X,
+    clampMapView,
+    defaultMapView,
     fanHasRoomForTargets,
     formatPickerCoordinate,
     groupOverlappingPins,
+    largestMapView,
     layoutFan,
+    panMapView,
     pickerPointToLocation,
+    pointsBeyondView,
     separateLabels,
+    type MapEdge,
   } from '../../lib/home-map-layout';
+  import {
+    ALL_THEMES_NAME,
+    chipsThatFit,
+    nodeThemesAreShown,
+    stripThemeOrder,
+    themeChipName,
+    themeIsShown,
+    togglePick,
+    typeIsShown,
+    typePillName,
+    type MapNodeType,
+  } from '../../lib/home-map-filters';
   import {
     describeMapStateFeed,
     mapStateAnnouncement,
@@ -841,9 +958,18 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       return ownedNodeKeysFor(node, key).some((item) => owned.has(item));
     };
 
+    // The theme editor's toggles are the full theme list; the strip shows as
+    // many of the same themes as fit.
     const themeFilterButtons = Array.from(scope.querySelectorAll('[data-theme-filter]')) as HTMLButtonElement[];
+    const themeStrip = scope.querySelector('[data-home-map-theme-strip]') as HTMLElement | null;
+    const themeStripChips = Array.from(scope.querySelectorAll('[data-theme-strip]')) as HTMLButtonElement[];
+    const themeAllChip = scope.querySelector('[data-home-map-theme-all]') as HTMLButtonElement | null;
+    const themeMoreChip = scope.querySelector('[data-home-map-theme-more]') as HTMLButtonElement | null;
+    const themeMoreCount = scope.querySelector('[data-home-map-theme-more-count]') as HTMLElement | null;
+    const themeEditorSummary = scope.querySelector('[data-theme-editor-summary]') as HTMLElement | null;
     const filterToggleButtons = Array.from(scope.querySelectorAll('[data-filter-toggle]')) as HTMLButtonElement[];
     const filterPanels = Array.from(scope.querySelectorAll('[data-filter-panel]')) as HTMLElement[];
+    const legendEl = scope.querySelector('.gp-home-map-legend') as HTMLElement | null;
     const legendItems = Array.from(scope.querySelectorAll('[data-legend-type]')) as HTMLButtonElement[];
     const legendCountByType = new Map(
       Array.from(scope.querySelectorAll('[data-home-map-type-count]')).map((el) => [
@@ -851,9 +977,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         el as HTMLElement,
       ])
     );
-    const activeThemes = new Set(themeFilterButtons.map((button) => clean(button.dataset.themeFilter)).filter(Boolean));
-    const allThemeCount = activeThemes.size;
-    let activeTypeFilter: '' | 'chapter' | 'steward' | 'member' = '';
+    const controlsEl = scope.querySelector('[data-home-map-controls]') as HTMLElement | null;
+    const listToggleCount = scope.querySelector('[data-home-map-list-toggle-count]') as HTMLElement | null;
+    const themeIds = themeFilterButtons.map((button) => clean(button.dataset.themeFilter)).filter(Boolean);
+    // Narrow, then add (map-polish-audit.md § 5): a set holds what is picked,
+    // and an empty set shows everything. The rules are in lib/home-map-filters.ts.
+    let pickedTypes = new Set<MapNodeType>();
+    let pickedThemes = new Set<string>();
     let openFilterPanel = '';
     let applyMapFilters = () => {};
     let syncSelectedOverlay = () => {};
@@ -874,9 +1004,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       )
     );
 
-    const themeIsActive = (theme: string) => (
-      !allThemeCount || activeThemes.size === allThemeCount || activeThemes.has(theme)
-    );
+    const themeIsActive = (theme: string) => themeIsShown(pickedThemes, theme);
 
     const toFiniteNumber = (value: unknown) => {
       const num = typeof value === 'number' ? value : Number(value);
@@ -990,51 +1118,108 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       return d;
     };
 
+    // The drawing, and how close a view may zoom: 46 units wide on a stage in
+    // the drawing's shape, and the same factor on a phone's narrower stage.
     const FULL_VIEW_BOX: MapViewBox = { x: 0, y: 0, width: VIEW_W, height: VISIBLE_VIEW_H };
     const MIN_VIEW_BOX_WIDTH = 46;
-    const viewBoxAspect = FULL_VIEW_BOX.width / FULL_VIEW_BOX.height;
+    const MAX_VIEW_ZOOM = FULL_VIEW_BOX.width / MIN_VIEW_BOX_WIDTH;
     let currentViewBox: MapViewBox = { ...FULL_VIEW_BOX };
+    // Whether the view is still the one the map opened on, or was reset to,
+    // so a resize frames the new stage the same way.
+    let viewIsDefault = true;
+    let lastStageAspect = 0;
     // Cluster recompute hook — assigned once the clustering module initializes.
     // Declared here (before setMapViewBox) so the viewBox setter can poke it
     // without a temporal-dead-zone error during the initial render.
     let clusterDirty: () => void = () => {};
+    // Assigned once the nodes can be counted, below.
+    let syncEdgePills: () => void = () => {};
+
+    // The layout the map's container picked, as its CSS says: 'phone' at a
+    // 520px container and narrower (DESIGN.md:403), else 'wide'. Only the
+    // width decides; the kind of pointer never does.
+    const mapLayout = () => (
+      window.getComputedStyle(root).getPropertyValue('--gp-map-layout').trim() === 'phone' ? 'phone' : 'wide'
+    );
 
     const formatViewBox = (box: MapViewBox) => (
       `${box.x.toFixed(2)} ${box.y.toFixed(2)} ${box.width.toFixed(2)} ${box.height.toFixed(2)}`
     );
 
-    const clampViewBox = (box: MapViewBox): MapViewBox => {
-      const width = Math.min(FULL_VIEW_BOX.width, Math.max(MIN_VIEW_BOX_WIDTH, box.width));
-      const height = Math.min(FULL_VIEW_BOX.height, width / viewBoxAspect);
-      const maxX = FULL_VIEW_BOX.x + FULL_VIEW_BOX.width - width;
-      const maxY = FULL_VIEW_BOX.y + FULL_VIEW_BOX.height - height;
-      return {
-        x: Math.min(Math.max(FULL_VIEW_BOX.x, box.x), maxX),
-        y: Math.min(Math.max(FULL_VIEW_BOX.y, box.y), maxY),
-        width,
-        height,
-      };
+    // The stage's shape, its width over its height: the drawing's 200 / 88
+    // on a wide map, taller on a phone, whose stage is at least 60svh.
+    const stageAspect = () => {
+      const rect = svgEl?.getBoundingClientRect();
+      const aspect = rect && rect.height > 0 ? rect.width / rect.height : 0;
+      return Number.isFinite(aspect) && aspect > 0 ? aspect : FULL_VIEW_BOX.width / FULL_VIEW_BOX.height;
     };
 
-    const setMapViewBox = (box: MapViewBox) => {
+    const clampViewBox = (box: MapViewBox): MapViewBox => (
+      clampMapView(box, stageAspect(), MAX_VIEW_ZOOM, FULL_VIEW_BOX)
+    );
+
+    // The view the map opens on: the whole map, or on a phone the drawing's
+    // full height centred on the Atlantic (lib/home-map-layout.ts).
+    const defaultViewBox = () => defaultMapView(stageAspect(), ATLANTIC_CENTER_X, FULL_VIEW_BOX);
+
+    const sameView = (a: MapViewBox, b: MapViewBox) => (
+      Math.abs(a.x - b.x) < 0.01 && Math.abs(a.y - b.y) < 0.01
+      && Math.abs(a.width - b.width) < 0.01 && Math.abs(a.height - b.height) < 0.01
+    );
+
+    const setMapViewBox = (box: MapViewBox, options: { isDefault?: boolean } = {}) => {
       currentViewBox = clampViewBox(box);
+      // A move that ends where the map opened (a zoom out at the widest view,
+      // say) leaves it the opening view, so a resize still frames it afresh.
+      viewIsDefault = Boolean(options.isDefault) || sameView(currentViewBox, defaultViewBox());
       svgEl?.setAttribute('viewBox', formatViewBox(currentViewBox));
-      root.classList.toggle('is-zoomed', currentViewBox.width < FULL_VIEW_BOX.width - 0.5);
+      const widest = largestMapView(stageAspect(), FULL_VIEW_BOX);
+      // Zoomed: closer than the widest view this stage has. A phone's opening
+      // view is its widest, though it shows only part of the world.
+      root.classList.toggle('is-zoomed', currentViewBox.width < widest.width - 0.5);
+      // There is more of the drawing than the view shows, so it can be dragged.
+      root.classList.toggle(
+        'can-pan',
+        currentViewBox.width < FULL_VIEW_BOX.width - 0.5 || currentViewBox.height < FULL_VIEW_BOX.height - 0.5
+      );
       syncSelectedOverlay();
+      syncEdgePills();
       clusterDirty();
     };
 
+    // The width is clamped before the view is centred, so a zoom or pinch
+    // past either bound keeps its centre instead of sliding the map.
     const setMapViewBoxCentered = (cx: number, cy: number, width: number) => {
-      const height = width / viewBoxAspect;
+      const { width: clampedWidth, height } = clampViewBox({ x: 0, y: 0, width, height: width / stageAspect() });
       setMapViewBox({
-        x: cx - width / 2,
+        x: cx - clampedWidth / 2,
         y: cy - height / 2,
-        width,
+        width: clampedWidth,
         height,
       });
     };
 
-    const resetMapView = () => setMapViewBox(FULL_VIEW_BOX);
+    // "Reset the map view": back to the opening view; the filters stay.
+    const resetMapView = () => setMapViewBox(defaultViewBox(), { isDefault: true });
+
+    // A resize keeps what the view shows: the opening view stays the opening
+    // view for the new stage, and a moved view keeps its centre and zoom.
+    const syncViewToStage = () => {
+      const aspect = stageAspect();
+      if (viewIsDefault) {
+        resetMapView();
+      } else if (lastStageAspect > 0 && Math.abs(aspect - lastStageAspect) > 0.001) {
+        const zoom = largestMapView(lastStageAspect, FULL_VIEW_BOX).width / currentViewBox.width;
+        setMapViewBoxCentered(
+          currentViewBox.x + currentViewBox.width / 2,
+          currentViewBox.y + currentViewBox.height / 2,
+          largestMapView(aspect, FULL_VIEW_BOX).width / zoom
+        );
+      } else {
+        setMapViewBox(currentViewBox);
+      }
+      lastStageAspect = aspect;
+    };
 
     const zoomMapBy = (factor: number) => {
       const centerX = currentViewBox.x + currentViewBox.width / 2;
@@ -1053,10 +1238,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       return x === null || y === null ? null : { x, y };
     };
 
+    // The SVG covers its stage (preserveAspectRatio slice), so the larger of
+    // the two scales is the one drawn. The script keeps the view in the
+    // stage's shape, where both are the same.
     const svgPointForBox = (event: PointerEvent | MouseEvent, box: MapViewBox) => {
       if (!svgEl) return null;
       const rect = svgEl.getBoundingClientRect();
-      const scale = Math.min(rect.width / box.width, rect.height / box.height);
+      const scale = Math.max(rect.width / box.width, rect.height / box.height);
       if (!Number.isFinite(scale) || scale <= 0) return null;
       const renderedWidth = box.width * scale;
       const renderedHeight = box.height * scale;
@@ -1078,7 +1266,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const clientScaleForBox = (box: MapViewBox) => {
       if (!svgEl) return 1;
       const rect = svgEl.getBoundingClientRect();
-      const scale = Math.min(rect.width / box.width, rect.height / box.height);
+      const scale = Math.max(rect.width / box.width, rect.height / box.height);
       return Number.isFinite(scale) && scale > 0 ? scale : 1;
     };
 
@@ -1699,10 +1887,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       lastMapPointerAt = Date.now();
       const mouse = event.pointerType === 'mouse';
       // Touch: pan + pinch on touch maps. Mouse/trackpad: bounded drag-pan only
-      // when zoomed in (the full map has nothing to pan) and with the primary
-      // button — so hover/click on desktop is untouched until the user zooms.
+      // while the view shows part of the drawing (zoomed in, or a phone's
+      // narrow stage) and with the primary button, so hover and click on the
+      // whole map are untouched.
       if (mouse) {
-        if (!root.classList.contains('is-zoomed') || event.button !== 0) return;
+        if (!root.classList.contains('can-pan') || event.button !== 0) return;
       } else if (!isTouchMap()) {
         return;
       }
@@ -1844,7 +2033,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     };
 
     const positionSelectedCard = (target: Element | null) => {
-      if (!selectedEl || selectedEl.hidden || !target || isTouchMap()) return;
+      if (!selectedEl || selectedEl.hidden || !target || mapLayout() === 'phone') return;
       const dot = target.querySelector('.gp-home-map-node-dot') as SVGCircleElement | null;
       const cx = Number(dot?.getAttribute('cx'));
       const cy = Number(dot?.getAttribute('cy'));
@@ -2034,6 +2223,9 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     const openSelected = (member: DynamicMapNode, link: Element, viaKeyboard = false) => {
       if (!selectedEl) return;
+      // One open surface at a time, however the node was reached: a keyboard
+      // can move from the editor back to a pin.
+      closeFilterPanels();
       resetUpdateState();
       root.querySelectorAll('.gp-home-map-node-link.is-selected').forEach((l) => l.classList.remove('is-selected'));
       // Clear any prior connection-row target highlight when swapping nodes.
@@ -2150,6 +2342,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     };
 
     // ---- Embedded map filters ---------------------------------------------
+    // The control that opened the theme editor gets focus back when it closes
+    // from inside: +N on the strip, or Themes on a phone.
+    let filterPanelOpener: HTMLElement | null = null;
+    // The strip re-sorts (picked themes first, then the most used) only when
+    // nobody is pressing its chips: a pressed chip must not move under the
+    // pointer or the finger that pressed it.
+    let stripSortPending = true;
+
     const syncFilterPanels = () => {
       filterPanels.forEach((panel) => {
         panel.hidden = panel.dataset.filterPanel !== openFilterPanel;
@@ -2159,12 +2359,24 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
         button.classList.toggle('is-active', expanded);
       });
+      root.classList.toggle('has-theme-editor', openFilterPanel === 'theme');
     };
 
     const closeFilterPanels = () => {
       if (!openFilterPanel) return;
+      const panel = filterPanels.find((item) => item.dataset.filterPanel === openFilterPanel);
+      const focusWasInside = Boolean(panel?.contains(document.activeElement));
       openFilterPanel = '';
       syncFilterPanels();
+      // Themes picked in the editor join the strip, at its front.
+      stripSortPending = true;
+      layoutThemeStrip();
+      if (!focusWasInside) return;
+      // The opener, or, when a resize hid it while the editor was open, the
+      // control that opens the editor in this layout.
+      const opener = [filterPanelOpener, ...filterToggleButtons]
+        .find((button) => button?.isConnected && button.getClientRects().length > 0);
+      opener?.focus({ preventScroll: true });
     };
 
     const setFilterPanel = (panelName: string) => {
@@ -2172,40 +2384,40 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (openFilterPanel) {
         closeNodeList();
         clearMapSurfaces();
+      } else {
+        stripSortPending = true;
       }
       dropPointerFocus();
       syncFilterPanels();
+      // A keyboard or switch user lands on the first toggle rather than tab
+      // through the rest of the map to reach the editor.
+      const panel = filterPanels.find((item) => item.dataset.filterPanel === openFilterPanel);
+      (panel?.querySelector('[data-theme-filter]') as HTMLElement | null)?.focus({ preventScroll: true });
     };
 
     const nodeMatchesFilters = (node: Element) => {
       const type = filterTypeFor(node.getAttribute('data-node-type'));
-      if (activeTypeFilter && type !== activeTypeFilter) return false;
+      if (!typeIsShown(pickedTypes, type)) return false;
       return nodeMatchesThemeFilters(node);
     };
 
     // Chapters match on the themes stewards set for them in Directus, like
     // people do on their own; a node without themes shows under all themes only.
-    const nodeMatchesThemeFilters = (node: Element) => {
-      if (!allThemeCount || activeThemes.size === allThemeCount) return true;
-      return nodeThemes(node).some((theme) => activeThemes.has(theme));
-    };
+    const nodeMatchesThemeFilters = (node: Element) => nodeThemesAreShown(pickedThemes, nodeThemes(node));
 
     // A steward's card jumps to their chapter, and since chapters follow the
     // theme filters (PRD-1423) a filter can hide it. Widen the filters just
-    // enough to show it before it opens, with the pills in step: the type
-    // filter lets it through, and one of its own themes is switched on, or
-    // every theme when it has none.
+    // enough to show it before it opens, with the pills in step: its type is
+    // added to the picked types, and one of its own themes to the picked
+    // themes, or every theme shows when it has none.
     const revealFilteredNode = (node: Element) => {
       if (!node.classList.contains('is-filtered-out')) return;
       const type = filterTypeFor(node.getAttribute('data-node-type'));
-      if (activeTypeFilter && activeTypeFilter !== type) activeTypeFilter = '';
+      if (!typeIsShown(pickedTypes, type)) pickedTypes = new Set([...pickedTypes, type]);
       if (!nodeMatchesThemeFilters(node)) {
-        const filterThemes = themeFilterButtons.map((button) => clean(button.dataset.themeFilter)).filter(Boolean);
-        const ownTheme = nodeThemes(node).find((theme) => filterThemes.includes(theme));
-        (ownTheme ? [ownTheme] : filterThemes).forEach((theme) => activeThemes.add(theme));
-        themeFilterButtons.forEach((button) => {
-          button.setAttribute('aria-pressed', activeThemes.has(clean(button.dataset.themeFilter)) ? 'true' : 'false');
-        });
+        const ownTheme = nodeThemes(node).find((theme) => themeIds.includes(theme));
+        pickedThemes = ownTheme ? new Set([...pickedThemes, ownTheme]) : new Set();
+        stripSortPending = true;
       }
       applyMapFilters();
     };
@@ -2224,6 +2436,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     };
 
     const filterResetButtons = Array.from(scope.querySelectorAll('[data-home-map-filter-reset]')) as HTMLButtonElement[];
+    const legendResetChip = scope.querySelector('.gp-home-map-legend-reset') as HTMLButtonElement | null;
     const filterNote = scope.querySelector('[data-home-map-filter-note]') as HTMLElement | null;
     const filterNoteText = scope.querySelector('[data-home-map-filter-note-text]') as HTMLElement | null;
     const filterLive = scope.querySelector('[data-home-map-filter-live]') as HTMLElement | null;
@@ -2231,9 +2444,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const SPARSE_FILTER_RESULT = 3;
     let filterResultAnnounced = false;
 
-    const filtersAreNarrowing = () => (
-      Boolean(activeTypeFilter) || (allThemeCount > 0 && activeThemes.size < allThemeCount)
-    );
+    const filtersAreNarrowing = () => pickedTypes.size > 0 || pickedThemes.size > 0;
 
     const syncFilterStatus = (visibleCount: number, totalCount: number) => {
       const narrowing = filtersAreNarrowing();
@@ -2249,6 +2460,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         filterNote.dataset.sparse = visibleCount <= SPARSE_FILTER_RESULT ? 'true' : 'false';
         filterNote.dataset.empty = visibleCount === 0 ? 'true' : 'false';
       }
+      if (themeEditorSummary) {
+        const picked = pickedThemes.size === 0 ? 'Every theme' : `${pickedThemes.size} picked`;
+        themeEditorSummary.textContent = `${picked} · ${visibleCount} ${visibleCount === 1 ? 'node' : 'nodes'}`;
+      }
+      if (listToggleCount) listToggleCount.textContent = String(visibleCount);
       if (!filterLive) return;
       // Announce a changed result once, not every poll that re-applies it.
       const announcement = narrowing ? message : (filterResultAnnounced ? 'Showing all nodes.' : '');
@@ -2256,22 +2472,171 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       filterResultAnnounced = narrowing;
     };
 
+    // Narrow, then add: a reset empties both picked sets, which shows every
+    // node, rather than switching every theme back on.
     const resetMapFilters = () => {
-      activeTypeFilter = '';
-      themeFilterButtons.forEach((button) => {
-        const theme = clean(button.dataset.themeFilter);
-        if (theme) activeThemes.add(theme);
-        button.setAttribute('aria-pressed', 'true');
-      });
+      pickedTypes = new Set();
+      pickedThemes = new Set();
+      stripSortPending = true;
       dropPointerFocus();
       closeFanNow();
       applyMapFilters();
+    };
+
+    // ---- Theme strip and theme editor ----------------------------------------
+    // How many nodes carry each theme. The counts in names and on the editor's
+    // toggles follow the type filter, as the legend's counts follow the theme
+    // filter; the strip's order uses every node, so it does not reshuffle as
+    // types are picked.
+    let themeCounts = new Map<string, number>();
+    let themeUsage = new Map<string, number>();
+    let lastThemeUsageSignature = '';
+    let stripOrder: string[] = [...themeIds];
+    // The strip is one tab stop (role="toolbar"); this chip holds it.
+    let stripTabStop: HTMLElement | null = themeAllChip;
+
+    const stripChipById = new Map(themeStripChips.map((chip) => [clean(chip.dataset.themeStrip), chip]));
+    const themeLabelFor = (theme: string) => themeLabel(theme);
+    const pxValue = (value: string) => {
+      const num = Number.parseFloat(value);
+      return Number.isFinite(num) ? num : 0;
+    };
+
+    const stripButtons = () => (
+      [themeAllChip, ...stripOrder.map((id) => stripChipById.get(id)), themeMoreChip]
+        .filter((button): button is HTMLButtonElement => Boolean(button) && !button!.hidden)
+    );
+
+    const syncStripTabStops = () => {
+      const buttons = stripButtons();
+      if (!stripTabStop || !buttons.includes(stripTabStop as HTMLButtonElement)) stripTabStop = buttons[0] ?? null;
+      buttons.forEach((button) => button.setAttribute('tabindex', button === stripTabStop ? '0' : '-1'));
+      themeStripChips.filter((chip) => chip.hidden).forEach((chip) => chip.setAttribute('tabindex', '-1'));
+    };
+
+    // As many chips as fit beside the legend, from the front of the strip's
+    // order. The legend's room counts its Show all chip even while that is
+    // hidden, so a chip pressed on the strip never loses its place when Show
+    // all appears.
+    const layoutThemeStrip = (resorted = false) => {
+      if (!themeStrip || !themeAllChip || !themeMoreChip) return;
+      const interacting = themeStrip.matches(':hover, :focus-within');
+      if (stripSortPending && !interacting) {
+        stripOrder = stripThemeOrder(themeIds.map((id) => ({ id, count: themeUsage.get(id) ?? 0 })), pickedThemes);
+        stripSortPending = false;
+      }
+      // Moving a node drops its focus, so chips move only when the order
+      // changed, and a focused chip gets its focus back.
+      const domOrder = Array.from(themeStrip.querySelectorAll<HTMLElement>('[data-theme-strip]'))
+        .map((chip) => clean(chip.dataset.themeStrip));
+      if (domOrder.join(' ') !== stripOrder.join(' ')) {
+        const focused = themeStrip.contains(document.activeElement) ? document.activeElement as HTMLElement : null;
+        stripOrder.forEach((id) => {
+          const chip = stripChipById.get(id);
+          if (chip) themeStrip.insertBefore(chip, themeMoreChip);
+        });
+        focused?.focus({ preventScroll: true });
+      }
+      const chips = stripOrder.map((id) => stripChipById.get(id)).filter(Boolean) as HTMLButtonElement[];
+      if (!controlsEl || !legendEl || mapLayout() === 'phone' || !themeStrip.getClientRects().length) {
+        // A phone opens the editor from Themes instead; nothing to measure.
+        root.classList.remove('has-compact-legend');
+        chips.forEach((chip) => { chip.hidden = true; });
+        syncStripTabStops();
+        return;
+      }
+      // The legend's room counts its Show all chip, hidden or not.
+      const legendRoom = () => {
+        const resetWasHidden = Boolean(legendResetChip?.hidden);
+        if (legendResetChip) legendResetChip.hidden = false;
+        const width = legendEl.offsetWidth;
+        if (legendResetChip) legendResetChip.hidden = resetWasHidden;
+        return width;
+      };
+      const stripStyle = window.getComputedStyle(themeStrip);
+      const gap = pxValue(stripStyle.columnGap);
+      const stripChrome = pxValue(stripStyle.paddingInlineStart) + pxValue(stripStyle.paddingInlineEnd)
+        + pxValue(stripStyle.borderInlineStartWidth) + pxValue(stripStyle.borderInlineEndWidth);
+      const controlsGap = pxValue(window.getComputedStyle(controlsEl).columnGap);
+      // +N is measured at its widest, so the chips that fit never depend on N.
+      if (themeMoreCount) themeMoreCount.textContent = String(themeIds.length);
+      themeMoreChip.hidden = false;
+      chips.forEach((chip) => { chip.hidden = false; });
+      const widths = chips.map((chip) => chip.offsetWidth);
+      const fixed = stripChrome + themeAllChip.offsetWidth + themeMoreChip.offsetWidth + gap * 2;
+      // The legend spans the grid's end columns, which also hold the live
+      // status and the end bar below it; the strip gets what is left of the
+      // wider of the two.
+      const endGroup = controlsEl.querySelector('.gp-home-map-end-group') as HTMLElement | null;
+      const endBar = (endGroup?.offsetWidth ?? 0)
+        + (freshnessEl && freshnessEl.getClientRects().length ? freshnessEl.offsetWidth + controlsGap : 0);
+      const fitBeside = (room: number) => chipsThatFit(
+        widths,
+        controlsEl.clientWidth - Math.max(room, endBar) - controlsGap - fixed,
+        gap
+      );
+      // The legend shows its labels unless they would leave the strip no
+      // theme at all; then it shows dots and numbers, as on a phone.
+      root.classList.remove('has-compact-legend');
+      let fit = fitBeside(legendRoom());
+      if (fit === 0 && chips.length > 0) {
+        root.classList.add('has-compact-legend');
+        fit = fitBeside(legendRoom());
+      }
+      if (!resorted && chips.slice(fit).some((chip) => pickedThemes.has(clean(chip.dataset.themeStrip)))) {
+        // A picked theme fell off the end (the legend grew): bring the picks
+        // back to the front, even mid-interaction, rather than hide one.
+        stripOrder = stripThemeOrder(themeIds.map((id) => ({ id, count: themeUsage.get(id) ?? 0 })), pickedThemes);
+        layoutThemeStrip(true);
+        return;
+      }
+      chips.forEach((chip, index) => { chip.hidden = index >= fit; });
+      const more = chips.length - fit;
+      themeMoreChip.hidden = more === 0;
+      if (themeMoreCount) themeMoreCount.textContent = String(more);
+      themeMoreChip.setAttribute('aria-label', `${more} more ${more === 1 ? 'theme' : 'themes'}`);
+      syncStripTabStops();
+    };
+
+    // Pressed states, counts and names on the strip and in the editor.
+    const renderThemeFilters = () => {
+      const allPressed = pickedThemes.size === 0;
+      if (themeAllChip) {
+        themeAllChip.setAttribute('aria-pressed', allPressed ? 'true' : 'false');
+        themeAllChip.setAttribute('aria-label', ALL_THEMES_NAME);
+      }
+      const nameFor = (theme: string) => themeChipName({
+        label: themeLabelFor(theme),
+        count: themeCounts.get(theme) ?? 0,
+        theme,
+        picked: pickedThemes,
+      });
+      themeStripChips.forEach((chip) => {
+        const theme = clean(chip.dataset.themeStrip);
+        chip.setAttribute('aria-pressed', pickedThemes.has(theme) ? 'true' : 'false');
+        chip.setAttribute('aria-label', nameFor(theme));
+      });
+      themeFilterButtons.forEach((button) => {
+        const theme = clean(button.dataset.themeFilter);
+        button.setAttribute('aria-pressed', pickedThemes.has(theme) ? 'true' : 'false');
+        button.setAttribute('aria-label', nameFor(theme));
+        const count = button.querySelector('[data-theme-filter-count]');
+        if (count) count.textContent = String(themeCounts.get(theme) ?? 0);
+      });
+      const usageSignature = themeIds.map((id) => themeUsage.get(id) ?? 0).join(' ');
+      if (usageSignature !== lastThemeUsageSignature) {
+        lastThemeUsageSignature = usageSignature;
+        stripSortPending = true;
+      }
+      layoutThemeStrip();
     };
 
     applyMapFilters = () => {
       const visibleNodeIds = new Set<string>();
       const nodeTypeById = new Map<string, string>();
       const legendCounts: Record<string, number> = { chapter: 0, steward: 0, member: 0 };
+      const nextThemeCounts = new Map<string, number>();
+      const nextThemeUsage = new Map<string, number>();
       root.querySelectorAll('.gp-home-map-node-link').forEach((node) => {
         const type = filterTypeFor(node.getAttribute('data-node-type'));
         const id = node.getAttribute('data-node-id');
@@ -2279,10 +2644,17 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         if (nodeMatchesThemeFilters(node)) {
           legendCounts[type] = (legendCounts[type] ?? 0) + 1;
         }
+        const themes = new Set(nodeThemes(node));
+        themes.forEach((theme) => {
+          nextThemeUsage.set(theme, (nextThemeUsage.get(theme) ?? 0) + 1);
+          if (typeIsShown(pickedTypes, type)) nextThemeCounts.set(theme, (nextThemeCounts.get(theme) ?? 0) + 1);
+        });
         const visible = nodeMatchesFilters(node);
         setNodeVisibility(node, visible);
         if (visible && id) visibleNodeIds.add(id);
       });
+      themeCounts = nextThemeCounts;
+      themeUsage = nextThemeUsage;
       syncFilterStatus(visibleNodeIds.size, nodeTypeById.size);
 
       root.querySelectorAll<SVGPathElement>('.gp-home-map-thread').forEach((thread) => {
@@ -2290,11 +2662,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         const to = thread.getAttribute('data-to') || '';
         const theme = thread.getAttribute('data-theme') || '';
         const visible = visibleNodeIds.has(from) && visibleNodeIds.has(to) && themeIsActive(theme);
+        // While types are picked, every line still drawn joins two of them.
         const isSameTypeThread = Boolean(
-          activeTypeFilter &&
+          pickedTypes.size > 0 &&
           visible &&
-          nodeTypeById.get(from) === activeTypeFilter &&
-          nodeTypeById.get(to) === activeTypeFilter
+          pickedTypes.has(filterTypeFor(nodeTypeById.get(from))) &&
+          pickedTypes.has(filterTypeFor(nodeTypeById.get(to)))
         );
         thread.classList.toggle('is-filtered-out', !visible);
         thread.classList.toggle('is-type-filter-match', isSameTypeThread);
@@ -2306,32 +2679,33 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const focusedNode = root.querySelector('.gp-home-map-node-link.is-adj.is-filtered-out');
       if (focusedNode) clearFocus();
 
-      // Counts stay stable for the type toggles while still respecting narrowed
-      // theme filters. This avoids layout jump when isolating a node type.
+      // Counts stay stable for the type pills while still respecting narrowed
+      // theme filters. This avoids layout jump when narrowing to a node type.
+      // Each pill's name says what pressing it will do (lib/home-map-filters.ts);
+      // aria-pressed carries the state, and only a pressed pill is filled.
       legendItems.forEach((item) => {
-        const type = clean(item.dataset.legendType);
-        if (!type) return;
+        const type = filterTypeFor(item.dataset.legendType);
         item.hidden = false;
-        const selected = activeTypeFilter === type;
+        const selected = pickedTypes.has(type);
         const label = item.querySelector('.gp-home-map-legend-label')?.textContent?.trim() || type;
         const countValue = legendCounts[type] ?? 0;
-        item.classList.toggle('is-active', selected);
         item.setAttribute('aria-pressed', selected ? 'true' : 'false');
-        item.setAttribute(
-          'aria-label',
-          selected
-            ? `Show all map nodes; ${label} currently isolated; ${countValue} match current filters`
-            : `Show only ${label}; ${countValue} match current filters`
-        );
+        item.setAttribute('aria-label', typePillName({
+          label,
+          count: countValue,
+          type,
+          picked: pickedTypes,
+          themesNarrow: pickedThemes.size > 0,
+        }));
         const count = legendCountByType.get(type);
         if (count) count.textContent = String(countValue);
       });
-      // Filter affordance: a toggle shows a dot while its filter set is
-      // narrowed, so closed panels still signal that the map view is filtered.
+      // Filter affordance: Themes shows a dot while a theme narrows the map,
+      // so a phone, which has no strip, still signals that the view is filtered.
       filterToggleButtons.forEach((button) => {
-        const narrowed = allThemeCount > 0 && activeThemes.size < allThemeCount;
-        button.classList.toggle('is-filtering', narrowed);
+        button.classList.toggle('is-filtering', pickedThemes.size > 0);
       });
+      renderThemeFilters();
 
       applyNodeDensityScale();
       const activeFocusTarget = selectedFocusTarget ?? pointerFocusTarget;
@@ -2344,35 +2718,111 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         markSelectedThreads(selectedId);
         renderSelectedEdgeList(selectedId);
       }
+      syncEdgePills();
       clusterDirty();
       renderNodeList();
     };
 
     filterToggleButtons.forEach((button) => {
-      button.addEventListener('click', () => setFilterPanel(button.dataset.filterToggle || ''));
+      button.addEventListener('click', () => {
+        filterPanelOpener = button;
+        setFilterPanel(button.dataset.filterToggle || '');
+      });
     });
 
+    // Narrow, then add: the first press shows only that type, more presses
+    // add to it, and pressing a picked type removes it.
     legendItems.forEach((button) => {
       button.addEventListener('click', () => {
         const type = filterTypeFor(button.dataset.legendType);
-        activeTypeFilter = activeTypeFilter === type ? '' : type;
+        pickedTypes = togglePick(pickedTypes, type);
         dropPointerFocus();
         closeFanNow();
         applyMapFilters();
       });
     });
 
+    // Themes follow the same rule, from the strip or the editor. A press on
+    // the strip leaves its order alone; the editor's picks reach the strip's
+    // front when it closes.
+    const pickTheme = (theme: string) => {
+      if (!theme) return;
+      pickedThemes = togglePick(pickedThemes, theme);
+      // Picked themes go to the strip's front once nobody is on the strip.
+      stripSortPending = true;
+      dropPointerFocus();
+      closeFanNow();
+      applyMapFilters();
+    };
     themeFilterButtons.forEach((button) => {
-      button.addEventListener('click', () => {
-        const theme = clean(button.dataset.themeFilter);
-        if (!theme) return;
-        if (activeThemes.has(theme)) activeThemes.delete(theme);
-        else activeThemes.add(theme);
-        button.setAttribute('aria-pressed', activeThemes.has(theme) ? 'true' : 'false');
-        dropPointerFocus();
-        closeFanNow();
-        applyMapFilters();
-      });
+      button.addEventListener('click', () => pickTheme(clean(button.dataset.themeFilter)));
+    });
+    themeStripChips.forEach((chip) => {
+      chip.addEventListener('click', () => pickTheme(clean(chip.dataset.themeStrip)));
+    });
+
+    // "All" shows every theme again; the type filter stays.
+    const showEveryTheme = () => {
+      if (pickedThemes.size === 0) return;
+      pickedThemes = new Set();
+      stripSortPending = true;
+      dropPointerFocus();
+      closeFanNow();
+      applyMapFilters();
+    };
+    themeAllChip?.addEventListener('click', showEveryTheme);
+    scope.querySelector('[data-theme-editor-clear]')?.addEventListener('click', showEveryTheme);
+    scope.querySelector('[data-theme-editor-done]')?.addEventListener('click', closeFilterPanels);
+    scope.querySelector('[data-theme-editor-close]')?.addEventListener('click', closeFilterPanels);
+
+    // A sort the strip put off while it was in use happens once it is not:
+    // when a mouse leaves it or focus moves away. A finger "leaves" the moment
+    // it lifts, so a touch waits for the next change instead, rather than
+    // moving the chip it just pressed before a second tap.
+    const sortStripWhenFree = () => {
+      if (stripSortPending) window.requestAnimationFrame(() => layoutThemeStrip());
+    };
+    themeStrip?.addEventListener('pointerleave', (event) => {
+      if (event.pointerType !== 'touch') sortStripWhenFree();
+    });
+    themeStrip?.addEventListener('focusout', sortStripWhenFree);
+
+    // The strip's arrow keys, Home and End (role="toolbar"). In a
+    // right-to-left page the arrows follow the reading direction.
+    themeStrip?.addEventListener('focusin', (event) => {
+      const target = event.target instanceof HTMLElement ? event.target.closest('button') : null;
+      if (!target || !themeStrip.contains(target)) return;
+      stripTabStop = target;
+      syncStripTabStops();
+    });
+    themeStrip?.addEventListener('keydown', (event) => {
+      const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
+      if (!keys.includes(event.key)) return;
+      const buttons = stripButtons();
+      const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+      if (index === -1) return;
+      const rtl = window.getComputedStyle(themeStrip).direction === 'rtl';
+      const step = (event.key === 'ArrowRight') !== rtl ? 1 : -1;
+      const next = event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? buttons.length - 1
+          : Math.min(buttons.length - 1, Math.max(0, index + step));
+      event.preventDefault();
+      buttons[next]?.focus({ preventScroll: true });
+    });
+
+    // The phone's row scrolls sideways. Focus the script moves there (with
+    // preventScroll, so the page stays put) still brings its control into
+    // the row's view.
+    const controlRow = scope.querySelector('.gp-home-map-control-row') as HTMLElement | null;
+    controlRow?.addEventListener('focusin', (event) => {
+      if (mapLayout() !== 'phone' || !(event.target instanceof HTMLElement)) return;
+      const row = controlRow.getBoundingClientRect();
+      const item = event.target.getBoundingClientRect();
+      const margin = 8;
+      if (item.left < row.left) controlRow.scrollLeft -= row.left - item.left + margin;
+      else if (item.right > row.right) controlRow.scrollLeft += item.right - row.right + margin;
     });
 
     filterResetButtons.forEach((button) => {
@@ -2511,6 +2961,40 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const visibleMapNodes = () => (
       Array.from(root.querySelectorAll('.gp-home-map-node-link:not(.is-filtered-out)')) as HTMLElement[]
     );
+
+    // ---- Edge pills (phones) -------------------------------------------------
+    // A phone shows part of the world. An edge with nodes beyond it gets a pill
+    // that pans that way ("5 more east"); after a pan the pill on the other
+    // edge leads back. With "Reset the map view", keyboard and switch users
+    // always have a way across and back without dragging.
+    const edgePills = Array.from(scope.querySelectorAll('[data-home-map-pan]')) as HTMLButtonElement[];
+    const edgeOf = (pill: HTMLElement): MapEdge => (pill.dataset.homeMapPan === 'west' ? 'west' : 'east');
+    syncEdgePills = () => {
+      const phone = mapLayout() === 'phone';
+      const beyond = phone
+        ? pointsBeyondView(currentViewBox, visibleMapNodes().map(nodeCenter).filter(Boolean) as Array<{ x: number; y: number }>)
+        : { west: 0, east: 0 };
+      const focused = edgePills.find((pill) => pill === document.activeElement);
+      edgePills.forEach((pill) => {
+        const count = beyond[edgeOf(pill)];
+        const label = pill.querySelector('[data-home-map-pan-label]');
+        if (label) label.textContent = `${count} more ${edgeOf(pill)}`;
+        pill.hidden = !phone || count === 0;
+      });
+      // A pill that panned as far as it goes hides; focus goes to the pill
+      // that leads back, or to the reset.
+      if (focused?.hidden) {
+        const back = edgePills.find((pill) => !pill.hidden);
+        (back ?? (scope.querySelector('[data-home-map-zoom="reset"]') as HTMLElement | null))?.focus({ preventScroll: true });
+      }
+    };
+    edgePills.forEach((pill) => {
+      pill.addEventListener('click', () => {
+        dropPointerFocus();
+        closeFanNow();
+        setMapViewBox(panMapView(currentViewBox, edgeOf(pill), FULL_VIEW_BOX));
+      });
+    });
 
     const activateMapNode = (node: Element, viaKeyboard = false) => {
       const memberKey = (node as HTMLElement).dataset.memberKey;
@@ -3771,6 +4255,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (el && el.textContent !== text) el.textContent = text;
     };
 
+    // On a phone the error note sits across the stage's top, and the edge
+    // pills move below its rendered height, however many lines it wraps to.
+    const syncAlertBlock = () => {
+      const height = mapStateError && !mapStateError.hidden && mapLayout() === 'phone' ? mapStateError.offsetHeight : 0;
+      if (height) root.style.setProperty('--gp-map-error-block', `${height}px`);
+      else root.style.removeProperty('--gp-map-error-block');
+    };
+
     const renderMapStateStatus = () => {
       const status = describeMapStateFeed(mapStateFeed, intakeMode, Date.now());
       if (freshnessEl) {
@@ -3791,8 +4283,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         // focus to the legend rather than drop it to the top of the page.
         if (hadFocus && !status.problem) legendItems[0]?.focus({ preventScroll: true });
       }
-      // The compact map gives the error its own row under the drawing.
       root.classList.toggle('has-map-state-problem', Boolean(status.problem));
+      syncAlertBlock();
       const announcement = mapStateAnnouncement(lastMapStateStatus, status);
       if (announcement && mapStateLive) {
         // The same words twice in a row are not read again unless they change.
@@ -4651,11 +5143,51 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       dropPointerFocus();
     }, { passive: true });
     window.addEventListener(PENDING_NODE_UPDATED_EVENT, renderLocalPending);
+    // ---- Focus across a layout change -----------------------------------------
+    // Some controls exist in one layout only: the theme strip and the zoom
+    // buttons on a wide map; Themes and the edge pills on a phone. When the
+    // container crosses 520px (a resize, a rotated device) while keyboard
+    // focus is on one that hides, focus moves to its counterpart in the new
+    // layout instead of falling to the page (Codex on #56).
+    const themesToggle = scope.querySelector('.gp-home-map-themes-toggle') as HTMLButtonElement | null;
+    const resetViewButton = scope.querySelector('[data-home-map-zoom="reset"]') as HTMLButtonElement | null;
+    // The chrome control that last held focus. A control that hides blurs
+    // with nowhere to go, so the memory outlives that blur, and only that one.
+    let lastChromeFocus: HTMLElement | null = null;
+    controlsEl?.addEventListener('focusin', (event) => {
+      if (event.target instanceof HTMLElement) lastChromeFocus = event.target;
+    });
+    controlsEl?.addEventListener('focusout', (event) => {
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (target && target.getClientRects().length > 0) lastChromeFocus = null;
+    });
+    const counterpartsOf = (el: HTMLElement): Array<HTMLElement | null> => {
+      if (themeStrip?.contains(el)) return [themesToggle, stripTabStop, themeAllChip, themeMoreChip];
+      if (el === themesToggle) return [stripTabStop, themeAllChip, themeMoreChip];
+      if (el.closest('.gp-home-map-edge-pills') || el.matches('[data-home-map-zoom]')) return [resetViewButton];
+      return [];
+    };
+    const keepChromeFocus = () => {
+      const active = document.activeElement;
+      const held = active instanceof HTMLElement && controlsEl?.contains(active)
+        ? active
+        : !active || active === document.body ? lastChromeFocus : null;
+      if (!held || held.getClientRects().length > 0) return;
+      const next = counterpartsOf(held).find((candidate) => candidate && candidate.getClientRects().length > 0);
+      next?.focus({ preventScroll: true });
+    };
+
     let mapResizeTimer = 0;
     const scheduleMapResizeSync = () => {
+      // Before the debounce: focus must not wait on a control that just hid.
+      keepChromeFocus();
       window.clearTimeout(mapResizeTimer);
       mapResizeTimer = window.setTimeout(() => {
-        setMapViewBox(currentViewBox);
+        syncViewToStage();
+        layoutThemeStrip();
+        // The strip may have hidden a chip that no longer fits.
+        keepChromeFocus();
+        syncAlertBlock();
         applyNodeDensityScale();
         const activeFocusTarget = selectedFocusTarget ?? pointerFocusTarget;
         if (activeFocusTarget && !activeFocusTarget.classList.contains('is-filtered-out')) {
@@ -4671,9 +5203,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       window.addEventListener('resize', scheduleMapResizeSync);
     }
 
+    // Frame the stage before the first paint of nodes: on a phone, the
+    // Atlantic rather than the middle of the world.
+    syncViewToStage();
     applyMapFilters();
     renderLocalPending();
     loadMapState();
+    // Chips are measured in the site's fonts, which can arrive after this.
+    document.fonts?.ready.then(() => layoutThemeStrip()).catch(() => {});
   })();
 </script>
 
@@ -4694,6 +5231,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     --gp-map-pop-bg: color-mix(in srgb, var(--gp-green-950) 84%, transparent);
     --gp-map-pop-shadow: 0 18px 48px -18px rgba(0, 0, 0, 0.72);
     --gp-map-control-bg: rgba(7, 24, 15, 0.5);
+    /* The bars and pills inside the stage. */
+    --gp-map-bar-bg: color-mix(in srgb, var(--gp-green-950) 80%, transparent);
     --gp-map-edge-fade: linear-gradient(to right, transparent 0, #000 6px, #000 calc(100% - 12px), transparent 100%);
     /* The world grid shown at rest, as width / height. */
     --gp-map-aspect: 200 / 88;
@@ -4708,8 +5247,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
          take about 22.5rem;
        - 25rem, so a short laptop, where the buttons sit below the fold either
          way, is not left with a small map. At that height the map is 56.8rem
-         wide, which also keeps a short viewport out of the compact layout
-         below (the 720px container query): only a narrow container may
+         wide, which also keeps a short viewport out of the phone layout
+         below (the 520px container query): only a narrow container may
          trigger that. */
     --gp-map-max-block: max(56.25svh, calc(100svh - 22.5rem), 25rem);
     width: min(100%, calc(var(--gp-map-max-block) * var(--gp-map-aspect)));
@@ -4737,6 +5276,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   .gp-home-map-canvas {
     --gp-map-card-width: 280px;
     --gp-map-card-offset: 22px;
+    /* The layout the container picks; the script reads it (mapLayout). */
+    --gp-map-layout: wide;
+    /* The bars' distance from the stage's edge, their chips, and their
+       height: a chip, the bar's padding and its border. */
+    --gp-map-inset: calc(var(--gp-space-sm) + var(--gp-space-xs));
+    --gp-map-chip: 30px;
+    --gp-map-bar-block: calc(var(--gp-map-chip) + var(--gp-space-xs) * 2 + 2px);
     position: relative;
     width: 100%;
     aspect-ratio: var(--gp-map-aspect);
@@ -4746,6 +5292,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       radial-gradient(ellipse at center, rgba(20, 68, 52, 0.65) 0%, rgba(11, 46, 35, 0.95) 100%);
     overflow: hidden;
     box-shadow: var(--gp-shadow-deep);
+  }
+
+  /* A finger needs a 44px chip (DESIGN.md:431); the bars grow to hold it. */
+  @media (pointer: coarse) {
+    .gp-home-map-canvas {
+      --gp-map-chip: 44px;
+    }
   }
 
   .gp-home-map-topo {
@@ -4765,6 +5318,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     width: 100%;
     height: 100%;
     display: block;
+    /* A touch at the opening view: an up or down swipe scrolls the page, and
+       a sideways drag or a pinch goes to the map. Zoomed in, the map takes
+       every gesture. */
+    touch-action: pan-y;
+  }
+
+  .gp-home-map-canvas.is-zoomed .gp-home-map-svg {
+    touch-action: none;
   }
 
   .gp-home-map-canvas.has-selected-node .gp-home-map-svg {
@@ -5217,62 +5778,69 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     animation: gpMapStrandGrow 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
-  /* Visible identity counts inside the map */
-  .gp-home-map-legend {
-    position: absolute;
-    top: 12px;
-    inset-inline-end: 12px;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
-    background: rgba(11, 38, 28, 0.78);
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-pill);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    z-index: 3;
-    max-width: calc(100% - 24px);
-    pointer-events: auto;
+  /* ---- Filter chips on the map --------------------------------------------
+     The type pills, the theme strip's chips and both Show all chips are the
+     shared Chip. A pressed chip is filled; hover only tints its border, and
+     keyboard focus keeps the site's focus ring, so a chip that merely has
+     focus never reads as pressed (map-polish-audit.md § 2.4). Chips are 30px
+     under a fine pointer and 44px under a coarse one (DESIGN.md:431). */
+  .gp-home-map .gp-chip {
+    min-height: var(--gp-map-chip);
+    gap: var(--gp-space-sm);
+    padding-inline: calc(var(--gp-space-sm) + var(--gp-space-xs));
+    border-color: var(--gp-border-soft);
+    color: var(--gp-fg-muted);
+    font-size: var(--gp-caption);
+    font-weight: 700;
   }
 
-  .gp-home-map-canvas.has-selected-node .gp-home-map-legend {
-    inset-inline-end: 12px;
-    max-width: calc(100% - 24px);
+  .gp-home-map .gp-chip:hover {
+    border-color: color-mix(in srgb, var(--gp-primary) 42%, transparent);
+    color: var(--gp-fg);
   }
 
-  .gp-home-map-legend-item {
-    appearance: none;
-    box-sizing: border-box;
-    min-height: 34px;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 3px 7px;
-    border: 1px solid transparent;
-    border-radius: var(--gp-radius-pill);
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: background 160ms cubic-bezier(0.4, 0, 0.2, 1), border-color 160ms cubic-bezier(0.4, 0, 0.2, 1), color 160ms cubic-bezier(0.4, 0, 0.2, 1);
+  .gp-home-map .gp-chip[aria-pressed='true'] {
+    border-color: color-mix(in srgb, var(--gp-primary) 55%, transparent);
+    background: color-mix(in srgb, var(--gp-primary) 16%, transparent);
+    color: var(--gp-lime-200);
   }
 
   /* The class display wins over the UA [hidden] rule, so hide explicitly. */
-  .gp-home-map-legend-item[hidden] {
+  .gp-home-map .gp-chip[hidden],
+  .gp-home-map .gp-button[hidden] {
     display: none;
   }
 
-  .gp-home-map-legend-item:hover,
-  .gp-home-map-legend-item:focus-visible,
-  .gp-home-map-legend-item.is-active {
-    border-color: color-mix(in srgb, var(--gp-primary) 38%, transparent);
-    background: color-mix(in srgb, var(--gp-primary) 13%, transparent);
+  /* Visible identity counts inside the map: the top end bar on a wide map. */
+  .gp-home-map-legend {
+    grid-area: legend;
+    justify-self: end;
+    align-self: start;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gp-space-xs);
+    max-inline-size: 100%;
+    padding: var(--gp-space-xs);
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-pill);
+    background: var(--gp-map-bar-bg);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
   }
 
-  .gp-home-map-legend-item.is-active .gp-home-map-legend-label {
-    color: var(--gp-primary);
+  /* The legend's pills sit in one bar, as before: no outline of their own
+     until hovered or pressed. */
+  .gp-home-map .gp-chip.gp-home-map-legend-item {
+    padding-inline: var(--gp-space-sm);
+    border-color: transparent;
+  }
+
+  .gp-home-map .gp-chip.gp-home-map-legend-item:hover {
+    border-color: color-mix(in srgb, var(--gp-primary) 42%, transparent);
+  }
+
+  .gp-home-map .gp-chip.gp-home-map-legend-item[aria-pressed='true'] {
+    border-color: color-mix(in srgb, var(--gp-primary) 55%, transparent);
   }
 
   .gp-home-map-legend-mark {
@@ -5299,14 +5867,26 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
   .gp-home-map-legend-label {
     font-family: var(--gp-font-mono);
-    color: var(--gp-fg-dim);
-    font-size: 12px;
+    font-size: var(--gp-caption);
     letter-spacing: 0.12em;
     text-transform: uppercase;
     font-weight: 700;
   }
 
-  .gp-home-map-legend-count {
+  /* Where the legend's labels would leave the theme strip no theme at all,
+     on a narrow stage, the legend shows dots and numbers only, as on a phone
+     (DESIGN.md:403). Each pill keeps its name. */
+  .gp-home-map-canvas.has-compact-legend .gp-home-map-legend-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .gp-home-map-legend-count,
+  .gp-home-map-list-toggle-count {
     box-sizing: border-box;
     min-width: 4ch;
     display: inline-flex;
@@ -5321,59 +5901,25 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     font-size: var(--gp-caption);
     font-weight: 800;
     font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
     line-height: 1.1;
   }
 
-  /* Reset chip, in the legend and in the note below: only while filtering.
-     The error note's Try again is the same ghost chip. */
-  .gp-home-map-legend-reset,
-  .gp-home-map-filter-note button,
-  .gp-home-map-state-error button {
-    appearance: none;
-    box-sizing: border-box;
-    flex: none;
-    min-height: 34px;
-    padding: var(--gp-space-xs) var(--gp-space-md);
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-pill);
-    background: transparent;
-    color: var(--gp-fg-muted);
-    font-family: var(--gp-font-body);
-    font-size: var(--gp-label-sm);
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: border-color 160ms cubic-bezier(0.4, 0, 0.2, 1), color 160ms cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  /* Try again is the way out of an error, so it is a full 44px target at
-     every width and with any pointer. */
-  .gp-home-map-state-error button {
-    min-height: 44px;
-  }
-
-  /* The legend is anchored at its end, so the chip joins at the start: the
-     type pills must not move under the pointer that just pressed one. */
-  .gp-home-map-legend-reset {
+  /* The legend is anchored at its end, so the Show all chip joins at the
+     start: the type pills must not move under the pointer that just pressed
+     one. */
+  .gp-home-map .gp-chip.gp-home-map-legend-reset {
     order: -1;
   }
 
+  .gp-home-map-filter-note .gp-chip {
+    flex: none;
+  }
+
   /* The class display wins over the UA [hidden] rule, so hide explicitly. */
-  .gp-home-map-legend-reset[hidden],
   .gp-home-map-filter-note[hidden],
   .gp-home-map-state-error[hidden] {
     display: none;
-  }
-
-  .gp-home-map-legend-reset:hover,
-  .gp-home-map-legend-reset:focus-visible,
-  .gp-home-map-filter-note button:hover,
-  .gp-home-map-filter-note button:focus-visible,
-  .gp-home-map-state-error button:hover,
-  .gp-home-map-state-error button:focus-visible {
-    border-color: color-mix(in srgb, var(--gp-primary) 38%, transparent);
-    color: var(--gp-fg);
   }
 
   /* On a wide map the legend chip is the way back, so the note is kept for
@@ -5385,13 +5931,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   /* Sits under the legend whose filters caused it. */
   .gp-home-map-filter-note {
     position: absolute;
-    inset-block-start: 72px;
-    inset-inline-end: 12px;
+    inset-block-start: calc(var(--gp-map-inset) + var(--gp-map-bar-block) + var(--gp-space-sm));
+    inset-inline-end: var(--gp-map-inset);
     z-index: 3;
     display: flex;
     align-items: center;
     gap: var(--gp-space-sm);
-    max-width: calc(100% - 24px);
+    max-width: calc(100% - var(--gp-map-inset) * 2);
     padding: var(--gp-space-xs) var(--gp-space-xs) var(--gp-space-xs) var(--gp-space-md);
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-pill);
@@ -5400,6 +5946,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     font-family: var(--gp-font-body);
     font-size: var(--gp-body-sm);
     line-height: 1.3;
+    text-align: start;
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
   }
@@ -5409,13 +5956,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
      the legend whose steward and member counts it explains. */
   .gp-home-map-state-error {
     position: absolute;
-    inset-block-start: 72px;
-    inset-inline-end: 12px;
+    inset-block-start: calc(var(--gp-map-inset) + var(--gp-map-bar-block) + var(--gp-space-sm));
+    inset-inline-end: var(--gp-map-inset);
     z-index: 3;
     display: flex;
     align-items: center;
     gap: var(--gp-space-sm);
-    max-width: calc(100% - var(--gp-space-lg));
+    max-width: calc(100% - var(--gp-map-inset) * 2);
     padding: var(--gp-space-xs) var(--gp-space-xs) var(--gp-space-xs) var(--gp-space-md);
     border: 1px solid var(--gp-error);
     border-radius: var(--gp-radius-pill);
@@ -5424,31 +5971,42 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     font-family: var(--gp-font-body);
     font-size: var(--gp-body-sm);
     line-height: 1.3;
+    text-align: start;
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
   }
 
+  /* Try again is the shared ghost Button, 48px tall at every width and with
+     any pointer. The Button fills a narrow container; here it sits beside
+     the message. */
+  .gp-home-map-state-error .gp-button {
+    flex: none;
+    width: auto;
+    padding-inline: var(--gp-space-md);
+  }
+
   /* On a wide map a sparse-filter note shares that spot; it moves below the
      error note: Try again, the note's padding and its border. */
-  @container (width > 720px) {
+  @container (width > 520px) {
     .gp-home-map-state-error:not([hidden]) ~ .gp-home-map-filter-note {
-      inset-block-start: calc(72px + 44px + var(--gp-space-xs) * 2 + 2px + var(--gp-space-sm));
+      inset-block-start: calc(
+        var(--gp-map-inset) + var(--gp-map-bar-block) + var(--gp-space-sm) + 48px + var(--gp-space-xs) * 2 + 2px + var(--gp-space-sm)
+      );
     }
   }
 
+  /* The live status, just before the zoom bar on a wide map. */
   .gp-home-map-freshness {
-    position: absolute;
-    inset-block-start: 12px;
-    inset-inline-start: 12px;
-    z-index: 4;
+    grid-area: status;
+    justify-self: end;
+    align-self: center;
     box-sizing: border-box;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    inline-size: max-content;
     min-inline-size: 0;
-    max-inline-size: calc(100% - 24px);
+    max-inline-size: 100%;
     min-height: 30px;
     padding: 0 11px;
     border: 1px solid var(--gp-border-soft);
@@ -5660,164 +6218,137 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   }
 
   /* Embedded HiFi-style map controls */
+  /* The chrome layer covers the stage, and only its bars take presses. On a
+     wide map the bars sit in its corners: the theme strip and the legend at
+     the top, List and the end bar (live status, zoom, Join the map) at the
+     bottom. */
   .gp-home-map-controls {
     position: absolute;
-    inset-inline-start: 12px;
-    inset-block-end: 12px;
+    inset: var(--gp-map-inset);
     z-index: 5;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    max-width: min(var(--gp-container-md), calc(100% - var(--gp-space-lg)));
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'strip legend legend'
+      '. . .'
+      'list status end';
+    gap: var(--gp-space-sm);
+    pointer-events: none;
   }
 
-  .gp-home-map-canvas.has-selected-node .gp-home-map-controls {
-    max-width: min(var(--gp-container-md), calc(100% - var(--gp-space-lg)));
+  .gp-home-map-controls > *,
+  .gp-home-map-control-row > * {
+    pointer-events: auto;
   }
 
-  .gp-home-map-filter-panel {
-    width: min(var(--gp-container-md), calc(100vw - (var(--gp-space-xl) * 2)));
-    max-height: min(290px, 58cqw);
-    overflow: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 12px;
+  /* The live status is not a control: presses pass through it to the map. */
+  .gp-home-map-controls > .gp-home-map-freshness {
+    pointer-events: none;
+  }
+
+  /* On a wide map the row's parts take their own corners of the grid. */
+  .gp-home-map-control-row {
+    display: contents;
+  }
+
+  /* The theme strip (role="toolbar"): All, the most-used themes as they fit
+     and +N. The script measures how many fit beside the legend. */
+  .gp-home-map-theme-strip {
+    grid-area: strip;
+    justify-self: start;
+    align-self: start;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gp-space-xs);
+    max-inline-size: 100%;
+    padding: var(--gp-space-xs);
     border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-md);
-    background: rgba(11, 38, 28, 0.92);
-    box-shadow: var(--gp-shadow-card-lg);
+    border-radius: var(--gp-radius-pill);
+    background: var(--gp-map-bar-bg);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
   }
 
-  .gp-home-map-filter-panel[hidden] {
-    display: none;
+  .gp-home-map .gp-chip.gp-home-map-strip-chip {
+    flex: none;
   }
 
-  .gp-home-map-filter-panel.is-themes {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    max-height: none;
-    overflow: visible;
-  }
-
-  .gp-home-map-filter-panel.is-themes[hidden] {
-    display: none;
-  }
-
-  .gp-home-map-filter-option {
-    min-height: 38px;
-    display: grid;
-    grid-template-columns: 16px minmax(0, 1fr);
-    align-items: center;
-    gap: 10px;
-    padding: 6px 8px;
-    border: 0;
-    border-radius: var(--gp-radius-sm);
-    background: transparent;
+  .gp-home-map .gp-chip.gp-home-map-strip-chip.is-more {
+    border-color: var(--gp-border);
     color: var(--gp-fg);
-    font: inherit;
-    font-size: 13px;
-    font-weight: 650;
-    line-height: 1.2;
-    text-align: left;
-    cursor: pointer;
-    transition: opacity 160ms ease, background 160ms ease;
+    font-family: var(--gp-font-mono);
   }
 
-  .gp-home-map-filter-option[aria-pressed='false'] {
-    opacity: 0.38;
+  .gp-home-map .gp-chip.gp-home-map-strip-chip.is-more[aria-expanded='true'] {
+    border-color: color-mix(in srgb, var(--gp-primary) 55%, transparent);
+    background: color-mix(in srgb, var(--gp-primary) 16%, transparent);
+    color: var(--gp-lime-200);
   }
 
-  .gp-home-map-filter-panel.is-themes .gp-home-map-filter-option {
-    grid-template-columns: 12px minmax(0, 1fr);
-    gap: var(--gp-space-xs);
-    min-height: 40px;
-    padding: 5px 6px;
-    font-size: var(--gp-caption);
-    line-height: 1.1;
-  }
-
-  .gp-home-map-filter-panel.is-themes .gp-home-map-filter-option span:last-child {
-    overflow-wrap: anywhere;
-  }
-
-  .gp-home-map-filter-option:hover,
-  .gp-home-map-filter-option:focus-visible {
-    background: rgba(250, 247, 238, 0.06);
-    outline: none;
-  }
-
-  .gp-home-map-filter-marker {
-    width: 11px;
-    height: 11px;
+  .gp-home-map-strip-dot {
+    width: 8px;
+    height: 8px;
+    flex: none;
     border-radius: 50%;
     background: var(--theme-color, var(--gp-map-member));
-    box-shadow: 0 0 8px color-mix(in srgb, var(--theme-color, var(--gp-map-member)) 55%, transparent);
   }
 
-  .gp-home-map-filter-option.is-chapter .gp-home-map-filter-marker {
-    background: var(--gp-map-chapter);
-    box-shadow: 0 0 0 1.5px var(--gp-map-chapter-ring);
-  }
-
-  .gp-home-map-filter-option.is-steward .gp-home-map-filter-marker {
-    background: var(--gp-map-steward);
-  }
-
-  .gp-home-map-filter-option.is-member .gp-home-map-filter-marker {
-    background: var(--gp-map-member);
-    box-shadow: 0 0 0 1.5px var(--gp-green-950);
-  }
-
-  .gp-home-map-filter-tabs {
+  /* Text buttons on the map: List, and on a phone Themes. They match Join
+     the map, so the bottom bars line up, and clear DESIGN.md's 48px button
+     minimum. */
+  .gp-home-map-list-toggle,
+  .gp-home-map-themes-toggle {
+    appearance: none;
+    box-sizing: border-box;
+    flex: none;
+    min-height: calc(40px + var(--gp-space-xs) * 2 + 2px);
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    width: fit-content;
-    max-width: 100%;
-    padding: 4px;
+    gap: var(--gp-space-sm);
+    padding: 0 var(--gp-space-md);
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-pill);
-    background: rgba(11, 38, 28, 0.72);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-  }
-
-  .gp-home-map-filter-tabs button {
-    min-height: 40px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    border: 0;
-    border-radius: var(--gp-radius-pill);
-    padding: 8px 15px;
-    background: transparent;
-    color: var(--gp-fg-dim);
+    background: var(--gp-map-bar-bg);
+    color: var(--gp-fg);
     font-family: var(--gp-font-body);
-    font-size: 13px;
+    font-size: var(--gp-label-sm);
     font-weight: 700;
     letter-spacing: 0.04em;
-    line-height: 1;
     white-space: nowrap;
     cursor: pointer;
-    transition: background 160ms ease, color 160ms ease;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
   }
 
-  .gp-home-map-filter-tabs button:hover,
-  .gp-home-map-filter-tabs button:focus-visible,
-  .gp-home-map-filter-tabs button.is-active {
-    background: var(--gp-map-member);
-    color: var(--gp-green-900);
-    outline: none;
+  .gp-home-map-list-toggle {
+    grid-area: list;
+    justify-self: start;
+    align-self: end;
   }
 
-  /* Narrowed-filter indicator — the dot stays visible after the panel closes
-     so a filtered map never reads as the full network. */
-  .gp-home-map-filter-tabs button.is-filtering::after {
+  /* Themes opens the editor on a phone; a wide map has the strip's +N. */
+  .gp-home-map-themes-toggle {
+    display: none;
+  }
+
+  .gp-home-map-list-toggle:hover,
+  .gp-home-map-themes-toggle:hover {
+    border-color: color-mix(in srgb, var(--gp-primary) 45%, transparent);
+  }
+
+  /* Open is shown like pressed: the list or the editor it opened is up. */
+  .gp-home-map-list-toggle[aria-expanded='true'],
+  .gp-home-map-themes-toggle[aria-expanded='true'] {
+    border-color: color-mix(in srgb, var(--gp-primary) 55%, transparent);
+    background: color-mix(in srgb, var(--gp-primary) 16%, transparent);
+    color: var(--gp-lime-200);
+  }
+
+  /* Narrowed-filter indicator: on a phone, which has no strip, a dot on
+     Themes says a theme narrows the map while the editor is closed. */
+  .gp-home-map-themes-toggle.is-filtering::after {
     content: '';
     width: 6px;
     height: 6px;
@@ -5826,13 +6357,23 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     background: currentColor;
   }
 
+  .gp-home-map-end-group {
+    grid-area: end;
+    justify-self: end;
+    align-self: end;
+    display: flex;
+    align-items: center;
+    gap: var(--gp-space-sm);
+    min-inline-size: 0;
+  }
+
   .gp-home-map-zoom-controls {
-    /* Visible on every viewport — desktop needs zoom + the drag-pan it unlocks,
-       not just touch. */
+    /* Visible on every wide map — desktop needs zoom + the drag-pan it
+       unlocks, not just touch. 44px icons in a bar as tall as Join the map. */
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 4px;
+    gap: 2px;
+    padding: 2px;
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-pill);
     background: color-mix(in srgb, var(--gp-green-950) 74%, transparent);
@@ -5851,8 +6392,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     pointer-events: none;
   }
 
-  /* Drag-to-pan affordance once the map is zoomed in. */
-  .gp-home-map-canvas.is-zoomed .gp-home-map-svg {
+  /* Drag-to-pan affordance whenever the view shows part of the drawing. */
+  .gp-home-map-canvas.can-pan .gp-home-map-svg {
     cursor: grab;
   }
   .gp-home-map-canvas.is-grabbing .gp-home-map-svg,
@@ -5868,29 +6409,17 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     justify-content: center;
     border: 0;
     border-radius: var(--gp-radius-pill);
-    padding: 8px 12px;
+    padding: 0;
     background: transparent;
     color: var(--gp-fg);
-    font-family: var(--gp-font-body);
-    font-size: var(--gp-label-sm);
-    font-weight: 800;
     line-height: 1;
     cursor: pointer;
   }
 
   .gp-home-map-zoom-controls button:hover,
-  .gp-home-map-zoom-controls button:focus-visible,
   .gp-home-map-canvas.is-zoomed .gp-home-map-zoom-controls [data-home-map-zoom='reset'] {
     background: var(--gp-map-member);
     color: var(--gp-green-900);
-  }
-
-  .gp-home-map-control-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: nowrap;
-    gap: 8px;
-    max-width: 100%;
   }
 
   /* A quiet pill beside the map controls. The hero keeps the page's one lime
@@ -5917,10 +6446,272 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     transition: border-color 160ms ease, background 160ms ease;
   }
 
-  .gp-home-map-join:hover,
-  .gp-home-map-join:focus-visible {
+  .gp-home-map-join:hover {
     border-color: color-mix(in srgb, var(--gp-primary) 45%, transparent);
     background: color-mix(in srgb, var(--gp-green-950) 90%, transparent);
+  }
+
+  /* At an 860px container and narrower the live pill keeps its dot and Live,
+     so the bottom bars fit beside List; a failing feed shows in the error
+     note instead. */
+  @container (max-width: 860px) {
+    .gp-home-map-freshness-sep,
+    .gp-home-map-freshness-age,
+    .gp-home-map-freshness[data-state='stale'] {
+      display: none;
+    }
+  }
+
+  /* Phones only: a pill at each top corner while nodes lie beyond that
+     edge, on the shared Chip. Their layer is left to right, so west and east
+     stay the map's sides; it moves below a failing feed's note. */
+  .gp-home-map-controls > .gp-home-map-edge-pills {
+    position: absolute;
+    inset: 0 0 auto;
+    display: none;
+    pointer-events: none;
+  }
+
+  /* The script measures the error note, which can wrap to several lines. */
+  .gp-home-map-canvas.has-map-state-problem .gp-home-map-controls > .gp-home-map-edge-pills {
+    inset-block-start: calc(var(--gp-map-error-block, 0px) + var(--gp-space-sm));
+  }
+
+  .gp-home-map .gp-chip.gp-home-map-edge-pill {
+    position: absolute;
+    inset-block-start: 0;
+    min-height: 48px;
+    padding-inline: var(--gp-space-md);
+    gap: 6px;
+    background: var(--gp-map-bar-bg);
+    color: var(--gp-fg);
+    letter-spacing: 0.1em;
+    pointer-events: auto;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+
+  .gp-home-map .gp-chip.gp-home-map-edge-pill.is-west {
+    inset-inline-start: 0;
+  }
+
+  .gp-home-map .gp-chip.gp-home-map-edge-pill.is-east {
+    inset-inline-end: 0;
+  }
+
+  .gp-home-map-edge-pill svg {
+    width: 14px;
+    height: 14px;
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* The theme editor: under the strip on a wide map, a sheet on a phone. Its
+     head stays put while the toggles scroll on a short stage. One open
+     surface at a time: opening it closes the list and the selected node. */
+  .gp-home-map-theme-editor {
+    container: gp-theme-editor / inline-size;
+    position: absolute;
+    inset-block-start: calc(var(--gp-map-bar-block) + var(--gp-space-sm));
+    inset-inline-start: 0;
+    z-index: 2;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    inline-size: min(54rem, 100%);
+    max-block-size: calc(100% - var(--gp-map-bar-block) - var(--gp-space-sm));
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-lg);
+    background: var(--gp-map-pop-bg);
+    color: var(--gp-fg);
+    box-shadow: var(--gp-map-pop-shadow);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    overflow: hidden;
+    /* The hero centres its text; the editor reads from the start. */
+    text-align: start;
+  }
+
+  .gp-home-map-theme-editor[hidden] {
+    display: none;
+  }
+
+  .gp-home-map-theme-editor-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--gp-space-sm);
+    padding: var(--gp-space-md) var(--gp-space-md) 0 var(--gp-space-lg);
+  }
+
+  .gp-home-map-theme-editor-kicker {
+    margin: 0 0 var(--gp-space-xs);
+    color: var(--gp-fg-muted);
+    font-family: var(--gp-font-mono);
+    font-size: var(--gp-caption);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+
+  .gp-home-map-theme-editor-title {
+    margin: 0;
+    color: var(--gp-secondary);
+    font-family: var(--gp-font-display);
+    font-size: var(--gp-title-lg);
+    font-weight: 500;
+    line-height: 1.15;
+  }
+
+  .gp-home-map-theme-editor-close {
+    width: 44px;
+    height: 44px;
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-pill);
+    background: transparent;
+    color: var(--gp-fg);
+    cursor: pointer;
+  }
+
+  .gp-home-map-theme-editor-close:hover {
+    border-color: color-mix(in srgb, var(--gp-primary) 45%, transparent);
+  }
+
+  .gp-home-map-theme-editor-close svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+  }
+
+  .gp-home-map-theme-editor-body {
+    flex: 1 1 auto;
+    min-block-size: 0;
+    display: grid;
+    align-content: start;
+    gap: var(--gp-space-md);
+    padding: var(--gp-space-sm) var(--gp-space-lg) var(--gp-space-md);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .gp-home-map-theme-editor-note {
+    margin: 0;
+    color: var(--gp-fg-muted);
+    font-size: var(--gp-body-sm);
+    line-height: 1.5;
+  }
+
+  /* All the themes, four to a row; the editor's body scrolls, never the grid. */
+  .gp-home-map-filter-panel.is-themes {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--gp-space-sm);
+    max-height: none;
+    overflow: visible;
+  }
+
+  /* Each toggle is a chip with the theme's dot and its count, filled while
+     picked, like the strip's chips. */
+  .gp-home-map-filter-panel.is-themes .gp-home-map-filter-option {
+    box-sizing: border-box;
+    min-height: max(40px, var(--gp-map-chip));
+    display: grid;
+    grid-template-columns: 8px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--gp-space-sm);
+    padding-block: var(--gp-space-xs);
+    padding-inline: var(--gp-space-md) var(--gp-space-sm);
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-pill);
+    background: transparent;
+    color: var(--gp-fg-muted);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-caption);
+    font-weight: 700;
+    line-height: 1.15;
+    text-align: start;
+    cursor: pointer;
+    transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+  }
+
+  .gp-home-map-filter-panel.is-themes .gp-home-map-filter-option:hover {
+    border-color: color-mix(in srgb, var(--gp-primary) 42%, transparent);
+    color: var(--gp-fg);
+  }
+
+  .gp-home-map-filter-panel.is-themes .gp-home-map-filter-option[aria-pressed='true'] {
+    border-color: color-mix(in srgb, var(--gp-primary) 55%, transparent);
+    background: color-mix(in srgb, var(--gp-primary) 16%, transparent);
+    color: var(--gp-lime-200);
+  }
+
+  /* A chip's label stays on one line (DESIGN.md's chip rule). Four columns
+     fit the longest theme at the editor's full width; a narrower editor
+     lists fewer a row, down to one on a phone. */
+  .gp-home-map-filter-option-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @container gp-theme-editor (width < 53.5rem) {
+    .gp-home-map-filter-panel.is-themes {
+      grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+    }
+  }
+
+  .gp-home-map-filter-option-count {
+    font-family: var(--gp-font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .gp-home-map-filter-marker {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--theme-color, var(--gp-map-member));
+  }
+
+  .gp-home-map-theme-editor-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gp-space-sm);
+    padding: var(--gp-space-sm) var(--gp-space-md) var(--gp-space-md) var(--gp-space-lg);
+    border-block-start: 1px solid var(--gp-border-soft);
+  }
+
+  .gp-home-map-theme-editor-summary {
+    margin: 0;
+    color: var(--gp-fg-muted);
+    font-family: var(--gp-font-mono);
+    font-size: var(--gp-caption);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .gp-home-map-theme-editor-actions {
+    display: flex;
+    gap: var(--gp-space-sm);
+  }
+
+  .gp-home-map-theme-editor-actions .gp-button {
+    width: auto;
+    padding-inline: var(--gp-space-lg);
   }
 
   .gp-home-map-list-drawer {
@@ -7537,65 +8328,32 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     }
   }
 
-  @container (max-width: 720px) {
-    /* Compact: the chrome sits below the drawing, never over it. The canvas is
-       the drawing (44cqw tall at the 200 / 88 aspect) plus a band under it for
-       the legend row and, beneath that, the controls row or the selected
-       node's bar. The band grows to fit the bar, so a selection covers none of
-       the map; the page below moves down instead, on the tap that asked. */
+  /* DESIGN.md's narrow map overlay: dots and numbers only, no labels. The
+     label stays in the accessibility tree, so each pill keeps its name. */
+  @container (max-width: 520px) {
+    .gp-home-map-legend-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    /* A phone (map-polish-audit.md § 5, "60svh map, one row"). The stage is
+       at least 60svh tall and frames the drawing's full height, centred on
+       the Atlantic by the script; the edge pills reach the rest. Every
+       control sits in one row along the stage's bottom. This replaces June's
+       compact layout, a band under a short drawing that started at 720px. */
     .gp-home-map-canvas {
+      --gp-map-layout: phone;
+      --gp-map-inset: var(--gp-space-sm);
       --gp-map-edge: var(--gp-space-sm);
       /* One row of chrome: a 44px touch target, the row's padding and border. */
       --gp-map-row: calc(44px + var(--gp-space-xs) * 2 + 2px);
-      --gp-map-lower: var(--gp-map-row);
-      --gp-map-alert: 0px;
       aspect-ratio: auto;
-      block-size: calc(44cqw + var(--gp-map-edge) * 4 + var(--gp-map-row) + var(--gp-map-lower) + var(--gp-map-alert));
+      block-size: 60svh;
       border-radius: var(--gp-radius-lg);
-    }
-
-    /* A failing feed adds a row for its error between the drawing and the
-       legend: over the drawing it would cover pins. The page below moves
-       down by that row while the error lasts. */
-    .gp-home-map-canvas.has-map-state-problem {
-      --gp-map-alert: calc(var(--gp-map-row) + var(--gp-map-edge));
-    }
-
-    .gp-home-map-state-error {
-      inset-block-start: auto;
-      inset-block-end: calc(var(--gp-map-edge) * 3 + var(--gp-map-row) + var(--gp-map-lower));
-      inset-inline: var(--gp-map-edge);
-      max-width: none;
-      min-height: var(--gp-map-row);
-      box-sizing: border-box;
-      justify-content: space-between;
-    }
-
-    /* The compact pill keeps its dot and Live; a failing feed shows in the
-       error row instead of over the drawing. */
-    .gp-home-map-freshness-sep,
-    .gp-home-map-freshness-age,
-    .gp-home-map-freshness[data-state='stale'] {
-      display: none;
-    }
-
-    .gp-home-map-canvas.has-selected-node {
-      --gp-map-lower: max(var(--gp-map-row), calc(var(--gp-map-selected-clearance, 186px) - 18px));
-    }
-
-    .gp-home-map-svg {
-      inset: var(--gp-map-edge) 0 auto;
-      width: 100%;
-      height: auto;
-      aspect-ratio: var(--gp-map-aspect);
-      touch-action: none;
-    }
-
-    .gp-home-map-canvas.has-selected-node .gp-home-map-svg {
-      inset: var(--gp-map-edge) 0 auto;
-      width: 100%;
-      inline-size: 100%;
-      max-inline-size: none;
     }
 
     .gp-home-map-thread {
@@ -7623,130 +8381,131 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       stroke-width: 5.6;
     }
 
-    /* The legend row hugs its pills from the start edge, so the Show all chip
-       joins at the end without moving a pill under the finger. */
-    .gp-home-map-legend,
-    .gp-home-map-canvas.has-selected-node .gp-home-map-legend {
-      inset-inline-start: var(--gp-map-edge);
-      inset-inline-end: auto;
-      inset-block-start: auto;
-      inset-block-end: calc(var(--gp-map-edge) * 2 + var(--gp-map-lower));
-      max-width: calc(100% - var(--gp-map-edge) * 2);
-      padding: var(--gp-space-xs);
-      gap: var(--gp-space-xs);
-      flex-wrap: nowrap;
-      justify-content: flex-start;
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-
-    .gp-home-map-legend::-webkit-scrollbar {
-      display: none;
-    }
-
-    .gp-home-map-legend-item {
-      min-height: 44px;
-      padding-inline: 8px;
-    }
-
-    .gp-home-map-legend-count {
-      padding-inline: 6px;
-      font-size: var(--gp-caption);
-    }
-
-    .gp-home-map-legend-label {
-      font-size: var(--gp-caption);
-      letter-spacing: 0.08em;
-    }
-
-    .gp-home-map-focus {
-      padding: 8px 10px;
-      min-width: 180px;
-      max-width: min(240px, calc(100% - 16px));
-      display: none !important;
-    }
-
+    .gp-home-map-focus,
     .gp-home-map-edge-tooltip {
       display: none !important;
     }
 
-    .gp-home-map-focus-name {
-      font-size: var(--gp-body-sm);
-    }
-
+    /* The chrome: the edge pills at the top corners, one row at the bottom. */
     .gp-home-map-controls {
-      inset-inline-start: var(--gp-map-edge);
-      inset-inline-end: var(--gp-map-edge);
-      inset-block-end: var(--gp-map-edge);
-      max-width: none;
-      align-items: stretch;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
     }
 
-    /* The selected node's bar takes the controls' row; closing it brings the
-       controls back. Opening a panel or the list closes the selection first. */
-    .gp-home-map-canvas.has-selected-node .gp-home-map-controls {
+    .gp-home-map-controls > .gp-home-map-edge-pills {
+      display: block;
+    }
+
+    .gp-home-map-theme-strip {
       display: none;
     }
 
-    .gp-home-map-filter-panel {
-      width: min(340px, calc(100vw - 40px));
-      max-height: 44cqw;
-      padding: 10px;
+    /* The row scrolls behind an edge fade (DESIGN.md:403), in this order:
+       the type counts, Show all, Themes, List, Reset the map view, Join the
+       map. Text buttons are 54px, chips and the reset icon 44px. */
+    .gp-home-map-control-row {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: var(--gp-space-sm);
+      overflow-x: auto;
+      overscroll-behavior-inline: contain;
+      scrollbar-width: none;
+      mask-image: var(--gp-map-edge-fade);
+      -webkit-mask-image: var(--gp-map-edge-fade);
     }
 
-    .gp-home-map-filter-panel.is-themes {
-      position: fixed;
-      inset-inline: var(--gp-space-md);
-      inset-block-end: calc(var(--gp-space-3xl) + env(safe-area-inset-bottom, 0px));
-      z-index: 20;
-      width: auto;
-      max-inline-size: calc(100vw - (var(--gp-space-md) * 2));
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      max-height: none;
-      overflow: visible;
+    .gp-home-map-control-row::-webkit-scrollbar {
+      display: none;
     }
 
-    .gp-home-map-canvas.has-selected-node .gp-home-map-filter-panel.is-themes {
-      inset-block-end: calc(
-        var(--gp-map-selected-clearance, 168px) + var(--gp-space-3xl) + env(safe-area-inset-bottom, 0px)
-      );
+    .gp-home-map-control-row > * {
+      flex: none;
     }
 
-    .gp-home-map-filter-tabs {
-      gap: 5px;
-      width: 100%;
+    .gp-home-map .gp-chip.gp-home-map-legend-item,
+    .gp-home-map .gp-chip.gp-home-map-legend-reset {
+      min-height: 44px;
+      padding-inline: var(--gp-space-sm);
+    }
+
+    /* The Show all chip ends the counts, after the pills, so none of them
+       moves under the finger that pressed it. */
+    .gp-home-map .gp-chip.gp-home-map-legend-reset {
+      order: 1;
+    }
+
+    .gp-home-map .gp-chip.gp-home-map-legend-item {
+      gap: 6px;
+    }
+
+    .gp-home-map-legend-mark {
+      width: 9px;
+      height: 9px;
+    }
+
+    .gp-home-map-themes-toggle {
+      display: inline-flex;
+    }
+
+    .gp-home-map-list-toggle,
+    .gp-home-map-themes-toggle,
+    .gp-home-map-join {
+      min-height: var(--gp-map-row);
+    }
+
+    .gp-home-map-list-toggle-count {
+      display: none;
+    }
+
+    /* Pinch zooms on a phone; the zoom bar keeps only Reset the map view. */
+    .gp-home-map-zoom-controls {
+      padding: var(--gp-space-xs);
+    }
+
+    .gp-home-map-zoom-controls [data-home-map-zoom='in'],
+    .gp-home-map-zoom-controls [data-home-map-zoom='out'] {
+      display: none;
+    }
+
+    /* The live status leaves the row and sits just above its middle, over
+       the South Atlantic, clear of the edge pills and the error note. */
+    .gp-home-map-freshness {
+      position: absolute;
+      inset-block-end: calc(var(--gp-map-row) + var(--gp-space-sm));
+      inset-inline: 0;
+      margin-inline: auto;
+      inline-size: max-content;
+    }
+
+    /* The editor is a sheet over the stage's bottom, leaving the top of the
+       map in view so a pick shows its effect. */
+    .gp-home-map-theme-editor {
+      inset-block-start: auto;
+      inset-block-end: 0;
+      inset-inline: 0;
+      inline-size: auto;
+      max-block-size: 75%;
+    }
+
+    .gp-home-map-filter-panel.is-themes .gp-home-map-filter-option {
+      min-height: 44px;
+    }
+
+    /* A failing feed's note sits across the stage's top, over the far
+       north, where it covers no pin; the edge pills move below it. */
+    .gp-home-map-state-error {
+      inset-block-start: var(--gp-map-edge);
+      inset-inline: var(--gp-map-edge);
+      max-width: none;
+      min-height: var(--gp-map-row);
+      box-sizing: border-box;
       justify-content: space-between;
     }
 
-    .gp-home-map-filter-tabs button {
-      flex: 1 1 0;
-      min-height: 44px;
-      padding-inline: 12px;
-      font-size: var(--gp-label-sm);
-    }
-
-    .gp-home-map-zoom-controls {
-      display: none;
-    }
-
-    .gp-home-map-control-row {
-      width: 100%;
-    }
-
-    .gp-home-map-join {
-      min-height: var(--gp-map-row);
-      padding-inline: var(--gp-space-md);
-    }
-
-    /* The Show all chip ends the legend row, after the pills. */
-    .gp-home-map-legend-reset {
-      order: 1;
-      min-height: 44px;
-    }
-
-    /* The legend says what a filter left and offers the way back, so the note
-       appears only when nothing matches, over the drawing it then leaves
-       empty. */
+    /* The counts say what a filter left and the row offers the way back, so
+       the note appears only when nothing matches, over the empty stage. */
     .gp-home-map-filter-note,
     .gp-home-map-filter-note[data-sparse='false'] {
       display: none;
@@ -7754,14 +8513,15 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     .gp-home-map-filter-note[data-empty='true']:not([hidden]) {
       display: flex;
-      inset-block-start: calc(var(--gp-map-edge) + 22cqw);
+      inset-block-start: 50%;
       inset-inline: var(--gp-map-edge);
+      min-height: var(--gp-map-row);
       max-width: none;
       justify-content: space-between;
       transform: translateY(-50%);
     }
 
-    .gp-home-map-filter-note button {
+    .gp-home-map-filter-note .gp-chip {
       min-height: 44px;
     }
 
@@ -7796,8 +8556,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       padding: 8px 10px;
     }
 
-    /* Mobile: a compact selected summary over the lower map edge. The visible
-       surface is one name/action row plus one horizontal connection-chip row. */
+    /* Until the bottom sheet (PRD-1438's inspector step), a selected node is
+       a compact bar over the stage's bottom, in the row's place. */
+    .gp-home-map-canvas.has-selected-node .gp-home-map-control-row {
+      display: none;
+    }
+
     .gp-home-map-canvas.has-selected-node .gp-home-map-selected {
       inset-inline-start: 8px;
       inset-inline-end: 8px;
@@ -7946,34 +8710,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     .gp-home-map-update-form {
       gap: 8px;
-    }
-  }
-
-  /* DESIGN.md's narrow map overlay: dots and numbers only, no labels. The
-     label stays in the accessibility tree, so each pill keeps its name. */
-  @container (max-width: 520px) {
-    .gp-home-map-legend-label {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip: rect(0 0 0 0);
-      white-space: nowrap;
-    }
-
-    .gp-home-map-legend-item {
-      gap: 6px;
-    }
-
-    .gp-home-map-legend-mark {
-      width: 9px;
-      height: 9px;
-    }
-
-    .gp-home-map-filter-tabs button {
-      min-height: 44px;
-      padding-inline: 10px;
-      font-size: var(--gp-caption);
     }
   }
 </style>
