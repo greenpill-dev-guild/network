@@ -280,7 +280,14 @@ export function operatorPanelFields(panel: { type: string; options: Record<strin
   ])];
 }
 
-export function buildDirectusOperatorDashboardPlan(collectionNames: readonly string[]) {
+// `fieldsByCollection` lists the fields each collection has in the instance.
+// A panel naming a field the instance does not have yet is left off, because
+// it would fail the dashboard's one GraphQL request and empty every panel. A
+// rerun after the migration adds it.
+export function buildDirectusOperatorDashboardPlan(
+  collectionNames: readonly string[],
+  fieldsByCollection?: ReadonlyMap<string, ReadonlySet<string>>
+) {
   const collectionByBase = new Map(collectionNames.map((collection) => [cleanCollectionName(collection), collection]));
   const panels = OPERATOR_PANELS
     .filter((panel) => collectionByBase.has(panel.collection))
@@ -302,6 +309,10 @@ export function buildDirectusOperatorDashboardPlan(collectionNames: readonly str
         options: panelOptions(panel, collection),
       };
     });
+  const missingFields = (panel: (typeof panels)[number]) => {
+    const available = fieldsByCollection?.get(panel.options.collection);
+    return fieldsByCollection ? operatorPanelFields(panel).filter((field) => !available?.has(field)) : [];
+  };
   return {
     dashboard: {
       id: OPERATOR_DASHBOARD.id,
@@ -310,12 +321,31 @@ export function buildDirectusOperatorDashboardPlan(collectionNames: readonly str
       color: OPERATOR_DASHBOARD.color,
       note: OPERATOR_DASHBOARD.note,
     },
-    panels,
+    panels: panels.filter((panel) => missingFields(panel).length === 0),
+    skipped: panels
+      .map((panel) => ({ name: panel.name, collection: panel.options.collection as string, missing: missingFields(panel) }))
+      .filter((panel) => panel.missing.length > 0),
   };
 }
 
+async function readFieldsByCollection(client: DirectusClient, collectionNames: readonly string[]) {
+  const wanted = new Set(OPERATOR_PANELS.map((panel) => panel.collection));
+  const fieldsByCollection = new Map<string, Set<string>>();
+  for (const collection of collectionNames.filter((name) => wanted.has(cleanCollectionName(name)))) {
+    const response = await client.request(`/fields/${encodeURIComponent(collection)}?limit=-1`);
+    fieldsByCollection.set(collection, new Set((response?.data ?? []).map((field) => field.field)));
+  }
+  return fieldsByCollection;
+}
+
 export async function applyDirectusOperatorDashboard(client: DirectusClient, collectionNames: readonly string[]) {
-  const plan = buildDirectusOperatorDashboardPlan(collectionNames);
+  const plan = buildDirectusOperatorDashboardPlan(collectionNames, await readFieldsByCollection(client, collectionNames));
+  for (const panel of plan.skipped) {
+    console.warn(
+      `Skipped dashboard panel "${panel.name}": ${panel.collection} has no ${panel.missing.join(', ')} yet. ` +
+      'Apply the pending database migration, then re-run this setup.'
+    );
+  }
   const id = encodeURIComponent(plan.dashboard.id);
 
   const existing = await client.request(`/dashboards?filter[id][_eq]=${id}&fields=id&limit=1`);
@@ -326,10 +356,15 @@ export async function applyDirectusOperatorDashboard(client: DirectusClient, col
     await client.request('/dashboards', { method: 'POST', body: plan.dashboard });
   }
 
-  const current = await client.request(`/panels?filter[dashboard][_eq]=${id}&fields=id&limit=-1`);
-  const currentIds = new Set<string>((current?.data ?? []).map((panel) => panel.id));
+  // Panels are found by id on any dashboard: one moved elsewhere by hand is
+  // moved back rather than created a second time, which Directus would refuse.
+  const plannedIds = plan.panels.map((panel) => panel.id);
+  const found = plannedIds.length === 0
+    ? null
+    : await client.request(`/panels?filter[id][_in]=${plannedIds.map(encodeURIComponent).join(',')}&fields=id&limit=-1`);
+  const existingIds = new Set<string>((found?.data ?? []).map((panel) => panel.id));
   for (const panel of plan.panels) {
-    if (currentIds.has(panel.id)) {
+    if (existingIds.has(panel.id)) {
       const { id: panelId, ...changes } = panel;
       await client.request(`/panels/${encodeURIComponent(panelId)}`, { method: 'PATCH', body: changes });
     } else {
@@ -338,14 +373,15 @@ export async function applyDirectusOperatorDashboard(client: DirectusClient, col
     console.log(`Dashboard panel: ${plan.dashboard.name} / ${panel.name}`);
   }
 
-  const plannedIds = new Set(plan.panels.map((panel) => panel.id));
+  const current = await client.request(`/panels?filter[dashboard][_eq]=${id}&fields=id&limit=-1`);
+  const planned = new Set(plannedIds);
   let removed = 0;
-  for (const panelId of currentIds) {
-    if (plannedIds.has(panelId)) continue;
-    await client.request(`/panels/${encodeURIComponent(panelId)}`, { method: 'DELETE', expected: [204] });
+  for (const panel of current?.data ?? []) {
+    if (planned.has(panel.id)) continue;
+    await client.request(`/panels/${encodeURIComponent(panel.id)}`, { method: 'DELETE', expected: [204] });
     removed += 1;
   }
   if (removed > 0) console.log(`Removed ${removed} panel(s) no longer on ${plan.dashboard.name}.`);
 
-  return { dashboard: plan.dashboard.name, panels: plan.panels.length, removed };
+  return { dashboard: plan.dashboard.name, panels: plan.panels.length, removed, skipped: plan.skipped.length };
 }

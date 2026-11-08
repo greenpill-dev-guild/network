@@ -186,7 +186,13 @@ export async function assertStewardLandingBookmarks(
 
   for (const bookmark of bookmarks) {
     const target = STEWARD_LANDING_SCOPES[bookmark.collection.replace(/^content[._]|^impact[._]/, '')];
-    if (!target || !JSON.stringify(bookmark.filter ?? {}).includes('$CURRENT_USER')) continue;
+    const scoped = JSON.stringify(bookmark.filter ?? {}).includes('$CURRENT_USER');
+    // Without the assignment filter, My chapter and My guild would open on
+    // every published record the steward can read.
+    if (!scoped && STEWARD_LANDING_ENTRY_POINTS.includes(bookmark.bookmark)) {
+      throw new Error(`Steward landing bookmark "${bookmark.bookmark}" does not filter by the steward's assignments.`);
+    }
+    if (!target || !scoped) continue;
     const params = new URLSearchParams();
     params.set('filter', JSON.stringify(bookmark.filter));
     params.set('fields', target.field);

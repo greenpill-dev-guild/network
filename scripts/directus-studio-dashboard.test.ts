@@ -67,7 +67,8 @@ test('every metric panel counts a named field, which GraphQL can ask for', () =>
   assert.ok(metrics.length > 0);
   for (const panel of metrics) {
     assert.equal(panel.options.function, 'count', panel.name);
-    assert.match(String(panel.options.field), /^\w+$/, panel.name);
+    assert.equal(typeof panel.options.field, 'string', panel.name);
+    assert.match(panel.options.field, /^\w+$/, panel.name);
   }
 });
 
@@ -130,17 +131,30 @@ test('only Trusted Publishers get the operator dashboard and the publish-health 
 function fakeDirectus() {
   const dashboards = new Map<string, Record<string, unknown>>();
   const panels = new Map<string, Record<string, unknown>>();
+  // Every field the panels read, so no panel is skipped unless a test removes one.
+  const fields = new Map<string, Set<string>>();
+  for (const panel of buildDirectusOperatorDashboardPlan(DASHBOARD_COLLECTIONS).panels) {
+    const known = fields.get(panel.options.collection) ?? new Set<string>();
+    operatorPanelFields(panel).forEach((field) => known.add(field));
+    fields.set(panel.options.collection, known);
+  }
   const calls: string[] = [];
   const request = async (path: string, { method = 'GET', body }: { method?: string; body?: any } = {}) => {
     calls.push(`${method} ${path.split('?')[0]}`);
     const url = new URL(path, 'http://directus.test');
     const [, resource, id] = url.pathname.split('/');
+    if (resource === 'fields') {
+      return { data: [...(fields.get(decodeURIComponent(id)) ?? [])].map((field) => ({ field })) };
+    }
     const store = resource === 'dashboards' ? dashboards : panels;
     if (method === 'GET') {
       const byId = url.searchParams.get('filter[id][_eq]');
+      const byIds = url.searchParams.get('filter[id][_in]')?.split(',');
       const byDashboard = url.searchParams.get('filter[dashboard][_eq]');
       const rows = [...store.values()].filter((row) => (
-        (!byId || row.id === byId) && (!byDashboard || row.dashboard === byDashboard)
+        (!byId || row.id === byId) &&
+        (!byIds || byIds.includes(String(row.id))) &&
+        (!byDashboard || row.dashboard === byDashboard)
       ));
       return { data: rows.map((row) => ({ id: row.id })) };
     }
@@ -159,10 +173,10 @@ function fakeDirectus() {
     }
     throw new Error(`unexpected ${method} ${path}`);
   };
-  return { client: { request }, dashboards, panels, calls };
+  return { client: { request }, dashboards, panels, fields, calls };
 }
 
-test('rerunning the dashboard setup updates the one dashboard in place and removes stray panels', async () => {
+test('rerunning the dashboard setup restores the one dashboard in place and removes stray panels', async () => {
   const directus = fakeDirectus();
   const log = console.log;
   console.log = () => {};
@@ -170,8 +184,14 @@ test('rerunning the dashboard setup updates the one dashboard in place and remov
     const first = await applyDirectusOperatorDashboard(directus.client, DASHBOARD_COLLECTIONS);
     const created = directus.calls.filter((call) => call.startsWith('POST')).length;
     assert.equal(created, 1 + first.panels);
+    const planned = buildDirectusOperatorDashboardPlan(DASHBOARD_COLLECTIONS);
+    const [edited, moved] = planned.panels;
 
-    // A panel someone added to this dashboard by hand is removed on the next run.
+    // Hand edits since the last run: a renamed dashboard, a changed panel, a
+    // managed panel moved to another dashboard, and a panel added by hand.
+    directus.dashboards.set(DIRECTUS_OPERATOR_DASHBOARD_ID, { ...directus.dashboards.get(DIRECTUS_OPERATOR_DASHBOARD_ID), name: 'Renamed' });
+    directus.panels.set(edited.id, { ...directus.panels.get(edited.id), options: { collection: 'chapters' } });
+    directus.panels.set(moved.id, { ...directus.panels.get(moved.id), dashboard: 'another-dashboard' });
     directus.panels.set('stray', { id: 'stray', dashboard: DIRECTUS_OPERATOR_DASHBOARD_ID, name: 'Hand-made' });
     directus.calls.length = 0;
     const second = await applyDirectusOperatorDashboard(directus.client, DASHBOARD_COLLECTIONS);
@@ -179,6 +199,9 @@ test('rerunning the dashboard setup updates the one dashboard in place and remov
     assert.equal(directus.calls.some((call) => call.startsWith('POST')), false);
     assert.equal(second.removed, 1);
     assert.equal(directus.dashboards.size, 1);
+    assert.equal(directus.dashboards.get(DIRECTUS_OPERATOR_DASHBOARD_ID)?.name, planned.dashboard.name);
+    assert.deepEqual(directus.panels.get(edited.id)?.options, edited.options);
+    assert.equal(directus.panels.get(moved.id)?.dashboard, DIRECTUS_OPERATOR_DASHBOARD_ID);
     assert.equal(directus.panels.size, first.panels);
     assert.deepEqual(
       [...directus.panels.values()].map((panel) => panel.dashboard),
@@ -186,6 +209,34 @@ test('rerunning the dashboard setup updates the one dashboard in place and remov
     );
   } finally {
     console.log = log;
+  }
+});
+
+test('a panel naming a field the instance does not have yet is left off until a rerun', async () => {
+  // review_notifications before migration 030: no resolved_at column.
+  const directus = fakeDirectus();
+  directus.fields.get('review_notifications')?.delete('resolved_at');
+  const log = console.log;
+  const warn = console.warn;
+  const warnings: string[] = [];
+  console.log = () => {};
+  console.warn = (message) => { warnings.push(String(message)); };
+  try {
+    const result = await applyDirectusOperatorDashboard(directus.client, DASHBOARD_COLLECTIONS);
+    const names = [...directus.panels.values()].map((panel) => panel.name);
+    assert.equal(result.skipped, 2);
+    assert.equal(names.includes('Records dropped') || names.includes('Images withheld'), false);
+    assert.ok(names.includes('Failed CMS emails'));
+    assert.match(warnings.join('\n'), /review_notifications has no resolved_at/);
+
+    // After the migration the next run adds them.
+    directus.fields.get('review_notifications')?.add('resolved_at');
+    const rerun = await applyDirectusOperatorDashboard(directus.client, DASHBOARD_COLLECTIONS);
+    assert.equal(rerun.skipped, 0);
+    assert.equal(directus.panels.size, rerun.panels);
+  } finally {
+    console.log = log;
+    console.warn = warn;
   }
 });
 
@@ -244,6 +295,14 @@ test('the smoke check refuses a landing bookmark that shows another steward\'s r
     assertStewardLandingBookmarks(steward({ chapters: [], guilds: [{ slug: 'dev-guild' }] }), options),
     /does not show the steward's assigned chapter/
   );
+
+  // A My chapter bookmark that lost its assignment filter would open on every
+  // published chapter; the check refuses it instead of skipping it.
+  presets[0] = { ...presets[0], filter: {} as any };
+  await assert.rejects(
+    assertStewardLandingBookmarks(steward({ chapters: [{ slug: 'brasil' }], guilds: [{ slug: 'dev-guild' }] }), options),
+    /does not filter by the steward's assignments/
+  );
 });
 
 test('a new steward lands on Chapters, where the My chapter bookmark is', () => {
@@ -266,6 +325,12 @@ test('a new steward lands on Chapters, where the My chapter bookmark is', () => 
     .map((collection) => collection.collection);
 
   assert.deepEqual(stewardSidebar.slice(0, 3), ['chapters', 'chapter_initiatives', 'chapter_update_requests']);
+  // A sort set by hand elsewhere cannot outrank these: every other managed
+  // collection is written with no sort.
+  const sorted = new Set(['chapters', 'chapter_initiatives', 'chapter_update_requests', 'guilds', 'projects', 'people', 'themes', 'chapter_impact_snapshots']);
+  for (const collection of plan.collections.filter((candidate) => !sorted.has(candidate.collection))) {
+    assert.equal(collection.meta.sort, null, collection.collection);
+  }
   assert.ok(stewardSidebar.includes('chapter_impact_snapshots'));
   assert.equal(stewardSidebar.includes('publish_health'), false);
 });

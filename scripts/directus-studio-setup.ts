@@ -147,9 +147,10 @@ const OPTIONAL_COLLECTION_META = Object.freeze({
 
 // Sidebar order. Data Studio opens a new user on the first collection in it,
 // so a steward lands on Chapters, where the My chapter bookmark sits, and not
-// on the first collection by name (Chapter Impact Snapshots). Collections
-// left out follow these, by name.
-const COLLECTION_SORT = Object.freeze({
+// on the first collection by name (Chapter Impact Snapshots). Every other
+// collection this setup manages has its sort cleared, so an order set by hand
+// in the Data Model cannot put one ahead of these; they follow, by name.
+const COLLECTION_SORT: Readonly<Record<string, number>> = Object.freeze({
   chapters: 1,
   chapter_initiatives: 2,
   chapter_update_requests: 3,
@@ -1111,7 +1112,7 @@ export function buildDirectusStudioMetadataPlan(
               unarchive_value: 'draft',
             }
             : {}),
-          ...(base in COLLECTION_SORT ? { sort: COLLECTION_SORT[base] } : {}),
+          sort: COLLECTION_SORT[base] ?? null,
           ...meta,
         },
       };
