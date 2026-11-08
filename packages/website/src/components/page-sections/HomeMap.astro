@@ -3659,6 +3659,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     // centre, so in map units it grows as the map draws smaller.
     const minTargetRadius = () => pxToViewBox(POINTER_TARGET_RADIUS_PX);
     const pinHitRadius = () => Math.max(NODE_HIT_RADIUS, minTargetRadius());
+    // A badge's target: its disc and 3px, or 44px across if that is more.
+    const badgeHitRadius = (markerRadius: number) => Math.max(markerRadius + pxToViewBox(3), minTargetRadius());
     // A map that is not laid out has no scale to read; it keeps what it has.
     const mapIsDrawn = () => Boolean(svgEl && svgEl.getBoundingClientRect().width > 0);
     const syncPinHitTargets = () => {
@@ -4001,11 +4003,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       )));
       const distance = reach + pxToViewBox(STACK_BADGE_GAP_PX) + radius;
       const box = currentViewBox;
+      // The badge's whole 44px target must be in view, not just its disc.
+      const target = badgeHitRadius(radius);
       let best: { center: MapPoint; room: number } | null = null;
       for (const angle of BADGE_DIRECTIONS) {
         const center = { x: anchor.x + Math.cos(angle) * distance, y: anchor.y + Math.sin(angle) * distance };
-        const inView = center.x - radius >= box.x && center.x + radius <= box.x + box.width
-          && center.y - radius >= box.y && center.y + radius <= box.y + box.height;
+        const inView = center.x - target >= box.x && center.x + target <= box.x + box.width
+          && center.y - target >= box.y && center.y + target <= box.y + box.height;
         if (!inView) continue;
         const room = taken.reduce((min, other) => (
           Math.min(min, Math.hypot(center.x - other.center.x, center.y - other.center.y) - other.radius - radius)
@@ -4013,9 +4017,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         if (room >= 0) return center;
         if (!best || room > best.room) best = { center, room };
       }
-      return best?.center ?? {
-        x: anchor.x + Math.cos(BADGE_DIRECTIONS[0]) * distance,
-        y: anchor.y + Math.sin(BADGE_DIRECTIONS[0]) * distance,
+      if (best) return best.center;
+      // No side keeps the whole target in view: the first side, moved in.
+      return {
+        x: clampNumber(anchor.x + Math.cos(BADGE_DIRECTIONS[0]) * distance, box.x + target, box.x + box.width - target),
+        y: clampNumber(anchor.y + Math.sin(BADGE_DIRECTIONS[0]) * distance, box.y + target, box.y + box.height - target),
       };
     };
 
@@ -4051,7 +4057,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       group.append(title);
 
       // A badge is a target at least 44px across, like a pin.
-      const hitRadius = Math.max(markerRadius + pxToViewBox(3), minTargetRadius());
+      const hitRadius = badgeHitRadius(markerRadius);
       group.append(makeCircle('gp-home-map-overlap-hit', markerCenter.x, markerCenter.y, hitRadius));
       group.append(makeCircle('gp-home-map-overlap-halo', markerCenter.x, markerCenter.y, markerRadius + pxToViewBox(4)));
       if (ownedInStack) group.append(makeCircle('gp-home-map-overlap-owner-ring', markerCenter.x, markerCenter.y, markerRadius + pxToViewBox(2.5)));
@@ -4709,6 +4715,9 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       }
       root.classList.toggle('has-map-state-problem', Boolean(status.problem));
       syncAlertBlock();
+      // The live pill and the error note are bars the labels keep clear of,
+      // and they just showed, hid or changed width.
+      scheduleChapterLabels();
       const announcement = mapStateAnnouncement(lastMapStateStatus, status);
       if (announcement && mapStateLive) {
         // The same words twice in a row are not read again unless they change.

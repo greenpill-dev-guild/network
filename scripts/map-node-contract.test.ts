@@ -2954,7 +2954,18 @@ test('home map labels and hit targets: chapter labels at rest, 44px pins and bad
   assert.match(component, /const minTargetRadius = \(\) => pxToViewBox\(POINTER_TARGET_RADIUS_PX\);/);
   assert.match(component, /const pinHitRadius = \(\) => Math\.max\(NODE_HIT_RADIUS, minTargetRadius\(\)\);/);
   assert.match(component, /const hitRadius = Math\.max\(pinRadius, r \+ 3\.2, minViewRadius\);/);
-  assert.match(component, /const hitRadius = Math\.max\(markerRadius \+ pxToViewBox\(3\), minTargetRadius\(\)\);/);
+  assert.match(component, /const badgeHitRadius = \(markerRadius: number\) => Math\.max\(markerRadius \+ pxToViewBox\(3\), minTargetRadius\(\)\);/);
+  assert.match(component, /const hitRadius = badgeHitRadius\(markerRadius\);/);
+  // A badge set beside its pins keeps its whole 44px target in view, not
+  // just its disc, and a badge with no such side moves in (Codex on #60).
+  const badgeCenter = component.match(/const badgeCenterFor = \([\s\S]*?\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(badgeCenter, /const target = badgeHitRadius\(radius\);/);
+  assert.match(badgeCenter, /const inView = center\.x - target >= box\.x && center\.x \+ target <= box\.x \+ box\.width\s*&& center\.y - target >= box\.y && center\.y \+ target <= box\.y \+ box\.height;/);
+  assert.match(badgeCenter, /x: clampNumber\([^\n]*box\.x \+ target, box\.x \+ box\.width - target\),\s*y: clampNumber\([^\n]*box\.y \+ target, box\.y \+ box\.height - target\),/);
+  // The live pill and the error note are label blockers: a status render
+  // lays the labels out again (Codex on #60).
+  const statusRender = component.match(/const renderMapStateStatus = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(statusRender, /syncAlertBlock\(\);\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*scheduleChapterLabels\(\);/);
   const recomputeClusters = component.match(/const recomputeClustersNow = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
   assert.match(recomputeClusters, /^\s*if \(!clustersGroup \|\| !membersGroup\) return;\s*\/\/[^\n]*\n\s*placePinsInsideDrawing\(\);/);
   assert.match(recomputeClusters, /syncPinHitTargets\(\);\s*layoutChapterLabels\(\);/);
