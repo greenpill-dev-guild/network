@@ -52,6 +52,7 @@ import {
   entryMatchesSearch,
   groupListEntries,
   listSearchAnnouncement,
+  rowToFocusAfterRebuild,
   searchWords,
 } from '../packages/website/src/lib/home-map-list.ts';
 import {
@@ -2697,6 +2698,18 @@ test('home map list: search matches names and places, and groups follow the lege
   assert.equal(listSearchAnnouncement(1, 29, 'awka'), '1 of 29 nodes matches "awka".');
   assert.equal(listSearchAnnouncement(0, 29, 'xyz'), 'No nodes match "xyz".');
   assert.equal(listSearchAnnouncement(29, 29, ''), '29 nodes in the list.');
+  // A rebuild keeps focus on the same node's row; when an update removed it,
+  // on the next row that remains; with nothing after it, on no row, and the
+  // list's first control takes it (Codex on #59).
+  const before = ['chapter:a', 'chapter:b', 'steward:c', 'member:d', 'member:e'];
+  assert.equal(rowToFocusAfterRebuild(before, 'steward:c', before), 'steward:c');
+  assert.equal(rowToFocusAfterRebuild(before, 'steward:c', ['chapter:a', 'chapter:b', 'member:d', 'member:e']), 'member:d');
+  assert.equal(rowToFocusAfterRebuild(before, 'steward:c', ['chapter:a', 'chapter:b', 'member:e']), 'member:e');
+  assert.equal(rowToFocusAfterRebuild(before, 'member:e', ['chapter:a', 'chapter:b', 'steward:c', 'member:d']), null);
+  assert.equal(rowToFocusAfterRebuild(before, 'steward:c', ['chapter:a', 'chapter:b']), null);
+  assert.equal(rowToFocusAfterRebuild(before, '', before), null);
+  // A node that arrives with the update is never the "next" row.
+  assert.equal(rowToFocusAfterRebuild(before, 'member:d', ['chapter:a', 'member:new', 'member:e']), 'member:e');
 });
 
 test('home map list: a dock beside the map, a sheet inside the stage, a modal sheet on phones', async () => {
@@ -2731,9 +2744,17 @@ test('home map list: a dock beside the map, a sheet inside the stage, a modal sh
   assert.ok(listCss.length > 0, 'list CSS block found');
   assert.doesNotMatch(listCss, /\b(?:44|16|10|2)px;|999px/);
   assert.match(component, /groupListEntries\(entries\)\.forEach\(\(group\) => \{[\s\S]*?makeListPart\('h3', 'gp-home-map-list-group-title'\)[\s\S]*?makeListPart\('span', 'gp-home-map-list-group-count', String\(group\.entries\.length\)\)[\s\S]*?makeListPart\('ul', 'gp-home-map-list-rows'\)/);
-  // "Hovering or focusing a row rings its pin and shows its tooltip."
-  assert.match(component, /row\.addEventListener\('pointerenter', \(\) => previewListNode\(node\)\);/);
-  assert.match(component, /row\.addEventListener\('focus', \(\) => previewListNode\(node\)\);/);
+  // "Hovering or focusing a row rings its pin and shows its tooltip." The
+  // hovered row and the keyboard-focused row are tracked apart, the latest
+  // in front: when the pointer leaves, a row that keeps focus previews
+  // again, and on blur a row still under the pointer does (Codex on #59).
+  // The focus a click leaves previews nothing, as on the map's pins.
+  assert.match(component, /row\.addEventListener\('pointerenter', \(\) => \{\s*hoveredListNode = node;\s*previewListNode\(node\);\s*\}\);/);
+  assert.match(component, /row\.addEventListener\('pointerleave', \(\) => \{\s*hoveredListNode = null;\s*restoreListPreview\(\);\s*\}\);/);
+  assert.match(component, /row\.addEventListener\('focus', \(\) => \{\s*if \(!row\.matches\(':focus-visible'\)\) return;\s*focusedListNode = node;\s*previewListNode\(node\);\s*\}\);/);
+  assert.match(component, /row\.addEventListener\('blur', \(\) => \{\s*if \(focusedListNode !== node\) return;\s*focusedListNode = null;\s*restoreListPreview\(\);\s*\}\);/);
+  assert.match(component, /const restoreListPreview = \(\) => \{\s*const node = hoveredListNode \?\? focusedListNode;\s*if \(node\) previewListNode\(node\);\s*else clearListTarget\(\);\s*\};/);
+  assert.doesNotMatch(component, /row\.addEventListener\('(?:pointerleave|blur)', clearListTarget\)/);
   // A row previews beside a selected node too, and the selection's state
   // comes back when the preview ends (Codex on #59). The selected node stays
   // lit meanwhile, and a selected chapter's state is the map at rest.
@@ -2750,7 +2771,19 @@ test('home map list: a dock beside the map, a sheet inside the stage, a modal sh
   assert.match(component, /\.gp-home-map-node-link\.is-list-target \.gp-home-map-node-ring \{/);
   assert.match(component, /\.gp-home-map-overlap-stack\.is-list-target \.gp-home-map-overlap-disc \{/);
   // A live update rebuilding the rows keeps keyboard focus on the same node.
-  assert.match(component, /if \(focusedId && row\.dataset\.listNodeId === focusedId\) focusRow = row;/);
+  // When the update removed that node, focus moves to the next row that
+  // remains, else to the list's first control, also when no row is left:
+  // it never drops out of the list or a phone's modal sheet (Codex on #59).
+  const renderList = component.match(/\n    renderNodeList = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(renderList, /const focusId = active\s*\? rowToFocusAfterRebuild\(previousIds, clean\(active\.dataset\.listNodeId\), entries\.map\(\(entry\) => clean\(entry\.node\.dataset\.nodeId\)\)\)\s*: null;/);
+  assert.match(renderList, /if \(focusId && row\.dataset\.listNodeId === focusId\) focusRow = row;/);
+  assert.match(renderList, /if \(keepFocusOn\) keepFocusOn\.focus\(\{ preventScroll: true \}\);\s*else if \(active\) listEntryControl\(\)\?\.focus\(\{ preventScroll: true \}\);/);
+  assert.match(renderList, /'No visible nodes match these filters\.'\s*\)\);\s*if \(active\) listEntryControl\(\)\?\.focus\(\{ preventScroll: true \}\);\s*return;/);
+  assert.match(renderList, /hoveredListNode = null;\s*focusedListNode = null;\s*clearListTarget\(\);\s*listItems\.textContent = '';/);
+  // The first control is the search, or Close on a touch screen, as when
+  // the list opens.
+  assert.match(component, /const listEntryControl = \(\) => \{\s*const typing = !window\.matchMedia\('\(pointer: coarse\)'\)\.matches;\s*return \(typing \? listSearch : listClose\)/);
+  assert.match(component, /window\.requestAnimationFrame\(\(\) => listEntryControl\(\)\?\.focus\(\{ preventScroll: true \}\)\);/);
   // "The list is non-modal on desktop: the map stays usable" and on phones
   // "The list opens as a full-height sheet, modal on phones as today". Width
   // picks the layout, never the pointer.
@@ -2765,7 +2798,12 @@ test('home map list: a dock beside the map, a sheet inside the stage, a modal sh
   assert.match(showList, /if \(listDrawer\.open && listShownModal === modal\) return;/);
   assert.match(showList, /if \(listDrawer\.open\) listDrawer\.close\(\);/);
   assert.match(showList, /if \(listItems\) listItems\.scrollTop = scrollTop;\s*focused\?\.focus\(\{ preventScroll: true \}\);/);
-  assert.match(component, /const scheduleMapResizeSync = \(\) => \{[\s\S]*?if \(listDrawer\?\.open && !listDrawer\.hidden\) showNodeListForLayout\(\);[\s\S]*?window\.clearTimeout\(mapResizeTimer\);/);
+  assert.match(component, /const scheduleMapResizeSync = \(\) => \{[\s\S]*?if \(listDrawer\?\.open && !listDrawer\.hidden\) \{\s*if \(mapLayout\(\) !== 'dock' && selectedEl && !selectedEl\.hidden\) yieldListToSelection\(\);\s*else showNodeListForLayout\(\);\s*\}[\s\S]*?window\.clearTimeout\(mapResizeTimer\);/);
+  // A docked list can sit beside a selected card; a sheet or a phone has
+  // room for one. Leaving the dock with both open settles as a pick on a
+  // sheet does: the list closes, the selection stays, and focus that was in
+  // the list moves to the card (Codex on #59).
+  assert.match(component, /const yieldListToSelection = \(\) => \{\s*const focusWasInList = Boolean\(listDrawer\?\.contains\(document\.activeElement\)\);\s*closeNodeList\(\);\s*if \(focusWasInList\) selectedClose\?\.focus\(\{ preventScroll: true \}\);\s*\};/);
   assert.match(component, /listDrawer\?\.addEventListener\('close', \(\) => \{\s*if \(listDrawer\.open\) return;\s*syncNodeListClosed\(\);/);
   // The dock: "inset 12px, the stage's full height, about 340px wide", and
   // "While the dock is open, both bars end at its edge."

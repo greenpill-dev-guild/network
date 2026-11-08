@@ -42,6 +42,25 @@ export function groupListEntries<T extends ListEntry>(entries: readonly T[]): Li
     .filter((group) => group.entries.length > 0);
 }
 
+/**
+ * The row that keeps keyboard focus when the rows are rebuilt (a filter, a
+ * live update): the same node's row while it is still listed, otherwise the
+ * first row after it that remains. Null when nothing after it remains, and
+ * the list's first control takes focus instead.
+ */
+export function rowToFocusAfterRebuild(
+  previousIds: readonly string[],
+  focusedId: string,
+  nextIds: readonly string[]
+): string | null {
+  if (!focusedId) return null;
+  const remaining = new Set(nextIds);
+  if (remaining.has(focusedId)) return focusedId;
+  const from = previousIds.indexOf(focusedId);
+  if (from === -1) return null;
+  return previousIds.slice(from + 1).find((id) => remaining.has(id)) ?? null;
+}
+
 const nodesWord = (count: number) => (count === 1 ? 'node' : 'nodes');
 
 /** What the list's live region says once typing pauses. */
