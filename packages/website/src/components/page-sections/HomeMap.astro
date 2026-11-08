@@ -304,12 +304,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     </div>
     <p class="gp-home-map-sr" data-home-map-filter-live aria-live="polite"></p>
 
-    {/* Focus card — populated by inline script on hover/focus */}
+    {/* The hover and focus tooltip (map-polish-audit.md § 5): the name, then
+        TYPE · PLACE in mono, with no note and no theme chips; for a stack,
+        what it holds and how to open it. It sits above its node and flips
+        below when there is no room. The script fills and places it. */}
     <div class="gp-home-map-focus" data-home-map-focus role="status" aria-live="polite" aria-hidden="true">
-      <span class="gp-home-map-focus-role" data-focus-role></span>
       <span class="gp-home-map-focus-name" data-focus-name></span>
+      <span class="gp-home-map-focus-role" data-focus-role></span>
       <span class="gp-home-map-focus-meta" data-focus-meta></span>
-      <span class="gp-home-map-focus-themes" data-focus-themes></span>
     </div>
 
     <div class="gp-home-map-edge-tooltip" data-home-map-edge-tooltip aria-hidden="true">
@@ -318,41 +320,58 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       <span class="gp-home-map-edge-tooltip-meta" data-edge-tooltip-meta></span>
     </div>
 
-    {/* Selected-node inspector. Desktop floats near the active node without
-        resizing the map; mobile anchors as a compact bar over the lower canvas. */}
+    {/* The inspector (PRD-1438, map-polish-audit.md § 5): a selected node's
+        details. On a wide map it docks inside the stage's end edge, where
+        the list docks, and the map never resizes; at an 860px container and
+        narrower it is a sheet with a handle over the stage's bottom. Its
+        head (the kicker, the name, the way back to the list and Close) stays
+        put while its body scrolls. From the top: TYPE · PLACE, the name, the
+        public note, the themes, the connections, the public link, and Edit
+        this node for an approved person. */}
     <div class="gp-home-map-selected" data-home-map-selected hidden role="region" aria-label="Selected map node">
-      <button type="button" class="gp-home-map-selected-close" data-selected-close aria-label="Close selected node">
-        <span aria-hidden="true">×</span>
-      </button>
-      <p class="gp-home-map-selected-kicker" data-selected-kicker>Network node</p>
-      <p class="gp-home-map-selected-name" data-selected-name></p>
-      <p class="gp-home-map-selected-place" data-selected-place></p>
-      <div class="gp-home-map-selected-links" data-selected-links hidden></div>
-      <div class="gp-home-map-selected-themes" data-selected-themes></div>
-      <p class="gp-home-map-selected-note" data-selected-note></p>
-      <div class="gp-home-map-selected-edge-list" data-selected-edge-list hidden>
-        <p class="gp-home-map-selected-edge-title">Connections</p>
-        <div class="gp-home-map-selected-edge-items" data-selected-edge-items></div>
-      </div>
-
-      <div class="gp-home-map-update" data-home-map-update hidden>
-        <button type="button" class="gp-home-map-update-trigger" data-update-trigger>Edit this node</button>
-
-        <form class="gp-home-map-update-form" data-update-form hidden novalidate>
-          <label class="gp-home-map-update-field" for="gp-home-map-update-email">
-            <span>Owner email</span>
-          </label>
-          <input id="gp-home-map-update-email" type="email" name="email" inputmode="email" autocomplete="email" required placeholder="you@example.org" />
-          <div class="gp-home-map-update-actions">
-            <button type="button" class="gp-home-map-update-cancel" data-update-cancel>Cancel</button>
-            <button type="submit" class="gp-home-map-update-submit">Send edit link</button>
+      <header class="gp-home-map-selected-head">
+        <span class="gp-home-map-selected-handle" aria-hidden="true"></span>
+        <div class="gp-home-map-selected-bar">
+          <button type="button" class="gp-home-map-selected-back" data-selected-back aria-label="Back to the map list" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="11 6 5 12 11 18" /></svg>
+          </button>
+          <div class="gp-home-map-selected-heading">
+            <p class="gp-home-map-selected-kicker" data-selected-kicker>Network node</p>
+            <h2 class="gp-home-map-selected-name" data-selected-name></h2>
           </div>
-          <p class="gp-home-map-update-error" data-update-error role="alert"></p>
-        </form>
+          <button type="button" class="gp-home-map-selected-close" data-selected-close aria-label="Close selected node">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
+          </button>
+        </div>
+      </header>
+      <div class="gp-home-map-selected-body" data-selected-body>
+        <p class="gp-home-map-selected-note" data-selected-note></p>
+        <div class="gp-home-map-selected-themes" data-selected-themes role="group" aria-label="Themes"></div>
+        <section class="gp-home-map-selected-edge-list" data-selected-edge-list aria-labelledby="gp-home-map-selected-edge-title" hidden>
+          <h3 id="gp-home-map-selected-edge-title" class="gp-home-map-selected-edge-title">Connections</h3>
+          <ul class="gp-home-map-selected-edge-items" data-selected-edge-items></ul>
+        </section>
+        <div class="gp-home-map-selected-links" data-selected-links hidden></div>
 
-        <p class="gp-home-map-update-success" data-update-success role="status" hidden>
-          If this email matches the node owner, we'll send an edit link.
-        </p>
+        <div class="gp-home-map-update" data-home-map-update hidden>
+          <button type="button" class="gp-home-map-update-trigger" data-update-trigger>Edit this node</button>
+
+          <form class="gp-home-map-update-form" data-update-form hidden novalidate>
+            <label class="gp-home-map-update-field" for="gp-home-map-update-email">
+              <span>Owner email</span>
+            </label>
+            <input id="gp-home-map-update-email" type="email" name="email" inputmode="email" autocomplete="email" required placeholder="you@example.org" />
+            <div class="gp-home-map-update-actions">
+              <button type="button" class="gp-home-map-update-cancel" data-update-cancel>Cancel</button>
+              <button type="submit" class="gp-home-map-update-submit">Send edit link</button>
+            </div>
+            <p class="gp-home-map-update-error" data-update-error role="alert"></p>
+          </form>
+
+          <p class="gp-home-map-update-success" data-update-success role="status" hidden>
+            If this email matches the node owner, we'll send an edit link.
+          </p>
+        </div>
       </div>
       <p class="gp-home-map-selected-live gp-home-map-sr" data-selected-live aria-live="polite"></p>
     </div>
@@ -775,7 +794,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     PIN_HIT_RADIUS,
     badgeFallbackCenter,
     circleFitsInside,
-    clampMapView,
+    clampMapViewBeside,
     clampPinToDrawing,
     defaultMapView,
     fanHasRoomForTargets,
@@ -784,12 +803,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     largestMapView,
     layoutFan,
     panMapView,
+    panPointIntoOpenArea,
     pickerPointToLocation,
     placeMapLabels,
     pointsBeyondView,
     separateLabels,
     type MapCircle,
     type MapEdge,
+    type MapPanel,
   } from '../../lib/home-map-layout';
   import {
     entryMatchesSearch,
@@ -901,7 +922,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const focusRole = root.querySelector('[data-focus-role]') as HTMLElement | null;
     const focusName = root.querySelector('[data-focus-name]') as HTMLElement | null;
     const focusMeta = root.querySelector('[data-focus-meta]') as HTMLElement | null;
-    const focusThemes = root.querySelector('[data-focus-themes]') as HTMLElement | null;
     const edgeTooltip = root.querySelector('[data-home-map-edge-tooltip]') as HTMLElement | null;
     const edgeTooltipKicker = root.querySelector('[data-edge-tooltip-kicker]') as HTMLElement | null;
     const edgeTooltipTitle = root.querySelector('[data-edge-tooltip-title]') as HTMLElement | null;
@@ -1017,6 +1037,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     let openFilterPanel = '';
     let applyMapFilters = () => {};
     let syncSelectedOverlay = () => {};
+    // The inspector's cover over the stage, once the inspector is set up.
+    let inspectorPanel: () => { panel: MapPanel; clearance: number } | null = () => null;
     let renderNodeList = () => {};
     let closeNodeList = (_options: { restoreFocus?: boolean } = {}) => {};
 
@@ -1186,9 +1208,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       return Number.isFinite(aspect) && aspect > 0 ? aspect : FULL_VIEW_BOX.width / FULL_VIEW_BOX.height;
     };
 
-    const clampViewBox = (box: MapViewBox): MapViewBox => (
-      clampMapView(box, stageAspect(), MAX_VIEW_ZOOM, FULL_VIEW_BOX)
-    );
+    // Inside the drawing, except that an open inspector lets the view slide
+    // under it, so a node there can come out (inspectorPanel, below).
+    const clampViewBox = (box: MapViewBox): MapViewBox => {
+      const covered = inspectorPanel();
+      return clampMapViewBeside(box, stageAspect(), MAX_VIEW_ZOOM, covered?.panel ?? null, covered?.clearance ?? 0, FULL_VIEW_BOX);
+    };
 
     // The view the map opens on: the whole map, or on a phone the drawing's
     // full height centred on the Atlantic (lib/home-map-layout.ts).
@@ -1259,9 +1284,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       setMapViewBoxCentered(centerX, centerY, currentViewBox.width * factor);
     };
 
-    const isTouchMap = () => (
-      window.matchMedia('(pointer: coarse)').matches || root.getBoundingClientRect().width <= 520
-    );
+    // § 5: "Layout follows the container's width only; the kind of pointer
+    // never picks it." mapLayout() picks the layout. A coarse pointer picks
+    // only how input works: a tap's 44px fallback, pinch and drag on touch,
+    // "Tap" in a stack's hint, and no hover tooltips from a finger. A 1024px
+    // iPad gets the dock, driven by taps.
+    const coarsePointer = () => window.matchMedia('(pointer: coarse)').matches;
 
     const nodeCenter = (node: Element) => {
       const dot = node.querySelector('.gp-home-map-node-dot') as SVGCircleElement | null;
@@ -1391,7 +1419,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     const showEdgeTooltip = (edgeId: string, event: PointerEvent | MouseEvent) => {
       const edge = edgeMetaById.get(edgeId);
-      if (!edge || !edgeTooltip || !edgeTooltipKicker || !edgeTooltipTitle || !edgeTooltipMeta || isTouchMap()) return;
+      if (!edge || !edgeTooltip || !edgeTooltipKicker || !edgeTooltipTitle || !edgeTooltipMeta || coarsePointer()) return;
       edgeTooltipKicker.textContent = edgePairLabel(edge);
       edgeTooltipTitle.textContent = `${edge.from.name} → ${edge.to.name}`;
       edgeTooltipMeta.textContent = edge.themeLabel;
@@ -1410,10 +1438,10 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       root.querySelectorAll('.gp-home-map-thread, .gp-home-map-thread-hit').forEach((edge) => {
         edge.classList.toggle('is-edge-selected', clean((edge as HTMLElement).dataset.edgeId) === edgeId);
       });
+      // The inspector's row for that line lights with it. Rows select their
+      // node, so they carry no pressed state.
       scope.querySelectorAll('[data-selected-edge-row]').forEach((row) => {
-        const selected = clean((row as HTMLElement).dataset.selectedEdgeRow) === edgeId;
-        row.classList.toggle('is-active', selected);
-        row.setAttribute('aria-pressed', selected ? 'true' : 'false');
+        row.classList.toggle('is-active', clean((row as HTMLElement).dataset.selectedEdgeRow) === edgeId);
       });
     };
 
@@ -1422,10 +1450,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       root.querySelectorAll('.gp-home-map-thread, .gp-home-map-thread-hit').forEach((edge) => {
         edge.classList.remove('is-edge-selected');
       });
-      scope.querySelectorAll('[data-selected-edge-row]').forEach((row) => {
-        row.classList.remove('is-active');
-        row.setAttribute('aria-pressed', 'false');
-      });
+      scope.querySelectorAll('[data-selected-edge-row]').forEach((row) => row.classList.remove('is-active'));
     };
 
     const syncEdgeHitState = (thread: SVGPathElement) => {
@@ -1554,14 +1579,56 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       return count;
     };
 
-    // The hover card sits beside a map point, on the side with more room.
+    // What covers part of the stage: the inspector, or the list while it is
+    // docked. A dock covers one side; a sheet, the stage's bottom. The rect is
+    // in px from the stage's top left. A hidden panel, or the list as a sheet
+    // or a phone's full-page sheet, covers nothing here.
+    type StagePanel = {
+      el: HTMLElement;
+      side: 'east' | 'west' | 'south';
+      rect: { minX: number; minY: number; maxX: number; maxY: number };
+      stage: DOMRect;
+    };
+    const stagePanel = (): StagePanel | null => {
+      const layout = mapLayout();
+      const el = selectedEl && !selectedEl.hidden
+        ? selectedEl
+        : layout === 'dock' && listDrawer && !listDrawer.hidden ? listDrawer : null;
+      if (!el) return null;
+      const stage = root.getBoundingClientRect();
+      const box = el.getBoundingClientRect();
+      if (box.width <= 0 || box.height <= 0 || stage.width <= 0 || stage.height <= 0) return null;
+      const rect = { minX: box.left - stage.left, minY: box.top - stage.top, maxX: box.right - stage.left, maxY: box.bottom - stage.top };
+      if (layout !== 'dock') return { el, side: 'south', rect, stage };
+      return { el, side: rect.minX + rect.maxX > stage.width ? 'east' : 'west', rect, stage };
+    };
+
+    // § 5: the tooltip "flips below the node when there is no room above".
+    // It is centred on its point, and kept inside the open part of the stage,
+    // inset like the bars: never under the dock or the sheet. The tooltip
+    // must be showing, so it can be measured.
     const placeFocusCard = (cx: number, cy: number) => {
       if (!focusEl) return;
       const xPct = ((cx - currentViewBox.x) / currentViewBox.width) * 100;
       const yPct = ((cy - currentViewBox.y) / currentViewBox.height) * 100;
       focusEl.style.left = `${xPct}%`;
       focusEl.style.top = `${yPct}%`;
-      focusEl.style.transform = `translate(${xPct < 60 ? 'var(--gp-map-card-offset)' : 'calc(-100% - var(--gp-map-card-offset))'}, ${yPct < 50 ? 'var(--gp-map-card-offset)' : 'calc(-100% - var(--gp-map-card-offset))'})`;
+      const stage = root.getBoundingClientRect();
+      const tip = focusEl.getBoundingClientRect();
+      const inset = cssPx('--gp-map-inset', 12);
+      const offset = cssPx('--gp-map-tip-offset', 14);
+      const covered = stagePanel();
+      const minX = covered?.side === 'west' ? covered.rect.maxX : 0;
+      const maxX = covered?.side === 'east' ? covered.rect.minX : stage.width;
+      const maxY = covered?.side === 'south' ? covered.rect.minY : stage.height;
+      const anchorX = (xPct / 100) * stage.width;
+      const anchorY = (yPct / 100) * stage.height;
+      const shiftX = clampNumber(-tip.width / 2, minX + inset - anchorX, maxX - inset - tip.width - anchorX);
+      const roomAbove = anchorY - offset - tip.height >= inset;
+      const roomBelow = anchorY + offset + tip.height <= maxY - inset;
+      const below = !roomAbove && roomBelow;
+      focusEl.dataset.tipSide = below ? 'below' : 'above';
+      focusEl.style.transform = `translate(${shiftX.toFixed(1)}px, ${below ? 'var(--gp-map-tip-offset)' : 'calc(-100% - var(--gp-map-tip-offset))'})`;
     };
 
     const setFocus = (target: Element) => {
@@ -1622,25 +1689,15 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         const roleLabel = clean(targetEl.dataset.nodeRole) || focusType.charAt(0).toUpperCase() + focusType.slice(1);
         const placeLabel = clean(targetEl.dataset.nodePlace) || parts.slice(1).join(' · ');
         focusRole.textContent = placeLabel ? `${roleLabel} · ${placeLabel}` : roleLabel;
-        focusMeta.textContent = focusType === 'chapter' ? '' : clean(targetEl.dataset.nodePublicNote);
-        if (focusThemes) {
-          focusThemes.textContent = '';
-          nodeThemes(target).slice(0, 4).forEach((slug) => {
-            const chip = document.createElement('span');
-            applyScope(chip);
-            chip.textContent = themeLabel(slug);
-            chip.style.setProperty('--chip-color', themeColor(slug));
-            focusThemes.append(chip);
-          });
-        }
-        const dot = target.querySelector('.gp-home-map-node-dot') as SVGCircleElement | null;
-        const cx = Number(dot?.getAttribute('cx'));
-        const cy = Number(dot?.getAttribute('cy'));
-        if (Number.isFinite(cx) && Number.isFinite(cy)) placeFocusCard(cx, cy);
+        // § 5: "No note and no theme chips." The inspector carries those.
+        focusMeta.textContent = '';
         focusEl.dataset.nodeType = focusType;
-        // The selected node already shows the persistent popover; don't stack the
-        // transient hover card on top of it. Hovering OTHER nodes still shows it.
-        focusEl.setAttribute('aria-hidden', target === selectedFocusTarget ? 'true' : 'false');
+        // The selected node shows in the inspector; its tooltip would repeat
+        // it. Hovering other nodes still shows theirs.
+        const shown = target !== selectedFocusTarget;
+        focusEl.setAttribute('aria-hidden', shown ? 'false' : 'true');
+        const center = shown ? nodeCenter(target) : null;
+        if (center) placeFocusCard(center.x, center.y);
       }
     };
 
@@ -1958,7 +2015,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       // whole map are untouched.
       if (mouse) {
         if (!root.classList.contains('can-pan') || event.button !== 0) return;
-      } else if (!isTouchMap()) {
+      } else if (!coarsePointer()) {
         return;
       }
       if (!svgPointForEvent(event)) return;
@@ -1985,7 +2042,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       gesturePointers.set(event.pointerId, event);
       // Mouse drag-pan runs on desktop too; pinch stays touch-only (it needs two
       // pointers, which a mouse can't produce).
-      if (!isTouchMap() && event.pointerType !== 'mouse') return;
+      if (!coarsePointer() && event.pointerType !== 'mouse') return;
 
       if (gesturePointers.size >= 2 && pinchStart) {
         const pointers = Array.from(gesturePointers.values());
@@ -2043,7 +2100,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     // Hover comes from geometry only, never from the element under the
     // pointer, so the card always names what a click would open.
     root.addEventListener('pointermove', (event) => {
-      if (isTouchMap() && event.pointerType !== 'mouse') return;
+      if (coarsePointer() && event.pointerType !== 'mouse') return;
       if (gesturePointers.size > 0) return;
       const { pin, stack, mark } = hoverTargetAtPointer(event);
       // Hover follows the pointer while a card is open too, since a click
@@ -2074,7 +2131,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const selectedEl = scope.querySelector('[data-home-map-selected]') as HTMLElement | null;
     const selectedKicker = scope.querySelector('[data-selected-kicker]') as HTMLElement | null;
     const selectedName = scope.querySelector('[data-selected-name]') as HTMLElement | null;
-    const selectedPlace = scope.querySelector('[data-selected-place]') as HTMLElement | null;
+    const selectedBack = scope.querySelector('[data-selected-back]') as HTMLButtonElement | null;
+    const selectedBody = scope.querySelector('[data-selected-body]') as HTMLElement | null;
     const selectedThemesEl = scope.querySelector('[data-selected-themes]') as HTMLElement | null;
     const selectedNote = scope.querySelector('[data-selected-note]') as HTMLElement | null;
     const selectedLinks = scope.querySelector('[data-selected-links]') as HTMLElement | null;
@@ -2102,45 +2160,51 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       return Math.min(Math.max(value, min), safeMax);
     };
 
-    const positionSelectedCard = (target: Element | null) => {
-      if (!selectedEl || selectedEl.hidden || !target || mapLayout() === 'phone') return;
-      const dot = target.querySelector('.gp-home-map-node-dot') as SVGCircleElement | null;
-      const cx = Number(dot?.getAttribute('cx'));
-      const cy = Number(dot?.getAttribute('cy'));
-      if (!Number.isFinite(cx) || !Number.isFinite(cy)) return;
-      const xPct = ((cx - currentViewBox.x) / currentViewBox.width) * 100;
-      const yPct = ((cy - currentViewBox.y) / currentViewBox.height) * 100;
-      const rootRect = root.getBoundingClientRect();
-      const cardRect = selectedEl.getBoundingClientRect();
-      const offset = cssPx('--gp-map-card-offset', 22);
-      const inset = 12;
-      const anchorX = (xPct / 100) * rootRect.width;
-      const anchorY = (yPct / 100) * rootRect.height;
-      const desiredX = xPct < 60 ? anchorX + offset : anchorX - cardRect.width - offset;
-      const desiredY = yPct < 50 ? anchorY + offset : anchorY - cardRect.height - offset;
-      // Beside a docked list the card keeps to the map's side of it, so it
-      // never covers the search or the rows. Step 4 moves the card into the
-      // dock itself.
-      const dockRect = mapLayout() === 'dock' && listDrawer && !listDrawer.hidden ? listDrawer.getBoundingClientRect() : null;
-      const besideDock = dockRect && dockRect.width > 0 ? dockRect.left - rootRect.left - cardRect.width - inset : Number.NaN;
-      const maxX = besideDock >= inset ? besideDock : rootRect.width - cardRect.width - inset;
-      selectedEl.style.setProperty('--gp-selected-x', `${clampNumber(desiredX, inset, maxX)}px`);
-      selectedEl.style.setProperty('--gp-selected-y', `${clampNumber(desiredY, inset, rootRect.height - cardRect.height - inset)}px`);
-      selectedEl.style.setProperty('--gp-selected-transform', 'none');
+    // The inspector's chrome follows it through CSS: on a wide map both bars
+    // end at the dock's edge, and over a sheet the bottom bars step aside.
+    syncSelectedOverlay = () => {
+      if (selectedEl && !selectedEl.hidden) root.classList.add('has-selected-node');
+      else root.classList.remove('has-selected-node');
     };
 
-    syncSelectedOverlay = () => {
-      if (!selectedEl || selectedEl.hidden) {
-        root.classList.remove('has-selected-node');
-        root.style.removeProperty('--gp-map-selected-clearance');
-        return;
-      }
-      root.classList.add('has-selected-node');
-      const selectedHeight = selectedEl.getBoundingClientRect().height;
-      if (Number.isFinite(selectedHeight) && selectedHeight > 0) {
-        root.style.setProperty('--gp-map-selected-clearance', `${Math.ceil(selectedHeight + 18)}px`);
-      }
-      positionSelectedCard(selectedFocusTarget);
+    // § 5: "When the node would sit under the dock, the map pans it into the
+    // open area", and "The map pans the node above the sheet." While the
+    // inspector is open the view may slide under it, past the drawing's edge
+    // there, which the inspector hides: by as much as it covers, and a pin's
+    // target and the bars' inset more (lib/home-map-layout.ts).
+    inspectorPanel = () => {
+      const covered = stagePanel();
+      if (!covered || covered.el !== selectedEl) return null;
+      const { side, rect, stage } = covered;
+      const share = side === 'east'
+        ? (stage.width - rect.minX) / stage.width
+        : side === 'west' ? rect.maxX / stage.width : (stage.height - rect.minY) / stage.height;
+      return {
+        panel: { side, share: clampNumber(share, 0, 1) },
+        clearance: pxToViewBox(POINTER_TARGET_RADIUS_PX + cssPx('--gp-map-inset', 12)),
+      };
+    };
+
+    // The view before the inspector first moved it, to go back to on close
+    // unless the map was moved since.
+    let viewBeforeInspector: { view: MapViewBox; wasDefault: boolean; moved: MapViewBox } | null = null;
+    const panSelectedIntoView = () => {
+      const covered = inspectorPanel();
+      const point = selectedFocusTarget ? nodeCenter(selectedFocusTarget) : null;
+      if (!covered || !point) return;
+      const next = panPointIntoOpenArea(currentViewBox, point, covered.panel, covered.clearance, FULL_VIEW_BOX);
+      if (sameView(next, currentViewBox)) return;
+      const before = viewBeforeInspector ?? { view: { ...currentViewBox }, wasDefault: viewIsDefault };
+      setMapViewBox(next);
+      viewBeforeInspector = { ...before, moved: { ...currentViewBox } };
+    };
+    // Once the inspector has closed: back where the map was, or, if it was
+    // moved since, inside the drawing again.
+    const settleViewAfterInspector = () => {
+      const before = viewBeforeInspector;
+      viewBeforeInspector = null;
+      if (before && sameView(currentViewBox, before.moved)) setMapViewBox(before.view, { isDefault: before.wasDefault });
+      else setMapViewBox(currentViewBox);
     };
 
     const resetUpdateState = () => {
@@ -2154,119 +2218,138 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (updateTrigger) updateTrigger.hidden = false;
     };
 
-    // One-shot "peek" so an overflowing theme carousel hints it scrolls, then
-    // settles. User-triggered (row activation) and reduced-motion aware — never
-    // an idle loop.
-    const peekCarousel = (strip: HTMLElement | null) => {
-      if (!strip) return;
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-      const overflow = strip.scrollWidth - strip.clientWidth;
-      if (overflow <= 4) return;
-      // Assigning scrollLeft animates via the strip's CSS `scroll-behavior: smooth`
-      // (browsers force it to instant under reduced motion). One-shot peek; no loop.
-      strip.scrollLeft = overflow;
-      window.setTimeout(() => { strip.scrollLeft = 0; }, 900);
-    };
-
+    // § 5: "connections as rows of at least 44px (mark, name, place,
+    // shared-theme tag) that select that node". Hovering or focusing a row
+    // previews its node as a list row does, ringing its pin and showing its
+    // tooltip, and lights the line between the two.
     const renderSelectedEdgeList = (nodeId: string) => {
       if (!selectedEdgeList || !selectedEdgeItems) return;
       selectedEdgeItems.textContent = '';
+      // The old rows go, and with them what they previewed.
+      hoveredListNode = null;
+      focusedListNode = null;
+      clearListTarget();
       const edges = connectedEdgesFor(nodeId);
       selectedEdgeList.hidden = edges.length === 0;
       edges.forEach((edge) => {
         const connected = oppositeEndpoint(edge, nodeId);
-        const connectedEl = root.querySelector(`.gp-home-map-node-link[data-node-id="${CSS.escape(connected.id)}"]`);
+        const connectedEl = root.querySelector(`.gp-home-map-node-link[data-node-id="${CSS.escape(connected.id)}"]`) as HTMLElement | null;
+        if (!connectedEl) return;
         const shared = sharedThemesForEdge(edge.from.id, edge.to.id);
         const themeSlugs = [...new Set((shared.length ? shared : [edge.theme]).filter(Boolean))];
+        const name = clean(connectedEl.dataset.nodeName) || connected.name || connected.id;
+        const place = clean(connectedEl.dataset.nodePlace) || endpointRoleLabel(connected.type);
+        const themeNames = themeSlugs.map(themeLabel);
 
-        const item = document.createElement('div');
+        const item = document.createElement('li');
         applyScope(item);
         item.className = 'gp-home-map-selected-edge-item';
-        item.style.setProperty('--edge-color', edge.themeColor);
 
-        // Name area — selecting it highlights the connection + connected node.
         const row = document.createElement('button');
         applyScope(row);
         row.type = 'button';
         row.className = 'gp-home-map-selected-edge-row';
         row.dataset.selectedEdgeRow = edge.edgeId;
-        row.setAttribute('aria-pressed', selectedEdgeId === edge.edgeId ? 'true' : 'false');
+        row.style.setProperty('--edge-color', edge.themeColor);
+        row.setAttribute(
+          'aria-label',
+          `Select ${name}${place ? `, ${place}` : ''}${themeNames.length ? `; shares ${listLabel(themeNames, 3, (n) => `${n} more`)}` : ''}`
+        );
 
         const mark = document.createElement('span');
         applyScope(mark);
         mark.className = 'gp-home-map-selected-edge-mark';
         mark.setAttribute('aria-hidden', 'true');
 
-        const copy = document.createElement('span');
-        applyScope(copy);
-        copy.className = 'gp-home-map-selected-edge-copy';
+        const nameEl = document.createElement('span');
+        applyScope(nameEl);
+        nameEl.className = 'gp-home-map-selected-edge-name';
+        nameEl.textContent = name;
 
-        const name = document.createElement('span');
-        applyScope(name);
-        name.className = 'gp-home-map-selected-edge-name';
-        name.textContent = connected.name || connected.id;
+        const placeEl = document.createElement('span');
+        applyScope(placeEl);
+        placeEl.className = 'gp-home-map-selected-edge-place';
+        placeEl.textContent = place;
 
-        const meta = document.createElement('span');
-        applyScope(meta);
-        meta.className = 'gp-home-map-selected-edge-meta';
-        meta.textContent = endpointRoleLabel(connected.type);
-
-        copy.append(name, meta);
-        row.append(mark, copy);
-
-        // Shared themes — single non-wrapping row; overflow scrolls (carousel)
-        // so a long list never makes rows uneven.
-        const themesStrip = document.createElement('div');
-        applyScope(themesStrip);
-        themesStrip.className = 'gp-home-map-selected-edge-themes';
-        themeSlugs.slice(0, 6).forEach((slug) => {
-          const chip = document.createElement('span');
-          applyScope(chip);
-          chip.className = 'gp-home-map-selected-edge-theme';
-          chip.textContent = themeLabel(slug);
-          chip.style.setProperty('--chip-color', themeColor(slug));
-          themesStrip.append(chip);
-        });
-
-        row.addEventListener('click', () => {
-          applyEdgeHighlight(edge.edgeId);
-          root.querySelectorAll('.gp-home-map-node-link.is-edge-target').forEach((n) => n.classList.remove('is-edge-target'));
-          if (connectedEl) connectedEl.classList.add('is-edge-target');
-          peekCarousel(themesStrip);
-        });
-        item.append(row);
-
-        // Open-link control — the connected person's public profile (new tab) or
-        // their same-site chapter page. Separate from row selection.
-        // One link per connection: the connected person's profile (new tab) only.
-        const connProfile = cleanHref(connectedEl?.getAttribute('data-node-profile-url'));
-        if (connProfile) {
-          const open = document.createElement('a');
-          applyScope(open);
-          open.className = 'gp-home-map-selected-edge-open';
-          open.href = connProfile;
-          open.target = '_blank';
-          open.rel = 'noopener noreferrer';
-          open.textContent = '↗';
-          open.setAttribute('aria-label', `Open ${connected.name || 'connection'}'s profile in a new tab`);
-          open.addEventListener('click', (event) => event.stopPropagation());
-          item.append(open);
+        row.append(mark, nameEl, placeEl);
+        // One shared theme as a tag, and how many more there are.
+        if (themeSlugs.length) {
+          const tag = document.createElement('span');
+          applyScope(tag);
+          tag.className = 'gp-home-map-selected-edge-theme';
+          tag.style.setProperty('--chip-color', themeColor(themeSlugs[0]));
+          tag.textContent = themeSlugs.length > 1 ? `${themeNames[0]} +${themeSlugs.length - 1}` : themeNames[0];
+          row.append(tag);
         }
 
-        item.append(themesStrip);
+        const preview = () => {
+          previewListNode(connectedEl);
+          applyEdgeHighlight(edge.edgeId);
+        };
+        row.addEventListener('pointerenter', () => {
+          hoveredListNode = connectedEl;
+          preview();
+        });
+        row.addEventListener('pointerleave', () => {
+          hoveredListNode = null;
+          restoreListPreview();
+        });
+        row.addEventListener('focus', () => {
+          if (!row.matches(':focus-visible')) return;
+          focusedListNode = connectedEl;
+          preview();
+        });
+        row.addEventListener('blur', () => {
+          if (focusedListNode !== connectedEl) return;
+          focusedListNode = null;
+          restoreListPreview();
+        });
+        row.addEventListener('click', (event) => {
+          activateMapNode(connectedEl, event.detail === 0 || row.matches(':focus-visible'));
+        });
+
+        item.append(row);
         selectedEdgeItems.append(item);
       });
-      applyEdgeHighlight(selectedEdgeId);
+      selectedEdgeList.hidden = selectedEdgeItems.childElementCount === 0;
     };
 
-    const closeSelected = () => {
-      const restoreFocus = Boolean(selectedEl?.contains(document.activeElement));
+    // The dock holds one thing at a time (§ 5: "Picking a row swaps the dock
+    // to that node, with a way back to the list"). While the inspector stands
+    // in for the list, this keeps what the list showed, for Back.
+    type ListBehind = {
+      opener: HTMLElement | null;
+      subset: { keys: string[]; label: string } | null;
+      query: string;
+      scrollTop: number;
+    };
+    let listBehindInspector: ListBehind | null = null;
+
+    // The first control in the inspector's head: Back, while the inspector
+    // stands in for the list, or else Close.
+    const inspectorEntryControl = () => (selectedBack && !selectedBack.hidden ? selectedBack : selectedClose);
+
+    // On a phone the themes are one scrolling row (§ 5). A row that scrolls
+    // must be reachable by keyboard, so it takes focus while it scrolls.
+    const syncThemesScroller = () => {
+      if (!selectedThemesEl) return;
+      const scrolls = !selectedThemesEl.hidden && selectedThemesEl.scrollWidth > selectedThemesEl.clientWidth + 1;
+      if (scrolls) selectedThemesEl.tabIndex = 0;
+      else selectedThemesEl.removeAttribute('tabindex');
+    };
+
+    // § 5: "Closing returns focus to the node, and a closed dock leaves no
+    // focusable or pressed controls behind." `returnFocus: false` is for Back,
+    // which hands focus to the list instead.
+    const closeSelected = ({ returnFocus = true }: { returnFocus?: boolean } = {}) => {
+      const restoreFocus = returnFocus && Boolean(selectedEl?.contains(document.activeElement));
       const focusTarget = selectedFocusTarget;
-      const shouldRecoverMobileView = isTouchMap() && root.classList.contains('is-zoomed');
       if (selectedEl) {
         selectedEl.hidden = true;
         delete selectedEl.dataset.selectedType;
       }
+      listBehindInspector = null;
+      if (selectedBack) selectedBack.hidden = true;
       resetUpdateState();
       selectedFocusTarget = null;
       root.querySelectorAll('.gp-home-map-node-link.is-selected').forEach((l) => l.classList.remove('is-selected'));
@@ -2275,16 +2358,23 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       syncSelectedOverlay();
       clearFocusState();
       revealDefaultState();
-      if (shouldRecoverMobileView) resetMapView();
+      // The map goes back where it was, and the bars and labels take back
+      // the room the inspector had.
+      settleViewAfterInspector();
+      layoutThemeStrip();
+      scheduleChapterLabels();
       // A person drawn while selected goes back into their stack.
       clusterDirty();
+      if (!restoreFocus || !focusTarget) return;
+      // The node, or what stands for it when a stack or a filter hides it.
       if (
-        restoreFocus &&
-        focusTarget &&
         !focusTarget.classList.contains('is-filtered-out') &&
+        !focusTarget.classList.contains('is-clustered') &&
         typeof (focusTarget as HTMLElement).focus === 'function'
       ) {
         (focusTarget as HTMLElement).focus({ preventScroll: true });
+      } else {
+        focusControlFor([focusTarget.getAttribute('data-node-id') || '']);
       }
     };
 
@@ -2302,6 +2392,19 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       // One open surface at a time, however the node was reached: a keyboard
       // can move from the editor back to a pin.
       closeFilterPanels();
+      // The list gives the dock (or the sheet) to the node, and Back brings
+      // it back as it was. A pin picked while the inspector already stands in
+      // for the list keeps that way back.
+      const fromList = Boolean(listDrawer && !listDrawer.hidden);
+      if (fromList) {
+        listBehindInspector = {
+          opener: listOpener,
+          subset: listSubset ? { keys: [...listSubset.keys], label: listSubset.label } : null,
+          query: listQuery,
+          scrollTop: listItems?.scrollTop ?? 0,
+        };
+        closeNodeList();
+      }
       resetUpdateState();
       root.querySelectorAll('.gp-home-map-node-link.is-selected').forEach((l) => l.classList.remove('is-selected'));
       // Clear any prior connection-row target highlight when swapping nodes.
@@ -2314,16 +2417,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
       if (selectedKicker) {
         const typeLabel = member.type.charAt(0).toUpperCase() + member.type.slice(1);
-        selectedKicker.textContent = member.owned
+        const role = member.owned
           ? (member.pending ? 'Your pending node' : 'Your node')
           : member.pending ? `Pending ${member.type}` : typeLabel;
-        selectedKicker.hidden = isChapter;
+        // § 5: "TYPE · PLACE", for chapters too.
+        selectedKicker.textContent = member.place ? `${role} · ${member.place}` : role;
       }
       if (selectedName) selectedName.textContent = member.name;
-      if (selectedPlace) {
-        selectedPlace.textContent = member.place;
-        selectedPlace.hidden = !member.place;
-      }
       if (selectedThemesEl) {
         selectedThemesEl.textContent = '';
         // A person picks up to four themes. A chapter shows every theme its
@@ -2357,7 +2457,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (updateWrap) updateWrap.hidden = isChapter || !member.approved;
       activeSourceId = !isChapter && member.approved ? member.sourceId : '';
 
+      if (selectedBack) selectedBack.hidden = !listBehindInspector;
       selectedEl.hidden = false;
+      // Each node starts at the top of the inspector's body.
+      if (selectedBody) selectedBody.scrollTop = 0;
+      syncThemesScroller();
       if (selectedLive) selectedLive.textContent = `${member.name} selected on the map.`;
       syncSelectedOverlay();
       if (isChapter) {
@@ -2370,18 +2474,45 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         // Theme colour + per-theme strands ride the selected node's edges only.
         markSelectedThreads(link.getAttribute('data-node-id') || member.key);
       }
-      syncSelectedOverlay();
-      // Keyboard-initiated selection moves focus into the popover so its Close,
-      // links, and Edit controls are reachable without tabbing through every
-      // remaining map node first. Pointer selection leaves focus on the node, so
-      // there is no surprising focus jump on click (:focus-visible stays off for
-      // pointers anyway). Escape or Close returns focus to the node — closeSelected
-      // restores it whenever focus is inside the card. Blurring the node here is
-      // safe: clearFocus re-applies setFocus(selectedFocusTarget), which preserves
-      // the colour web (is-selected-adj is never touched by setFocus).
-      if (viaKeyboard) selectedClose?.focus({ preventScroll: true });
+      // The bars end at the dock now, and labels give way to it; the node
+      // comes out from under it.
+      layoutThemeStrip();
+      scheduleChapterLabels();
+      panSelectedIntoView();
+      // A keyboard selection moves focus into the inspector, so its controls
+      // are reachable without tabbing through every remaining pin; so does a
+      // pick from the list, whose row has gone. A pointer on the map leaves
+      // focus on the node, with no jump. Escape or Close returns focus to the
+      // node: closeSelected restores it whenever focus is inside. Blurring the
+      // node here is safe: clearFocus re-applies setFocus(selectedFocusTarget),
+      // which keeps the colour web (is-selected-adj is never touched by
+      // setFocus).
+      if (viaKeyboard || fromList) inspectorEntryControl()?.focus({ preventScroll: true });
       clusterDirty();
     };
+
+    // Back: the list as it was, its search, its scroll and its rows, with
+    // focus on the row of the node just shown.
+    selectedBack?.addEventListener('click', () => {
+      const behind = listBehindInspector;
+      if (!behind) return;
+      const nodeId = selectedFocusTarget?.getAttribute('data-node-id') || '';
+      closeSelected({ returnFocus: false });
+      openNodeList(behind.opener, behind.subset);
+      if (listSearch && behind.query) {
+        listSearch.value = behind.query;
+        listQuery = behind.query;
+        renderNodeList();
+      }
+      if (listItems) listItems.scrollTop = behind.scrollTop;
+      // After the list's own first focus.
+      window.requestAnimationFrame(() => {
+        const row = nodeId
+          ? listItems?.querySelector<HTMLElement>(`.gp-home-map-list-row[data-list-node-id="${CSS.escape(nodeId)}"]`)
+          : null;
+        (row ?? listEntryControl())?.focus({ preventScroll: true });
+      });
+    });
 
     // Chapters keep their <a href> for no-JS navigation; with JS they open this
     // inspect card (which holds the same 'visit chapter' link) so a stray tap
@@ -2965,7 +3096,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       requestEditLink(sourceId, email);
     });
 
-    selectedClose?.addEventListener('click', closeSelected);
+    selectedClose?.addEventListener('click', () => closeSelected());
     root.addEventListener('click', (event) => {
       if (!selectedEl || selectedEl.hidden) return;
       const target = event.target;
@@ -2977,7 +3108,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         node.matches('.gp-home-map-node-link, .gp-home-map-clusters, .gp-home-map-selected, .gp-home-map-controls, .gp-home-map-legend, .gp-home-map-state-error, .gp-home-map-edge-tooltip, .gp-home-map-list-drawer')
       ));
       if (insideMap) return;
-      if (isTouchMap() && isRecentTouchMapClick() && nodeAtPointer(event as MouseEvent, 44)) return;
+      if (coarsePointer() && isRecentTouchMapClick() && nodeAtPointer(event as MouseEvent, 44)) return;
       closeSelected();
     });
     // Escape closes the selected-node card/bar from anywhere (keyboard + a11y).
@@ -3153,25 +3284,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       else clearListTarget();
     };
 
-    // Picking a row selects its node. A docked list stays open beside the
-    // map, and a mouse pick leaves focus in it for the next row; a keyboard
-    // pick moves focus into the node's card. A sheet or a phone's modal list
-    // gives way to the node first, and focus moves into its card.
+    // Picking a row selects its node (§ 5: "Picking a row swaps the dock to
+    // that node, with a way back to the list"). The sheets swap the same way.
+    // openSelected keeps what the list showed for Back, and moves focus into
+    // the inspector, since the row goes with the list.
     const activateListNode = (node: HTMLElement, viaKeyboard: boolean) => {
       clearListTarget();
-      const docked = mapLayout() === 'dock';
-      if (!docked) closeNodeList();
-      activateMapNode(node, viaKeyboard || !docked);
-    };
-
-    // A docked list and a selected card share the map; a sheet or a phone
-    // has room for one. When the layout leaves the dock with both open, the
-    // list gives way as it does to a pick there: the selection stays, and
-    // focus that was in the list moves to the card.
-    const yieldListToSelection = () => {
-      const focusWasInList = Boolean(listDrawer?.contains(document.activeElement));
-      closeNodeList();
-      if (focusWasInList) selectedClose?.focus({ preventScroll: true });
+      activateMapNode(node, viaKeyboard);
     };
 
     // The list's first control: its search with a keyboard at hand, Close on
@@ -3255,8 +3374,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       focusedListNode = null;
       clearListTarget();
       layoutThemeStrip();
-      // A selected node's card may sit where the dock no longer is, and
-      // labels may have room there again.
+      // The inspector may take the list's place now, and labels may have
+      // room where the list was.
       syncSelectedOverlay();
       scheduleChapterLabels();
     };
@@ -3532,7 +3651,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         return;
       }
       if (!target || !root.contains(target)) {
-        if (!isTouchMap() || !isRecentTouchMapClick() || !eventTarget || !root.contains(eventTarget) || isGestureBlocked(eventTarget)) return;
+        if (!coarsePointer() || !isRecentTouchMapClick() || !eventTarget || !root.contains(eventTarget) || isGestureBlocked(eventTarget)) return;
         const nearestNode = nodeAtPointer(event as MouseEvent, 44);
         if (!nearestNode) return;
         event.preventDefault();
@@ -3840,14 +3959,15 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (!focusEl || !focusRole || !focusName || !focusMeta) return;
       clearFocusState();
       hoveredStackKey = stackKeyOf(stack.members);
-      focusRole.textContent = peopleCount(stack.members.length);
+      // As a node's: the names first, then how many in mono, then where they
+      // are and how to choose one.
       focusName.textContent = listLabel(stack.members.map(pinName), 3, (n) => `${n} more`);
+      focusRole.textContent = peopleCount(stack.members.length);
       const where = stackWhere(stack.members, stack.chapters);
-      focusMeta.textContent = `${where.charAt(0).toUpperCase()}${where.slice(1)}. ${isTouchMap() ? 'Tap' : 'Click'} to choose one.`;
-      if (focusThemes) focusThemes.textContent = '';
+      focusMeta.textContent = `${where.charAt(0).toUpperCase()}${where.slice(1)}. ${coarsePointer() ? 'Tap' : 'Click'} to choose one.`;
       focusEl.dataset.nodeType = stack.members.every(isStewardPin) ? 'steward' : 'member';
-      placeFocusCard(stack.markerCenter.x, stack.markerCenter.y);
       focusEl.setAttribute('aria-hidden', 'false');
+      placeFocusCard(stack.markerCenter.x, stack.markerCenter.y);
     };
 
     const clearStackFocus = () => {
@@ -4218,6 +4338,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       '.gp-home-map-state-error',
       '.gp-home-map-filter-note',
       '.gp-home-map-list-drawer',
+      '.gp-home-map-selected',
     ].join(', ');
     const chapterLabelText = (name: string) => name.replace(/^Greenpill\s+/i, '') || name;
 
@@ -5677,15 +5798,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     };
 
     let mapResizeTimer = 0;
+    let lastMapLayout = mapLayout();
     const scheduleMapResizeSync = () => {
       // Before the debounce: focus must not wait on a control that just hid.
       keepChromeFocus();
-      // Nor must an open list wait to take the new width's mode. Out of the
-      // dock, a list open beside a selected card gives way to it.
-      if (listDrawer?.open && !listDrawer.hidden) {
-        if (mapLayout() !== 'dock' && selectedEl && !selectedEl.hidden) yieldListToSelection();
-        else showNodeListForLayout();
-      }
+      // Nor must an open list wait to take the new width's mode.
+      if (listDrawer?.open && !listDrawer.hidden) showNodeListForLayout();
       window.clearTimeout(mapResizeTimer);
       mapResizeTimer = window.setTimeout(() => {
         syncViewToStage();
@@ -5700,6 +5818,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           setFocus(activeFocusTarget);
         }
         syncSelectedOverlay();
+        // A dock that became a sheet, or a sheet that became a dock, covers
+        // another part of the map: the selected node comes out from under it.
+        const layout = mapLayout();
+        if (layout !== lastMapLayout && selectedEl && !selectedEl.hidden) panSelectedIntoView();
+        lastMapLayout = layout;
+        if (selectedEl && !selectedEl.hidden) syncThemesScroller();
         clusterDirty();
       }, 80);
     };
@@ -5791,8 +5915,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   }
 
   .gp-home-map-canvas {
-    --gp-map-card-width: 280px;
-    --gp-map-card-offset: 22px;
+    /* The tooltip's distance from the point it names (placeFocusCard). */
+    --gp-map-tip-offset: 14px;
     /* The layout the container picks, which the script reads (mapLayout):
        a dock beside the map, a sheet at 860px and narrower, a phone at 520px
        and narrower. */
@@ -5803,6 +5927,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     --gp-map-inset: calc(var(--gp-space-sm) + var(--gp-space-xs));
     --gp-map-end: var(--gp-map-inset);
     --gp-map-dock-width: 340px;
+    /* A sheet's handle, as wide as it is easy to see. */
+    --gp-map-handle: 36px;
     --gp-map-chip: 30px;
     --gp-map-bar-block: calc(var(--gp-map-chip) + var(--gp-space-xs) * 2 + 2px);
     position: relative;
@@ -6616,17 +6742,23 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   }
 
   /* Focus card */
+  /* The compact tooltip (§ 5): the name, then TYPE · PLACE in mono, with no
+     note and no theme chips; a stack adds where its people are and how to
+     choose one. The script centres it on its point, above it, or below when
+     there is no room above, inside the open part of the stage (never under
+     the dock or the sheet). It takes no presses. */
   .gp-home-map-focus {
     position: absolute;
     left: 50%;
     top: 50%;
+    z-index: 6;
     display: none;
     flex-direction: column;
-    gap: 7px;
-    width: min(var(--gp-map-card-width), calc(100% - 24px));
-    min-width: 0;
-    max-width: calc(100% - 24px);
-    padding: 13px 15px 14px;
+    gap: 2px;
+    box-sizing: border-box;
+    width: max-content;
+    max-width: min(16rem, calc(100% - var(--gp-map-inset) * 2));
+    padding: var(--gp-space-sm) var(--gp-map-inset);
     border: 1px solid color-mix(in srgb, var(--gp-map-member) 32%, transparent);
     border-radius: var(--gp-radius-md);
     background: var(--gp-map-pop-bg);
@@ -6634,7 +6766,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     -webkit-backdrop-filter: blur(8px);
     color: var(--gp-fg);
     box-shadow: var(--gp-map-pop-shadow);
-    z-index: 6;
     pointer-events: none;
     overflow-wrap: anywhere;
   }
@@ -6643,13 +6774,22 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     display: inline-flex;
   }
 
-  .gp-home-map-focus-role {
-    font-family: var(--gp-font-mono);
-    color: var(--gp-map-member);
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+  .gp-home-map-focus-name {
+    color: var(--gp-fg);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-label-md);
     font-weight: 700;
+    line-height: 1.25;
+  }
+
+  .gp-home-map-focus-role {
+    color: var(--gp-map-member);
+    font-family: var(--gp-font-mono);
+    font-size: var(--gp-caption);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    line-height: 1.3;
+    text-transform: uppercase;
   }
 
   .gp-home-map-focus[data-node-type='chapter'] .gp-home-map-focus-role {
@@ -6660,59 +6800,15 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     color: var(--gp-map-steward);
   }
 
-  .gp-home-map-focus-name {
-    font-family: var(--gp-font-display);
-    color: var(--gp-secondary);
-    font-size: 18px;
-    line-height: 1.1;
-  }
-
   .gp-home-map-focus-meta {
-    font-family: var(--gp-font-body);
     color: var(--gp-fg-muted);
-    font-size: 12px;
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-caption);
     line-height: 1.3;
   }
 
   .gp-home-map-focus-meta:empty {
     display: none;
-  }
-
-  .gp-home-map-focus-themes {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-  }
-
-  .gp-home-map-focus-themes:empty {
-    display: none;
-  }
-
-  .gp-home-map-focus-themes span {
-    display: inline-flex;
-    align-items: center;
-    min-height: 22px;
-    padding: 2px 7px;
-    border: 1px solid color-mix(in srgb, var(--chip-color, var(--gp-map-member)) 54%, transparent);
-    border-radius: var(--gp-radius-pill);
-    background: color-mix(in srgb, var(--chip-color, var(--gp-map-member)) 16%, transparent);
-    color: var(--gp-fg);
-    font-size: 10px;
-    font-weight: 700;
-    line-height: 1;
-  }
-
-  .gp-home-map-focus-connections {
-    margin-top: 2px;
-    padding-top: 7px;
-    border-top: 1px solid rgba(250, 247, 238, 0.1);
-    color: var(--gp-fg-dim);
-    font-family: var(--gp-font-mono);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    line-height: 1.2;
-    text-transform: uppercase;
   }
 
   .gp-home-map-edge-tooltip {
@@ -7592,110 +7688,161 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     }
   }
 
-  /* Selected-node card: a stable floating card anchored near the active node.
-     It mirrors the hover-card footprint so clicking from hover does not resize
-     or shift the map on desktop. Compact mobile rules turn this same region into
-     the lower map bar. */
+  /* The inspector (§ 5). On a wide map it docks inside the stage's end
+     edge, where the list docks: inset like the bars, the stage's full
+     height, about 340px wide. The map never resizes, and both bars end at
+     its edge. Its head stays put while its body scrolls, so a long note or
+     many connections stay reachable on a short stage. */
   .gp-home-map-selected {
     position: absolute;
-    inset-inline-start: var(--gp-selected-x, 50%);
-    inset-inline-end: auto;
-    inset-block-start: var(--gp-selected-y, 50%);
-    inset-block-end: auto;
-    z-index: 8;
-    width: min(var(--gp-map-card-width), calc(100% - 24px));
-    inline-size: min(var(--gp-map-card-width), calc(100% - 24px));
-    min-width: 0;
-    max-width: calc(100% - 24px);
-    max-height: calc(100% - 24px);
+    inset-block: var(--gp-map-inset);
+    inset-inline-start: auto;
+    inset-inline-end: var(--gp-map-inset);
+    z-index: 7;
     box-sizing: border-box;
+    width: min(var(--gp-map-dock-width), calc(100% - var(--gp-map-inset) * 2));
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 11px 13px 12px;
-    border: 1px solid color-mix(in srgb, var(--gp-map-member) 32%, transparent);
-    border-radius: var(--gp-radius-md);
-    background: var(--gp-map-pop-bg);
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-lg);
+    background: color-mix(in srgb, var(--gp-green-950) 96%, transparent);
     color: var(--gp-fg);
     box-shadow: var(--gp-map-pop-shadow);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    overflow: auto;
+    overflow: hidden;
     overflow-wrap: anywhere;
+    text-align: start;
     pointer-events: auto;
-    transform: var(--gp-selected-transform, translate(var(--gp-map-card-offset), var(--gp-map-card-offset)));
-  }
-  .gp-home-map-selected[hidden] { display: none; }
-
-  .gp-home-map-canvas.has-selected-node .gp-home-map-selected-edge-list:not([hidden]) {
-    display: block;
   }
 
+  .gp-home-map-selected[hidden] {
+    display: none;
+  }
+
+  /* While the inspector is docked, the bars and the notes under the legend
+     end at its edge, as they do beside the list. */
+  .gp-home-map-canvas.has-selected-node {
+    --gp-map-end: calc(var(--gp-map-inset) * 2 + var(--gp-map-dock-width));
+  }
+
+  .gp-home-map-selected-head {
+    flex: none;
+    padding: var(--gp-space-md) var(--gp-space-md) var(--gp-space-sm) var(--gp-space-lg);
+    border-block-end: 1px solid color-mix(in srgb, var(--gp-off-white) 8%, transparent);
+  }
+
+  /* A sheet's handle; the dock has none. */
+  .gp-home-map-selected-handle {
+    display: none;
+  }
+
+  .gp-home-map-selected-bar {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--gp-space-sm);
+  }
+
+  .gp-home-map-selected-heading {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .gp-home-map-selected-kicker {
+    margin: 0 0 var(--gp-space-xs);
+    color: var(--gp-map-member);
+    font-family: var(--gp-font-mono);
+    font-size: var(--gp-caption);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+
+  .gp-home-map-selected[data-selected-type='chapter'] .gp-home-map-selected-kicker {
+    color: var(--gp-map-chapter);
+  }
+
+  .gp-home-map-selected[data-selected-type='steward'] .gp-home-map-selected-kicker {
+    color: var(--gp-map-steward);
+  }
+
+  .gp-home-map-selected-name {
+    margin: 0;
+    color: var(--gp-secondary);
+    font-family: var(--gp-font-display);
+    font-size: var(--gp-title-lg);
+    font-weight: 500;
+    letter-spacing: 0;
+    line-height: 1.15;
+  }
+
+  /* Back and Close are icon-only: 44 by 44 (§ 5). */
+  .gp-home-map-selected-back,
   .gp-home-map-selected-close {
-    position: absolute;
-    inset-block-start: 8px;
-    inset-inline-end: 8px;
     width: var(--gp-map-target);
     height: var(--gp-map-target);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    flex: none;
+    display: inline-grid;
+    place-items: center;
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-pill);
-    background: rgba(7, 24, 15, 0.6);
-    color: var(--gp-fg-muted);
-    font-size: 18px;
-    line-height: 1;
+    background: transparent;
+    color: var(--gp-fg);
     cursor: pointer;
-  }
-  .gp-home-map-selected-close:hover { color: var(--gp-fg); }
-
-  .gp-home-map-selected[data-selected-type='chapter'] {
-    gap: 8px;
+    transition: border-color 160ms ease;
   }
 
-  .gp-home-map-selected[data-selected-type='chapter'] .gp-home-map-selected-kicker,
+  .gp-home-map-selected-back[hidden] {
+    display: none;
+  }
+
+  .gp-home-map-selected-back:hover,
+  .gp-home-map-selected-close:hover {
+    border-color: color-mix(in srgb, var(--gp-primary) 45%, transparent);
+  }
+
+  .gp-home-map-selected-back svg,
+  .gp-home-map-selected-close svg {
+    width: var(--gp-map-icon);
+    height: var(--gp-map-icon);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .gp-home-map-selected-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-md);
+    padding: var(--gp-space-md) var(--gp-space-md) var(--gp-space-lg) var(--gp-space-lg);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* The body scrolls; its parts keep their own height. A part that scrolls
+     itself, as a phone's row of themes does, would otherwise shrink to
+     nothing when the body runs long. */
+  .gp-home-map-selected-body > * {
+    flex: none;
+  }
+
+  /* A chapter has no note, no connections and no edit action here. */
   .gp-home-map-selected[data-selected-type='chapter'] .gp-home-map-selected-note,
   .gp-home-map-selected[data-selected-type='chapter'] .gp-home-map-selected-edge-list,
   .gp-home-map-selected[data-selected-type='chapter'] .gp-home-map-update {
     display: none;
   }
 
-  .gp-home-map-selected-kicker {
-    margin: 0;
-    padding-inline-end: 38px;
-    font-family: var(--gp-font-mono);
-    color: var(--gp-map-member);
-    font-size: var(--gp-caption);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    font-weight: 700;
-  }
-  .gp-home-map-selected-name {
-    margin: 0;
-    padding-inline-end: 38px;
-    font-family: var(--gp-font-display);
-    color: var(--gp-secondary);
-    font-size: var(--gp-title-md);
-    line-height: 1.15;
-    overflow-wrap: anywhere;
-  }
-  .gp-home-map-selected-place {
-    margin: 0;
-    color: var(--gp-fg-muted);
-    font-size: 13px;
-    line-height: 1.3;
-    overflow-wrap: anywhere;
-  }
-  .gp-home-map-selected-place:empty,
-  .gp-home-map-selected-place[hidden] { display: none; }
-
   .gp-home-map-selected-note {
     margin: 0;
     color: var(--gp-fg-muted);
-    font-size: 13px;
-    line-height: 1.4;
-    overflow-wrap: anywhere;
+    font-size: var(--gp-body-sm);
+    line-height: 1.45;
   }
 
   .gp-home-map-selected-note[hidden] {
@@ -7705,7 +7852,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   .gp-home-map-selected-links {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: var(--gp-space-sm);
   }
   .gp-home-map-selected-links[hidden] { display: none; }
   /* Pill links, sized like chips: 30px under a fine pointer, 44px under a
@@ -7736,33 +7883,33 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     background: var(--gp-green-800);
   }
 
+  /* Themes as tags: labels, not controls. */
   .gp-home-map-selected-themes {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 2px;
+    gap: var(--gp-space-xs);
   }
   .gp-home-map-selected-themes:empty,
   .gp-home-map-selected-themes[hidden] { display: none; }
   .gp-home-map-selected-themes span {
     display: inline-flex;
+    flex: none;
     align-items: center;
     min-height: 26px;
-    padding: 2px 9px;
+    padding: 2px 10px;
     border: 1px solid color-mix(in srgb, var(--chip-color, var(--gp-map-member)) 60%, transparent);
     border-radius: var(--gp-radius-pill);
     background: color-mix(in srgb, var(--chip-color, var(--gp-map-member)) 16%, transparent);
     color: var(--gp-fg);
-    font-size: 12px;
+    font-size: var(--gp-caption);
+    font-weight: 600;
     line-height: 1;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
   }
 
   .gp-home-map-selected-edge-list {
-    display: none;
-    margin-top: 6px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(250, 247, 238, 0.1);
+    display: grid;
+    gap: var(--gp-space-sm);
   }
 
   .gp-home-map-selected-edge-list[hidden] {
@@ -7770,139 +7917,89 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   }
 
   .gp-home-map-selected-edge-title {
-    margin: 0 0 8px;
-    color: var(--gp-fg-dim);
+    margin: 0;
+    color: var(--gp-fg-muted);
     font-family: var(--gp-font-mono);
     font-size: var(--gp-caption);
-    font-weight: 800;
-    letter-spacing: 0.1em;
-    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    line-height: 1.4;
     text-transform: uppercase;
   }
 
   .gp-home-map-selected-edge-items {
     display: grid;
-    gap: 7px;
+    gap: var(--gp-space-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
 
+  /* A connection, at least 44px tall: the line's mark, the name over the
+     place, and one shared theme as a tag. It selects that node. */
   .gp-home-map-selected-edge-row {
     --edge-color: var(--gp-map-member);
-    min-height: var(--gp-map-target);
+    box-sizing: border-box;
+    width: 100%;
+    min-block-size: var(--gp-map-target);
     display: grid;
-    grid-template-columns: 12px minmax(0, 1fr);
+    grid-template-columns: var(--gp-map-mark) minmax(0, 1fr) auto;
+    grid-template-areas:
+      'mark name tag'
+      'mark place tag';
     align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    border: 1px solid color-mix(in srgb, var(--edge-color) 38%, transparent);
-    border-radius: var(--gp-radius-sm);
-    background: color-mix(in srgb, var(--edge-color) 10%, var(--gp-green-950));
+    column-gap: var(--gp-space-sm);
+    padding: var(--gp-space-xs) var(--gp-space-sm);
+    border: 1px solid color-mix(in srgb, var(--edge-color) 32%, transparent);
+    border-radius: var(--gp-radius-md);
+    background: color-mix(in srgb, var(--edge-color) 8%, transparent);
     color: var(--gp-fg);
     font: inherit;
-    text-align: left;
+    text-align: start;
     cursor: pointer;
+    transition: background 160ms ease, border-color 160ms ease;
   }
 
   .gp-home-map-selected-edge-row:hover,
-  .gp-home-map-selected-edge-row:focus-visible,
   .gp-home-map-selected-edge-row.is-active {
     border-color: color-mix(in srgb, var(--edge-color) 72%, transparent);
-    background: color-mix(in srgb, var(--edge-color) 18%, var(--gp-green-950));
+    background: color-mix(in srgb, var(--edge-color) 18%, transparent);
   }
 
   .gp-home-map-selected-edge-mark {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
+    grid-area: mark;
+    width: var(--gp-map-mark);
+    height: var(--gp-map-mark);
+    border-radius: var(--gp-radius-pill);
     background: var(--edge-color);
-    box-shadow: 0 0 10px color-mix(in srgb, var(--edge-color) 62%, transparent);
   }
 
-  .gp-home-map-selected-edge-copy {
-    display: grid;
-    gap: 2px;
+  .gp-home-map-selected-edge-name,
+  .gp-home-map-selected-edge-place {
     min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .gp-home-map-selected-edge-name {
-    color: var(--gp-fg);
-    font-size: var(--gp-label-sm);
-    font-weight: 800;
-    line-height: 1.2;
-    overflow-wrap: anywhere;
+    grid-area: name;
+    font-size: var(--gp-label-md);
+    font-weight: 700;
+    line-height: 1.25;
   }
 
-  .gp-home-map-selected-edge-meta {
-    color: var(--gp-fg-dim);
-    font-family: var(--gp-font-mono);
-    font-size: var(--gp-caption);
-    font-weight: 750;
-    letter-spacing: 0.06em;
-    line-height: 1.2;
-    text-transform: uppercase;
-    overflow-wrap: anywhere;
-  }
-
-  /* Connection item: name button (selects) + open-link control + a single
-     non-wrapping shared-theme carousel, so a long theme list never makes rows
-     uneven. (The list itself is mobile-only — see the container query below.) */
-  .gp-home-map-selected-edge-item {
-    --edge-color: var(--gp-map-member);
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "name open"
-      "themes themes";
-    align-items: center;
-    gap: 5px 8px;
-  }
-  .gp-home-map-selected-edge-item .gp-home-map-selected-edge-row { grid-area: name; }
-  .gp-home-map-selected-edge-open { grid-area: open; }
-  .gp-home-map-selected-edge-themes { grid-area: themes; }
-
-  .gp-home-map-selected-edge-open {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--gp-map-target);
-    height: var(--gp-map-target);
-    flex: none;
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-pill);
-    background: var(--gp-map-control-bg);
+  .gp-home-map-selected-edge-place {
+    grid-area: place;
     color: var(--gp-fg-muted);
-    font-size: var(--gp-body-sm);
-    line-height: 1;
-    text-decoration: none;
-    cursor: pointer;
-    transition: color 160ms ease, border-color 160ms ease;
-  }
-  .gp-home-map-selected-edge-open:hover,
-  .gp-home-map-selected-edge-open:focus-visible {
-    color: var(--gp-primary);
-    border-color: color-mix(in srgb, var(--gp-primary) 55%, transparent);
+    font-size: var(--gp-caption);
+    line-height: 1.3;
   }
 
-  .gp-home-map-selected-edge-themes {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 5px;
-    min-width: 0;
-    overflow-x: auto;
-    overscroll-behavior-inline: contain;
-    scrollbar-width: none;
-    scroll-snap-type: x proximity;
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-    mask-image: var(--gp-map-edge-fade);
-    -webkit-mask-image: var(--gp-map-edge-fade);
-  }
-  .gp-home-map-selected-edge-themes::-webkit-scrollbar { display: none; }
-  .gp-home-map-selected-edge-themes:empty { display: none; }
   .gp-home-map-selected-edge-theme {
+    grid-area: tag;
     display: inline-flex;
     align-items: center;
-    flex: none;
-    scroll-snap-align: start;
     min-height: 22px;
     padding: 2px 8px;
     border: 1px solid color-mix(in srgb, var(--chip-color, var(--edge-color)) 50%, transparent);
@@ -7915,13 +8012,53 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     white-space: nowrap;
   }
 
-  /* The connected node a tapped connection row points to. */
+  /* The connected node a hovered or focused connection row points to. */
   .gp-home-map-node-link.is-edge-target .gp-home-map-node-halo {
     opacity: 0.62;
   }
 
+  /* At an 860px container and narrower the inspector is a sheet over the
+     stage's bottom (§ 5), with a handle, rising to about half the stage.
+     The bars keep their width; the bottom bars step aside under it, so no
+     control is left beneath it. The map pans the node above it. */
+  @container (max-width: 860px) {
+    .gp-home-map-canvas.has-selected-node {
+      --gp-map-end: var(--gp-map-inset);
+    }
+
+    .gp-home-map-selected {
+      inset-block: auto var(--gp-map-inset);
+      inset-inline: var(--gp-map-inset);
+      width: auto;
+      max-block-size: 60%;
+    }
+
+    .gp-home-map-selected-handle {
+      display: block;
+      width: var(--gp-map-handle);
+      height: var(--gp-space-xs);
+      margin: 0 auto var(--gp-space-sm);
+      border-radius: var(--gp-radius-pill);
+      background: color-mix(in srgb, var(--gp-off-white) 28%, transparent);
+    }
+
+    .gp-home-map-selected-head {
+      padding: var(--gp-space-sm) var(--gp-space-sm) var(--gp-space-sm) var(--gp-space-md);
+    }
+
+    .gp-home-map-selected-body {
+      padding: var(--gp-space-sm) var(--gp-space-md) var(--gp-space-md);
+    }
+
+    .gp-home-map-canvas.has-selected-node .gp-home-map-list-toggle,
+    .gp-home-map-canvas.has-selected-node .gp-home-map-end-group,
+    .gp-home-map-canvas.has-selected-node .gp-home-map-controls > .gp-home-map-freshness {
+      visibility: hidden;
+    }
+  }
+
   /* Owner edit-link request — neutral on every outcome. */
-  .gp-home-map-update { margin-top: 8px; }
+  .gp-home-map-update { margin: 0; }
   .gp-home-map-update[hidden] { display: none; }
   .gp-home-map-update-trigger {
     min-height: var(--gp-map-button);
@@ -9211,160 +9348,35 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       overscroll-behavior: contain;
     }
 
-    /* Until the bottom sheet (PRD-1438's inspector step), a selected node is
-       a compact bar over the stage's bottom, in the row's place. */
+    /* A selected node's sheet (§ 5) rises to about half the stage, as in the
+       frames, in the place of the row of controls, which steps aside until
+       it closes. Its handle, head and Close stay put while its body
+       scrolls, and its themes are one scrolling row. */
     .gp-home-map-canvas.has-selected-node .gp-home-map-control-row {
       display: none;
     }
 
-    .gp-home-map-canvas.has-selected-node .gp-home-map-selected {
-      inset-inline-start: 8px;
-      inset-inline-end: 8px;
-      inset-block-start: auto;
-      inset-block-end: 8px;
-      width: auto;
-      inline-size: auto;
-      min-width: 0;
-      max-width: none;
-      max-height: min(36cqw, 176px);
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto var(--gp-map-target);
-      grid-template-areas:
-        "name links close"
-        "list list list"
-        "edit edit edit";
-      align-items: center;
-      gap: 5px 8px;
-      overflow-y: hidden;
-      overflow-x: hidden;
-      scrollbar-width: none;
-      padding: 9px 10px 10px 12px;
-      transform: none;
-      border-radius: var(--gp-radius-lg);
-      border-color: color-mix(in srgb, var(--gp-map-member) 30%, transparent);
-      background: color-mix(in srgb, var(--gp-green-950) 97%, transparent);
-      box-shadow: 0 -14px 40px -28px color-mix(in srgb, var(--gp-green-950) 88%, transparent);
-    }
-
-    .gp-home-map-canvas.has-selected-node .gp-home-map-selected::-webkit-scrollbar {
-      display: none;
-    }
-
-    .gp-home-map-selected-close {
-      position: static;
-      grid-area: close;
-      width: var(--gp-map-target);
-      height: var(--gp-map-target);
-      justify-self: end;
-      align-self: center;
-    }
-
-    .gp-home-map-selected-name {
-      grid-area: name;
-      align-self: center;
-      padding-inline-end: 0;
-      font-size: var(--gp-body-md);
-      line-height: 1.15;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .gp-home-map-selected-links {
-      grid-area: links;
-      align-self: center;
-      flex-wrap: nowrap;
-    }
-    .gp-home-map-selected-links[hidden] { display: none; }
-    .gp-home-map-selected-link {
-      min-height: var(--gp-map-target);
-      padding-inline: 10px;
-      max-width: 96px;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .gp-home-map-selected {
+      inset-inline: var(--gp-space-sm);
+      inset-block-end: var(--gp-space-sm);
+      max-block-size: 55%;
     }
 
     .gp-home-map-selected-themes {
-      display: none;
-    }
-    .gp-home-map-selected-themes[hidden] { display: none; }
-
-    .gp-home-map-canvas.has-selected-node .gp-home-map-selected[data-selected-type='chapter'] {
-      grid-template-areas: "name links close";
-      max-height: min(22cqw, 136px);
-    }
-
-    .gp-home-map-selected[data-selected-type='chapter'] .gp-home-map-selected-links {
-      justify-self: end;
-    }
-
-    .gp-home-map-selected-kicker,
-    .gp-home-map-selected-place,
-    .gp-home-map-selected-note {
-      display: none;
-    }
-
-    .gp-home-map-selected-edge-list {
-      grid-area: list;
-    }
-    .gp-home-map-selected-edge-list:not([hidden]) {
-      display: block;
-      min-width: 0;
-      margin-top: 0;
-      padding-top: 4px;
-      border-top: 0;
-    }
-
-    .gp-home-map-selected-edge-title {
-      display: none;
-    }
-
-    .gp-home-map-selected-edge-items {
-      display: flex;
-      gap: 6px;
+      flex-wrap: nowrap;
       overflow-x: auto;
       overscroll-behavior-inline: contain;
-      padding-block-end: 2px;
+      scrollbar-width: none;
+      mask-image: var(--gp-map-edge-fade);
+      -webkit-mask-image: var(--gp-map-edge-fade);
     }
 
-    .gp-home-map-selected-edge-item {
-      display: block;
-      min-width: min(214px, 74cqw);
-      flex: 0 0 auto;
-    }
-
-    .gp-home-map-selected-edge-row {
-      min-height: var(--gp-map-target);
-      width: 100%;
-      grid-template-columns: 10px minmax(0, 1fr);
-      border-radius: var(--gp-radius-md);
-      padding-inline: 10px 12px;
-    }
-
-    .gp-home-map-selected-edge-open,
-    .gp-home-map-selected-edge-themes {
+    .gp-home-map-selected-themes::-webkit-scrollbar {
       display: none;
     }
 
-    .gp-home-map-selected-edge-name,
-    .gp-home-map-selected-edge-meta {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .gp-home-map-update {
-      grid-area: edit;
-      margin-top: 2px;
-    }
-
-    .gp-home-map-update-trigger {
-      min-height: var(--gp-map-button);
-      padding-block: 8px;
-    }
-
-    .gp-home-map-update-form {
-      gap: 8px;
+    .gp-home-map-selected-link {
+      min-height: var(--gp-map-target);
     }
   }
 </style>
