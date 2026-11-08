@@ -792,6 +792,69 @@ test('location integrity migration keeps confirmations and repairs auditable and
   assert.match(packageJson, /db:repair:map-node-locations/);
 });
 
+// PRD-1417. The behaviour is proven on a real database by
+// `bun run test:map-node-approval-guard:db`; these checks keep the migration
+// text in step with the shared rule.
+test('approval guard migration refuses approving a node at a point the map cannot show, and is safe to rerun', async () => {
+  const migrationFiles = (await readdir(new URL('../packages/agent/migrations', import.meta.url)))
+    .filter((file) => file.endsWith('.sql'));
+  const guardSql = await readFile(
+    new URL('../packages/agent/migrations/032_map_node_approval_guard.sql', import.meta.url),
+    'utf8'
+  );
+  const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+  const code = guardSql.replace(/^\s*--.*$/gm, '');
+
+  assert.equal(migrationFiles.includes('032_map_node_approval_guard.sql'), true);
+
+  // A trigger on the submissions table, run for every write that can leave an
+  // approved node somewhere new: an insert, or an update naming status,
+  // latitude or longitude (migration 007 applies update requests that way).
+  assert.match(code, /create or replace function intake\.map_node_approval_guard\(\)/);
+  assert.match(code, /drop trigger if exists map_node_submissions_approval_guard\s+on intake\.map_node_submissions;/);
+  assert.match(
+    code,
+    /create trigger map_node_submissions_approval_guard\s+before insert or update of status, latitude, longitude\s+on intake\.map_node_submissions\s+for each row\s+execute function intake\.map_node_approval_guard\(\);/
+  );
+  assert.ok(
+    code.indexOf('drop trigger if exists map_node_submissions_approval_guard') < code.indexOf('create trigger map_node_submissions_approval_guard')
+  );
+  assert.match(code, /if new\.status is distinct from 'approved'::intake\.map_node_status then\s+return new;/);
+
+  // Not a CHECK, which would also refuse declining or archiving a 0,0 row.
+  assert.doesNotMatch(code, /\badd constraint\b/i);
+  assert.doesNotMatch(code, /\bcheck\s*\(/i);
+
+  // The same problems as the shared rule, judged in the same order.
+  assert.match(code, /when new\.latitude is null\s+or new\.longitude is null/);
+  assert.match(code, /when abs\(new\.latitude\) > 90 then 'latitude_out_of_range'/);
+  assert.match(code, /when abs\(new\.longitude\) > 180 then 'longitude_out_of_range'/);
+  assert.match(code, /when new\.latitude = 0 and new\.longitude = 0 then 'null_island'/);
+  const sharedProblems = Object.keys(MAP_COORDINATE_PROBLEM_MESSAGES);
+  assert.deepEqual(sharedProblems, ['missing', 'latitude_out_of_range', 'longitude_out_of_range', 'null_island']);
+  const positions = sharedProblems.map((problem) => code.indexOf(`then '${problem}'`));
+  assert.equal(positions.every((position) => position >= 0), true, 'the guard names every shared coordinate problem');
+  assert.deepEqual([...positions].sort((a, b) => a - b), positions, 'the guard checks the problems in the shared order');
+  assert.equal(getMapCoordinateProblem(0.0000001, 0), 'null_island');
+
+  // Edge points stay allowed: the database can't tell a confirmed place on the
+  // 180th meridian from a pin clamped to the edge.
+  assert.doesNotMatch(code, />=\s*(90|180)\b/);
+  assert.doesNotMatch(code, /abs\(new\.(latitude|longitude)\)\s*=\s*(90|180)\b/);
+  assert.equal(getMapCoordinateProblem(-16.8, 180), null);
+
+  // A readable refusal that names the node and the problem, never its stored point.
+  assert.match(code, /errcode = 'check_violation'/);
+  assert.match(code, /detail = 'map_node_invalid_coordinates: ' \|\| problem/);
+  assert.match(code, /'Map node %s can''t be approved: %s, so the public map can''t show it\.'/);
+  assert.doesNotMatch(code, /format\([^;]*new\.(latitude|longitude)/s);
+
+  assert.equal(
+    packageJson.scripts['test:map-node-approval-guard:db'],
+    'bun run build:packages && bun --no-env-file scripts/map-node-approval-guard.integration.ts'
+  );
+});
+
 test('edit-token and update-request migration is replay-safe and public/private aware', async () => {
   const migrationFiles = (await readdir(new URL('../packages/agent/migrations', import.meta.url)))
     .filter((file) => file.endsWith('.sql'))
