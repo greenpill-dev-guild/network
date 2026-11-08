@@ -6,6 +6,7 @@ import {
   DIRECTUS_CHAPTER_IMAGE_FOLDER_ID,
   createDirectusClient,
 } from './directus-operational-content-setup.ts';
+import { formGroupAliases } from './directus-form-groups.ts';
 
 type SmokeOptions = {
   chapter: string;
@@ -232,9 +233,13 @@ export async function assertStewardFormsReadable(steward) {
       meta?: { group?: string | null } | null;
     }>;
     const readable = new Set(fields.map((field) => field.field));
-    const unreadableGroups = [...new Set(fields
-      .map((field) => field.meta?.group)
-      .filter((group): group is string => Boolean(group) && !readable.has(group as string)))];
+    // Every group the Studio setup creates, and any group a readable field
+    // names: a group hidden together with all its members leaves no trace in
+    // the fields the steward can read.
+    const unreadableGroups = [...new Set([
+      ...formGroupAliases(collection),
+      ...fields.map((field) => field.meta?.group).filter((group): group is string => Boolean(group)),
+    ])].filter((group) => !readable.has(group));
     if (unreadableGroups.length > 0) {
       throw new Error(
         `Stewards cannot read the ${collection} form group(s) ${unreadableGroups.join(', ')}, so Data Studio hides the fields in them. Re-run directus:content:setup.`
