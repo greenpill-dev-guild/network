@@ -1756,10 +1756,21 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     // filters changed. Without this the remembered node was re-focused by the
     // next poll or resize, long after the pointer had gone. A selected node
     // owns the focus state and is left alone.
+    // The pin or badge the pointer is on, as geometry decides it. The map
+    // draws hover from this class, not from :hover: a 44px hit circle can lie
+    // over a neighbour's, and the browser gives :hover to whichever paints
+    // last, while the tooltip and a click follow the nearest centre.
+    const markPointerTarget = (target: Element | null) => {
+      root.querySelectorAll('.is-pointer-target').forEach((el) => {
+        if (el !== target) el.classList.remove('is-pointer-target');
+      });
+      target?.classList.add('is-pointer-target');
+    };
     const dropPointerFocus = () => {
       const hadPointerTarget = Boolean(pointerFocusTarget || hoveredStackKey);
       pointerFocusTarget = null;
       hoveredStackKey = '';
+      markPointerTarget(null);
       if (selectedFocusTarget) return;
       if (hadPointerTarget || root.classList.contains('is-focused')) clearFocusState();
     };
@@ -2028,10 +2039,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const { pin, stack } = hoverTargetAtPointer(event);
       if (stack) {
         pointerFocusTarget = null;
+        markPointerTarget(stack.marker);
         if (hoveredStackKey !== stackKeyOf(stack.members)) showStackFocus(stack);
         return;
       }
       if (!pin) {
+        markPointerTarget(null);
         if (pointerFocusTarget || hoveredStackKey) {
           pointerFocusTarget = null;
           hoveredStackKey = '';
@@ -2039,6 +2052,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         }
         return;
       }
+      markPointerTarget(pin);
       if (pin === pointerFocusTarget) return;
       hoveredStackKey = '';
       pointerFocusTarget = pin;
@@ -3692,7 +3706,17 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         });
         moved = true;
       });
-      if (moved && lastThreadInputs) renderDynamicThreads(lastThreadInputs.nodes, lastThreadInputs.edges);
+      if (!moved) return;
+      if (lastThreadInputs) renderDynamicThreads(lastThreadInputs.nodes, lastThreadInputs.edges);
+      // What is drawn at a pin follows it: the selected node's coloured web
+      // and its card, and the tooltip of the node it shows.
+      const selectedId = selectedFocusTarget?.getAttribute('data-node-id') || '';
+      if (selectedId) markSelectedThreads(selectedId);
+      syncSelectedOverlay();
+      const shown = activeFocusNodeId
+        ? root.querySelector(`.gp-home-map-node-link[data-node-id="${CSS.escape(activeFocusNodeId)}"]`)
+        : null;
+      if (shown) setFocus(shown);
     };
     const isChapterPin = (pin: ClusterMember) => pin.el.classList.contains('is-chapter');
     const isStewardPin = (pin: ClusterMember) => filterTypeFor(pin.el.getAttribute('data-node-type')) === 'steward';
@@ -3740,9 +3764,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     // with, or the places its people gave. Pins the drawing's edge moved
     // together are not "at" one another, so their true points decide.
     const stackWhere = (members: ClusterMember[], chapters: ClusterMember[]) => {
-      const sharedChapters = chapters.filter((chapter) => (
-        members.some((member) => pointsWithin(member.truePoint, chapter.truePoint, OVERLAP_STACK_RADIUS))
-      ));
+      // Every person must truly share a chapter's spot for the stack to be
+      // "at" chapters; the chapters named are the ones they share.
+      const sharesSpot = (member: ClusterMember, chapter: ClusterMember) => (
+        pointsWithin(member.truePoint, chapter.truePoint, OVERLAP_STACK_RADIUS)
+      );
+      const sharedChapters = members.every((member) => chapters.some((chapter) => sharesSpot(member, chapter)))
+        ? chapters.filter((chapter) => members.some((member) => sharesSpot(member, chapter)))
+        : [];
       if (sharedChapters.length) {
         return `at ${listLabel(sharedChapters.map(pinName), 2, (n) => `${n} more ${n === 1 ? 'chapter' : 'chapters'}`)}`;
       }
@@ -4288,6 +4317,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (pointerFocusTarget?.classList.contains('is-clustered')) {
         pointerFocusTarget = null;
         clearFocus();
+        markPointerTarget(null);
       }
 
       // What is still drawn, so badges can be placed beside it rather than on it.
@@ -5936,7 +5966,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     fill: var(--gp-map-chapter);
     opacity: 0.16;
   }
-  .gp-home-map-node-link.is-chapter:hover .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-chapter.is-pointer-target .gp-home-map-node-halo,
   .gp-home-map-node-link.is-chapter:focus-visible .gp-home-map-node-halo,
   .gp-home-map-node-link.is-chapter.is-selected .gp-home-map-node-halo {
     opacity: 0.42;
@@ -5960,7 +5990,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     fill: none;
     stroke: transparent;
   }
-  .gp-home-map-node-link.is-steward:hover .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-steward.is-pointer-target .gp-home-map-node-halo,
   .gp-home-map-node-link.is-steward:focus-visible .gp-home-map-node-halo {
     opacity: 0.5;
   }
@@ -5988,13 +6018,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     opacity: 0.14;
     transition: opacity 240ms cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .gp-home-map-node-link.is-member:hover .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-member.is-pointer-target .gp-home-map-node-halo,
   .gp-home-map-node-link.is-member:focus-visible .gp-home-map-node-halo,
   .gp-home-map-node-link.is-member.is-selected .gp-home-map-node-halo,
-  .gp-home-map-node-link.is-project:hover .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-project.is-pointer-target .gp-home-map-node-halo,
   .gp-home-map-node-link.is-project:focus-visible .gp-home-map-node-halo,
   .gp-home-map-node-link.is-project.is-selected .gp-home-map-node-halo,
-  .gp-home-map-node-link.is-place:hover .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-place.is-pointer-target .gp-home-map-node-halo,
   .gp-home-map-node-link.is-place:focus-visible .gp-home-map-node-halo,
   .gp-home-map-node-link.is-place.is-selected .gp-home-map-node-halo {
     opacity: 0.46;
@@ -6012,7 +6042,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     stroke-dasharray: 0.9 0.75;
     opacity: 0.95;
   }
-  .gp-home-map-node-link.is-owned:hover .gp-home-map-node-owner-ring,
+  .gp-home-map-node-link.is-owned.is-pointer-target .gp-home-map-node-owner-ring,
   .gp-home-map-node-link.is-owned:focus-visible .gp-home-map-node-owner-ring,
   .gp-home-map-node-link.is-owned.is-selected .gp-home-map-node-owner-ring {
     stroke-width: 0.48;
@@ -6098,11 +6128,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     pointer-events: none;
     user-select: none;
   }
-  .gp-home-map-overlap-stack:hover .gp-home-map-overlap-halo,
+  .gp-home-map-overlap-stack.is-pointer-target .gp-home-map-overlap-halo,
   .gp-home-map-overlap-stack:focus-visible .gp-home-map-overlap-halo {
     opacity: 0.42;
   }
-  .gp-home-map-overlap-stack:hover .gp-home-map-overlap-disc,
+  .gp-home-map-overlap-stack.is-pointer-target .gp-home-map-overlap-disc,
   .gp-home-map-overlap-stack:focus-visible .gp-home-map-overlap-disc {
     stroke: var(--gp-primary);
     stroke-width: 2px;

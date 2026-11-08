@@ -2945,7 +2945,11 @@ test('home map labels and hit targets: chapter labels at rest, 44px pins and bad
   const placePins = component.match(/const placePinsInsideDrawing = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
   assert.match(placePins, /const inset = pinHitRadius\(\);/);
   assert.match(placePins, /const drawn = clampPinToDrawing\(\{ x, y \}, inset\);/);
-  assert.match(placePins, /if \(moved && lastThreadInputs\) renderDynamicThreads\(lastThreadInputs\.nodes, lastThreadInputs\.edges\);/);
+  assert.match(placePins, /if \(!moved\) return;\s*if \(lastThreadInputs\) renderDynamicThreads\(lastThreadInputs\.nodes, lastThreadInputs\.edges\);/);
+  // What is drawn at a moved pin follows it: the selected web and card, and
+  // the tooltip of the node it shows (Codex on #60).
+  assert.match(placePins, /if \(selectedId\) markSelectedThreads\(selectedId\);\s*syncSelectedOverlay\(\);/);
+  assert.match(placePins, /const shown = activeFocusNodeId\s*\? root\.querySelector\([^\n]*\)\s*: null;\s*if \(shown\) setFocus\(shown\);/);
   assert.match(component, /if \(!dynamicThreadsGroup\) return;\s*lastThreadInputs = \{ nodes: rawNodes, edges: rawEdges \};/);
 
   // § 5: "pins and badges stay at least 44px at every map size (their hit
@@ -2997,7 +3001,17 @@ test('home map labels and hit targets: chapter labels at rest, 44px pins and bad
   // another (CodeRabbit on #60).
   assert.match(component, /type ClusterMember = \{ el: Element; key: string; center: MapPoint; truePoint: MapPoint \};/);
   assert.match(component, /out\.push\(\{ el, key, center, truePoint: mapX !== null && mapY !== null \? \{ x: mapX, y: mapY \} : center \}\);/);
-  assert.match(component, /const sharedChapters = chapters\.filter\(\(chapter\) => \(\s*members\.some\(\(member\) => pointsWithin\(member\.truePoint, chapter\.truePoint, OVERLAP_STACK_RADIUS\)\)\s*\)\);/);
+  // Every person in the stack must share a chapter's spot, not just one
+  // (Codex on #60).
+  assert.match(component, /const sharedChapters = members\.every\(\(member\) => chapters\.some\(\(chapter\) => sharesSpot\(member, chapter\)\)\)\s*\? chapters\.filter\(\(chapter\) => members\.some\(\(member\) => sharesSpot\(member, chapter\)\)\)\s*: \[\];/);
+  // Hover is drawn from the pin or badge geometry picked, never from :hover,
+  // which an overlapping 44px hit circle can give to a neighbour (Codex on #60).
+  assert.match(component, /const markPointerTarget = \(target: Element \| null\) => \{/);
+  assert.match(component, /markPointerTarget\(pin\);\s*if \(pin === pointerFocusTarget\) return;/);
+  assert.match(component, /pointerFocusTarget = null;\s*markPointerTarget\(stack\.marker\);/);
+  assert.doesNotMatch(component, /\.gp-home-map-node-link[^{]*:hover|\.gp-home-map-overlap-stack:hover/);
+  assert.match(component, /\.gp-home-map-node-link\.is-chapter\.is-pointer-target \.gp-home-map-node-halo,/);
+  assert.match(component, /\.gp-home-map-overlap-stack\.is-pointer-target \.gp-home-map-overlap-disc,/);
   assert.match(component, /return sameSpot \? 'at the same spot' : 'close together';/);
   assert.match(component, /const chapterLabelText = \(name: string\) => name\.replace\(\/\^Greenpill\\s\+\/i, ''\) \|\| name;/);
   assert.match(component, /'\.gp-home-map-theme-strip',[\s\S]*?'\.gp-home-map-legend',[\s\S]*?'\.gp-home-map-end-group',[\s\S]*?'\.gp-home-map-list-drawer',/);
