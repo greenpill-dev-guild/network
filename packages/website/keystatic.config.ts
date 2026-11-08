@@ -460,7 +460,7 @@ export default config({
             levelLabel: fields.text({ label: 'Level Label' }),
             surfaceType: fields.select({
               label: 'Surface Type',
-              description: 'Telegram and Steward Call steps link to their Social Links entry, so their CTA URL stays empty.',
+              description: 'Telegram and Steward Call steps link to their Social Links entry, so their CTA URL stays empty. The Email step shows the newsletter signup form; its CTA is the Paragraph link the form offers when it cannot finish a signup.',
               options: [
                 { label: 'Email', value: 'email' },
                 { label: 'Telegram', value: 'telegram' },

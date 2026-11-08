@@ -1,11 +1,15 @@
 ---
 interface Props {
+  id?: string;
   placeholder?: string;
   label?: string;
-  name?: string;
+  /** `null` leaves the field out of a native form submission. */
+  name?: string | null;
   class?: string;
   autocomplete?: string;
   required?: boolean;
+  maxlength?: number;
+  spellcheck?: 'true' | 'false';
   'aria-describedby'?: string;
 }
 
@@ -63,5 +67,10 @@ const classes = ['gp-email-field', className].filter(Boolean).join(' ');
 
   .gp-email-field input:focus {
     border-color: var(--gp-primary);
+  }
+
+  /* After the focus rule, so a field marked invalid keeps its error border. */
+  .gp-email-field input[aria-invalid='true'] {
+    border-color: var(--gp-error);
   }
 </style>

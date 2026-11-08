@@ -40,11 +40,26 @@ import {
   PUBLIC_MAP_STATE_ROUTE,
 } from '@greenpill-network/agent/map-state';
 import {
+  NEWSLETTER_SUBSCRIBE_RATE_LIMIT,
   NEWSLETTER_SUBSCRIBE_ROUTE,
-  RESEND_CONTACTS_ENDPOINT,
-  RESEND_CONTACTS_USER_AGENT,
+  PARAGRAPH_SUBSCRIBERS_ENDPOINT,
+  PARAGRAPH_SUBSCRIBE_USER_AGENT,
+  createNewsletterRateLimiter,
+  createNewsletterRepository,
   subscribeToNewsletter,
 } from '@greenpill-network/agent/newsletter';
+import {
+  NEWSLETTER_EMAIL_MAX_LENGTH,
+  NEWSLETTER_SUBSCRIBE_ERRORS,
+  NEWSLETTER_SUBSCRIBE_ROUTE as SHARED_NEWSLETTER_SUBSCRIBE_ROUTE,
+  NEWSLETTER_SUBSCRIBE_STATUSES,
+  NEWSLETTER_TRAP_FIELD,
+  assertPublicNewsletterSubscribeResponse,
+  isValidNewsletterEmail,
+  normalizeNewsletterEmail,
+  readNewsletterSubscribeRequest,
+  readNewsletterSubscribeResponse,
+} from '@greenpill-network/shared/newsletter';
 import {
   buildDirectusAssetUrl,
   getPublicOperationalContentSnapshot,
@@ -1439,129 +1454,365 @@ test('a withheld chapter image alert says the chapter is still published', async
 const RESEND_TEST_WEBHOOK_SECRET = `whsec_${Buffer.from('test-resend-webhook-secret').toString('base64')}`;
 const RESEND_TEST_RECIPIENT_HASH_SECRET = 'test-recipient-hash-secret';
 
-test('newsletter subscribe route wires POST requests through the agent app', async () => {
+const PARAGRAPH_TEST_ENV = { PARAGRAPH_API_KEY: 'paragraph-test-key' };
+const NEWSLETTER_RAW_EMAIL = 'Person@Example.org';
+const NEWSLETTER_SUBSCRIBED = { status: 200, body: { ok: true, status: 'subscribed' } };
+const NEWSLETTER_INVALID = { status: 400, body: { ok: false, error: 'invalid_email' } };
+const NEWSLETTER_UNAVAILABLE = { status: 502, body: { ok: false, error: 'newsletter_unavailable' } };
+
+function paragraphFetch(status, body, calls = []) {
+  return async (url, options) => {
+    calls.push({ url, options });
+    return new Response(body === undefined ? null : JSON.stringify(body), {
+      status,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+}
+
+function postNewsletter(app, body, headers = {}) {
+  return app.request(NEWSLETTER_SUBSCRIBE_ROUTE, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...headers },
+    body: typeof body === 'string' ? body : JSON.stringify(body),
+  });
+}
+
+test('newsletter contract accepts only exact public bodies', () => {
+  assert.equal(SHARED_NEWSLETTER_SUBSCRIBE_ROUTE, '/newsletter/subscribe');
+  assert.equal(NEWSLETTER_SUBSCRIBE_ROUTE, SHARED_NEWSLETTER_SUBSCRIBE_ROUTE);
+
+  const publicBodies = [
+    ...NEWSLETTER_SUBSCRIBE_STATUSES.map((status) => ({ ok: true, status })),
+    ...NEWSLETTER_SUBSCRIBE_ERRORS.map((error) => ({ ok: false, error })),
+  ];
+  assert.equal(publicBodies.length, 6);
+  for (const body of publicBodies) {
+    assert.deepEqual(assertPublicNewsletterSubscribeResponse(body), body);
+    assert.deepEqual(readNewsletterSubscribeResponse(body), body);
+  }
+
+  // Extra keys (an echoed address, a provider message), unknown values and
+  // non-objects never pass, and the website reads them as unavailable.
+  for (const body of [
+    null,
+    undefined,
+    'subscribed',
+    [],
+    {},
+    { ok: true },
+    { ok: 'true', status: 'subscribed' },
+    { ok: true, status: 'pending' },
+    { ok: false, error: 'provider_error' },
+    { ok: true, status: 'subscribed', email: 'person@example.org' },
+    { ok: false, error: 'invalid_email', message: 'person@example.org is invalid' },
+  ]) {
+    assert.throws(() => assertPublicNewsletterSubscribeResponse(body), /does not match the signup contract/);
+    assert.deepEqual(readNewsletterSubscribeResponse(body), { ok: false, error: 'newsletter_unavailable' });
+  }
+});
+
+test('newsletter contract reads signup requests and checks addresses', () => {
+  assert.equal(NEWSLETTER_TRAP_FIELD, 'website');
+  assert.equal(NEWSLETTER_EMAIL_MAX_LENGTH, 254);
+
+  assert.deepEqual(
+    readNewsletterSubscribeRequest({ email: ' Person@Example.ORG ', website: '' }),
+    { email: 'person@example.org', trapFilled: false }
+  );
+  for (const website of [undefined, null, '', '   ']) {
+    assert.equal(readNewsletterSubscribeRequest({ email: 'a@b.co', website }).trapFilled, false);
+  }
+  for (const website of ['https://spam.example', 0, false, {}]) {
+    assert.equal(readNewsletterSubscribeRequest({ email: 'a@b.co', website }).trapFilled, true);
+  }
+  for (const input of [null, undefined, 'person@example.org', ['person@example.org'], { email: 42 }]) {
+    assert.deepEqual(readNewsletterSubscribeRequest(input), { email: '', trapFilled: false });
+  }
+
+  assert.equal(normalizeNewsletterEmail(' Person@Example.ORG '), 'person@example.org');
+  assert.equal(isValidNewsletterEmail('person@example.org'), true);
+  assert.equal(isValidNewsletterEmail(`${'a'.repeat(242)}@example.org`), true);
+  assert.equal(isValidNewsletterEmail(`${'a'.repeat(243)}@example.org`), false);
+  for (const value of ['', 'person', 'person@', '@example.org', 'person@example', 'per son@example.org', 42, null]) {
+    assert.equal(isValidNewsletterEmail(value), false, `rejects ${String(value)}`);
+  }
+});
+
+test('newsletter subscribe route passes the JSON body and client IP to the repository', async () => {
   const calls = [];
   const app = createAgentApp({
     newsletterRepository: {
-      async subscribe(input) {
-        calls.push(input);
-        return {
-          status: 200,
-          body: { ok: true, status: 'subscribed' },
-        };
+      async subscribe(input, context) {
+        calls.push({ input, context });
+        return { status: 200, body: { ok: true, status: 'subscribed' } };
       },
     },
   });
 
-  const response = await app.request(NEWSLETTER_SUBSCRIBE_ROUTE, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ email: 'person@example.org' }),
-  });
+  const response = await postNewsletter(
+    app,
+    { email: 'person@example.org', website: '' },
+    { 'fly-client-ip': '203.0.113.7' }
+  );
 
   assert.equal(response.status, 200);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
   assert.deepEqual(await response.json(), { ok: true, status: 'subscribed' });
-  assert.deepEqual(calls, [{ email: 'person@example.org' }]);
+  assert.deepEqual(calls, [{
+    input: { email: 'person@example.org', website: '' },
+    context: { rateLimitKey: '203.0.113.7' },
+  }]);
 });
 
-test('newsletter subscribe rejects invalid emails before contacting Resend', async () => {
-  let fetchCalls = 0;
-  const result = await subscribeToNewsletter({ email: 'not-an-email' }, {
-    env: { RESEND_API_KEY: 'resend-secret' },
-    fetchImpl: async () => {
-      fetchCalls += 1;
-      return Response.json({});
+test('newsletter subscribe route reads only small JSON object bodies', async () => {
+  const seen = [];
+  const app = createAgentApp({
+    newsletterRepository: {
+      async subscribe(input) {
+        seen.push(input);
+        return { status: 400, body: { ok: false, error: 'invalid_email' } };
+      },
     },
   });
 
-  assert.equal(result.status, 400);
-  assert.deepEqual(result.body, { ok: false, error: 'invalid_email' });
-  assert.equal(fetchCalls, 0);
+  const responses = [
+    // A form post skips the CORS preflight, so it is not read.
+    await app.request(NEWSLETTER_SUBSCRIBE_ROUTE, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: 'email=person%40example.org',
+    }),
+    await postNewsletter(app, { email: 'person@example.org', website: 'x'.repeat(4096) }),
+    await postNewsletter(app, '{"email":'),
+    await postNewsletter(app, '["person@example.org"]'),
+  ];
+
+  for (const response of responses) {
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), { ok: false, error: 'invalid_email' });
+  }
+  assert.deepEqual(seen, [{}, {}, {}, {}]);
 });
 
-test('newsletter subscribe reports missing Resend config without calling provider', async () => {
-  let fetchCalls = 0;
-  const result = await subscribeToNewsletter({ email: 'person@example.org' }, {
-    env: {},
-    fetchImpl: async () => {
-      fetchCalls += 1;
-      return Response.json({});
+test('newsletter subscribe route answers only with the public contract', async () => {
+  const leaky = createAgentApp({
+    newsletterRepository: {
+      async subscribe() {
+        return { status: 200, body: { ok: true, status: 'subscribed', email: 'person@example.org' } as any };
+      },
+    },
+  });
+  const failing = createAgentApp({
+    newsletterRepository: {
+      async subscribe() {
+        throw new Error('provider exploded for person@example.org');
+      },
     },
   });
 
-  assert.equal(result.status, 503);
-  assert.deepEqual(result.body, { ok: false, error: 'newsletter_not_configured' });
-  assert.equal(fetchCalls, 0);
+  for (const app of [leaky, failing]) {
+    const response = await postNewsletter(app, { email: 'person@example.org' });
+    const text = await response.text();
+    assert.equal(response.status, 502);
+    assert.deepEqual(JSON.parse(text), { ok: false, error: 'newsletter_unavailable' });
+    assert.doesNotMatch(text, /person@example\.org/);
+  }
 });
 
-test('newsletter subscribe creates a Resend contact with Garden metadata', async () => {
-  let request;
-  const result = await subscribeToNewsletter({ email: ' Person@Example.ORG ' }, {
-    env: {
-      RESEND_API_KEY: 'resend-secret',
-      RESEND_NEWSLETTER_SEGMENT_ID: 'seg_123',
-      RESEND_NEWSLETTER_TOPIC_ID: 'topic_456',
-    },
-    fetchImpl: async (url, options) => {
-      request = { url, options };
-      return Response.json({ object: 'contact', id: 'contact_1' });
-    },
-  });
-
-  assert.equal(result.status, 200);
-  assert.deepEqual(result.body, { ok: true, status: 'subscribed' });
-  assert.equal(request.url, RESEND_CONTACTS_ENDPOINT);
-  assert.equal(request.options.method, 'POST');
-  assert.equal(request.options.headers.authorization, 'Bearer resend-secret');
-  assert.equal(request.options.headers['content-type'], 'application/json');
-  assert.equal(request.options.headers['user-agent'], RESEND_CONTACTS_USER_AGENT);
-  assert.deepEqual(JSON.parse(request.options.body), {
-    email: 'person@example.org',
-    unsubscribed: false,
-    properties: {
-      source: 'garden',
-      signup_path: '/garden',
-    },
-    segments: [{ id: 'seg_123' }],
-    topics: [{ id: 'topic_456', subscription: 'opt_in' }],
-  });
-});
-
-test('newsletter subscribe treats existing contacts as public success', async () => {
-  const result = await subscribeToNewsletter({ email: 'person@example.org' }, {
-    env: { RESEND_API_KEY: 'resend-secret' },
-    fetchImpl: async () => new Response(JSON.stringify({
-      error: { message: 'Contact already exists.' },
-    }), {
-      status: 409,
-      headers: { 'content-type': 'application/json' },
+test('newsletter subscribe route limits each client IP and sends Retry-After', async () => {
+  const calls = [];
+  const app = createAgentApp({
+    newsletterRepository: createNewsletterRepository({
+      env: PARAGRAPH_TEST_ENV,
+      fetchImpl: paragraphFetch(200, { success: true }, calls),
+      rateLimiter: createNewsletterRateLimiter({ limit: 2, windowMs: 60_000 }),
+      reportFailure: () => assert.fail('no provider failure expected'),
     }),
   });
+  const post = (ip, body: Record<string, unknown> = { email: 'person@example.org' }) =>
+    postNewsletter(app, body, { 'fly-client-ip': ip });
 
-  assert.equal(result.status, 200);
-  assert.deepEqual(result.body, { ok: true, status: 'subscribed' });
+  // Every attempt counts, including one the agent refuses itself.
+  assert.equal((await post('203.0.113.7', { email: 'not-an-email' })).status, 400);
+  assert.equal((await post('203.0.113.7')).status, 200);
+
+  const limited = await post('203.0.113.7');
+  assert.equal(limited.status, 429);
+  assert.deepEqual(await limited.json(), { ok: false, error: 'newsletter_rate_limited' });
+  const retryAfter = Number(limited.headers.get('retry-after'));
+  assert.ok(retryAfter >= 1 && retryAfter <= 60, `Retry-After ${retryAfter}`);
+
+  // Another network keeps its own allowance.
+  assert.equal((await post('198.51.100.4')).status, 200);
+  assert.equal(calls.length, 2);
 });
 
-test('newsletter subscribe responses do not leak raw email addresses', async () => {
-  const rawEmail = 'Person@Example.org';
-  const invalid = await subscribeToNewsletter({ email: rawEmail }, {
-    env: {},
-  });
-  assert.doesNotMatch(JSON.stringify(invalid.body), /Person@Example\.org/i);
+test('newsletter rate limiter counts a fixed window per key and stays bounded', () => {
+  let now = 1_000_000;
+  const limiter = createNewsletterRateLimiter({ limit: 1, windowMs: 10_000, maxKeys: 2, now: () => now });
 
-  const providerFailure = await subscribeToNewsletter({ email: rawEmail }, {
-    env: { RESEND_API_KEY: 'resend-secret' },
-    fetchImpl: async () => new Response(JSON.stringify({
-      message: `Provider rejected ${rawEmail}`,
-    }), {
-      status: 500,
-      headers: { 'content-type': 'application/json' },
+  assert.deepEqual(limiter.take('203.0.113.7'), { allowed: true });
+  assert.deepEqual(limiter.take('203.0.113.7'), { allowed: false, retryAfterSeconds: 10 });
+  now += 4_000;
+  assert.deepEqual(limiter.take('203.0.113.7'), { allowed: false, retryAfterSeconds: 6 });
+  now += 6_000;
+  assert.deepEqual(limiter.take('203.0.113.7'), { allowed: true }, 'a new window opens');
+
+  // A blank key shares the anonymous allowance.
+  assert.deepEqual(limiter.take(''), { allowed: true });
+  assert.deepEqual(limiter.take('anonymous'), { allowed: false, retryAfterSeconds: 10 });
+
+  // Full of live windows, the limiter forgets the oldest key instead of growing.
+  assert.deepEqual(limiter.take('198.51.100.4'), { allowed: true });
+  assert.deepEqual(limiter.take('203.0.113.7'), { allowed: true }, 'the evicted key starts over');
+
+  assert.equal(NEWSLETTER_SUBSCRIBE_RATE_LIMIT.limit, 10);
+  assert.equal(NEWSLETTER_SUBSCRIBE_RATE_LIMIT.windowMs, 10 * 60 * 1000);
+});
+
+test('newsletter subscribe adds the address to Paragraph with the publication key', async () => {
+  const calls = [];
+  const result = await subscribeToNewsletter({ email: ' Person@Example.ORG ', website: '' }, {
+    env: PARAGRAPH_TEST_ENV,
+    fetchImpl: paragraphFetch(200, { success: true }, calls),
+    reportFailure: () => assert.fail('no provider failure expected'),
+  });
+
+  assert.deepEqual(result, NEWSLETTER_SUBSCRIBED);
+  assert.equal(PARAGRAPH_SUBSCRIBERS_ENDPOINT, 'https://public.api.paragraph.com/api/v1/subscribers');
+  assert.equal(calls.length, 1);
+  const [{ url, options }] = calls;
+  assert.equal(url, PARAGRAPH_SUBSCRIBERS_ENDPOINT);
+  assert.equal(options.method, 'POST');
+  assert.deepEqual(options.headers, {
+    accept: 'application/json',
+    authorization: 'Bearer paragraph-test-key',
+    'content-type': 'application/json',
+    'user-agent': PARAGRAPH_SUBSCRIBE_USER_AGENT,
+  });
+  assert.deepEqual(JSON.parse(options.body), { email: 'person@example.org' });
+  assert.ok(options.signal instanceof AbortSignal, 'the Paragraph call has a timeout');
+});
+
+test('newsletter subscribe maps every Paragraph answer to a public result', async () => {
+  const providerBody = (status) => ({ success: false, msg: `Paragraph said ${status} for ${NEWSLETTER_RAW_EMAIL}` });
+  // Only the answers Paragraph documents for this endpoint get a meaning:
+  // 200 {"success": true} and 400. Everything else is unconfirmed, and the
+  // form offers the Paragraph link instead of claiming an outcome.
+  const cases = [
+    { status: 200, body: { success: true }, expected: NEWSLETTER_SUBSCRIBED, reported: false },
+    { status: 400, body: providerBody(400), expected: NEWSLETTER_INVALID, reported: true },
+    { status: 200, body: providerBody(200), expected: NEWSLETTER_UNAVAILABLE, reported: true },
+    { status: 200, body: {}, expected: NEWSLETTER_UNAVAILABLE, reported: true },
+    { status: 200, body: { success: 'true' }, expected: NEWSLETTER_UNAVAILABLE, reported: true },
+    { status: 200, body: undefined, expected: NEWSLETTER_UNAVAILABLE, reported: true },
+    // Undocumented answers: a 409 is not read as "already subscribed", and
+    // no other 2xx or 4xx is read as a signup or a refused address.
+    { status: 201, body: { success: true }, expected: NEWSLETTER_UNAVAILABLE, reported: true },
+    { status: 201, body: undefined, expected: NEWSLETTER_UNAVAILABLE, reported: true },
+    { status: 204, body: undefined, expected: NEWSLETTER_UNAVAILABLE, reported: true },
+    { status: 409, body: { success: false, msg: `Subscriber ${NEWSLETTER_RAW_EMAIL} already exists` }, expected: NEWSLETTER_UNAVAILABLE, reported: true },
+    { status: 422, body: providerBody(422), expected: NEWSLETTER_UNAVAILABLE, reported: true },
+    ...[401, 403, 404, 429, 500, 503].map((status) => ({
+      status,
+      body: providerBody(status),
+      expected: NEWSLETTER_UNAVAILABLE,
+      reported: true,
+    })),
+  ];
+
+  for (const { status, body, expected, reported } of cases) {
+    const reports = [];
+    const result = await subscribeToNewsletter({ email: NEWSLETTER_RAW_EMAIL }, {
+      env: PARAGRAPH_TEST_ENV,
+      fetchImpl: paragraphFetch(status, body),
+      reportFailure: (event) => reports.push(event),
+    });
+
+    assert.deepEqual(result, expected, `Paragraph ${status}`);
+    assert.deepEqual(
+      reports,
+      reported ? [{ code: 'newsletter_subscribe_failed', reason: 'provider_status', providerStatus: status }] : [],
+      `Paragraph ${status} report`
+    );
+    assert.doesNotMatch(JSON.stringify({ result, reports }), /person@example\.org/i);
+  }
+});
+
+test('newsletter subscribe reports an unreachable or slow Paragraph as unavailable', async () => {
+  const reports = [];
+  const unreachable = await subscribeToNewsletter({ email: NEWSLETTER_RAW_EMAIL }, {
+    env: PARAGRAPH_TEST_ENV,
+    fetchImpl: async () => {
+      throw new TypeError(`fetch failed for ${NEWSLETTER_RAW_EMAIL}`);
+    },
+    reportFailure: (event) => reports.push(event),
+  });
+  const slow = await subscribeToNewsletter({ email: NEWSLETTER_RAW_EMAIL }, {
+    env: PARAGRAPH_TEST_ENV,
+    timeoutMs: 20,
+    fetchImpl: (_url, options) => new Promise<Response>((_resolve, reject) => {
+      options.signal.addEventListener('abort', () => reject(options.signal.reason), { once: true });
     }),
+    reportFailure: (event) => reports.push(event),
   });
 
-  assert.equal(providerFailure.status, 502);
-  assert.deepEqual(providerFailure.body, { ok: false, error: 'newsletter_unavailable' });
-  assert.doesNotMatch(JSON.stringify(providerFailure.body), /Person@Example\.org/i);
+  assert.deepEqual(unreachable, NEWSLETTER_UNAVAILABLE);
+  assert.deepEqual(slow, NEWSLETTER_UNAVAILABLE);
+  assert.deepEqual(reports, [
+    { code: 'newsletter_subscribe_failed', reason: 'provider_unreachable' },
+    { code: 'newsletter_subscribe_failed', reason: 'provider_unreachable' },
+  ]);
+});
+
+test('newsletter subscribe checks the honeypot, the address and the key before calling Paragraph', async () => {
+  const calls = [];
+  const fetchImpl = paragraphFetch(200, { success: true }, calls);
+
+  for (const input of [{ email: 'not-an-email' }, { email: `${'a'.repeat(243)}@example.org` }, {}, null, 'person@example.org']) {
+    assert.deepEqual(await subscribeToNewsletter(input, { env: PARAGRAPH_TEST_ENV, fetchImpl }), NEWSLETTER_INVALID);
+  }
+
+  // Without a key the route says so, and the form offers the Paragraph link.
+  for (const env of [{}, { PARAGRAPH_API_KEY: '   ' }]) {
+    assert.deepEqual(
+      await subscribeToNewsletter({ email: 'person@example.org' }, { env, fetchImpl }),
+      { status: 503, body: { ok: false, error: 'newsletter_not_configured' } }
+    );
+  }
+
+  // A filled honeypot looks like a signup and reaches no one, even with a bad address.
+  for (const input of [
+    { email: 'person@example.org', website: 'https://spam.example' },
+    { email: 'not-an-email', website: 'buy now' },
+  ]) {
+    assert.deepEqual(await subscribeToNewsletter(input, { env: PARAGRAPH_TEST_ENV, fetchImpl }), NEWSLETTER_SUBSCRIBED);
+  }
+
+  assert.equal(calls.length, 0);
+});
+
+test('newsletter subscribe failure logs carry no address', async () => {
+  const warnings = [];
+  const originalWarn = console.warn;
+  console.warn = (...args) => {
+    warnings.push(args);
+  };
+  try {
+    const result = await subscribeToNewsletter({ email: NEWSLETTER_RAW_EMAIL }, {
+      env: PARAGRAPH_TEST_ENV,
+      fetchImpl: paragraphFetch(500, { success: false, msg: `Could not add ${NEWSLETTER_RAW_EMAIL}` }),
+    });
+    assert.deepEqual(result, NEWSLETTER_UNAVAILABLE);
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  assert.deepEqual(warnings, [[
+    'newsletter_subscribe_failed',
+    { code: 'newsletter_subscribe_failed', reason: 'provider_status', providerStatus: 500 },
+  ]]);
 });
 
 function signedResendWebhookRequest(payload, {

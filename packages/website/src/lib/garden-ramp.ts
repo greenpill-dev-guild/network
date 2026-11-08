@@ -10,6 +10,10 @@
 
 const DEFAULT_HERO_CTA = { label: 'Start with Step 1', href: '#step-1' };
 
+/** Paragraph's own signup page for the Greenpill publication. */
+export const GARDEN_NEWSLETTER_PARAGRAPH_HREF = 'https://paragraph.com/@greenpill/subscribe';
+const DEFAULT_NEWSLETTER_FALLBACK = { label: 'Subscribe on Paragraph', href: GARDEN_NEWSLETTER_PARAGRAPH_HREF };
+
 export interface GardenRampCta {
   label?: string;
   href?: string;
@@ -46,6 +50,25 @@ export function gardenStepHref(step: GardenRampStep, links: GardenRampLinks): st
   if (step.surfaceType === 'telegram') return links.telegram;
   if (step.surfaceType === 'steward-call') return links.stewardCall;
   return step.cta?.href || '';
+}
+
+/**
+ * The email step shows the newsletter signup form in place of a button,
+ * wherever an editor moves it.
+ */
+export function isGardenSignupStep(step: GardenRampStep): boolean {
+  return step.surfaceType === 'email';
+}
+
+/**
+ * The link the signup form offers when it cannot finish a signup itself (no
+ * JavaScript, the agent unreachable or not configured): the email step's own
+ * button, or Paragraph's signup page when the step has none.
+ */
+export function gardenSignupFallback(step: GardenRampStep): { label: string; href: string } {
+  const href = step.cta?.href?.trim();
+  if (!href) return { ...DEFAULT_NEWSLETTER_FALLBACK };
+  return { label: step.cta?.label?.trim() || DEFAULT_NEWSLETTER_FALLBACK.label, href };
 }
 
 /**
