@@ -50,11 +50,18 @@ guard before returning data. `/impact/chapters/:slug`, `POST /map-nodes`,
 `GET /map-nodes/public`, and `POST /newsletter/subscribe` preserve the same
 public/private boundary for impact, map-node data, and Garden newsletter signup.
 
-`POST /newsletter/subscribe` accepts a public email signup from `/garden` and
-creates a global Resend Contact with optional newsletter segment/topic metadata.
-Configure `RESEND_API_KEY` on the agent service and optionally set
-`RESEND_NEWSLETTER_SEGMENT_ID` or `RESEND_NEWSLETTER_TOPIC_ID`; never expose
-those values to the static website.
+`POST /newsletter/subscribe` takes the signup form in step 1 of the Garden ramp
+(home and `/garden`) and adds the address to the Greenpill publication on
+Paragraph with `POST https://public.api.paragraph.com/api/v1/subscribers`. Set
+the publication's API key (Paragraph: Settings, API keys) as the
+`PARAGRAPH_API_KEY` Fly secret; never expose it to the static website. Without
+the key the route answers `503 newsletter_not_configured`, and the form offers
+Paragraph's own signup page instead. The route reads only small JSON bodies,
+counts 10 attempts per client IP per 10 minutes in memory (`429
+newsletter_rate_limited` with `Retry-After`), and answers a filled honeypot
+field as a signup without calling Paragraph. It stores nothing and logs no
+address: a Paragraph failure logs only its status. The answers are the shared
+contract in `@greenpill-network/shared/newsletter`.
 
 `POST /webhooks/resend` receives Resend email delivery and inbound metadata at
 `https://agent.greenpill.network/webhooks/resend`. Set `RESEND_WEBHOOK_SECRET`

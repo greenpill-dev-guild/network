@@ -9,10 +9,13 @@ import Overline from '../../components/ui/Overline.astro';
 import SectionHeader from '../../components/ui/SectionHeader.astro';
 import Text from '../../components/ui/Text.astro';
 import GardenAssessment from '../../components/page-sections/GardenAssessment.astro';
+import NewsletterSignup from '../../components/page-sections/NewsletterSignup.astro';
 import {
   gardenHeroCta,
   gardenRampSteps,
+  gardenSignupFallback,
   gardenStepHref,
+  isGardenSignupStep,
 } from '../../lib/garden-ramp';
 
 const title = garden.title || 'Greenpill Garden';
@@ -67,6 +70,7 @@ const seoDescription = garden.seo.description || summary;
             {steps.map((step, index) => {
               const level = step.level || index + 1;
               const stepHref = gardenStepHref(step, socialLinks);
+              const signupFallback = isGardenSignupStep(step) ? gardenSignupFallback(step) : null;
               return (
                 <article class="gp-garden-step" id={`step-${level}`}>
                   <div class="gp-garden-step-index">
@@ -77,7 +81,13 @@ const seoDescription = garden.seo.description || summary;
                     <Meta items={[step.kicker || 'Garden', step.meta || 'Open path']} accentIndex={0} />
                     <Text variant="h3">{step.title}</Text>
                     <Text variant="body-sm">{step.body}</Text>
-                    {level === 3 ? (
+                    {signupFallback ? (
+                      <NewsletterSignup
+                        id="garden-newsletter"
+                        fallbackHref={signupFallback.href}
+                        fallbackLabel={signupFallback.label}
+                      />
+                    ) : level === 3 ? (
                       <GardenAssessment stewardCallHref={socialLinks.stewardCall} />
                     ) : step.cta?.label && stepHref && (
                       <div class="gp-garden-step-action">

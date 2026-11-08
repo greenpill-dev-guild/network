@@ -19,10 +19,19 @@ import {
   buildDirectusOperationalPermissionPlan,
 } from './directus-operational-content-setup.ts';
 import {
+  GARDEN_NEWSLETTER_PARAGRAPH_HREF,
   gardenHeroCta,
   gardenRampSteps,
+  gardenSignupFallback,
   gardenStepHref,
+  isGardenSignupStep,
 } from '../packages/website/src/lib/garden-ramp.ts';
+import {
+  NEWSLETTER_AGENT_ORIGIN,
+  NEWSLETTER_LOCAL_AGENT_ORIGIN,
+  newsletterSignupView,
+  newsletterSubscribeUrl,
+} from '../packages/website/src/lib/newsletter-signup.ts';
 import {
   loadChapterEnrichment,
 } from './directus-chapter-enrichment.ts';
@@ -266,6 +275,95 @@ test('the Garden ramp keeps configured steps and takes the Telegram invite and b
     href: '#step-1',
   });
   assert.deepEqual(gardenHeroCta(undefined, steps.length), { label: 'Start with Step 1', href: '#step-1' });
+});
+
+test('the Garden email step shows the signup form and falls back to Paragraph', async () => {
+  const garden = await readJson('garden.json');
+  const signupSteps = garden.steps.filter((step) => isGardenSignupStep(step));
+  assert.equal(signupSteps.length, 1, 'one email step carries the form');
+  assert.equal(signupSteps[0].level, 1);
+  assert.deepEqual(gardenSignupFallback(signupSteps[0]), {
+    label: 'Subscribe on Paragraph',
+    href: GARDEN_NEWSLETTER_PARAGRAPH_HREF,
+  });
+  assert.equal(GARDEN_NEWSLETTER_PARAGRAPH_HREF, 'https://paragraph.com/@greenpill/subscribe');
+
+  // Only the email step, wherever an editor moves it.
+  assert.equal(isGardenSignupStep({ level: 3, surfaceType: 'email' }), true);
+  assert.equal(isGardenSignupStep({ level: 1, surfaceType: 'telegram' }), false);
+  assert.equal(isGardenSignupStep({ level: 1 }), false);
+
+  // A step without its own link still offers Paragraph's page.
+  assert.deepEqual(gardenSignupFallback({ surfaceType: 'email', cta: { label: 'Join', href: '  ' } }), {
+    label: 'Subscribe on Paragraph',
+    href: GARDEN_NEWSLETTER_PARAGRAPH_HREF,
+  });
+  assert.deepEqual(gardenSignupFallback({ surfaceType: 'email', cta: null }), {
+    label: 'Subscribe on Paragraph',
+    href: GARDEN_NEWSLETTER_PARAGRAPH_HREF,
+  });
+  assert.deepEqual(gardenSignupFallback({ surfaceType: 'email', cta: { href: 'https://paragraph.com/@greenpill' } }), {
+    label: 'Subscribe on Paragraph',
+    href: 'https://paragraph.com/@greenpill',
+  });
+});
+
+test('the newsletter form posts to the agent and shows every answer', () => {
+  assert.equal(newsletterSubscribeUrl('greenpill.network'), `${NEWSLETTER_AGENT_ORIGIN}/newsletter/subscribe`);
+  assert.equal(NEWSLETTER_AGENT_ORIGIN, 'https://agent.greenpill.network');
+  for (const hostname of ['localhost', '127.0.0.1', '[::1]']) {
+    assert.equal(newsletterSubscribeUrl(hostname), `${NEWSLETTER_LOCAL_AGENT_ORIGIN}/newsletter/subscribe`);
+  }
+
+  assert.deepEqual(newsletterSignupView({ ok: true, status: 'subscribed' }), {
+    state: 'done',
+    title: "You're subscribed.",
+    body: 'New Greenpill posts will arrive in your inbox.',
+  });
+  assert.deepEqual(newsletterSignupView({ ok: true, status: 'already_subscribed' }), {
+    state: 'done',
+    title: "You're already subscribed.",
+    body: 'That address is already on the list, so new posts keep coming.',
+  });
+
+  // The address is the problem: mark the field, no Paragraph link.
+  for (const outcome of ['empty_email', { ok: false, error: 'invalid_email' }] as const) {
+    const view = newsletterSignupView(outcome);
+    assert.equal(view.state, 'error');
+    assert.equal(view.state === 'error' && view.fieldError, true);
+    assert.equal(view.state === 'error' && view.offerParagraph, false);
+  }
+
+  // This page cannot finish the signup now: offer Paragraph's own page.
+  for (const outcome of [
+    'network_error',
+    { ok: false, error: 'newsletter_not_configured' },
+    { ok: false, error: 'newsletter_unavailable' },
+    { ok: false, error: 'newsletter_rate_limited' },
+  ] as const) {
+    const view = newsletterSignupView(outcome);
+    assert.equal(view.state, 'error');
+    assert.equal(view.state === 'error' && view.fieldError, false);
+    assert.equal(view.state === 'error' && view.offerParagraph, true, JSON.stringify(outcome));
+  }
+});
+
+test('the newsletter form keeps addresses out of URLs and the honeypot out of reach', async () => {
+  const source = await readFile(join(rootDir, 'packages/website/src/components/page-sections/NewsletterSignup.astro'), 'utf8');
+  const markup = source.slice(source.indexOf('<div class:list'), source.indexOf('<script>'));
+
+  // Without JavaScript a submit goes to Paragraph's page, carrying no field.
+  assert.match(markup, /<form[^>]*action=\{fallbackHref\}[^>]*method="get"/s);
+  assert.match(markup, /<EmailInput[^>]*name=\{null\}/s);
+  assert.doesNotMatch(markup, /<input[^>]*\sname=/s);
+
+  // The honeypot is hidden from assistive technology and the tab order.
+  assert.match(markup, /class="gp-newsletter-trap" aria-hidden="true"/);
+  assert.match(markup, /<input[^>]*tabindex="-1"[^>]*data-newsletter-trap/s);
+
+  // One polite live region holds every answer, and the no-JavaScript link is there.
+  assert.equal((markup.match(/role="status"/g) ?? []).length, 1);
+  assert.match(markup, /<noscript>[\s\S]*href=\{fallbackHref\}[\s\S]*<\/noscript>/);
 });
 
 test('operational content snapshot is public-safe and derived from approved operational collections', async () => {

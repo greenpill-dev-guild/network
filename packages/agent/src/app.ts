@@ -33,6 +33,7 @@ import {
 import {
   NEWSLETTER_SUBSCRIBE_ROUTE,
   createNewsletterRepository,
+  type NewsletterRepository,
 } from './newsletter.js';
 import {
   PUBLIC_OPERATIONAL_CONTENT_ROUTE,
@@ -60,6 +61,9 @@ import {
 import {
   assertPublicMapLocationPayload,
 } from '@greenpill-network/shared/map-locations';
+import {
+  assertPublicNewsletterSubscribeResponse,
+} from '@greenpill-network/shared/newsletter';
 
 type UnknownRecord = Record<string, any>;
 
@@ -69,7 +73,7 @@ export interface AgentAppOptions {
   mapNodeRepository?: UnknownRecord;
   mapLocationRepository?: UnknownRecord;
   mapStateRepository?: UnknownRecord;
-  newsletterRepository?: UnknownRecord;
+  newsletterRepository?: NewsletterRepository;
   publicContentRepository?: UnknownRecord;
   resendWebhookRepository?: UnknownRecord;
   reportEditLinkError?: (event: UnknownRecord) => void;
@@ -101,15 +105,18 @@ function isJsonRequest(context): boolean {
 }
 
 const MODERATION_BODY_MAX_BYTES = 4096;
+// An address of at most 254 characters plus the honeypot field.
+const NEWSLETTER_BODY_MAX_BYTES = 2048;
+const NEWSLETTER_CACHE_CONTROL = 'no-store';
 
 // Stops reading once the cap is crossed, so an unauthenticated request that omits
 // content-length or uses chunked transfer encoding cannot make us buffer an arbitrary body.
 // Returns null when the body is oversized.
-async function readCappedRequestBody(context): Promise<string | null> {
+async function readCappedRequestBody(context, maxBytes: number): Promise<string | null> {
   const body = context.req.raw?.body;
   if (!body || typeof body.getReader !== 'function') {
     const rawBody = await context.req.text();
-    return new TextEncoder().encode(rawBody).byteLength > MODERATION_BODY_MAX_BYTES ? null : rawBody;
+    return new TextEncoder().encode(rawBody).byteLength > maxBytes ? null : rawBody;
   }
 
   const reader = body.getReader();
@@ -121,7 +128,7 @@ async function readCappedRequestBody(context): Promise<string | null> {
       if (done) break;
       if (!value) continue;
       total += value.byteLength;
-      if (total > MODERATION_BODY_MAX_BYTES) {
+      if (total > maxBytes) {
         await reader.cancel().catch(() => {});
         return null;
       }
@@ -140,11 +147,11 @@ async function readCappedRequestBody(context): Promise<string | null> {
   return new TextDecoder().decode(merged);
 }
 
-async function readModerationJsonObject(context): Promise<UnknownRecord | null> {
+async function readCappedJsonObject(context, maxBytes: number): Promise<UnknownRecord | null> {
   const declaredLength = Number(context.req.header('content-length'));
-  if (Number.isFinite(declaredLength) && declaredLength > MODERATION_BODY_MAX_BYTES) return null;
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) return null;
 
-  const rawBody = await readCappedRequestBody(context);
+  const rawBody = await readCappedRequestBody(context, maxBytes);
   if (rawBody === null) return null;
   try {
     const value = JSON.parse(rawBody);
@@ -155,6 +162,8 @@ async function readModerationJsonObject(context): Promise<UnknownRecord | null> 
     return null;
   }
 }
+
+const readModerationJsonObject = (context) => readCappedJsonObject(context, MODERATION_BODY_MAX_BYTES);
 
 function toRouteErrorResponse(error) {
   const response = publicErrorResponse(error);
@@ -244,16 +253,24 @@ export function createAgentApp({
     }
   });
 
+  // The signup form sends JSON. Any other body, or one over the cap, reads as
+  // an empty request and gets `invalid_email`.
   app.post(NEWSLETTER_SUBSCRIBE_ROUTE, async (context) => {
-    let input: UnknownRecord = {};
+    context.header('Cache-Control', NEWSLETTER_CACHE_CONTROL);
     try {
-      input = await context.req.json() as UnknownRecord;
+      const input = isJsonRequest(context)
+        ? await readCappedJsonObject(context, NEWSLETTER_BODY_MAX_BYTES)
+        : null;
+      const result = await newsletter.subscribe(input ?? {}, {
+        rateLimitKey: getRequestMeta(context).rateLimitKey,
+      });
+      if (result.status === 429 && result.retryAfterSeconds) {
+        context.header('Retry-After', String(result.retryAfterSeconds));
+      }
+      return context.json(assertPublicNewsletterSubscribeResponse(result.body), result.status);
     } catch {
-      input = {};
+      return context.json({ ok: false, error: 'newsletter_unavailable' }, 502);
     }
-
-    const response = await (newsletter as any).subscribe(input);
-    return context.json(response.body, response.status as any);
   });
 
   app.get(CHAPTER_IMPACT_ROUTE, async (context) => {
