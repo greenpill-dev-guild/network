@@ -2898,6 +2898,30 @@ test('home map edge pins and labels at rest: the clamp and the placement rules',
   // A label's own dot never blocks it: the gap clears the dot's circle.
   const ownDot = { center: request.anchor, radius: 1.5 };
   assert.equal(placeMapLabels([request], { circles: [ownDot], boxes: [] }, bounds)[0]?.side, 'right');
+
+  // Bounds (CodeRabbit on #60): a label never leaves the map in view. A dot
+  // on the top edge sends its label below; one in the bottom right corner,
+  // left; a name wider than the map in view hides.
+  const topEdge = { anchor: { x: 100, y: 1 }, gap: 2, width: 10, height: 3 };
+  assert.equal(placeMapLabels([topEdge], none, bounds)[0]?.side, 'below');
+  const bottomRight = { anchor: { x: 195, y: 87 }, gap: 2, width: 10, height: 3 };
+  assert.equal(placeMapLabels([bottomRight], none, bounds)[0]?.side, 'above');
+  const tooWide = { anchor: { x: 100, y: 40 }, gap: 2, width: 210, height: 3 };
+  assert.equal(placeMapLabels([tooWide], none, bounds)[0], null);
+  // Every label placed anywhere on a grid of dots, edges and corners
+  // included, lies wholly inside the bounds.
+  const view = { x: 20, y: 10, width: 120, height: 60 };
+  for (let x = view.x; x <= view.x + view.width; x += 6) {
+    for (let y = view.y; y <= view.y + view.height; y += 5) {
+      const placedLabel = placeMapLabels([{ anchor: { x, y }, gap: 2, width: 14, height: 3 }], none, view)[0];
+      if (!placedLabel) continue;
+      const { box } = placedLabel;
+      assert.ok(
+        box.x >= view.x && box.y >= view.y && box.x + box.width <= view.x + view.width && box.y + box.height <= view.y + view.height,
+        `label at ${x},${y} placed ${placedLabel.side} outside the view`
+      );
+    }
+  }
 });
 
 test('home map labels and hit targets: chapter labels at rest, 44px pins and badges, 48px text buttons', async () => {
@@ -2952,6 +2976,8 @@ test('home map labels and hit targets: chapter labels at rest, 44px pins and bad
   assert.match(layoutLabels, /const fontSize = cssPx\('--gp-label-sm', 12\) \* px;/);
   assert.match(layoutLabels, /placeMapLabels\(/);
   assert.match(layoutLabels, /\.\.\.overlapStacks\.map\(/);
+  // The bounds are the map in view, 4px in from each edge.
+  assert.match(layoutLabels, /\{ x: view\.x \+ 4 \* px, y: view\.y \+ 4 \* px, width: view\.width - 8 \* px, height: view\.height - 8 \* px \}/);
   // The placement box takes in the halo, so the outline never paints over a
   // bar, a pin or the dock (CodeRabbit on #60).
   assert.match(layoutLabels, /const halo = 1\.5 \* px;[\s\S]*?width: measured\.width \+ halo \* 2,\s*height: measured\.height \+ halo \* 2,/);
