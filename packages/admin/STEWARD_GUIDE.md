@@ -56,10 +56,24 @@ asking for access.
 If the assigned chapter or guild is missing, message the Telegram steward chat
 with your chapter name and the email address used for your invite.
 
+## Where To Start
+
+Data Studio opens on `Chapters`. In the sidebar, the bookmarks under each
+collection open your own work:
+
+- `My chapter` and `My guild`: the records you edit.
+- `My chapter initiatives` and `My guild projects`: their initiatives and
+  projects, at any status.
+- `My chapter change requests` and `My change request outcomes`: requests you
+  are working on, and decided ones with the reviewer's notes.
+- `My chapter impact sync`: whether your chapter's impact sources synced, and
+  the last error if they did not.
+- `Published chapter reference`: every live chapter, for comparison.
+
 ## First 10-Minute Walkthrough
 
-1. Open `Chapters`.
-2. Use `Published chapter reference` to find the current public chapter profile.
+1. Open the `My chapter` bookmark under `Chapters`.
+2. Use `Published chapter reference` to compare with other public chapter profiles.
 3. Do not change `slug`; it controls URLs and assignments.
 4. Review the basic public fields:
    - `name`

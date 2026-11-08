@@ -160,6 +160,49 @@ export async function assertAltTextCanBeRequired(client) {
   }
 }
 
+// The steward landing bookmarks, run as the steward with their stored filters:
+// each "My ..." view must open on the steward's own assigned records and on
+// nothing outside them. Bookmarks without an assignment filter (reference and
+// status views) are left to the read permissions checked elsewhere.
+const STEWARD_LANDING_SCOPES: Readonly<Record<string, { field: string; scope: 'chapter' | 'guild' }>> = Object.freeze({
+  chapters: { field: 'slug', scope: 'chapter' },
+  chapter_initiatives: { field: 'chapter_slug', scope: 'chapter' },
+  chapter_impact_snapshots: { field: 'chapter_slug', scope: 'chapter' },
+  guilds: { field: 'slug', scope: 'guild' },
+  projects: { field: 'guild_slug', scope: 'guild' },
+});
+const STEWARD_LANDING_ENTRY_POINTS = Object.freeze(['My chapter', 'My guild']);
+
+export async function assertStewardLandingBookmarks(
+  steward,
+  options: Pick<SmokeOptions, 'chapter' | 'guild'>
+) {
+  const presets = await steward.request('/presets?fields=bookmark,collection,filter&filter[bookmark][_nnull]=true&limit=-1');
+  const bookmarks = (presets?.data ?? []) as Array<{ bookmark: string; collection: string; filter: unknown }>;
+  const names = new Set(bookmarks.map((bookmark) => bookmark.bookmark));
+  for (const name of STEWARD_LANDING_ENTRY_POINTS) {
+    if (!names.has(name)) throw new Error(`Steward landing bookmark "${name}" is missing. Re-run directus:studio:setup.`);
+  }
+
+  for (const bookmark of bookmarks) {
+    const target = STEWARD_LANDING_SCOPES[bookmark.collection.replace(/^content[._]|^impact[._]/, '')];
+    if (!target || !JSON.stringify(bookmark.filter ?? {}).includes('$CURRENT_USER')) continue;
+    const params = new URLSearchParams();
+    params.set('filter', JSON.stringify(bookmark.filter));
+    params.set('fields', target.field);
+    params.set('limit', '-1');
+    const rows = (await steward.request(`/items/${encodePathSegment(bookmark.collection)}?${params.toString()}`))?.data ?? [];
+    const expected = target.scope === 'chapter' ? options.chapter : options.guild;
+    const outside = rows.filter((row) => row[target.field] !== expected);
+    if (outside.length > 0) {
+      throw new Error(`Steward bookmark "${bookmark.bookmark}" shows ${outside.length} record(s) outside the steward's ${target.scope}.`);
+    }
+    if (STEWARD_LANDING_ENTRY_POINTS.includes(bookmark.bookmark) && rows.length === 0) {
+      throw new Error(`Steward bookmark "${bookmark.bookmark}" does not show the steward's assigned ${target.scope}.`);
+    }
+  }
+}
+
 async function expectForbidden(label: string, action: () => Promise<unknown>) {
   try {
     await action();
@@ -410,6 +453,14 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
     if (!assignmentSlugs.has(options.chapter) || assignmentSlugs.has(options.unassignedChapter)) {
       throw new Error('Steward assignment read scope did not match the temporary chapter assignment.');
     }
+
+    // The operator dashboard and the publish-health row are for Trusted
+    // Publishers. Without dashboard read access Data Studio shows a steward no
+    // Insights module at all.
+    await expectForbidden('operator dashboard read', () => steward.request('/dashboards?fields=id&limit=1'));
+    await expectForbidden('dashboard panel read', () => steward.request('/panels?fields=id&limit=1'));
+    await expectForbidden('publish health read', () => steward.request('/items/publish_health?fields=id&limit=1'));
+    await assertStewardLandingBookmarks(steward, options);
 
     await expectForbidden('chapter create', () => steward.request('/items/chapters', {
       method: 'POST',
