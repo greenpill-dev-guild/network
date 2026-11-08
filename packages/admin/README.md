@@ -441,9 +441,10 @@ The API does not enforce this either. A request created by a script or the
 content agent can carry an image with no alt text until someone saves it in
 Data Studio.
 
-`proposed_image` stays `not null default ''`. Its input saves an empty string
-when emptied (the `clear` option), because Directus refuses `null` for the
-column. That is how a steward takes a proposed image off a request.
+`proposed_image` stays `not null default ''` and saves `''` when emptied, like
+every optional text field (see
+[Text Fields And Empty Values](#text-fields-and-empty-values)). That is how a
+steward takes a proposed image off a request.
 
 Prove the database rules with `bun run test:chapter-images:db`. It needs
 `bun run db:local:up`, builds and drops its own scratch database, and refuses
@@ -475,12 +476,56 @@ holds these rules, and the steward smoke checks them on a live instance.
 Prove the copy step with `bun run test:chapter-image-copies`, and with a real
 website build through `bun run test:chapter-image-copies:build`.
 
-Directus caches the column shape. After a migration changes it, Directus
-keeps serving the old one, and Data Studio keeps saving a required field left
-untouched, until one of these happens: `directus:studio:setup` is re-applied,
-the system cache is cleared (`POST /utils/cache/clear?system` as an
-administrator; without `?system` the schema is not refreshed), or Directus
-restarts.
+#### Text Fields And Empty Values
+
+Data Studio decides that a field is missing only when it is `null` or was never
+sent, and on a new item it asks for an untouched field only when the column has
+no default. An emptied input or textarea sends `null` unless its `clear` option
+("Save as empty string") is set, and Directus refuses `null` for a NOT NULL
+column. So every editable text field follows one rule, set in
+`scripts/directus-studio-setup.ts`:
+
+| Field | Column | Data Studio metadata | When emptied in Data Studio |
+| --- | --- | --- | --- |
+| Required | NOT NULL, no `''` default | `required`, no `clear`, a validation that refuses spaces alone | The form refuses it: "Value is required" |
+| Required only sometimes (alt text with an image) | Nullable, `NULL` is the empty value | A field condition sets `required` | Saves `NULL` |
+| Optional | `not null default ''` | `clear` | Saves `''` |
+| Optional, nullable column | Nullable | No `clear` | Saves `NULL` |
+
+Migration `033` dropped the `''` default from the required columns that had
+one: `title` and `summary` on update requests, `label` and `url` on their link
+rows, `label` and `value` on their proof signal rows, and the owner relations
+`chapter_initiatives.chapter_slug` and `projects.guild_slug`. Until then a
+request saved with its title untouched reached the database as `''`, met the
+not-blank check from migration `016`, and showed stewards only "An unexpected
+error occurred." Those checks stay, for writers outside Directus. The columns
+stay NOT NULL, so the API refuses a missing or `null` value with a readable
+validation error for every caller.
+
+Two details:
+
+- Spaces alone are refused with "Enter some text. Spaces alone do not count."
+  Data Studio checks that itself in drawers, such as a request's link rows.
+  On a main form the API checks it, so the message appears after saving.
+  Alt text does not get this check: Directus runs the rule as a string check
+  that also refuses `null`, which would stop a nullable field from being
+  emptied. Spaces typed as alt text are stored as `NULL` by its trigger, so
+  an image saved that way has no alt text.
+- A field the database fills keeps its `''` default. The `chapter_slug` of a
+  request's link and proof signal rows comes from the parent request
+  (migration `027`), and Data Studio checks hidden required fields too.
+
+`directus:studio:setup` compares each field it configures with its column and
+prints a `Text field ...` warning for every mismatch, then a count. Run before
+a migration it depends on, it lists what that migration still has to change.
+`bun run test:text-fields:db` proves the rule against a scratch database built
+from every migration and fails when a field and its column disagree.
+
+Directus caches the column shape. After a migration changes it, Directus keeps
+serving the old one, and Data Studio keeps acting on it, until one of these
+happens: `directus:studio:setup` runs (it clears the system cache first), the
+system cache is cleared (`POST /utils/cache/clear?system` as an administrator;
+without `?system` the schema is not refreshed), or Directus restarts.
 
 ### Steward Onboarding
 
