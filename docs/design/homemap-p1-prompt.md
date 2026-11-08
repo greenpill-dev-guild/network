@@ -113,8 +113,9 @@ THE MAP AS IT SHIPS (context; the problems this round solves)
     says 520px.
 
 CONTENT (real data, 7 November 2026)
-- Counts [live data]: 12 chapters, 2 stewards, 15 members. One member is listed twice at the same
-  point; show members as 14 and note that exact duplicates are merged.
+- Counts [live data]: 12 chapters, 2 stewards, 15 members. One name appears twice at the same
+  point (two approved submissions). Settling that is for stewards in Directus, not the map, so
+  the map draws both.
 - Chapters, as name / city / featured weight (the weight sets label priority at rest):
     Greenpill Brasil / Rio de Janeiro (multi-city) / 100
     Greenpill Nigeria / Awka / 95
@@ -147,8 +148,9 @@ WHAT TO DESIGN (the P1 brief)
 1. Hover: a compact tooltip with the name, then TYPE · PLACE in mono. Nothing else. It sits
    beside the node and flips to the other side when there is no room.
 2. Selection: the rich content (TYPE · PLACE, the name in Spectral, the public note, themes,
-   connections as rows that select that node, public links such as "Visit chapter →", and
-   "Edit this node") opens in a docked side inspector on desktop and a bottom sheet on phones.
+   connections as rows that select that node, public links such as "Visit chapter →", and, for
+   an approved steward or member submission only, "Edit this node"; chapters have no edit
+   action) opens in a docked side inspector on desktop and a bottom sheet on phones.
    Today's alternative is the card that floats beside the node; a variant may argue for it, but
    say so. Opening the inspector never resizes the map; if the node would sit under the
    inspector, the map pans it into view.
@@ -165,7 +167,9 @@ WHAT TO DESIGN (the P1 brief)
    numbers only, then Themes, List, Join the map), scrolling behind an edge fade (DESIGN.md:403);
    a map stage of at least 60svh. Show the cost honestly: the intro and buttons move below the
    first screen, and a 60svh portrait stage shows only part of the world, so give a way to pan
-   to the rest. Reconcile the breakpoint with DESIGN.md (520px, not 720px).
+   to the rest and a way back that does not need dragging (a reset button in the row). Lay out
+   by container width, never by pointer type: a wide touch screen gets the desktop layout.
+   Reconcile the breakpoint with DESIGN.md (520px, not 720px).
 6. Chapter labels at rest on desktop: the highest featured weight wins, a label that would
    collide hides, and people stay hover- or tap-only.
 7. Hit targets of at least 44px everywhere: pins, badges, chips, rows, buttons.
@@ -207,5 +211,5 @@ DELIVER
 | 7. Theme chip strip with Clear and All; full panel only for editing; one open surface | What to design 3; States (shared editor frame) |
 | 8. Non-modal list drawer with grouped compact rows, row hover highlights the pin, search | What to design 4; Browse state |
 | 9. One-row phone chrome, map at least 60svh, scroll affordance, 520 vs 720/480 breakpoints | What to design 5 |
-| 10. Chapter labels at rest, 44px hit targets, node data clean-up | What to design 6 and 7; Content (duplicate merged) |
+| 10. Chapter labels at rest, 44px hit targets, node data clean-up | What to design 6 and 7; Content (counts, and the duplicate left to stewards) |
 | Locked since #41: "Join the map", "Find your people" | What to design 8 |
