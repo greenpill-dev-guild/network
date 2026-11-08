@@ -159,20 +159,23 @@ WHAT TO DESIGN (the P1 brief)
    One open surface at a time: opening the list, the theme panel, the inspector or the join
    walkthrough closes the others and clears any hover.
 4. List: a non-modal drawer on desktop with a search field (label "Search the map" [refresh ok],
-   placeholder "Name or place" [refresh ok]), compact rows of about 40px (mark, name, place),
+   placeholder "Name or place" [refresh ok]), compact rows at least 44px tall (mark, name, place),
    grouped (by type or by region) with counts. Hovering or focusing a row rings its pin on the
    map and shows its tooltip; picking a row selects the node. Keep the heading "Map list" and
    the kicker "Visible nodes".
 5. Phone (375): one row of controls along the bottom of the stage (the types as dots and
-   numbers only, then Themes, List, Join the map), scrolling behind an edge fade (DESIGN.md:403);
+   numbers only; a "Show all" chip while any filter narrows the map; then Themes, which opens
+   the theme panel; List; a reset-view button; Join the map), scrolling behind an edge fade
+   (DESIGN.md:403);
    a map stage of at least 60svh. Show the cost honestly: the intro and buttons move below the
    first screen, and a 60svh portrait stage shows only part of the world, so give a way to pan
-   to the rest and a way back that does not need dragging (a reset button in the row). Lay out
+   to the rest and a way back that does not need dragging (the reset-view button). Lay out
    by container width, never by pointer type: a wide touch screen gets the desktop layout.
    Reconcile the breakpoint with DESIGN.md (520px, not 720px).
 6. Chapter labels at rest on desktop: the highest featured weight wins, a label that would
    collide hides, and people stay hover- or tap-only.
-7. Hit targets of at least 44px everywhere: pins, badges, chips, rows, buttons.
+7. Hit targets: pins and badges at least 44px at every map size, rows at least 44px tall, and
+   chips and buttons at least 44px on touch screens and in the phone row (DESIGN.md:431).
 8. Unchanged since #41: "Join the map" opens the join walkthrough, and "Find your people" in the
    hero opens the list. Keep both labels and both behaviours.
 
