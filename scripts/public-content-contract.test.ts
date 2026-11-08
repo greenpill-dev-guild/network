@@ -437,11 +437,42 @@ test('a focused primary button keeps the focus ring under its glow', async () =>
   );
 });
 
+// A stylesheet's top-level `selector { declarations }` rules, by selector.
+// Rules inside at-rule blocks (@container, @media and so on) are left out.
+function topLevelCssRules(css) {
+  const rules = new Map();
+  let depth = 0;
+  let start = 0;
+  let selector = '';
+  for (let index = 0; index < css.length; index += 1) {
+    if (css[index] === '{') {
+      if (depth === 0) {
+        selector = css.slice(start, index).trim();
+        start = index + 1;
+      }
+      depth += 1;
+    } else if (css[index] === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        if (!selector.startsWith('@')) rules.set(selector, css.slice(start, index));
+        start = index + 1;
+      }
+    }
+  }
+  return rules;
+}
+
 test('the standalone map pages reset the body margin that GpLayout resets elsewhere', async () => {
   for (const [page, bodyClass] of [['map/edit.astro', 'map-edit-root'], ['map/moderate.astro', 'moderation-root']]) {
     const source = await readFile(join(websitePagesDir, page), 'utf8');
     assert.match(source, new RegExp(`<body class="gp-root ${bodyClass}">`), `${page} body classes`);
-    assert.match(source, new RegExp(`\\.${bodyClass}\\s*\\{[^}]*margin:\\s*0;`), `${page} resets the body margin`);
+    // Only a live top-level rule counts: not one in a comment or inside an
+    // @container or @media block that might not apply.
+    const css = [...source.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)]
+      .map((match) => match[1].replace(/\/\*[\s\S]*?\*\//g, ''))
+      .join('\n');
+    const bodyRule = topLevelCssRules(css).get(`.${bodyClass}`) ?? '';
+    assert.match(bodyRule, /(^|;)\s*margin:\s*0\s*(;|$)/, `${page} resets the body margin`);
   }
 });
 
