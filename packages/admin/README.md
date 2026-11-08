@@ -516,10 +516,11 @@ administrators see it; steward roles have no Insights access. It shows:
 - Impact sync: chapters whose last sync failed, snapshots past their refresh
   time, and the latest error per chapter.
 
-Each panel's note names the bookmark to open to act on it. Map submissions are
-counted, never listed. The dashboard and its panels have fixed ids, so a rerun
-updates them in place, and a panel added to this dashboard by hand is removed
-on the next run. Build any other dashboard separately.
+Each count's note says where to find the records behind it, usually a
+Trusted Publisher bookmark such as `Withheld chapter images`. Map submissions
+are counted, never listed. The dashboard and its panels have fixed ids, so a
+rerun updates them in place, and a panel added to this dashboard by hand is
+removed on the next run. Build any other dashboard separately.
 
 Data Studio loads every panel in one GraphQL request built from the viewer's
 permissions. A panel that names a field the viewer cannot read fails that

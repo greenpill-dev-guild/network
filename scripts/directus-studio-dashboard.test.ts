@@ -269,3 +269,24 @@ test('a new steward lands on Chapters, where the My chapter bookmark is', () => 
   assert.ok(stewardSidebar.includes('chapter_impact_snapshots'));
   assert.equal(stewardSidebar.includes('publish_health'), false);
 });
+
+test('every bookmark a panel note points to exists for Trusted Publishers, and every alert count names one', () => {
+  const plan = buildDirectusOperatorDashboardPlan(DASHBOARD_COLLECTIONS);
+  const publisherBookmarks = new Set(buildDirectusStudioBookmarkPlan([...DASHBOARD_COLLECTIONS])
+    .filter((bookmark) => bookmark.role === 'Greenpill Trusted Publisher')
+    .map((bookmark) => bookmark.bookmark));
+
+  for (const panel of plan.panels) {
+    for (const [, name] of panel.note.matchAll(/the ([A-Z][\w ]+?) bookmark/g)) {
+      assert.ok(publisherBookmarks.has(name), `panel "${panel.name}" points to a missing bookmark: ${name}`);
+    }
+  }
+  // An alert count is only useful if the operator can find the records behind it.
+  for (const panel of plan.panels.filter((candidate) => candidate.options.collection.endsWith('notifications'))) {
+    assert.match(panel.note, /bookmark/, `panel "${panel.name}" names no bookmark`);
+  }
+  // The new bookmark lists exactly the alerts the panel counts.
+  const withheld = buildDirectusStudioBookmarkPlan([...DASHBOARD_COLLECTIONS]).find((bookmark) => bookmark.bookmark === 'Withheld chapter images');
+  const withheldPanel = plan.panels.find((panel) => panel.name === 'Images withheld');
+  assert.deepEqual(withheld?.filter, withheldPanel?.options.filter);
+});

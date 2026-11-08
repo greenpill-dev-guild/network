@@ -1272,6 +1272,17 @@ const STUDIO_BOOKMARKS = Object.freeze([
     fields: ['record_collection', 'record_slug', 'quarantine_reason', 'status', 'created_at'],
   },
   {
+    role: 'Greenpill Trusted Publisher',
+    collection: 'review_notifications',
+    bookmark: 'Withheld chapter images',
+    icon: 'hide_image',
+    color: '#7d4f00',
+    // Published chapters shown without their image right now; the record slug
+    // is the chapter. Resolved alerts are history and stay out of the list.
+    filter: { _and: [{ kind: { _eq: 'chapter_image_withheld' } }, { resolved_at: { _null: true } }] },
+    fields: ['record_slug', 'status', 'created_at'],
+  },
+  {
     role: 'Greenpill Steward Editor',
     collection: 'chapter_update_requests',
     bookmark: 'My chapter change requests',
