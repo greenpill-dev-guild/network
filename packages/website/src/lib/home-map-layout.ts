@@ -302,3 +302,160 @@ export function pointsBeyondView(view: MapBox, points: readonly MapPoint[]): Rec
   }
   return { west, east };
 }
+
+// ---- Pins on the drawing's edge -------------------------------------------
+// docs/design/map-polish-audit.md § 5, "Edge pins": "A valid point on the
+// map's edge, such as a confirmed place on the 180th meridian, still draws
+// half outside the drawing. The build keeps the audit's clamp: the rendered
+// pin and its hover and focus target sit inside the drawable inset, and the
+// data keeps the true coordinate."
+
+/** A pin's hit circle at its smallest, in map units. */
+export const PIN_HIT_RADIUS = 4.8;
+
+/**
+ * Moves a circle's centre in, if it must, so the whole circle lies inside
+ * `box`. The stage clips to rounded corners: with `cornerRadius` (in map
+ * units) larger than the circle's radius, a centre in a corner's square
+ * stays within `cornerRadius - radius` of the corner's arc centre, so the
+ * circle clears the curve too.
+ */
+export function keepCircleInside(center: MapPoint, radius: number, box: MapBox, cornerRadius = 0): MapPoint {
+  const x = Math.min(Math.max(center.x, box.x + radius), box.x + box.width - radius);
+  const y = Math.min(Math.max(center.y, box.y + radius), box.y + box.height - radius);
+  if (cornerRadius <= radius) return { x, y };
+  const left = box.x + cornerRadius;
+  const right = box.x + box.width - cornerRadius;
+  const top = box.y + cornerRadius;
+  const bottom = box.y + box.height - cornerRadius;
+  const arcX = x < left ? left : x > right ? right : null;
+  const arcY = y < top ? top : y > bottom ? bottom : null;
+  if (arcX === null || arcY === null) return { x, y };
+  const reach = cornerRadius - radius;
+  const distance = Math.hypot(x - arcX, y - arcY);
+  if (distance <= reach) return { x, y };
+  return { x: arcX + ((x - arcX) / distance) * reach, y: arcY + ((y - arcY) / distance) * reach };
+}
+
+/** Whether a circle already lies wholly inside a box with rounded corners. */
+export function circleFitsInside(center: MapPoint, radius: number, box: MapBox, cornerRadius = 0): boolean {
+  const kept = keepCircleInside(center, radius, box, cornerRadius);
+  return Math.abs(kept.x - center.x) < 1e-9 && Math.abs(kept.y - center.y) < 1e-9;
+}
+
+const pointInside = (point: MapPoint, box: MapBox) => (
+  point.x >= box.x && point.x <= box.x + box.width && point.y >= box.y && point.y <= box.y + box.height
+);
+
+/**
+ * Where a pin is drawn: its point, kept `inset` map units inside `drawing`
+ * (and clear of its rounded corners) so the pin and its hit circle never
+ * cross the edge. Only the drawing moves; the node keeps its true
+ * coordinate. A point beyond the drawing's crop (south of about 68°S) is
+ * not on its edge, so it stays where it is, off the map, rather than drawn
+ * somewhere false.
+ */
+export function clampPinToDrawing(
+  point: MapPoint,
+  inset = PIN_HIT_RADIUS,
+  drawing: MapBox = MAP_DRAWING,
+  cornerRadius = 0
+): MapPoint {
+  if (!pointInside(point, MAP_DRAWING)) return { x: point.x, y: point.y };
+  return keepCircleInside(point, inset, drawing, cornerRadius);
+}
+
+/**
+ * Where a stack's badge goes when no side of its anchor has room for the
+ * badge's whole target (`targetRadius`) in `view`: `beside`, its first
+ * side, moved in until the target is whole and clear of the stage's rounded
+ * corners. An anchor outside the view keeps its badge beside it, out of view
+ * too, rather than drawn at the view's edge, far from its pin.
+ */
+export function badgeFallbackCenter(
+  anchor: MapPoint,
+  beside: MapPoint,
+  targetRadius: number,
+  view: MapBox,
+  cornerRadius = 0
+): MapPoint {
+  if (!pointInside(anchor, view)) return { x: beside.x, y: beside.y };
+  return keepCircleInside(beside, targetRadius, view, cornerRadius);
+}
+
+// ---- Labels at rest -------------------------------------------------------
+// § 5: "Chapter labels at rest ... The highest featuredWeight goes first.
+// Each label tries right, left, above and below its dot, and hides when it
+// would touch another label, a pin, a badge, a bar or the dock."
+
+export type LabelSide = 'right' | 'left' | 'above' | 'below';
+
+/** The order a label tries the sides of its dot. */
+export const LABEL_SIDES: readonly LabelSide[] = ['right', 'left', 'above', 'below'];
+
+export type MapCircle = { center: MapPoint; radius: number };
+
+/** A label to place: its dot, the gap it keeps from it, and its size. */
+export type LabelRequest = { anchor: MapPoint; gap: number; width: number; height: number };
+
+export type PlacedLabel = { side: LabelSide; box: MapBox } | null;
+
+/** The box a label takes on one side of its dot, centred on that side. */
+export function labelBoxOnSide(request: LabelRequest, side: LabelSide): MapBox {
+  const { anchor, gap, width, height } = request;
+  switch (side) {
+    case 'right':
+      return { x: anchor.x + gap, y: anchor.y - height / 2, width, height };
+    case 'left':
+      return { x: anchor.x - gap - width, y: anchor.y - height / 2, width, height };
+    case 'above':
+      return { x: anchor.x - width / 2, y: anchor.y - gap - height, width, height };
+    case 'below':
+      return { x: anchor.x - width / 2, y: anchor.y + gap, width, height };
+  }
+}
+
+// Touching counts: boxes that share an edge, or a circle that reaches a box.
+const boxesTouch = (a: MapBox, b: MapBox) => (
+  a.x <= b.x + b.width && b.x <= a.x + a.width && a.y <= b.y + b.height && b.y <= a.y + a.height
+);
+
+const boxTouchesCircle = (box: MapBox, circle: MapCircle) => {
+  const nearestX = Math.min(Math.max(circle.center.x, box.x), box.x + box.width);
+  const nearestY = Math.min(Math.max(circle.center.y, box.y), box.y + box.height);
+  return Math.hypot(circle.center.x - nearestX, circle.center.y - nearestY) <= circle.radius;
+};
+
+const boxInside = (box: MapBox, bounds: MapBox) => (
+  box.x >= bounds.x &&
+  box.y >= bounds.y &&
+  box.x + box.width <= bounds.x + bounds.width &&
+  box.y + box.height <= bounds.y + bounds.height
+);
+
+/**
+ * Places labels in the order given, the most important first. Each takes the
+ * first side of its dot where it lies inside `bounds` (the map in view) and
+ * touches no circle (pins, badges), no box (bars, the dock) and no label
+ * placed before it. A label with no such side hides (null). A label's own
+ * dot never blocks it, because its gap clears the dot's circle.
+ */
+export function placeMapLabels(
+  requests: readonly LabelRequest[],
+  obstacles: { circles: readonly MapCircle[]; boxes: readonly MapBox[] },
+  bounds: MapBox
+): PlacedLabel[] {
+  const placed: MapBox[] = [];
+  return requests.map((request) => {
+    for (const side of LABEL_SIDES) {
+      const box = labelBoxOnSide(request, side);
+      if (!boxInside(box, bounds)) continue;
+      if (obstacles.circles.some((circle) => boxTouchesCircle(box, circle))) continue;
+      if (obstacles.boxes.some((other) => boxesTouch(box, other))) continue;
+      if (placed.some((other) => boxesTouch(box, other))) continue;
+      placed.push(box);
+      return { side, box };
+    }
+    return null;
+  });
+}

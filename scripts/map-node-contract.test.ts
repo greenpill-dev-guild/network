@@ -22,16 +22,24 @@ import {
 import { toPublicOperationalLocations } from '@greenpill-network/shared/public-content';
 import {
   ATLANTIC_CENTER_X,
+  badgeFallbackCenter,
+  circleFitsInside,
   clampMapView,
+  clampPinToDrawing,
   defaultMapView,
   fanHasRoomForTargets,
   formatPickerCoordinate,
   groupOverlappingPins,
+  LABEL_SIDES,
+  labelBoxOnSide,
   largestMapView,
   layoutFan,
   MAP_DRAWING,
   panMapView,
+  keepCircleInside,
   pickerPointToLocation,
+  PIN_HIT_RADIUS,
+  placeMapLabels,
   pointsBeyondView,
   separateLabels,
 } from '../packages/website/src/lib/home-map-layout.ts';
@@ -2135,7 +2143,7 @@ test('home map stacks overlapping pins across node types, counts them, and fans 
   assert.match(recompute, /people\.length >= \(chapters\.length \? 1 : 2\)/);
   assert.match(recompute, /people\.forEach\(\(pin\) => setPinClustered\(pin\.el, true\)\)/);
   assert.doesNotMatch(recompute, /chapters\.forEach\(\(pin\) => setPinClustered/);
-  assert.match(recompute, /badgeCenterFor\(anchors, radius, taken\)/);
+  assert.match(recompute, /badgeCenterFor\(anchors, radius, taken, corner\)/);
   assert.match(component, /const BADGE_DIRECTIONS = \[-45, -135, 45, 135, 0, 180, -90, 90\]/);
 
   // A marker for several people shows how many, in their colour: members,
@@ -2366,9 +2374,10 @@ test('home map keeps focus, hover and selection honest when stacks rebuild', asy
   // Scrolling keeps the preview of a marker or satellite that has keyboard focus.
   assert.match(component, /active\.matches\('\.gp-home-map-node-link:focus-visible, \[data-home-map-cluster\]:focus-visible, \.gp-home-map-cluster-sat:focus-visible'\)/);
   // New map controls and the compact band use spacing tokens; heights derive
-  // from the 44px touch target.
+  // from the 44px touch target, which step 3 names once as --gp-map-target
+  // (§ 5: "Icon-only controls (zoom, close, reset) are 44 by 44px").
   assert.match(component, /--gp-map-edge: var\(--gp-space-sm\);/);
-  assert.match(component, /--gp-map-row: calc\(44px \+ var\(--gp-space-xs\) \* 2 \+ 2px\);/);
+  assert.match(component, /--gp-map-row: calc\(var\(--gp-map-target\) \+ var\(--gp-space-xs\) \* 2 \+ 2px\);/);
   assert.match(component, /\.gp-home-map-join \{[\s\S]*?min-height: calc\(40px \+ var\(--gp-space-xs\) \* 2 \+ 2px\);\s*padding: 0 var\(--gp-space-md\);/);
 });
 
@@ -2597,16 +2606,17 @@ test('home map chrome: bars in the stage, a theme strip toolbar, one phone row, 
 
   // Hit targets (DESIGN.md:431 to 441, § 5): text buttons reach 48px, chips
   // are 30px under a fine pointer and 44px under a coarse one and in the
-  // phone row, and icon-only controls are 44 by 44px.
+  // phone row, and icon-only controls are 44 by 44px. Step 3 names the 44px
+  // target once as --gp-map-target; the sizes are unchanged.
   assert.match(component, /\.gp-home-map-list-toggle,\s*\.gp-home-map-themes-toggle \{[\s\S]*?min-height: calc\(40px \+ var\(--gp-space-xs\) \* 2 \+ 2px\);/);
   assert.match(component, /--gp-map-chip: 30px;/);
-  assert.match(component, /@media \(pointer: coarse\) \{\s*\.gp-home-map-canvas \{\s*--gp-map-chip: 44px;/);
+  assert.match(component, /@media \(pointer: coarse\) \{\s*\.gp-home-map-canvas \{\s*--gp-map-chip: var\(--gp-map-target\);/);
   assert.match(component, /\.gp-home-map \.gp-chip \{\s*min-height: var\(--gp-map-chip\);/);
-  assert.match(component, /\.gp-home-map-zoom-controls button \{\s*min-width: 44px;\s*min-height: 44px;/);
-  assert.match(component, /\.gp-home-map-theme-editor-close \{\s*width: 44px;\s*height: 44px;/);
+  assert.match(component, /\.gp-home-map-zoom-controls button \{\s*min-width: var\(--gp-map-target\);\s*min-height: var\(--gp-map-target\);/);
+  assert.match(component, /\.gp-home-map-theme-editor-close \{\s*width: var\(--gp-map-target\);\s*height: var\(--gp-map-target\);/);
   const phoneCss = component.match(/@container \(max-width: 520px\) \{([\s\S]*?)\n  \}\n/)?.[1] ?? '';
   assert.match(phoneCss, /\.gp-home-map-list-toggle,\s*\.gp-home-map-themes-toggle,\s*\.gp-home-map-join \{\s*min-height: var\(--gp-map-row\);/);
-  assert.match(phoneCss, /\.gp-home-map \.gp-chip\.gp-home-map-legend-item,\s*\.gp-home-map \.gp-chip\.gp-home-map-legend-reset \{\s*min-height: 44px;/);
+  assert.match(phoneCss, /\.gp-home-map \.gp-chip\.gp-home-map-legend-item,\s*\.gp-home-map \.gp-chip\.gp-home-map-legend-reset \{\s*min-height: var\(--gp-map-target\);/);
   // § 5: "the row scrolls behind a mask-image edge fade", on one line, and a
   // phone opens the editor from Themes, not from the strip.
   assert.match(phoneCss, /\.gp-home-map-control-row \{[\s\S]*?flex-wrap: nowrap;[\s\S]*?overflow-x: auto;[\s\S]*?mask-image: var\(--gp-map-edge-fade\);/);
@@ -2835,9 +2845,289 @@ test('home map list: a dock beside the map, a sheet inside the stage, a modal sh
   // again when the list closes.
   assert.match(component, /const dockRect = mapLayout\(\) === 'dock' && listDrawer && !listDrawer\.hidden \? listDrawer\.getBoundingClientRect\(\) : null;/);
   assert.match(component, /selectedEl\.style\.setProperty\('--gp-selected-x', `\$\{clampNumber\(desiredX, inset, maxX\)\}px`\);/);
-  assert.match(component, /const syncNodeListClosed = \(\) => \{[\s\S]*?layoutThemeStrip\(\);\s*\/\/[^\n]*\n\s*syncSelectedOverlay\(\);\s*\};/);
+  assert.match(component, /const syncNodeListClosed = \(\) => \{[\s\S]*?layoutThemeStrip\(\);\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*syncSelectedOverlay\(\);\s*scheduleChapterLabels\(\);\s*\};/);
   // A touch screen opens the list at Close, so no on-screen keyboard rises.
   assert.match(component, /const typing = !window\.matchMedia\('\(pointer: coarse\)'\)\.matches;/);
+});
+
+test('home map edge pins and labels at rest: the clamp and the placement rules', () => {
+  // § 5, "Edge pins": "the rendered pin and its hover and focus target sit
+  // inside the drawable inset, and the data keeps the true coordinate."
+  assert.equal(PIN_HIT_RADIUS, 4.8);
+  assert.deepEqual(clampPinToDrawing({ x: 100, y: 40 }), { x: 100, y: 40 });
+  const lonToX = (lon: number) => ((lon + 180) / 360) * 200;
+  const latToY = (lat: number) => ((90 - lat) / 180) * 100;
+  // A confirmed place on the 180th meridian, and the -180 that clipped Amio.
+  assert.deepEqual(clampPinToDrawing({ x: lonToX(180), y: latToY(-17.7) }), { x: 200 - PIN_HIT_RADIUS, y: latToY(-17.7) });
+  assert.deepEqual(clampPinToDrawing({ x: lonToX(-180), y: latToY(0) }), { x: PIN_HIT_RADIUS, y: latToY(0) });
+  // The far north, and a point in the crop's bottom band (65°S), move in to
+  // the inset. A point south of the crop, which ends at about 68.4°S, is not
+  // on the map's edge (Codex on #60): it stays where it is, off the map, as
+  // it did before the clamp, rather than drawn near 60°S.
+  assert.equal(clampPinToDrawing({ x: 100, y: latToY(90) }).y, PIN_HIT_RADIUS);
+  assert.equal(clampPinToDrawing({ x: 100, y: latToY(-65) }).y, MAP_DRAWING.height - PIN_HIT_RADIUS);
+  assert.deepEqual(clampPinToDrawing({ x: 100, y: latToY(-75) }), { x: 100, y: latToY(-75) });
+  assert.deepEqual(
+    clampPinToDrawing({ x: lonToX(180), y: latToY(-77.8) }, 8.5, MAP_DRAWING, 12),
+    { x: lonToX(180), y: latToY(-77.8) }
+  );
+  // Only the drawing moves: the point passed in is left as it was.
+  const truePoint = { x: 200, y: 0 };
+  clampPinToDrawing(truePoint);
+  assert.deepEqual(truePoint, { x: 200, y: 0 });
+  // On a small map the 44px hit circle is wider than 4.8 map units, and the
+  // inset follows it (Codex on #60): at a 521px sheet, about 8.5 units.
+  assert.deepEqual(clampPinToDrawing({ x: lonToX(180), y: 40 }, 8.5), { x: 191.5, y: 40 });
+  // The stage clips to rounded corners (Codex on #60). In a corner's square
+  // the centre stays within `cornerRadius - inset` of the arc's centre, so
+  // the whole circle fits inside the curve; along an edge nothing changes,
+  // and a corner rounder than the inset changes nothing.
+  const cornered = clampPinToDrawing({ x: 200, y: 88 }, 4.8, MAP_DRAWING, 12);
+  const arc = { x: 200 - 12, y: 88 - 12 };
+  assert.ok(Math.abs(Math.hypot(cornered.x - arc.x, cornered.y - arc.y) - (12 - 4.8)) < 1e-9);
+  assert.ok(cornered.x > arc.x && cornered.y > arc.y, 'the pin stays toward its corner');
+  assert.ok(cornered.x <= 200 - 4.8 && cornered.y <= 88 - 4.8, 'and inside the rectangular inset');
+  assert.deepEqual(clampPinToDrawing({ x: 200, y: 40 }, 4.8, MAP_DRAWING, 12), { x: 195.2, y: 40 });
+  assert.deepEqual(clampPinToDrawing({ x: 200, y: 88 }, 4.8, MAP_DRAWING, 4), { x: 195.2, y: 83.2 });
+  // Every corner keeps the circle inside: no point of it lies beyond the curve.
+  for (const corner of [{ x: 0, y: 0 }, { x: 200, y: 0 }, { x: 0, y: 88 }, { x: 200, y: 88 }]) {
+    const pin = clampPinToDrawing(corner, 4.8, MAP_DRAWING, 12);
+    const arcCenter = { x: corner.x === 0 ? 12 : 188, y: corner.y === 0 ? 12 : 76 };
+    assert.ok(Math.hypot(pin.x - arcCenter.x, pin.y - arcCenter.y) + 4.8 <= 12 + 1e-9, `circle inside the curve at ${corner.x},${corner.y}`);
+  }
+  // The geometry under the clamp, which the badges share: a circle moved in
+  // just enough to lie inside a box with rounded corners.
+  const roundBox = { x: 10, y: 10, width: 100, height: 50 };
+  assert.deepEqual(keepCircleInside({ x: 50, y: 30 }, 4, roundBox, 8), { x: 50, y: 30 });
+  assert.deepEqual(keepCircleInside({ x: 5, y: 30 }, 4, roundBox, 8), { x: 14, y: 30 });
+  const inCorner = keepCircleInside({ x: 10, y: 10 }, 4, roundBox, 8);
+  assert.ok(Math.abs(Math.hypot(inCorner.x - 18, inCorner.y - 18) - 4) < 1e-9, 'a corner keeps the circle on its curve');
+  assert.equal(circleFitsInside({ x: 50, y: 30 }, 4, roundBox, 8), true);
+  assert.equal(circleFitsInside({ x: 13, y: 30 }, 4, roundBox, 8), false);
+  // Inside the rectangle, but its circle crosses the curve.
+  assert.equal(circleFitsInside({ x: 14.5, y: 14.5 }, 4, roundBox, 8), false);
+  assert.equal(circleFitsInside({ x: 14.5, y: 14.5 }, 4, roundBox, 0), true);
+  // A badge with no side that fits (CodeRabbit on #60): beside an anchor in
+  // view it moves in until its target is whole and clear of the corner's
+  // curve. Beside an anchor out of view (a zoomed map, or a spot south of the
+  // crop) it stays put, rather than drawn at the view's edge, far from its pin.
+  const badgeView = { x: 0, y: 0, width: 100, height: 50 };
+  const movedIn = badgeFallbackCenter({ x: 96, y: 4 }, { x: 99, y: 1 }, 3, badgeView, 6);
+  assert.ok(circleFitsInside(movedIn, 3, badgeView, 6), 'the moved badge keeps its target inside the curve');
+  assert.ok(movedIn.x > 90 && movedIn.y < 10, 'and stays in its corner');
+  assert.deepEqual(badgeFallbackCenter({ x: 120, y: 20 }, { x: 123, y: 17 }, 3, badgeView, 6), { x: 123, y: 17 });
+  assert.deepEqual(badgeFallbackCenter({ x: 50, y: 70 }, { x: 53, y: 67 }, 3, badgeView, 6), { x: 53, y: 67 });
+
+  // § 5: "Each label tries right, left, above and below its dot, and hides
+  // when it would touch another label, a pin, a badge, a bar or the dock."
+  assert.deepEqual([...LABEL_SIDES], ['right', 'left', 'above', 'below']);
+  const request = { anchor: { x: 50, y: 40 }, gap: 2, width: 10, height: 3 };
+  assert.deepEqual(labelBoxOnSide(request, 'right'), { x: 52, y: 38.5, width: 10, height: 3 });
+  assert.deepEqual(labelBoxOnSide(request, 'left'), { x: 38, y: 38.5, width: 10, height: 3 });
+  assert.deepEqual(labelBoxOnSide(request, 'above'), { x: 45, y: 35, width: 10, height: 3 });
+  assert.deepEqual(labelBoxOnSide(request, 'below'), { x: 45, y: 42, width: 10, height: 3 });
+  const bounds = { x: 0, y: 0, width: 200, height: 88 };
+  const none = { circles: [], boxes: [] };
+  assert.equal(placeMapLabels([request], none, bounds)[0]?.side, 'right');
+  // Off the map in view on the right: the left side.
+  assert.equal(placeMapLabels([request], none, { x: 0, y: 0, width: 60, height: 88 })[0]?.side, 'left');
+  // A pin on the right, then a bar on the left: above; all four blocked: hidden.
+  const pinRight = { center: { x: 56, y: 40 }, radius: 1 };
+  assert.equal(placeMapLabels([request], { circles: [pinRight], boxes: [] }, bounds)[0]?.side, 'left');
+  const barLeft = { x: 30, y: 30, width: 12, height: 20 };
+  assert.equal(placeMapLabels([request], { circles: [pinRight], boxes: [barLeft] }, bounds)[0]?.side, 'above');
+  const dockAboveAndBelow = { x: 40, y: 30, width: 20, height: 30 };
+  assert.equal(placeMapLabels([request], { circles: [], boxes: [dockAboveAndBelow] }, bounds)[0], null);
+  // Touching counts: a box that shares the right label's edge blocks it.
+  const touching = { x: 62, y: 38.5, width: 5, height: 3 };
+  assert.equal(placeMapLabels([request], { circles: [], boxes: [touching] }, bounds)[0]?.side, 'left');
+  // The first label is placed first; the next keeps clear of it.
+  const second = { anchor: { x: 50, y: 42 }, gap: 2, width: 10, height: 3 };
+  const placed = placeMapLabels([request, second], none, bounds);
+  assert.deepEqual(placed.map((label) => label?.side), ['right', 'left']);
+  // A label's own dot never blocks it: the gap clears the dot's circle.
+  const ownDot = { center: request.anchor, radius: 1.5 };
+  assert.equal(placeMapLabels([request], { circles: [ownDot], boxes: [] }, bounds)[0]?.side, 'right');
+
+  // Bounds (CodeRabbit on #60): a label never leaves the map in view. A dot
+  // on the top edge sends its label below; one in the bottom right corner,
+  // left; a name wider than the map in view hides.
+  const topEdge = { anchor: { x: 100, y: 1 }, gap: 2, width: 10, height: 3 };
+  assert.equal(placeMapLabels([topEdge], none, bounds)[0]?.side, 'below');
+  const bottomRight = { anchor: { x: 195, y: 87 }, gap: 2, width: 10, height: 3 };
+  assert.equal(placeMapLabels([bottomRight], none, bounds)[0]?.side, 'above');
+  const tooWide = { anchor: { x: 100, y: 40 }, gap: 2, width: 210, height: 3 };
+  assert.equal(placeMapLabels([tooWide], none, bounds)[0], null);
+  // Every label placed anywhere on a grid of dots, edges and corners
+  // included, lies wholly inside the bounds.
+  const view = { x: 20, y: 10, width: 120, height: 60 };
+  // A view away from the origin still places labels (CodeRabbit on #60), so
+  // the grid below cannot pass by placing none.
+  assert.equal(placeMapLabels([request], none, view)[0]?.side, 'right');
+  let gridPlaced = 0;
+  for (let x = view.x; x <= view.x + view.width; x += 6) {
+    for (let y = view.y; y <= view.y + view.height; y += 5) {
+      const placedLabel = placeMapLabels([{ anchor: { x, y }, gap: 2, width: 14, height: 3 }], none, view)[0];
+      if (!placedLabel) continue;
+      gridPlaced += 1;
+      const { box } = placedLabel;
+      assert.ok(
+        box.x >= view.x && box.y >= view.y && box.x + box.width <= view.x + view.width && box.y + box.height <= view.y + view.height,
+        `label at ${x},${y} placed ${placedLabel.side} outside the view`
+      );
+    }
+  }
+  assert.ok(gridPlaced > 0, 'labels are placed in an offset view');
+});
+
+test('home map labels and hit targets: chapter labels at rest, 44px pins and badges, 48px text buttons', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  // Edge pins: chapters and people are drawn through the clamp, and their
+  // lines end where the pins are drawn; the data keeps its true coordinate.
+  assert.match(component, /const mapPoint = \{ x: lonToX\(c\.data\.long\), y: latToY\(c\.data\.lat\) \};\s*const pin = clampPinToDrawing\(mapPoint\);/);
+  assert.match(component, /x: pin\.x,\s*y: pin\.y,\s*mapX: mapPoint\.x,\s*mapY: mapPoint\.y,/);
+  assert.match(component, /const mapPoint = \{ x: lonToX\(member\.long\), y: latToY\(member\.lat\) \};\s*const \{ x, y \} = clampPinToDrawing\(mapPoint\);/);
+  assert.match(component, /const drawn = clampPinToDrawing\(\{ x: lonToX\(long\), y: latToY\(lat\) \}\);\s*nodeById\.set\(id, \{\s*x: existing\?\.x \?\? drawn\.x,\s*y: existing\?\.y \?\? drawn\.y,/);
+  assert.match(component, /<circle class="gp-home-map-node-hit" cx=\{c\.x\} cy=\{c\.y\} r=\{PIN_HIT_RADIUS\} \/>/);
+  assert.match(component, /const NODE_HIT_RADIUS = PIN_HIT_RADIUS;/);
+  // The inset grows with the hit circle on a small map (Codex on #60): every
+  // pin carries its true point, each stacks rebuild first moves edge pins in
+  // by the scaled hit radius, and their lines are drawn again to meet them.
+  assert.match(component, /data-map-x=\{c\.mapX\.toFixed\(3\)\}\s*data-map-y=\{c\.mapY\.toFixed\(3\)\}/);
+  assert.match(component, /group\.dataset\.mapX = mapPoint\.x\.toFixed\(3\);\s*group\.dataset\.mapY = mapPoint\.y\.toFixed\(3\);/);
+  const placePins = component.match(/const placePinsInsideDrawing = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(placePins, /const inset = pinHitRadius\(\);\s*const corner = stageCornerRadius\(\);/);
+  const stageCorner = component.match(/const stageCornerRadius = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(stageCorner, /const clipRadius = \(Number\.parseFloat\(stage\.borderTopLeftRadius\) \|\| 0\) - \(Number\.parseFloat\(stage\.borderTopWidth\) \|\| 0\);\s*return pxToViewBox\(Math\.max\(0, clipRadius\)\);/);
+  assert.match(placePins, /const widest = largestMapView\(stageAspect\(\), FULL_VIEW_BOX\);\s*const shownDrawing = \{ x: FULL_VIEW_BOX\.x, y: widest\.y, width: FULL_VIEW_BOX\.width, height: widest\.height \};/);
+  assert.match(placePins, /const drawn = clampPinToDrawing\(\{ x, y \}, inset, shownDrawing, corner\);/);
+  // Every circle of a pin is brought to it, not just the dot, so an owner
+  // ring added after a claim follows a moved pin too (CodeRabbit on #60).
+  assert.match(placePins, /pin\.querySelectorAll\(PIN_CIRCLES\)\.forEach\(\(circle\) => \{\s*if \(close\(circle, 'cx', drawn\.x\) && close\(circle, 'cy', drawn\.y\)\) return;/);
+  assert.match(component, /const drawn = nodeCenter\(existing\) \?\? \{ x, y \};\s*existing\.insertBefore\(\s*makeCircle\('gp-home-map-node-owner-ring', drawn\.x, drawn\.y,/);
+  assert.match(placePins, /if \(!moved\) return;\s*if \(lastThreadInputs\) renderDynamicThreads\(lastThreadInputs\.nodes, lastThreadInputs\.edges\);/);
+  // What is drawn at a moved pin follows it: the selected web and card, and
+  // the tooltip of the node it shows (Codex on #60).
+  assert.match(placePins, /if \(selectedId\) markSelectedThreads\(selectedId\);\s*syncSelectedOverlay\(\);/);
+  assert.match(placePins, /const shown = activeFocusNodeId\s*\? root\.querySelector\([^\n]*\)\s*: null;\s*if \(shown\) setFocus\(shown\);/);
+  assert.match(component, /if \(!dynamicThreadsGroup\) return;\s*lastThreadInputs = \{ nodes: rawNodes, edges: rawEdges \};/);
+
+  // § 5: "pins and badges stay at least 44px at every map size (their hit
+  // circles scale with the map)".
+  assert.match(component, /const POINTER_TARGET_RADIUS_PX = 22;/);
+  assert.match(component, /const minTargetRadius = \(\) => pxToViewBox\(POINTER_TARGET_RADIUS_PX\);/);
+  assert.match(component, /const pinHitRadius = \(\) => Math\.max\(NODE_HIT_RADIUS, minTargetRadius\(\)\);/);
+  assert.match(component, /const hitRadius = Math\.max\(pinRadius, r \+ 3\.2, minViewRadius\);/);
+  assert.match(component, /const badgeHitRadius = \(markerRadius: number\) => Math\.max\(markerRadius \+ pxToViewBox\(3\), minTargetRadius\(\)\);/);
+  assert.match(component, /const hitRadius = badgeHitRadius\(markerRadius\);/);
+  // A badge set beside its pins keeps its whole 44px target in view, not
+  // just its disc, and a badge with no such side moves in (Codex on #60),
+  // both clear of the stage's rounded corners; an anchor out of view keeps
+  // its badge beside it (CodeRabbit on #60).
+  const badgeCenter = component.match(/const badgeCenterFor = \([\s\S]*?\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(badgeCenter, /const target = badgeHitRadius\(radius\);/);
+  assert.match(badgeCenter, /if \(!circleFitsInside\(center, target, box, corner\)\) continue;/);
+  assert.match(badgeCenter, /return badgeFallbackCenter\(anchor, beside, target, box, corner\);/);
+  assert.doesNotMatch(badgeCenter, /clampNumber\(/);
+  // The live pill and the error note are label blockers: a status render
+  // lays the labels out again (Codex on #60).
+  const statusRender = component.match(/const renderMapStateStatus = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(statusRender, /syncAlertBlock\(\);\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*scheduleChapterLabels\(\);/);
+  const recomputeClusters = component.match(/const recomputeClustersNow = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(recomputeClusters, /^\s*if \(!clustersGroup \|\| !membersGroup\) return;\s*\/\/[^\n]*\n\s*placePinsInsideDrawing\(\);/);
+  assert.match(recomputeClusters, /syncPinHitTargets\(\);\s*layoutChapterLabels\(\);/);
+  assert.match(recomputeClusters, /const corner = stageCornerRadius\(\);/);
+
+  // § 5: "Chapter labels at rest: Manrope 600 at 12px in --gp-fg-muted with
+  // a dark halo, without the leading 'Greenpill ' ... The highest
+  // featuredWeight goes first ... People never get labels at rest. Labels dim
+  // while a node is selected." Phones: "No labels at rest."
+  assert.match(component, /data-featured-weight=\{c\.featuredWeight\}/);
+  assert.match(component, /<g class="gp-home-map-members" data-home-map-members><\/g>[\s\S]*?<g class="gp-home-map-chapter-labels" data-home-map-chapter-labels aria-hidden="true"><\/g>[\s\S]*?<g class="gp-home-map-clusters" data-home-map-clusters><\/g>/);
+  assert.match(component, /\.gp-home-map-chapter-label \{\s*fill: var\(--gp-fg-muted\);\s*font-family: var\(--gp-font-body\);\s*font-weight: 600;\s*paint-order: stroke;\s*stroke: var\(--gp-green-950\);/);
+  assert.match(component, /\.gp-home-map-canvas\.has-selected-node \.gp-home-map-chapter-label,\s*\.gp-home-map-canvas\.is-focused \.gp-home-map-chapter-label \{\s*opacity: 0\.35;/);
+  const phoneCss = component.match(/@container \(max-width: 520px\) \{([\s\S]*?)\n  \}\n/)?.[1] ?? '';
+  assert.match(phoneCss, /\.gp-home-map-chapter-labels \{\s*display: none;/);
+  const layoutLabels = component.match(/const layoutChapterLabels = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(layoutLabels, /if \(mapLayout\(\) === 'phone'\) return;/);
+  assert.match(layoutLabels, /\.filter\(\(pin\) => pin\.classList\.contains\('is-chapter'\)\)/);
+  assert.match(layoutLabels, /\.sort\(\(a, b\) => b\.weight - a\.weight \|\| a\.name\.localeCompare\(b\.name, 'en'\)\);/);
+  assert.match(layoutLabels, /const fontSize = cssPx\('--gp-label-sm', 12\) \* px;/);
+  assert.match(layoutLabels, /placeMapLabels\(/);
+  assert.match(layoutLabels, /\.\.\.overlapStacks\.map\(/);
+  // The bounds are the map in view, 4px in from each edge.
+  assert.match(layoutLabels, /\{ x: view\.x \+ 4 \* px, y: view\.y \+ 4 \* px, width: view\.width - 8 \* px, height: view\.height - 8 \* px \}/);
+  // The placement box takes in the halo, so the outline never paints over a
+  // bar, a pin or the dock (CodeRabbit on #60).
+  assert.match(layoutLabels, /const halo = 1\.5 \* px;[\s\S]*?width: measured\.width \+ halo \* 2,\s*height: measured\.height \+ halo \* 2,/);
+  // A stack says its people are "at" a chapter only when their true points
+  // share its spot; pins the drawing's edge moved together are not "at" one
+  // another (CodeRabbit on #60).
+  assert.match(component, /type ClusterMember = \{ el: Element; key: string; center: MapPoint; truePoint: MapPoint \};/);
+  assert.match(component, /out\.push\(\{ el, key, center, truePoint: mapX !== null && mapY !== null \? \{ x: mapX, y: mapY \} : center \}\);/);
+  // The stack is "at" only the chapters every one of its people shares a
+  // spot with; people who each share a different chapter's spot are not
+  // "at" both (Codex on #60, twice).
+  assert.match(component, /const sharedChapters = chapters\.filter\(\(chapter\) => members\.every\(\(member\) => sharesSpot\(member, chapter\)\)\);/);
+  // Hover is drawn from the pin or badge geometry picked, never from :hover,
+  // which an overlapping 44px hit circle can give to a neighbour (Codex on #60).
+  // What is drawn hovered is the satellite or marker under the pointer, even
+  // for a marker that stands for one person, and it follows the pointer while
+  // a card is open (CodeRabbit on #60).
+  assert.match(component, /const markPointerTarget = \(target: Element \| null\) => \{/);
+  assert.match(component, /if \(satellite\) return \{ pin: satellite\.member\.el, mark: satellite\.el \};/);
+  assert.match(component, /\? \{ pin: stack\.members\[0\]\.el, mark: stack\.marker \}\s*: \{ stack, mark: stack\.marker \};/);
+  assert.match(component, /return pin \? \{ pin, mark: pin \} : \{\};/);
+  assert.match(component, /const \{ pin, stack, mark \} = hoverTargetAtPointer\(event\);\s*(?:\/\/[^\n]*\n\s*)*markPointerTarget\(mark \?\? null\);\s*if \(selectedFocusTarget\) return;/);
+  assert.doesNotMatch(component, /\.gp-home-map-node-link[^{]*:hover|\.gp-home-map-overlap-stack:hover|\.gp-home-map-cluster-sat:hover/);
+  assert.match(component, /\.gp-home-map-cluster-sat\.is-pointer-target \.gp-home-map-cluster-sat-label,/);
+  assert.match(component, /\.gp-home-map-node-link\.is-chapter\.is-pointer-target \.gp-home-map-node-halo,/);
+  assert.match(component, /\.gp-home-map-overlap-stack\.is-pointer-target \.gp-home-map-overlap-disc,/);
+  assert.match(component, /return sameSpot \? 'at the same spot' : 'close together';/);
+  assert.match(component, /const chapterLabelText = \(name: string\) => name\.replace\(\/\^Greenpill\\s\+\/i, ''\) \|\| name;/);
+  assert.match(component, /'\.gp-home-map-theme-strip',[\s\S]*?'\.gp-home-map-legend',[\s\S]*?'\.gp-home-map-end-group',[\s\S]*?'\.gp-home-map-list-drawer',/);
+  // The dock and the bars move without a stacks rebuild: one layout a frame.
+  assert.match(component, /scheduleChapterLabels = \(\) => \{\s*window\.cancelAnimationFrame\(chapterLabelFrame\);\s*chapterLabelFrame = window\.requestAnimationFrame\(layoutChapterLabels\);/);
+
+  // Sizes, set once on the map's figure so the join walkthrough shares them.
+  const mapRule = component.match(/\n  \.gp-home-map \{([\s\S]*?)\n  \}\n/)?.[1] ?? '';
+  assert.match(mapRule, /--gp-map-target: 44px;\s*--gp-map-icon: 16px;\s*--gp-map-mark: 10px;\s*--gp-map-button: 48px;/);
+  // § 5: "Every text button under 48px goes to 48px, and the contract test
+  // asserts that minimum." List, Themes and Join the map are 50px; the edge
+  // pills 48px; Try again, Clear and Done are the 48px Button; the card's
+  // Edit this node and its form's buttons now reach 48px too.
+  assert.match(component, /\.gp-home-map-join \{[\s\S]*?min-height: calc\(40px \+ var\(--gp-space-xs\) \* 2 \+ 2px\);/);
+  assert.match(component, /\.gp-home-map \.gp-chip\.gp-home-map-edge-pill \{[\s\S]*?min-height: 48px;/);
+  assert.match(component, /\.gp-home-map-update-trigger \{\s*min-height: var\(--gp-map-button\);/);
+  assert.match(component, /\.gp-home-map-update-actions button \{\s*min-height: var\(--gp-map-button\);/);
+  assert.doesNotMatch(component, /\.gp-home-map-update-trigger \{\s*min-height: (?:36|40)px;/);
+  // The join walkthrough's text buttons too (Codex on #60): Find place, the
+  // place results, Confirm coordinate, the review's Edit buttons, and the
+  // manage-link toggle and Send. Its theme toggles are chips.
+  assert.match(component, /\.gp-home-map-location-search-row button,\s*\.gp-home-map-location-results button,\s*\.gp-home-map-location-coordinate-row button \{\s*min-height: var\(--gp-map-button\);/);
+  assert.match(component, /\.gp-home-map-location-results button \{\s*width: 100%;\s*min-height: var\(--gp-map-button\);/);
+  // The result buttons are made by the script, so they take the component's
+  // scope, or the scoped 48px rule never reaches them (CodeRabbit on #60).
+  const searchResults = component.match(/const renderSearchResults = \([\s\S]*?\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(searchResults, /applyScope\(item\);\s*applyScope\(button\);/);
+  assert.match(component, /\.gp-home-map-location-coordinate-row button \{\s*min-height: var\(--gp-map-button\);/);
+  assert.match(component, /\.gp-home-map-addnode-location-head button,\s*\.gp-home-map-addnode-review button \{\s*display: inline-flex;\s*align-items: center;\s*min-height: var\(--gp-map-button\);/);
+  assert.match(component, /\.gp-home-map-addnode-manage-toggle \{\s*min-height: var\(--gp-map-button\);/);
+  assert.match(component, /\.gp-home-map-addnode-manage-submit \{[\s\S]*?min-height: var\(--gp-map-button\);/);
+  assert.match(component, /\.gp-home-map-addnode-next,[\s\S]*?\.gp-home-map-addnode-submit\s*\{[\s\S]*?min-height:\s*48px;/);
+  // "Icon-only controls (zoom, close, reset) are 44 by 44px".
+  assert.match(component, /\.gp-home-map-selected-close \{\s*position: absolute;[\s\S]*?width: var\(--gp-map-target\);\s*height: var\(--gp-map-target\);/);
+  assert.match(component, /\.gp-home-map-selected-edge-open \{[\s\S]*?width: var\(--gp-map-target\);\s*height: var\(--gp-map-target\);/);
+  assert.match(component, /\.gp-home-map-addnode-close \{[\s\S]*?width: var\(--gp-map-target\);\s*height: var\(--gp-map-target\);/);
+  assert.match(component, /\.gp-home-map-addnode-back \{[\s\S]*?width: var\(--gp-map-target\);\s*height: var\(--gp-map-target\);/);
+  assert.doesNotMatch(component, /width: (?:34|38)px;\s*height: (?:34|38)px;/);
+  // Pill links follow the chip rule: 30px under a fine pointer, 44px under a
+  // coarse one and on a phone.
+  assert.match(component, /\.gp-home-map-selected-link \{\s*appearance: none;\s*display: inline-flex;\s*align-items: center;\s*min-height: var\(--gp-map-chip\);/);
+  assert.match(phoneCss, /\.gp-home-map-selected-link \{\s*min-height: var\(--gp-map-target\);/);
 });
 
 // ---------------------------------------------------------------------------

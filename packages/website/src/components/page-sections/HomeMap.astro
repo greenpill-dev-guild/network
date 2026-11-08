@@ -4,6 +4,7 @@ import { isPublicMapCoordinate } from '@greenpill-network/shared/map-locations';
 import { normalizePublicMapThemeSlugs } from '@greenpill-network/shared/map-nodes';
 import { PUBLIC_MAP_THEMES } from '@greenpill-network/shared/map-state';
 import { WORLD_LAND_RINGS, type WorldLandRing } from '../../data/world-land-rings';
+import { PIN_HIT_RADIUS, clampPinToDrawing } from '../../lib/home-map-layout';
 import Button from '../ui/Button.astro';
 import Chip from '../ui/Chip.astro';
 
@@ -94,8 +95,13 @@ type ChapterNode = {
   themes: string[];
   x: number;
   y: number;
+  // The true point in map units; x and y are where the pin is drawn.
+  mapX: number;
+  mapY: number;
   href: string;
   size: number;
+  // Public, from the approved snapshot: which label is placed first.
+  featuredWeight: number;
 };
 
 const chapters = await getOperationalChapters();
@@ -112,6 +118,11 @@ const chapterNodes: ChapterNode[] = chapters
   .map((c) => {
     const size = 1.38;
     const chapterNodeId = `chapter:${c.id}`;
+    // Drawn inside the drawing's edge (§ 5, "Edge pins"); the chapter keeps
+    // its true coordinate, and the script moves the pin in further when its
+    // hit circle grows on a small map.
+    const mapPoint = { x: lonToX(c.data.long), y: latToY(c.data.lat) };
+    const pin = clampPinToDrawing(mapPoint);
     return {
       id: chapterNodeId,
       type: 'chapter' as const,
@@ -122,10 +133,13 @@ const chapterNodes: ChapterNode[] = chapters
       // Directus (Afo, 2026-11-07), read the way the agent reads them for its
       // own chapter nodes. A chapter without themes shows under all themes only.
       themes: normalizePublicMapThemeSlugs(c.data.themeSlugs),
-      x: lonToX(c.data.long),
-      y: latToY(c.data.lat),
+      x: pin.x,
+      y: pin.y,
+      mapX: mapPoint.x,
+      mapY: mapPoint.y,
       href: `/chapters/${c.id}`,
       size,
+      featuredWeight: Number(c.data.featuredWeight ?? 0) || 0,
     };
   });
 
@@ -242,9 +256,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
             data-node-role="Chapter"
             data-node-place={c.city || c.region}
             data-node-themes={c.themes.join(' ')}
+            data-featured-weight={c.featuredWeight}
+            data-map-x={c.mapX.toFixed(3)}
+            data-map-y={c.mapY.toFixed(3)}
           >
             <title>{`${c.name}${c.city ? ` · ${c.city}` : ''}`}</title>
-            <circle class="gp-home-map-node-hit" cx={c.x} cy={c.y} r="4.8" />
+            <circle class="gp-home-map-node-hit" cx={c.x} cy={c.y} r={PIN_HIT_RADIUS} />
             <circle class="gp-home-map-node-halo" cx={c.x} cy={c.y} r={c.size + 1.45} data-base-r={c.size + 1.45} />
             <circle class="gp-home-map-node-ring" cx={c.x} cy={c.y} r={c.size + 0.45} data-base-r={c.size + 0.45} />
             <circle class="gp-home-map-node-dot" cx={c.x} cy={c.y} r={c.size} data-base-r={c.size} />
@@ -257,6 +274,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           build time so the map renders and degrades gracefully when the agent
           is unavailable. */}
       <g class="gp-home-map-members" data-home-map-members></g>
+
+      {/* Chapter labels at rest, placed by the script where they touch no
+          other label, pin, badge, bar or dock. Visual only: each pin carries
+          its full name. Below the stacks, so an open fan reads on top. */}
+      <g class="gp-home-map-chapter-labels" data-home-map-chapter-labels aria-hidden="true"></g>
 
       {/* Exact-overlap fan-out affordances for co-located people pins.
           Rendered client-side above the people layer; empty at build time. */}
@@ -750,7 +772,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   } from '@greenpill-network/shared/map-node-storage';
   import {
     ATLANTIC_CENTER_X,
+    PIN_HIT_RADIUS,
+    badgeFallbackCenter,
+    circleFitsInside,
     clampMapView,
+    clampPinToDrawing,
     defaultMapView,
     fanHasRoomForTargets,
     formatPickerCoordinate,
@@ -759,8 +785,10 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     layoutFan,
     panMapView,
     pickerPointToLocation,
+    placeMapLabels,
     pointsBeyondView,
     separateLabels,
+    type MapCircle,
     type MapEdge,
   } from '../../lib/home-map-layout';
   import {
@@ -857,7 +885,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const VISIBLE_VIEW_H = 88;
     const MAP_VIEW_H = 88; // client-scope mirror of the server mini-map viewBox height (0 0 200 88)
     const SVG_NS = 'http://www.w3.org/2000/svg';
-    const NODE_HIT_RADIUS = 4.8;
+    const NODE_HIT_RADIUS = PIN_HIT_RADIUS;
     const lonToX = (lon: number) => ((lon + 180) / 360) * VIEW_W;
     const latToY = (lat: number) => ((90 - lat) / 180) * VIEW_H;
 
@@ -1730,10 +1758,21 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     // filters changed. Without this the remembered node was re-focused by the
     // next poll or resize, long after the pointer had gone. A selected node
     // owns the focus state and is left alone.
+    // The pin or badge the pointer is on, as geometry decides it. The map
+    // draws hover from this class, not from :hover: a 44px hit circle can lie
+    // over a neighbour's, and the browser gives :hover to whichever paints
+    // last, while the tooltip and a click follow the nearest centre.
+    const markPointerTarget = (target: Element | null) => {
+      root.querySelectorAll('.is-pointer-target').forEach((el) => {
+        if (el !== target) el.classList.remove('is-pointer-target');
+      });
+      target?.classList.add('is-pointer-target');
+    };
     const dropPointerFocus = () => {
       const hadPointerTarget = Boolean(pointerFocusTarget || hoveredStackKey);
       pointerFocusTarget = null;
       hoveredStackKey = '';
+      markPointerTarget(null);
       if (selectedFocusTarget) return;
       if (hadPointerTarget || root.classList.contains('is-focused')) clearFocusState();
     };
@@ -1743,6 +1782,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const minViewRadius = minClientRadius > 0 ? minClientRadius / clientScaleForBox(currentViewBox) : 0;
 
       let nearest: { node: Element; distance: number } | null = null;
+      // At least the drawn hit circle: 44px across at every map size.
+      const pinRadius = pinHitRadius();
       // A pin hidden behind a stack marker is not a target.
       for (const node of root.querySelectorAll('.gp-home-map-node-link:not(.is-filtered-out):not(.is-clustered)')) {
         const dot = node.querySelector('.gp-home-map-node-dot') as SVGCircleElement | null;
@@ -1751,7 +1792,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         const r = Number(dot?.getAttribute('r')) || 1.4;
         if (!Number.isFinite(cx) || !Number.isFinite(cy)) continue;
         const distance = Math.hypot(point.x - cx, point.y - cy);
-        const hitRadius = Math.max(NODE_HIT_RADIUS, r + 3.2, minViewRadius);
+        const hitRadius = Math.max(pinRadius, r + 3.2, minViewRadius);
         if (distance > hitRadius) continue;
         if (!nearest || distance < nearest.distance) nearest = { node, distance };
       }
@@ -1766,7 +1807,9 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     // and a click opens what the hover card named.
     type MapPoint = { x: number; y: number };
     type MapBox = { x: number; y: number; width: number; height: number };
-    type ClusterMember = { el: Element; key: string; center: MapPoint };
+    // `center` is where the pin is drawn; `truePoint` is where the node is.
+    // They differ only for a pin the drawing's edge moved in.
+    type ClusterMember = { el: Element; key: string; center: MapPoint; truePoint: MapPoint };
     type OverlapStack = {
       members: ClusterMember[];
       // The chapter pins the stacked people sit on, if any.
@@ -1821,14 +1864,22 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     // What hover shows for a pointer position: a pin (a fan satellite stands for
     // its pin, and a marker for one person stands for that person), a stack of
-    // several people, or nothing. The legend, the controls and the cards are
-    // not the map, so over those there is nothing.
-    const hoverTargetAtPointer = (event: PointerEvent | MouseEvent): { pin?: Element; stack?: OverlapStack } => {
+    // several people, or nothing. `mark` is what is drawn hovered: the
+    // satellite or the marker the pointer is on, not the hidden pin it stands
+    // for. The legend, the controls and the cards are not the map, so over
+    // those there is nothing.
+    const hoverTargetAtPointer = (
+      event: PointerEvent | MouseEvent
+    ): { pin?: Element; stack?: OverlapStack; mark?: Element } => {
       if (isGestureBlocked(event.target)) return {};
       const { satellite, pin, stack } = targetAtPointer(event);
-      if (satellite) return { pin: satellite.member.el };
-      if (stack) return stack.members.length === 1 ? { pin: stack.members[0].el } : { stack };
-      return pin ? { pin } : {};
+      if (satellite) return { pin: satellite.member.el, mark: satellite.el };
+      if (stack) {
+        return stack.members.length === 1
+          ? { pin: stack.members[0].el, mark: stack.marker }
+          : { stack, mark: stack.marker };
+      }
+      return pin ? { pin, mark: pin } : {};
     };
 
     const gesturePointers = new Map<number, PointerEvent>();
@@ -1994,8 +2045,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     root.addEventListener('pointermove', (event) => {
       if (isTouchMap() && event.pointerType !== 'mouse') return;
       if (gesturePointers.size > 0) return;
+      const { pin, stack, mark } = hoverTargetAtPointer(event);
+      // Hover follows the pointer while a card is open too, since a click
+      // there acts on what is drawn hovered; the selected node keeps the card
+      // and the focus state.
+      markPointerTarget(mark ?? null);
       if (selectedFocusTarget) return;
-      const { pin, stack } = hoverTargetAtPointer(event);
       if (stack) {
         pointerFocusTarget = null;
         if (hoveredStackKey !== stackKeyOf(stack.members)) showStackFocus(stack);
@@ -2801,7 +2856,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     // it lifts, so a touch waits for the next change instead, rather than
     // moving the chip it just pressed before a second tap.
     const sortStripWhenFree = () => {
-      if (stripSortPending) window.requestAnimationFrame(() => layoutThemeStrip());
+      if (!stripSortPending) return;
+      window.requestAnimationFrame(() => {
+        layoutThemeStrip();
+        // The strip may now take more or less room beside the labels.
+        scheduleChapterLabels();
+      });
     };
     themeStrip?.addEventListener('pointerleave', (event) => {
       if (event.pointerType !== 'touch') sortStripWhenFree();
@@ -2931,6 +2991,9 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const injectedKeys = new Set<string>();
     const memberByKey = new Map<string, DynamicMapNode>();
     let lastDynamicThreadSignature = '';
+    // The last nodes and lines drawn, so the lines can be drawn again when an
+    // edge pin moves in.
+    let lastThreadInputs: { nodes: Array<Record<string, any>>; edges: Array<Record<string, any>> } | null = null;
 
     const makeCircle = (cls: string, cx: number, cy: number, r: number) => {
       const circle = document.createElementNS(SVG_NS, 'circle');
@@ -3172,8 +3235,9 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       listDrawer.hidden = false;
       renderNodeList();
       showNodeListForLayout();
-      // The strip has less room beside a docked list.
+      // The strip has less room beside a docked list, and labels give way to it.
       layoutThemeStrip();
+      scheduleChapterLabels();
       // The list starts at its first control.
       window.requestAnimationFrame(() => listEntryControl()?.focus({ preventScroll: true }));
     };
@@ -3191,8 +3255,10 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       focusedListNode = null;
       clearListTarget();
       layoutThemeStrip();
-      // A selected node's card may sit where the dock no longer is.
+      // A selected node's card may sit where the dock no longer is, and
+      // labels may have room there again.
       syncSelectedOverlay();
+      scheduleChapterLabels();
     };
 
     // Focus goes back to the list's opener, or, when a rebuild replaced the
@@ -3493,8 +3559,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     const injectMember = (member: DynamicMapNode) => {
       if (!membersGroup) return;
-      const x = lonToX(member.long);
-      const y = latToY(member.lat);
+      // Drawn inside the drawing's edge (§ 5, "Edge pins"); the member keeps
+      // its true coordinate (data-map-x, data-map-y), and the stacks rebuild
+      // moves the pin in further when its hit circle grows on a small map.
+      const mapPoint = { x: lonToX(member.long), y: latToY(member.lat) };
+      const { x, y } = clampPinToDrawing(mapPoint);
       if (injectedKeys.has(member.key)) {
         const existing = membersGroup.querySelector(`[data-node-id="${CSS.escape(member.key)}"]`) as SVGGElement | null;
         const current = memberByKey.get(member.key);
@@ -3507,8 +3576,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           if (title) title.textContent = `${next.name} · Your node${next.place ? ` · ${next.place}` : ''}`;
           if (!existing.querySelector('.gp-home-map-node-owner-ring')) {
             const halo = existing.querySelector('.gp-home-map-node-halo');
+            // The ring goes where the pin is drawn now, which the edge may
+            // have moved in further than the default inset.
+            const drawn = nodeCenter(existing) ?? { x, y };
             existing.insertBefore(
-              makeCircle('gp-home-map-node-owner-ring', x, y, next.type === 'steward' ? 3.5 : 3.35),
+              makeCircle('gp-home-map-node-owner-ring', drawn.x, drawn.y, next.type === 'steward' ? 3.5 : 3.35),
               halo
             );
           }
@@ -3539,6 +3611,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       group.setAttribute('data-node-public-note', member.publicNote);
       group.setAttribute('data-node-themes', member.themes.join(' '));
       group.dataset.memberKey = member.key;
+      group.dataset.mapX = mapPoint.x.toFixed(3);
+      group.dataset.mapY = mapPoint.y.toFixed(3);
       const roleWord = member.pending ? `Pending ${member.type} node` : `${member.type} node`;
       group.setAttribute('aria-label', `${member.name}, ${member.owned ? 'your ' : ''}${roleWord}${member.place ? `, ${member.place}` : ''}`);
 
@@ -3608,6 +3682,73 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const reducedMotionPref = () =>
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const pxToViewBox = (px: number) => px / clientScaleForBox(currentViewBox);
+    // § 5: "pins and badges stay at least 44px at every map size (their hit
+    // circles scale with the map)". A target reaches at least 22px from its
+    // centre, so in map units it grows as the map draws smaller.
+    const minTargetRadius = () => pxToViewBox(POINTER_TARGET_RADIUS_PX);
+    const pinHitRadius = () => Math.max(NODE_HIT_RADIUS, minTargetRadius());
+    // A badge's target: its disc and 3px, or 44px across if that is more.
+    const badgeHitRadius = (markerRadius: number) => Math.max(markerRadius + pxToViewBox(3), minTargetRadius());
+    // A map that is not laid out has no scale to read; it keeps what it has.
+    const mapIsDrawn = () => Boolean(svgEl && svgEl.getBoundingClientRect().width > 0);
+    // The stage clips the drawing to rounded corners, inside its border; in
+    // map units, so a pin's or a badge's target near a corner can keep its
+    // whole circle inside that curve.
+    const stageCornerRadius = () => {
+      const stage = window.getComputedStyle(root);
+      const clipRadius = (Number.parseFloat(stage.borderTopLeftRadius) || 0) - (Number.parseFloat(stage.borderTopWidth) || 0);
+      return pxToViewBox(Math.max(0, clipRadius));
+    };
+    const syncPinHitTargets = () => {
+      if (!mapIsDrawn()) return;
+      const radius = pinHitRadius().toFixed(2);
+      root.querySelectorAll('.gp-home-map-node-hit').forEach((circle) => circle.setAttribute('r', radius));
+    };
+    // § 5, "Edge pins": a pin and its hit circle stay inside the drawing.
+    // The hit circle grows as the map draws smaller, so the inset grows with
+    // it: a pin on the 180th meridian moves in until its 44px target is whole.
+    // The node keeps its true point (data-map-x, data-map-y); its lines are
+    // drawn again to meet the pin where it now stands.
+    const PIN_CIRCLES = '.gp-home-map-node-hit, .gp-home-map-node-owner-ring, .gp-home-map-node-halo, .gp-home-map-node-ring, .gp-home-map-node-dot';
+    const placePinsInsideDrawing = () => {
+      if (!mapIsDrawn()) return;
+      const inset = pinHitRadius();
+      const corner = stageCornerRadius();
+      // The drawing as the stage shows it at its widest: all of its width
+      // (a phone pans across it), and its height less what a wide stage crops
+      // from the top and bottom, so the corners are the stage's own.
+      const widest = largestMapView(stageAspect(), FULL_VIEW_BOX);
+      const shownDrawing = { x: FULL_VIEW_BOX.x, y: widest.y, width: FULL_VIEW_BOX.width, height: widest.height };
+      let moved = false;
+      root.querySelectorAll<SVGElement>('.gp-home-map-node-link').forEach((pin) => {
+        const x = toFiniteNumber(pin.dataset.mapX);
+        const y = toFiniteNumber(pin.dataset.mapY);
+        if (x === null || y === null) return;
+        const drawn = clampPinToDrawing({ x, y }, inset, shownDrawing, corner);
+        // Each circle is checked, not just the dot, so one added later (the
+        // owner ring of a node just claimed) is brought to the pin too.
+        const close = (circle: Element, attribute: string, value: number) => (
+          Math.abs(Number(circle.getAttribute(attribute)) - value) < 0.005
+        );
+        pin.querySelectorAll(PIN_CIRCLES).forEach((circle) => {
+          if (close(circle, 'cx', drawn.x) && close(circle, 'cy', drawn.y)) return;
+          circle.setAttribute('cx', drawn.x.toFixed(2));
+          circle.setAttribute('cy', drawn.y.toFixed(2));
+          moved = true;
+        });
+      });
+      if (!moved) return;
+      if (lastThreadInputs) renderDynamicThreads(lastThreadInputs.nodes, lastThreadInputs.edges);
+      // What is drawn at a pin follows it: the selected node's coloured web
+      // and its card, and the tooltip of the node it shows.
+      const selectedId = selectedFocusTarget?.getAttribute('data-node-id') || '';
+      if (selectedId) markSelectedThreads(selectedId);
+      syncSelectedOverlay();
+      const shown = activeFocusNodeId
+        ? root.querySelector(`.gp-home-map-node-link[data-node-id="${CSS.escape(activeFocusNodeId)}"]`)
+        : null;
+      if (shown) setFocus(shown);
+    };
     const isChapterPin = (pin: ClusterMember) => pin.el.classList.contains('is-chapter');
     const isStewardPin = (pin: ClusterMember) => filterTypeFor(pin.el.getAttribute('data-node-type')) === 'steward';
     const pointsWithin = (a: MapPoint, b: MapPoint, radius: number) => (
@@ -3621,7 +3762,10 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       layer.querySelectorAll('.gp-home-map-node-link:not(.is-filtered-out)').forEach((el) => {
         const center = nodeCenter(el);
         const key = el.getAttribute('data-node-id') || '';
-        if (center && key) out.push({ el, key, center });
+        if (!center || !key) return;
+        const mapX = toFiniteNumber(el.getAttribute('data-map-x'));
+        const mapY = toFiniteNumber(el.getAttribute('data-map-y'));
+        out.push({ el, key, center, truePoint: mapX !== null && mapY !== null ? { x: mapX, y: mapY } : center });
       });
       return out;
     };
@@ -3647,16 +3791,24 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const pinName = (pin: ClusterMember) => clean(pin.el.getAttribute('data-node-name')) || 'Map node';
     const peopleCount = (count: number) => `${count} ${count === 1 ? 'person' : 'people'}`;
 
-    // Where a stack is, in words: the chapters it sits on, or the places its
-    // people gave.
+    // Where a stack is, in words: the chapters its people truly share a spot
+    // with, or the places its people gave. Pins the drawing's edge moved
+    // together are not "at" one another, so their true points decide.
     const stackWhere = (members: ClusterMember[], chapters: ClusterMember[]) => {
-      if (chapters.length) {
-        return `at ${listLabel(chapters.map(pinName), 2, (n) => `${n} more ${n === 1 ? 'chapter' : 'chapters'}`)}`;
+      // The stack is "at" the chapters whose spot every one of its people
+      // truly shares; people who each share a different chapter's spot are
+      // not all at any of them.
+      const sharesSpot = (member: ClusterMember, chapter: ClusterMember) => (
+        pointsWithin(member.truePoint, chapter.truePoint, OVERLAP_STACK_RADIUS)
+      );
+      const sharedChapters = chapters.filter((chapter) => members.every((member) => sharesSpot(member, chapter)));
+      if (sharedChapters.length) {
+        return `at ${listLabel(sharedChapters.map(pinName), 2, (n) => `${n} more ${n === 1 ? 'chapter' : 'chapters'}`)}`;
       }
       const places = [...new Set(members.map((m) => clean(m.el.getAttribute('data-node-place'))).filter(Boolean))];
-      return places.length
-        ? `near ${listLabel(places, 2, (n) => `${n} more ${n === 1 ? 'place' : 'places'}`)}`
-        : 'at the same spot';
+      if (places.length) return `near ${listLabel(places, 2, (n) => `${n} more ${n === 1 ? 'place' : 'places'}`)}`;
+      const sameSpot = members.every((member) => pointsWithin(member.truePoint, members[0].truePoint, OVERLAP_STACK_RADIUS));
+      return sameSpot ? 'at the same spot' : 'close together';
     };
 
     const setPinClustered = (el: Element, clustered: boolean) => {
@@ -3903,29 +4055,35 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const ring = pin.el.querySelector('.gp-home-map-node-ring') as SVGCircleElement | null;
       return { center: pin.center, radius: Number(ring?.getAttribute('r')) || 1.8 };
     };
-    const badgeCenterFor = (anchors: ClusterMember[], radius: number, taken: Footprint[]) => {
+    // `corner` is the stage's corner radius in map units (stageCornerRadius).
+    const badgeCenterFor = (anchors: ClusterMember[], radius: number, taken: Footprint[], corner: number) => {
       const anchor = centroidOf(anchors);
       const reach = Math.max(...anchors.map((pin) => (
         Math.hypot(pin.center.x - anchor.x, pin.center.y - anchor.y) + pinFootprint(pin).radius
       )));
       const distance = reach + pxToViewBox(STACK_BADGE_GAP_PX) + radius;
       const box = currentViewBox;
+      // The badge's whole 44px target must be in view, not just its disc,
+      // and clear of the stage's rounded corners.
+      const target = badgeHitRadius(radius);
       let best: { center: MapPoint; room: number } | null = null;
       for (const angle of BADGE_DIRECTIONS) {
         const center = { x: anchor.x + Math.cos(angle) * distance, y: anchor.y + Math.sin(angle) * distance };
-        const inView = center.x - radius >= box.x && center.x + radius <= box.x + box.width
-          && center.y - radius >= box.y && center.y + radius <= box.y + box.height;
-        if (!inView) continue;
+        if (!circleFitsInside(center, target, box, corner)) continue;
         const room = taken.reduce((min, other) => (
           Math.min(min, Math.hypot(center.x - other.center.x, center.y - other.center.y) - other.radius - radius)
         ), Number.POSITIVE_INFINITY);
         if (room >= 0) return center;
         if (!best || room > best.room) best = { center, room };
       }
-      return best?.center ?? {
+      if (best) return best.center;
+      // No side keeps the whole target in view: the first side, moved in,
+      // unless the anchor itself is out of view.
+      const beside = {
         x: anchor.x + Math.cos(BADGE_DIRECTIONS[0]) * distance,
         y: anchor.y + Math.sin(BADGE_DIRECTIONS[0]) * distance,
       };
+      return badgeFallbackCenter(anchor, beside, target, box, corner);
     };
 
     // Draws one stack: a counted marker for several people, or one pin for one
@@ -3959,7 +4117,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       title.textContent = label;
       group.append(title);
 
-      const hitRadius = markerRadius + pxToViewBox(3);
+      // A badge is a target at least 44px across, like a pin.
+      const hitRadius = badgeHitRadius(markerRadius);
       group.append(makeCircle('gp-home-map-overlap-hit', markerCenter.x, markerCenter.y, hitRadius));
       group.append(makeCircle('gp-home-map-overlap-halo', markerCenter.x, markerCenter.y, markerRadius + pxToViewBox(4)));
       if (ownedInStack) group.append(makeCircle('gp-home-map-overlap-owner-ring', markerCenter.x, markerCenter.y, markerRadius + pxToViewBox(2.5)));
@@ -4037,8 +4196,137 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       return true;
     };
 
+    // ---- Chapter labels at rest ---------------------------------------------
+    // § 5: "Manrope 600 at 12px in --gp-fg-muted with a dark halo, without the
+    // leading 'Greenpill ' (the tooltip and the dock keep the full name). The
+    // highest featuredWeight goes first. Each label tries right, left, above
+    // and below its dot, and hides when it would touch another label, a pin, a
+    // badge, a bar or the dock. People never get labels at rest. Labels dim
+    // while a node is selected." A phone shows none. placeMapLabels
+    // (lib/home-map-layout.ts) holds the rules; this measures and draws.
+    const chapterLabelsGroup = root.querySelector('[data-home-map-chapter-labels]') as SVGGElement | null;
+    // What a label must not touch besides pins and badges: the bars, the
+    // notes over the map, and the list's dock or sheet.
+    const LABEL_BLOCKERS = [
+      '.gp-home-map-theme-strip',
+      '.gp-home-map-legend',
+      '.gp-home-map-themes-toggle',
+      '.gp-home-map-list-toggle',
+      '.gp-home-map-freshness',
+      '.gp-home-map-end-group',
+      '.gp-home-map-edge-pill',
+      '.gp-home-map-state-error',
+      '.gp-home-map-filter-note',
+      '.gp-home-map-list-drawer',
+    ].join(', ');
+    const chapterLabelText = (name: string) => name.replace(/^Greenpill\s+/i, '') || name;
+
+    // A box on the page, in map units. Hidden elements have none.
+    const mapBoxForClientRect = (rect: DOMRect): MapBox | null => {
+      if (!svgEl || rect.width <= 0 || rect.height <= 0) return null;
+      const svgRect = svgEl.getBoundingClientRect();
+      const scale = clientScaleForBox(currentViewBox);
+      const offsetX = (svgRect.width - currentViewBox.width * scale) / 2;
+      const offsetY = (svgRect.height - currentViewBox.height * scale) / 2;
+      return {
+        x: currentViewBox.x + (rect.left - svgRect.left - offsetX) / scale,
+        y: currentViewBox.y + (rect.top - svgRect.top - offsetY) / scale,
+        width: rect.width / scale,
+        height: rect.height / scale,
+      };
+    };
+
+    const layoutChapterLabels = () => {
+      const group = chapterLabelsGroup;
+      if (!group) return;
+      group.textContent = '';
+      if (mapLayout() === 'phone') return;
+      const px = pxToViewBox(1);
+      const view = currentViewBox;
+      const ringRadius = (pin: Element) => Number(pin.querySelector('.gp-home-map-node-ring')?.getAttribute('r')) || 1.5;
+      const drawnPins = Array.from(root.querySelectorAll<SVGElement>('.gp-home-map-node-link:not(.is-filtered-out):not(.is-clustered)'));
+      const chapters = drawnPins
+        .filter((pin) => pin.classList.contains('is-chapter'))
+        .map((pin) => ({ pin, center: nodeCenter(pin), weight: Number(pin.dataset.featuredWeight) || 0, name: clean(pin.dataset.nodeName) }))
+        .filter((chapter): chapter is { pin: SVGElement; center: MapPoint; weight: number; name: string } => (
+          Boolean(chapter.center && chapter.name)
+        ))
+        .sort((a, b) => b.weight - a.weight || a.name.localeCompare(b.name, 'en'));
+      if (!chapters.length) return;
+      // Pins as their rings draw them and badges as their discs do, with 2px
+      // to spare; a label keeps 4px from its own dot.
+      const circles: MapCircle[] = [
+        ...drawnPins.flatMap((pin) => {
+          const center = nodeCenter(pin);
+          return center ? [{ center, radius: ringRadius(pin) + 2 * px }] : [];
+        }),
+        ...overlapStacks.map((stack) => ({
+          center: stack.markerCenter,
+          radius: (Number(stack.marker.querySelector('.gp-home-map-overlap-disc')?.getAttribute('r')) || 0) + 2 * px,
+        })),
+      ];
+      const boxes = Array.from(root.querySelectorAll<HTMLElement>(LABEL_BLOCKERS)).flatMap((el) => {
+        const box = mapBoxForClientRect(el.getBoundingClientRect());
+        return box ? [box] : [];
+      });
+      const fontSize = cssPx('--gp-label-sm', 12) * px;
+      try {
+        const labels = chapters.map((chapter) => {
+          const text = document.createElementNS(SVG_NS, 'text');
+          applyScope(text);
+          text.setAttribute('class', 'gp-home-map-chapter-label');
+          text.setAttribute('font-size', fontSize.toFixed(3));
+          text.setAttribute('stroke-width', (3 * px).toFixed(3));
+          text.setAttribute('dominant-baseline', 'central');
+          text.textContent = chapterLabelText(chapter.name);
+          group.append(text);
+          // Measured where it was made, at 0,0.
+          return { text, chapter, measured: text.getBBox() };
+        });
+        // A label's box takes in its halo, half the outline's width each side,
+        // so the outline never paints over what the label keeps clear of.
+        const halo = 1.5 * px;
+        const placements = placeMapLabels(
+          labels.map(({ chapter, measured }) => ({
+            anchor: chapter.center,
+            gap: ringRadius(chapter.pin) + 4 * px - halo,
+            width: measured.width + halo * 2,
+            height: measured.height + halo * 2,
+          })),
+          { circles, boxes },
+          { x: view.x + 4 * px, y: view.y + 4 * px, width: view.width - 8 * px, height: view.height - 8 * px }
+        );
+        placements.forEach((placement, index) => {
+          const { text, measured } = labels[index];
+          // A name with no size was not drawn; it is placed on a later layout.
+          if (!placement || measured.width <= 0) {
+            text.remove();
+            return;
+          }
+          text.setAttribute('x', (placement.box.x + halo - measured.x).toFixed(2));
+          text.setAttribute('y', (placement.box.y + halo - measured.y).toFixed(2));
+          text.dataset.labelSide = placement.side;
+        });
+      } catch {
+        // A map that is not rendered has no boxes to measure (some browsers
+        // throw); it labels itself on the next layout, and the stacks
+        // rebuild that called this carries on.
+        group.textContent = '';
+      }
+    };
+
+    // The bars and the dock move without a rebuild of the stacks (the list
+    // opens, the strip re-sorts, the fonts arrive): one layout a frame.
+    let chapterLabelFrame = 0;
+    const scheduleChapterLabels = () => {
+      window.cancelAnimationFrame(chapterLabelFrame);
+      chapterLabelFrame = window.requestAnimationFrame(layoutChapterLabels);
+    };
+
     const recomputeClustersNow = () => {
       if (!clustersGroup || !membersGroup) return;
+      // Edge pins first: the stacks and the labels work from where pins stand.
+      placePinsInsideDrawing();
       // Keyboard focus on a marker, a fan satellite or a pin about to be hidden
       // must not fall to the page when the markers are rebuilt.
       const active = document.activeElement instanceof Element && root.contains(document.activeElement)
@@ -4061,6 +4349,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (pointerFocusTarget?.classList.contains('is-clustered')) {
         pointerFocusTarget = null;
         clearFocus();
+        markPointerTarget(null);
       }
 
       // What is still drawn, so badges can be placed beside it rather than on it.
@@ -4075,6 +4364,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const roomAt = (center: MapPoint, radius: number) => taken.reduce((min, other) => (
         Math.min(min, Math.hypot(center.x - other.center.x, center.y - other.center.y) - other.radius - radius)
       ), Number.POSITIVE_INFINITY);
+      const corner = stageCornerRadius();
       // Stacks of people alone sit where their people are, or just beside that
       // spot when a drawn pin is there. Badges for people on a chapter, or
       // beside a selected person, are placed after them.
@@ -4086,7 +4376,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         .forEach(({ people }) => {
           const radius = radiusFor(people.length);
           const spot = centroidOf(people);
-          const center = roomAt(spot, radius) >= 0 ? spot : badgeCenterFor(people, radius, taken);
+          const center = roomAt(spot, radius) >= 0 ? spot : badgeCenterFor(people, radius, taken, corner);
           renderOverlapStack(people, [], center, radius, spot);
           taken.push({ center, radius });
         });
@@ -4095,12 +4385,16 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         .forEach(({ people, chapters }) => {
           const radius = radiusFor(people.length);
           const anchors = anchorsOf(people, chapters);
-          const center = badgeCenterFor(anchors, radius, taken);
+          const center = badgeCenterFor(anchors, radius, taken, corner);
           renderOverlapStack(people, chapters, center, radius, centroidOf(anchors));
           taken.push({ center, radius });
         });
       // A row's preview moves to the marker that now stands for its node.
       if (listTargetNode) previewListNode(listTargetNode);
+      // Hit circles follow the map's scale, and labels find room around the
+      // pins and badges as they now stand.
+      syncPinHitTargets();
+      layoutChapterLabels();
       // When nothing stands for those people any more (an update removed
       // them), the legend, the next control after the map, takes focus.
       if (active && (!active.isConnected || active.classList.contains('is-clustered')) && !focusControlFor(focusKeys)) {
@@ -4247,6 +4541,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       rawEdges: Array<Record<string, any>>
     ) => {
       if (!dynamicThreadsGroup) return;
+      lastThreadInputs = { nodes: rawNodes, edges: rawEdges };
       const existingThreads = new Map<string, SVGPathElement>();
       dynamicThreadsGroup.querySelectorAll<SVGPathElement>('.gp-home-map-thread').forEach((path) => {
         const id = clean(path.dataset.edgeId);
@@ -4283,9 +4578,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         const type = filterTypeFor(node?.type);
         if (!id || lat === null || long === null) return;
         const existing = nodeById.get(id);
+        // A line ends where its pin is drawn, inside the drawing's edge.
+        const drawn = clampPinToDrawing({ x: lonToX(long), y: latToY(lat) });
         nodeById.set(id, {
-          x: existing?.x ?? lonToX(long),
-          y: existing?.y ?? latToY(lat),
+          x: existing?.x ?? drawn.x,
+          y: existing?.y ?? drawn.y,
           type: existing?.type ?? type,
           name: existing?.name || clean(node?.name) || id,
         });
@@ -4481,6 +4778,9 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       }
       root.classList.toggle('has-map-state-problem', Boolean(status.problem));
       syncAlertBlock();
+      // The live pill and the error note are bars the labels keep clear of,
+      // and they just showed, hid or changed width.
+      scheduleChapterLabels();
       const announcement = mapStateAnnouncement(lastMapStateStatus, status);
       if (announcement && mapStateLive) {
         // The same words twice in a row are not read again unless they change.
@@ -5036,6 +5336,9 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       results.forEach((result) => {
         const item = document.createElement('li');
         const button = document.createElement('button');
+        // Scoped like the markup, so the 48px result buttons get their style.
+        applyScope(item);
+        applyScope(button);
         button.type = 'button';
         button.textContent = result.label;
         button.addEventListener('click', () => {
@@ -5413,7 +5716,10 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     renderLocalPending();
     loadMapState();
     // Chips are measured in the site's fonts, which can arrive after this.
-    document.fonts?.ready.then(() => layoutThemeStrip()).catch(() => {});
+    document.fonts?.ready.then(() => {
+      layoutThemeStrip();
+      scheduleChapterLabels();
+    }).catch(() => {});
   })();
 </script>
 
@@ -5439,6 +5745,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     --gp-map-edge-fade: linear-gradient(to right, transparent 0, #000 6px, #000 calc(100% - 12px), transparent 100%);
     /* The world grid shown at rest, as width / height. */
     --gp-map-aspect: 200 / 88;
+    /* Sizes set once for the map and its join walkthrough (DESIGN.md:431 to
+       441, § 5's hit targets): a touch target (icon-only controls, rows,
+       fields, chips on a touch screen), a text button's minimum, an icon,
+       and a node's mark. */
+    --gp-map-target: 44px;
+    --gp-map-icon: 16px;
+    --gp-map-mark: 10px;
+    --gp-map-button: 48px;
     container-type: inline-size;
     margin: 0 auto;
     /* Width comes from the container. The viewport only caps the height, and
@@ -5491,11 +5805,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     --gp-map-dock-width: 340px;
     --gp-map-chip: 30px;
     --gp-map-bar-block: calc(var(--gp-map-chip) + var(--gp-space-xs) * 2 + 2px);
-    /* Sizes the list's parts share, set once here: a touch target (a row,
-       the search field, Close), an icon, and a node's mark. */
-    --gp-map-target: 44px;
-    --gp-map-icon: 16px;
-    --gp-map-mark: 10px;
     position: relative;
     width: 100%;
     aspect-ratio: var(--gp-map-aspect);
@@ -5510,7 +5819,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   /* A finger needs a 44px chip (DESIGN.md:431); the bars grow to hold it. */
   @media (pointer: coarse) {
     .gp-home-map-canvas {
-      --gp-map-chip: 44px;
+      --gp-map-chip: var(--gp-map-target);
     }
   }
 
@@ -5693,7 +6002,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     fill: var(--gp-map-chapter);
     opacity: 0.16;
   }
-  .gp-home-map-node-link.is-chapter:hover .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-chapter.is-pointer-target .gp-home-map-node-halo,
   .gp-home-map-node-link.is-chapter:focus-visible .gp-home-map-node-halo,
   .gp-home-map-node-link.is-chapter.is-selected .gp-home-map-node-halo {
     opacity: 0.42;
@@ -5717,7 +6026,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     fill: none;
     stroke: transparent;
   }
-  .gp-home-map-node-link.is-steward:hover .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-steward.is-pointer-target .gp-home-map-node-halo,
   .gp-home-map-node-link.is-steward:focus-visible .gp-home-map-node-halo {
     opacity: 0.5;
   }
@@ -5745,13 +6054,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     opacity: 0.14;
     transition: opacity 240ms cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .gp-home-map-node-link.is-member:hover .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-member.is-pointer-target .gp-home-map-node-halo,
   .gp-home-map-node-link.is-member:focus-visible .gp-home-map-node-halo,
   .gp-home-map-node-link.is-member.is-selected .gp-home-map-node-halo,
-  .gp-home-map-node-link.is-project:hover .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-project.is-pointer-target .gp-home-map-node-halo,
   .gp-home-map-node-link.is-project:focus-visible .gp-home-map-node-halo,
   .gp-home-map-node-link.is-project.is-selected .gp-home-map-node-halo,
-  .gp-home-map-node-link.is-place:hover .gp-home-map-node-halo,
+  .gp-home-map-node-link.is-place.is-pointer-target .gp-home-map-node-halo,
   .gp-home-map-node-link.is-place:focus-visible .gp-home-map-node-halo,
   .gp-home-map-node-link.is-place.is-selected .gp-home-map-node-halo {
     opacity: 0.46;
@@ -5769,7 +6078,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     stroke-dasharray: 0.9 0.75;
     opacity: 0.95;
   }
-  .gp-home-map-node-link.is-owned:hover .gp-home-map-node-owner-ring,
+  .gp-home-map-node-link.is-owned.is-pointer-target .gp-home-map-node-owner-ring,
   .gp-home-map-node-link.is-owned:focus-visible .gp-home-map-node-owner-ring,
   .gp-home-map-node-link.is-owned.is-selected .gp-home-map-node-owner-ring {
     stroke-width: 0.48;
@@ -5855,11 +6164,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     pointer-events: none;
     user-select: none;
   }
-  .gp-home-map-overlap-stack:hover .gp-home-map-overlap-halo,
+  .gp-home-map-overlap-stack.is-pointer-target .gp-home-map-overlap-halo,
   .gp-home-map-overlap-stack:focus-visible .gp-home-map-overlap-halo {
     opacity: 0.42;
   }
-  .gp-home-map-overlap-stack:hover .gp-home-map-overlap-disc,
+  .gp-home-map-overlap-stack.is-pointer-target .gp-home-map-overlap-disc,
   .gp-home-map-overlap-stack:focus-visible .gp-home-map-overlap-disc {
     stroke: var(--gp-primary);
     stroke-width: 2px;
@@ -5911,11 +6220,33 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     stroke-linejoin: round;
     user-select: none;
   }
-  .gp-home-map-cluster-sat:hover .gp-home-map-cluster-sat-label,
+  .gp-home-map-cluster-sat.is-pointer-target .gp-home-map-cluster-sat-label,
   .gp-home-map-cluster-sat:focus-visible .gp-home-map-cluster-sat-label {
     fill: var(--gp-primary);
   }
-  .gp-home-map-cluster-sat:hover .gp-home-map-cluster-sat-dot,
+
+  /* Chapter labels at rest (§ 5): Manrope 600 at 12px in the muted text
+     colour, outlined in the canvas green so they read over threads and land
+     dots. The script places each one and sets its size and outline in map
+     units, as it does for the fan's names. They dim with the map while a
+     node is selected or previewed; a phone shows none. */
+  .gp-home-map-chapter-label {
+    fill: var(--gp-fg-muted);
+    font-family: var(--gp-font-body);
+    font-weight: 600;
+    paint-order: stroke;
+    stroke: var(--gp-green-950);
+    stroke-linejoin: round;
+    pointer-events: none;
+    user-select: none;
+    transition: opacity 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .gp-home-map-canvas.has-selected-node .gp-home-map-chapter-label,
+  .gp-home-map-canvas.is-focused .gp-home-map-chapter-label {
+    opacity: 0.35;
+  }
+  .gp-home-map-cluster-sat.is-pointer-target .gp-home-map-cluster-sat-dot,
   .gp-home-map-cluster-sat:focus-visible .gp-home-map-cluster-sat-dot {
     stroke: var(--gp-primary);
     stroke-width: 0.9;
@@ -6616,8 +6947,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   }
 
   .gp-home-map-zoom-controls button {
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--gp-map-target);
+    min-height: var(--gp-map-target);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -6783,8 +7114,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   }
 
   .gp-home-map-theme-editor-close {
-    width: 44px;
-    height: 44px;
+    width: var(--gp-map-target);
+    height: var(--gp-map-target);
     flex: none;
     display: inline-grid;
     place-items: center;
@@ -7304,8 +7635,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     position: absolute;
     inset-block-start: 8px;
     inset-inline-end: 8px;
-    width: 34px;
-    height: 34px;
+    width: var(--gp-map-target);
+    height: var(--gp-map-target);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -7377,11 +7708,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     gap: 6px;
   }
   .gp-home-map-selected-links[hidden] { display: none; }
+  /* Pill links, sized like chips: 30px under a fine pointer, 44px under a
+     coarse one and on a phone (DESIGN.md:431). */
   .gp-home-map-selected-link {
     appearance: none;
     display: inline-flex;
     align-items: center;
-    min-height: 30px;
+    min-height: var(--gp-map-chip);
     padding: 4px 11px;
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-pill);
@@ -7454,7 +7787,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
   .gp-home-map-selected-edge-row {
     --edge-color: var(--gp-map-member);
-    min-height: 44px;
+    min-height: var(--gp-map-target);
     display: grid;
     grid-template-columns: 12px minmax(0, 1fr);
     align-items: center;
@@ -7530,8 +7863,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: var(--gp-map-target);
+    height: var(--gp-map-target);
     flex: none;
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-pill);
@@ -7591,7 +7924,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   .gp-home-map-update { margin-top: 8px; }
   .gp-home-map-update[hidden] { display: none; }
   .gp-home-map-update-trigger {
-    min-height: 40px;
+    min-height: var(--gp-map-button);
     display: inline-flex;
     align-items: center;
     padding: 8px 16px;
@@ -7630,7 +7963,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   .gp-home-map-update-form input {
     width: 100%;
     box-sizing: border-box;
-    min-height: 44px;
+    min-height: var(--gp-map-target);
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-md);
     padding: 10px 12px;
@@ -7649,7 +7982,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     gap: 8px;
   }
   .gp-home-map-update-actions button {
-    min-height: 44px;
+    min-height: var(--gp-map-button);
     flex: 1 1 auto;
     border-radius: var(--gp-radius-pill);
     padding: 8px 16px;
@@ -7731,8 +8064,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     top: 22px;
     right: 22px;
     z-index: 3;
-    width: 38px;
-    height: 38px;
+    width: var(--gp-map-target);
+    height: var(--gp-map-target);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -7751,8 +8084,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     inset-block-start: 22px;
     inset-inline-start: 22px;
     z-index: 3;
-    width: 38px;
-    height: 38px;
+    width: var(--gp-map-target);
+    height: var(--gp-map-target);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -8027,10 +8360,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     gap: 8px;
   }
 
+  /* Text buttons in the walkthrough reach the 48px button minimum (§ 5,
+     "Every text button under 48px goes to 48px"); the theme toggles are
+     chips. Fields beside a button match its height. */
   .gp-home-map-location-search-row button,
   .gp-home-map-location-results button,
   .gp-home-map-location-coordinate-row button {
-    min-height: 44px;
+    min-height: var(--gp-map-button);
     border: 1px solid color-mix(in srgb, var(--gp-map-member) 42%, transparent);
     border-radius: var(--gp-radius-md);
     background: color-mix(in srgb, var(--gp-green-700) 88%, transparent);
@@ -8073,7 +8409,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
   .gp-home-map-location-results button {
     width: 100%;
-    min-height: 40px;
+    min-height: var(--gp-map-button);
     padding: 8px 10px;
     text-align: start;
   }
@@ -8127,11 +8463,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   }
 
   .gp-home-map-location-coordinate-row input {
-    min-height: 44px;
+    min-height: var(--gp-map-button);
   }
 
   .gp-home-map-location-coordinate-row button {
-    min-height: 44px;
+    min-height: var(--gp-map-button);
     padding-inline: 12px;
     white-space: nowrap;
   }
@@ -8149,8 +8485,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     gap: 12px;
   }
 
+  /* The review's Edit buttons read as links but are text buttons: 48px tall. */
   .gp-home-map-addnode-location-head button,
   .gp-home-map-addnode-review button {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--gp-map-button);
     border: 0;
     background: transparent;
     color: var(--gp-map-member);
@@ -8394,7 +8734,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     color: var(--gp-fg-muted);
   }
   .gp-home-map-addnode-manage-toggle {
-    min-height: 40px;
+    min-height: var(--gp-map-button);
     padding: 8px 14px;
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-pill);
@@ -8431,7 +8771,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     color: var(--gp-fg-muted);
   }
   .gp-home-map-addnode-manage-field input {
-    min-height: 44px;
+    min-height: var(--gp-map-button);
     padding: 10px 14px;
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-md);
@@ -8442,7 +8782,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   .gp-home-map-addnode-manage-submit {
     flex: 0 0 auto;
     align-self: flex-end;
-    min-height: 44px;
+    min-height: var(--gp-map-button);
     padding: 10px 18px;
     border: 0;
     border-radius: var(--gp-radius-pill);
@@ -8530,15 +8870,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     .gp-home-map-addnode-close {
       top: 16px;
       right: 16px;
-      width: 44px;
-      height: 44px;
     }
 
     .gp-home-map-addnode-back {
       inset-block-start: 16px;
       inset-inline-start: 16px;
-      width: 44px;
-      height: 44px;
     }
 
     .gp-home-map-addnode-form {
@@ -8668,6 +9004,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       white-space: nowrap;
     }
 
+    /* § 5, phones: "No labels at rest." */
+    .gp-home-map-chapter-labels {
+      display: none;
+    }
+
     /* A phone (map-polish-audit.md § 5, "60svh map, one row"). The stage is
        at least 60svh tall and frames the drawing's full height, centred on
        the Atlantic by the script; the edge pills reach the rest. Every
@@ -8678,7 +9019,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       --gp-map-inset: var(--gp-space-sm);
       --gp-map-edge: var(--gp-space-sm);
       /* One row of chrome: a 44px touch target, the row's padding and border. */
-      --gp-map-row: calc(44px + var(--gp-space-xs) * 2 + 2px);
+      --gp-map-row: calc(var(--gp-map-target) + var(--gp-space-xs) * 2 + 2px);
       aspect-ratio: auto;
       block-size: 60svh;
       border-radius: var(--gp-radius-lg);
@@ -8754,7 +9095,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     .gp-home-map .gp-chip.gp-home-map-legend-item,
     .gp-home-map .gp-chip.gp-home-map-legend-reset {
-      min-height: 44px;
+      min-height: var(--gp-map-target);
       padding-inline: var(--gp-space-sm);
     }
 
@@ -8818,7 +9159,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     }
 
     .gp-home-map-filter-panel.is-themes .gp-home-map-filter-option {
-      min-height: 44px;
+      min-height: var(--gp-map-target);
     }
 
     /* A failing feed's note sits across the stage's top, over the far
@@ -8850,7 +9191,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     }
 
     .gp-home-map-filter-note .gp-chip {
-      min-height: 44px;
+      min-height: var(--gp-map-target);
     }
 
     /* On a phone the list is a full-height modal sheet over the page (the
@@ -8887,7 +9228,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       max-width: none;
       max-height: min(36cqw, 176px);
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto 44px;
+      grid-template-columns: minmax(0, 1fr) auto var(--gp-map-target);
       grid-template-areas:
         "name links close"
         "list list list"
@@ -8912,8 +9253,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     .gp-home-map-selected-close {
       position: static;
       grid-area: close;
-      width: 44px;
-      height: 44px;
+      width: var(--gp-map-target);
+      height: var(--gp-map-target);
       justify-self: end;
       align-self: center;
     }
@@ -8936,7 +9277,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     }
     .gp-home-map-selected-links[hidden] { display: none; }
     .gp-home-map-selected-link {
-      min-height: 36px;
+      min-height: var(--gp-map-target);
       padding-inline: 10px;
       max-width: 96px;
       overflow: hidden;
@@ -8993,7 +9334,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     }
 
     .gp-home-map-selected-edge-row {
-      min-height: 44px;
+      min-height: var(--gp-map-target);
       width: 100%;
       grid-template-columns: 10px minmax(0, 1fr);
       border-radius: var(--gp-radius-md);
@@ -9018,7 +9359,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     }
 
     .gp-home-map-update-trigger {
-      min-height: 36px;
+      min-height: var(--gp-map-button);
       padding-block: 8px;
     }
 
