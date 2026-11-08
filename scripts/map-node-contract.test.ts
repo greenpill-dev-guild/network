@@ -2423,10 +2423,13 @@ test('home map filters narrow, then add (map-polish-audit.md § 5)', () => {
   assert.equal(stewardName(none), 'Show only Stewards; 2 match current filters');
   assert.equal(stewardName(new Set<MapNodeType>(['member'])), 'Add Stewards; 2 match current filters');
   assert.equal(stewardName(new Set<MapNodeType>(['member', 'steward'])), 'Remove Stewards');
-  assert.equal(stewardName(new Set<MapNodeType>(['steward'])), 'Show all map nodes');
+  // § 5: "While it is the only one picked: 'Show all map nodes'". The name
+  // keeps the pill's visible label too, so a speech user can say "Stewards"
+  // (WCAG 2.5.3, CodeRabbit on #56).
+  assert.equal(stewardName(new Set<MapNodeType>(['steward'])), 'Remove Stewards to show all map nodes');
   // Pressing the only picked type clears the type filter. While a theme still
   // narrows the map that is not every node, so the name says what it is.
-  assert.equal(stewardName(new Set<MapNodeType>(['steward']), true), 'Show every node type');
+  assert.equal(stewardName(new Set<MapNodeType>(['steward']), true), 'Remove Stewards to show every node type');
   assert.equal(
     typePillName({ label: 'Stewards', count: 1, type: 'steward', picked: none, themesNarrow: false }),
     'Show only Stewards; 1 matches current filters'
@@ -2437,8 +2440,9 @@ test('home map filters narrow, then add (map-polish-audit.md § 5)', () => {
   assert.equal(waterName(new Set<string>()), 'Show only Water; 7 match current filters');
   assert.equal(waterName(new Set(['trees'])), 'Add Water; 7 match current filters');
   assert.equal(waterName(new Set(['trees', 'water'])), 'Remove Water');
-  assert.equal(waterName(new Set(['water'])), 'Show every theme', 'pressing the only picked theme shows every theme');
-  assert.equal(ALL_THEMES_NAME, 'Show every theme');
+  assert.equal(waterName(new Set(['water'])), 'Remove Water to show every theme', 'pressing the only picked theme shows every theme');
+  // "All" named "Show every theme", with its visible label first.
+  assert.equal(ALL_THEMES_NAME, 'All, show every theme');
 
   // The strip: "the most-used themes (picked ones first, as many as fit)".
   const tallies = [
@@ -2522,10 +2526,10 @@ test('home map chrome: bars in the stage, a theme strip toolbar, one phone row, 
   // filter narrows the map. Bottom left: 'List' with the visible count
   // (aria-expanded). Bottom right: the live status, zoom and 'Join the map'."
   const controlsCss = component.match(/\n  \.gp-home-map-controls \{([^}]*)\}/)?.[1] ?? '';
-  assert.match(controlsCss, /grid-template-areas:\s*'strip legend'\s*'\. \.'\s*'list end';/);
+  assert.match(controlsCss, /grid-template-areas:\s*'strip legend legend'\s*'\. \. \.'\s*'list status end';/);
   assert.match(controlsCss, /pointer-events: none;/, 'the map takes every press between the bars');
   assert.match(component, /<div class="gp-home-map-theme-strip" role="toolbar" aria-label="Filter by theme" data-home-map-theme-strip>/);
-  assert.match(component, /<Chip as="button" class="gp-home-map-strip-chip is-all" data-home-map-theme-all aria-pressed="true" aria-label="Show every theme">All<\/Chip>/);
+  assert.match(component, /<Chip as="button" class="gp-home-map-strip-chip is-all" data-home-map-theme-all aria-pressed="true" aria-label="All, show every theme">All<\/Chip>/);
   assert.match(component, /data-home-map-theme-more\s+aria-expanded="false"\s+aria-controls="gp-home-map-theme-editor"/);
   // The overlay wrappers carry roles (the audit's § 2.5 a11y item, carried
   // into the chrome step): bare labelled divs were dropped by assistive tech.
@@ -2536,8 +2540,13 @@ test('home map chrome: bars in the stage, a theme strip toolbar, one phone row, 
   }
   assert.match(component, /class="gp-home-map-list-toggle" data-home-map-list-toggle aria-expanded="false" aria-controls="gp-home-map-node-list">[\s\S]*?data-home-map-list-toggle-count/);
   assert.match(component, /if \(listToggleCount\) listToggleCount\.textContent = String\(visibleCount\);/);
-  // The live status sits in the bottom end bar with zoom and Join the map.
-  assert.match(component, /<div class="gp-home-map-end-group">\s*[\s\S]*?<div class="gp-home-map-freshness"[\s\S]*?<div class="gp-home-map-zoom-controls"[\s\S]*?data-home-map-open/);
+  // The live status stands before zoom and Join the map, in its own grid
+  // cell, outside the phone row, whose edge fade would mask it.
+  assert.match(controlsCss, /'list status end';/);
+  assert.match(component, /\.gp-home-map-freshness \{\s*grid-area: status;/);
+  const rowMarkup = component.match(/<div class="gp-home-map-control-row">([\s\S]*?)\n      <\/div>\n\n      \{\/\* The Live pill/)?.[1] ?? '';
+  assert.ok(rowMarkup.includes('data-home-map-open'), 'the row holds the controls');
+  assert.ok(!rowMarkup.includes('data-home-map-freshness'), 'the live pill is not in the row');
 
   // "The theme editor, opened from '+N', is the only place that lists all 16
   // themes: toggles with counts in four columns, plus 'Clear' and 'Done'."
@@ -2561,7 +2570,7 @@ test('home map chrome: bars in the stage, a theme strip toolbar, one phone row, 
   // Closing the editor from inside gives focus back to what opened it.
   assert.match(component, /if \(!focusWasInside\) return;[\s\S]*?const opener = \[filterPanelOpener, \.\.\.filterToggleButtons\]/);
   // A sort put off while the strip was in use happens once it is not.
-  assert.match(component, /\['pointerleave', 'focusout'\]\.forEach\(\(type\) => \{\s*themeStrip\?\.addEventListener\(type, \(\) => \{\s*if \(stripSortPending\)/);
+  assert.match(component, /themeStrip\?\.addEventListener\('focusout', sortStripWhenFree\);/);
 
   // Pressed versus focus (the audit's § 2.4, carried into the chrome step): a
   // pressed chip is filled, hover only tints its border, and focus keeps the
@@ -2595,7 +2604,8 @@ test('home map chrome: bars in the stage, a theme strip toolbar, one phone row, 
   // § 5: "the row scrolls behind a mask-image edge fade", on one line, and a
   // phone opens the editor from Themes, not from the strip.
   assert.match(phoneCss, /\.gp-home-map-control-row \{[\s\S]*?flex-wrap: nowrap;[\s\S]*?overflow-x: auto;[\s\S]*?mask-image: var\(--gp-map-edge-fade\);/);
-  assert.match(phoneCss, /\.gp-home-map-edge-pill\[hidden\],\s*\.gp-home-map-theme-strip \{\s*display: none;/);
+  assert.match(phoneCss, /\.gp-home-map-theme-strip \{\s*display: none;/);
+  assert.match(phoneCss, /\.gp-home-map-controls > \.gp-home-map-edge-pills \{\s*display: block;/);
   assert.match(phoneCss, /\.gp-home-map-themes-toggle \{\s*display: inline-flex;/);
   // "Layout follows the container's width only; the kind of pointer never
   // picks it": the script reads the layout the CSS picked.
@@ -2607,9 +2617,40 @@ test('home map chrome: bars in the stage, a theme strip toolbar, one phone row, 
   assert.match(component, /setMapViewBox\(panMapView\(currentViewBox, edgeOf\(pill\), FULL_VIEW_BOX\)\);/);
   assert.match(component, /if \(label\) label\.textContent = `\$\{count\} more \$\{edgeOf\(pill\)\}`;/);
   assert.match(component, /preserveAspectRatio="xMidYMid slice"/, 'before the script runs, a phone crops the map rather than letterboxing it');
-  // At the opening view an up or down swipe still scrolls the page.
-  assert.match(phoneCss, /\.gp-home-map-svg \{\s*touch-action: pan-y;/);
-  assert.match(phoneCss, /\.gp-home-map-canvas\.is-zoomed \.gp-home-map-svg \{\s*touch-action: none;/);
+  // At the opening view an up or down swipe still scrolls the page, on every
+  // touch map: zoomed in, the map takes every gesture (CodeRabbit on #56).
+  assert.match(component, /\n  \.gp-home-map-svg \{[^}]*touch-action: pan-y;/);
+  assert.match(component, /\n  \.gp-home-map-canvas\.is-zoomed \.gp-home-map-svg \{\s*touch-action: none;/);
+
+  // Answers to the #56 reviews.
+  // One open surface however a node is reached (Codex, CodeRabbit).
+  assert.match(component, /const openSelected = \(member: DynamicMapNode, link: Element, viaKeyboard = false\) => \{\s*if \(!selectedEl\) return;[\s\S]*?closeFilterPanels\(\);\s*resetUpdateState\(\);/);
+  // A pick queues the strip's picked-first sort for when the strip is let go;
+  // a mouse leaving or focus moving runs it, a lifted finger does not.
+  assert.match(component, /pickedThemes = togglePick\(pickedThemes, theme\);\s*\/\/[^\n]*\n\s*stripSortPending = true;/);
+  assert.match(component, /themeStrip\?\.addEventListener\('pointerleave', \(event\) => \{\s*if \(event\.pointerType !== 'touch'\) sortStripWhenFree\(\);/);
+  // Chips move only when their order changed, and keep focus (CodeRabbit).
+  assert.match(component, /if \(domOrder\.join\(' '\) !== stripOrder\.join\(' '\)\) \{[\s\S]*?focused\?\.focus\(\{ preventScroll: true \}\);/);
+  // The end bar shares the strip's grid column with the legend (CodeRabbit).
+  assert.match(component, /controlsEl\.clientWidth - Math\.max\(room, endBar\) - controlsGap - fixed/);
+  // A move that ends at the opening view keeps it the opening view (Codex),
+  // and a zoom clamps its width before it centres (CodeRabbit).
+  assert.match(component, /viewIsDefault = Boolean\(options\.isDefault\) \|\| sameView\(currentViewBox, defaultViewBox\(\)\);/);
+  assert.match(component, /const \{ width: clampedWidth, height \} = clampViewBox\(\{ x: 0, y: 0, width, height: width \/ stageAspect\(\) \}\);/);
+  // The floating card is placed by layout, not by pointer (CodeRabbit).
+  assert.match(component, /if \(!selectedEl \|\| selectedEl\.hidden \|\| !target \|\| mapLayout\(\) === 'phone'\) return;/);
+  // The editor's toggles and the edge pills are the shared Chip (CodeRabbit),
+  // the toggles' labels stay on one line, and the pills keep the map's sides.
+  assert.match(component, /<Chip\s+as="button"\s+class="gp-home-map-filter-option is-theme"\s+data-theme-filter=\{theme\.id\}/);
+  assert.match(component, /<div class="gp-home-map-edge-pills" dir="ltr">\s*<Chip as="button" mono class="gp-home-map-edge-pill is-west" data-home-map-pan="west" hidden>/);
+  assert.match(component, /\.gp-home-map-filter-option-label \{[^}]*white-space: nowrap;/);
+  assert.match(component, /@container gp-theme-editor \(width < 53\.5rem\) \{\s*\.gp-home-map-filter-panel\.is-themes \{\s*grid-template-columns: repeat\(auto-fill, minmax\(13rem, 1fr\)\);/);
+  // At 860px and narrower the live pill keeps its dot and Live, so the bottom
+  // bars fit beside List (CodeRabbit); on a phone it sits over the South
+  // Atlantic, clear of the edge pills, which move below a wrapped error note.
+  assert.match(component, /@container \(max-width: 860px\) \{\s*\.gp-home-map-freshness-sep,\s*\.gp-home-map-freshness-age,\s*\.gp-home-map-freshness\[data-state='stale'\] \{\s*display: none;/);
+  assert.match(phoneCss, /\.gp-home-map-freshness \{\s*position: absolute;\s*inset-block-end: calc\(var\(--gp-map-row\) \+ var\(--gp-space-sm\)\);/);
+  assert.match(component, /const height = mapStateError && !mapStateError\.hidden && mapLayout\(\) === 'phone' \? mapStateError\.offsetHeight : 0;/);
 
   // WebMCP stays read-only and reads the new rule: no picked theme means
   // every theme shows.

@@ -344,21 +344,24 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         Reset the map view, Join the map. */}
     <div class="gp-home-map-controls" data-home-map-controls>
       {/* Phones only: an edge with nodes beyond it gets a pill that pans the
-          map that way. After a pan the other edge has one that leads back. */}
-      <button type="button" class="gp-home-map-edge-pill is-west" data-home-map-pan="west" hidden>
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="11 6 5 12 11 18" /></svg>
-        <span data-home-map-pan-label>more west</span>
-      </button>
-      <button type="button" class="gp-home-map-edge-pill is-east" data-home-map-pan="east" hidden>
-        <span data-home-map-pan-label>more east</span>
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="13 6 19 12 13 18" /></svg>
-      </button>
+          map that way. After a pan the other edge has one that leads back.
+          West and east are the map's sides in any reading direction. */}
+      <div class="gp-home-map-edge-pills" dir="ltr">
+        <Chip as="button" mono class="gp-home-map-edge-pill is-west" data-home-map-pan="west" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="11 6 5 12 11 18" /></svg>
+          <span data-home-map-pan-label>more west</span>
+        </Chip>
+        <Chip as="button" mono class="gp-home-map-edge-pill is-east" data-home-map-pan="east" hidden>
+          <span data-home-map-pan-label>more east</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="13 6 19 12 13 18" /></svg>
+        </Chip>
+      </div>
 
       {/* The theme strip: All, the most-used themes as they fit (picked ones
           first), and +N for the rest, which opens the theme editor. One tab
           stop; the arrow keys move along it. */}
       <div class="gp-home-map-theme-strip" role="toolbar" aria-label="Filter by theme" data-home-map-theme-strip>
-        <Chip as="button" class="gp-home-map-strip-chip is-all" data-home-map-theme-all aria-pressed="true" aria-label="Show every theme">All</Chip>
+        <Chip as="button" class="gp-home-map-strip-chip is-all" data-home-map-theme-all aria-pressed="true" aria-label="All, show every theme">All</Chip>
         {mapThemes.map((theme) => (
           <Chip
             as="button"
@@ -419,18 +422,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         </button>
 
         <div class="gp-home-map-end-group">
-          {/* The Live pill says how current the stewards and members on the
-              map are: "Live · Updated just now" while live intake is on,
-              "Updated 5 min ago" once refreshes keep failing. Its age changes
-              every minute, so it is not a live region; the status line with
-              the error note announces what matters. The rules are in
-              lib/home-map-live.ts. */}
-          <div class="gp-home-map-freshness" data-home-map-freshness data-state="live" hidden>
-            <span class="gp-home-map-freshness-dot" aria-hidden="true"></span>
-            <span class="gp-home-map-freshness-label" data-home-map-freshness-label>Live</span>
-            <span class="gp-home-map-freshness-sep" data-home-map-freshness-sep aria-hidden="true" hidden>·</span>
-            <span class="gp-home-map-freshness-age" data-home-map-freshness-age hidden></span>
-          </div>
           <div class="gp-home-map-zoom-controls" data-home-map-zoom-controls role="group" aria-label="Map zoom">
             <button type="button" data-home-map-zoom="out" aria-label="Zoom out">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><line x1="5" y1="12" x2="19" y2="12" /></svg>
@@ -452,6 +443,20 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           {/* The way onto the map: opens the join walkthrough below. */}
           <button type="button" class="gp-home-map-join" data-home-map-open aria-haspopup="dialog">Join the map</button>
         </div>
+      </div>
+
+      {/* The Live pill says how current the stewards and members on the map
+          are: "Live · Updated just now" while live intake is on, "Updated 5
+          min ago" once refreshes keep failing. Its age changes every minute,
+          so it is not a live region; the status line with the error note
+          announces what matters. The rules are in lib/home-map-live.ts. On a
+          wide map it stands before the zoom bar; on a phone, over the stage
+          above the row (never inside the row, whose edge fade would mask it). */}
+      <div class="gp-home-map-freshness" data-home-map-freshness data-state="live" hidden>
+        <span class="gp-home-map-freshness-dot" aria-hidden="true"></span>
+        <span class="gp-home-map-freshness-label" data-home-map-freshness-label>Live</span>
+        <span class="gp-home-map-freshness-sep" data-home-map-freshness-sep aria-hidden="true" hidden>·</span>
+        <span class="gp-home-map-freshness-age" data-home-map-freshness-age hidden></span>
       </div>
 
       {/* The theme editor, opened from +N (or Themes on a phone): the only
@@ -477,8 +482,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           <p class="gp-home-map-theme-editor-note">Show nodes that work on any theme you pick. Nothing picked shows everything.</p>
           <div class="gp-home-map-filter-panel is-themes">
             {mapThemes.map((theme) => (
-              <button
-                type="button"
+              <Chip
+                as="button"
                 class="gp-home-map-filter-option is-theme"
                 data-theme-filter={theme.id}
                 aria-pressed="false"
@@ -487,7 +492,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
                 <span class="gp-home-map-filter-marker" aria-hidden="true"></span>
                 <span class="gp-home-map-filter-option-label">{theme.label}</span>
                 <span class="gp-home-map-filter-option-count" data-theme-filter-count aria-hidden="true"></span>
-              </button>
+              </Chip>
             ))}
           </div>
         </div>
@@ -1157,9 +1162,16 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     // full height centred on the Atlantic (lib/home-map-layout.ts).
     const defaultViewBox = () => defaultMapView(stageAspect(), ATLANTIC_CENTER_X, FULL_VIEW_BOX);
 
+    const sameView = (a: MapViewBox, b: MapViewBox) => (
+      Math.abs(a.x - b.x) < 0.01 && Math.abs(a.y - b.y) < 0.01
+      && Math.abs(a.width - b.width) < 0.01 && Math.abs(a.height - b.height) < 0.01
+    );
+
     const setMapViewBox = (box: MapViewBox, options: { isDefault?: boolean } = {}) => {
       currentViewBox = clampViewBox(box);
-      viewIsDefault = Boolean(options.isDefault);
+      // A move that ends where the map opened (a zoom out at the widest view,
+      // say) leaves it the opening view, so a resize still frames it afresh.
+      viewIsDefault = Boolean(options.isDefault) || sameView(currentViewBox, defaultViewBox());
       svgEl?.setAttribute('viewBox', formatViewBox(currentViewBox));
       const widest = largestMapView(stageAspect(), FULL_VIEW_BOX);
       // Zoomed: closer than the widest view this stage has. A phone's opening
@@ -1175,12 +1187,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       clusterDirty();
     };
 
+    // The width is clamped before the view is centred, so a zoom or pinch
+    // past either bound keeps its centre instead of sliding the map.
     const setMapViewBoxCentered = (cx: number, cy: number, width: number) => {
-      const height = width / stageAspect();
+      const { width: clampedWidth, height } = clampViewBox({ x: 0, y: 0, width, height: width / stageAspect() });
       setMapViewBox({
-        x: cx - width / 2,
+        x: cx - clampedWidth / 2,
         y: cy - height / 2,
-        width,
+        width: clampedWidth,
         height,
       });
     };
@@ -2019,7 +2033,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     };
 
     const positionSelectedCard = (target: Element | null) => {
-      if (!selectedEl || selectedEl.hidden || !target || isTouchMap()) return;
+      if (!selectedEl || selectedEl.hidden || !target || mapLayout() === 'phone') return;
       const dot = target.querySelector('.gp-home-map-node-dot') as SVGCircleElement | null;
       const cx = Number(dot?.getAttribute('cx'));
       const cy = Number(dot?.getAttribute('cy'));
@@ -2209,6 +2223,9 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     const openSelected = (member: DynamicMapNode, link: Element, viaKeyboard = false) => {
       if (!selectedEl) return;
+      // One open surface at a time, however the node was reached: a keyboard
+      // can move from the editor back to a pin.
+      closeFilterPanels();
       resetUpdateState();
       root.querySelectorAll('.gp-home-map-node-link.is-selected').forEach((l) => l.classList.remove('is-selected'));
       // Clear any prior connection-row target highlight when swapping nodes.
@@ -2508,10 +2525,18 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         stripOrder = stripThemeOrder(themeIds.map((id) => ({ id, count: themeUsage.get(id) ?? 0 })), pickedThemes);
         stripSortPending = false;
       }
-      stripOrder.forEach((id) => {
-        const chip = stripChipById.get(id);
-        if (chip) themeStrip.insertBefore(chip, themeMoreChip);
-      });
+      // Moving a node drops its focus, so chips move only when the order
+      // changed, and a focused chip gets its focus back.
+      const domOrder = Array.from(themeStrip.querySelectorAll<HTMLElement>('[data-theme-strip]'))
+        .map((chip) => clean(chip.dataset.themeStrip));
+      if (domOrder.join(' ') !== stripOrder.join(' ')) {
+        const focused = themeStrip.contains(document.activeElement) ? document.activeElement as HTMLElement : null;
+        stripOrder.forEach((id) => {
+          const chip = stripChipById.get(id);
+          if (chip) themeStrip.insertBefore(chip, themeMoreChip);
+        });
+        focused?.focus({ preventScroll: true });
+      }
       const chips = stripOrder.map((id) => stripChipById.get(id)).filter(Boolean) as HTMLButtonElement[];
       if (!controlsEl || !legendEl || mapLayout() === 'phone' || !themeStrip.getClientRects().length) {
         // A phone opens the editor from Themes instead; nothing to measure.
@@ -2539,7 +2564,17 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       chips.forEach((chip) => { chip.hidden = false; });
       const widths = chips.map((chip) => chip.offsetWidth);
       const fixed = stripChrome + themeAllChip.offsetWidth + themeMoreChip.offsetWidth + gap * 2;
-      const fitBeside = (room: number) => chipsThatFit(widths, controlsEl.clientWidth - room - controlsGap - fixed, gap);
+      // The legend spans the grid's end columns, which also hold the live
+      // status and the end bar below it; the strip gets what is left of the
+      // wider of the two.
+      const endGroup = controlsEl.querySelector('.gp-home-map-end-group') as HTMLElement | null;
+      const endBar = (endGroup?.offsetWidth ?? 0)
+        + (freshnessEl && freshnessEl.getClientRects().length ? freshnessEl.offsetWidth + controlsGap : 0);
+      const fitBeside = (room: number) => chipsThatFit(
+        widths,
+        controlsEl.clientWidth - Math.max(room, endBar) - controlsGap - fixed,
+        gap
+      );
       // The legend shows its labels unless they would leave the strip no
       // theme at all; then it shows dots and numbers, as on a phone.
       root.classList.remove('has-compact-legend');
@@ -2713,6 +2748,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const pickTheme = (theme: string) => {
       if (!theme) return;
       pickedThemes = togglePick(pickedThemes, theme);
+      // Picked themes go to the strip's front once nobody is on the strip.
+      stripSortPending = true;
       dropPointerFocus();
       closeFanNow();
       applyMapFilters();
@@ -2738,12 +2775,17 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     scope.querySelector('[data-theme-editor-done]')?.addEventListener('click', closeFilterPanels);
     scope.querySelector('[data-theme-editor-close]')?.addEventListener('click', closeFilterPanels);
 
-    // A sort the strip put off while it was in use happens once it is not.
-    ['pointerleave', 'focusout'].forEach((type) => {
-      themeStrip?.addEventListener(type, () => {
-        if (stripSortPending) window.requestAnimationFrame(() => layoutThemeStrip());
-      });
+    // A sort the strip put off while it was in use happens once it is not:
+    // when a mouse leaves it or focus moves away. A finger "leaves" the moment
+    // it lifts, so a touch waits for the next change instead, rather than
+    // moving the chip it just pressed before a second tap.
+    const sortStripWhenFree = () => {
+      if (stripSortPending) window.requestAnimationFrame(() => layoutThemeStrip());
+    };
+    themeStrip?.addEventListener('pointerleave', (event) => {
+      if (event.pointerType !== 'touch') sortStripWhenFree();
     });
+    themeStrip?.addEventListener('focusout', sortStripWhenFree);
 
     // The strip's arrow keys, Home and End (role="toolbar"). In a
     // right-to-left page the arrows follow the reading direction.
@@ -4213,6 +4255,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (el && el.textContent !== text) el.textContent = text;
     };
 
+    // On a phone the error note sits across the stage's top, and the edge
+    // pills move below its rendered height, however many lines it wraps to.
+    const syncAlertBlock = () => {
+      const height = mapStateError && !mapStateError.hidden && mapLayout() === 'phone' ? mapStateError.offsetHeight : 0;
+      if (height) root.style.setProperty('--gp-map-error-block', `${height}px`);
+      else root.style.removeProperty('--gp-map-error-block');
+    };
+
     const renderMapStateStatus = () => {
       const status = describeMapStateFeed(mapStateFeed, intakeMode, Date.now());
       if (freshnessEl) {
@@ -4233,8 +4283,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         // focus to the legend rather than drop it to the top of the page.
         if (hadFocus && !status.problem) legendItems[0]?.focus({ preventScroll: true });
       }
-      // The compact map gives the error its own row under the drawing.
       root.classList.toggle('has-map-state-problem', Boolean(status.problem));
+      syncAlertBlock();
       const announcement = mapStateAnnouncement(lastMapStateStatus, status);
       if (announcement && mapStateLive) {
         // The same words twice in a row are not read again unless they change.
@@ -5099,6 +5149,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       mapResizeTimer = window.setTimeout(() => {
         syncViewToStage();
         layoutThemeStrip();
+        syncAlertBlock();
         applyNodeDensityScale();
         const activeFocusTarget = selectedFocusTarget ?? pointerFocusTarget;
         if (activeFocusTarget && !activeFocusTarget.classList.contains('is-filtered-out')) {
@@ -5229,6 +5280,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     width: 100%;
     height: 100%;
     display: block;
+    /* A touch at the opening view: an up or down swipe scrolls the page, and
+       a sideways drag or a pinch goes to the map. Zoomed in, the map takes
+       every gesture. */
+    touch-action: pan-y;
+  }
+
+  .gp-home-map-canvas.is-zoomed .gp-home-map-svg {
+    touch-action: none;
   }
 
   .gp-home-map-canvas.has-selected-node .gp-home-map-svg {
@@ -5898,8 +5957,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     }
   }
 
-  /* The live status, at the start of the bottom end bar on a wide map. */
+  /* The live status, just before the zoom bar on a wide map. */
   .gp-home-map-freshness {
+    grid-area: status;
+    justify-self: end;
+    align-self: center;
     box-sizing: border-box;
     display: inline-flex;
     align-items: center;
@@ -6127,12 +6189,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     inset: var(--gp-map-inset);
     z-index: 5;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-rows: auto minmax(0, 1fr) auto;
     grid-template-areas:
-      'strip legend'
-      '. .'
-      'list end';
+      'strip legend legend'
+      '. . .'
+      'list status end';
     gap: var(--gp-space-sm);
     pointer-events: none;
   }
@@ -6140,6 +6202,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   .gp-home-map-controls > *,
   .gp-home-map-control-row > * {
     pointer-events: auto;
+  }
+
+  /* The live status is not a control: presses pass through it to the map. */
+  .gp-home-map-controls > .gp-home-map-freshness {
+    pointer-events: none;
   }
 
   /* On a wide map the row's parts take their own corners of the grid. */
@@ -6346,40 +6413,52 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     background: color-mix(in srgb, var(--gp-green-950) 90%, transparent);
   }
 
-  /* Phones only: a pill at each top corner while nodes lie beyond that edge. */
-  .gp-home-map-edge-pill {
+  /* At an 860px container and narrower the live pill keeps its dot and Live,
+     so the bottom bars fit beside List; a failing feed shows in the error
+     note instead. */
+  @container (max-width: 860px) {
+    .gp-home-map-freshness-sep,
+    .gp-home-map-freshness-age,
+    .gp-home-map-freshness[data-state='stale'] {
+      display: none;
+    }
+  }
+
+  /* Phones only: a pill at each top corner while nodes lie beyond that
+     edge, on the shared Chip. Their layer is left to right, so west and east
+     stay the map's sides; it moves below a failing feed's note. */
+  .gp-home-map-controls > .gp-home-map-edge-pills {
+    position: absolute;
+    inset: 0 0 auto;
+    display: none;
+    pointer-events: none;
+  }
+
+  /* The script measures the error note, which can wrap to several lines. */
+  .gp-home-map-canvas.has-map-state-problem .gp-home-map-controls > .gp-home-map-edge-pills {
+    inset-block-start: calc(var(--gp-map-error-block, 0px) + var(--gp-space-sm));
+  }
+
+  .gp-home-map .gp-chip.gp-home-map-edge-pill {
     position: absolute;
     inset-block-start: 0;
-    display: none;
-    align-items: center;
-    gap: 6px;
     min-height: 48px;
-    padding: 0 var(--gp-space-md);
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-pill);
+    padding-inline: var(--gp-space-md);
+    gap: 6px;
     background: var(--gp-map-bar-bg);
     color: var(--gp-fg);
-    font-family: var(--gp-font-mono);
-    font-size: var(--gp-caption);
-    font-weight: 700;
     letter-spacing: 0.1em;
-    text-transform: uppercase;
-    white-space: nowrap;
-    cursor: pointer;
+    pointer-events: auto;
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
   }
 
-  .gp-home-map-edge-pill.is-west {
+  .gp-home-map .gp-chip.gp-home-map-edge-pill.is-west {
     inset-inline-start: 0;
   }
 
-  .gp-home-map-edge-pill.is-east {
+  .gp-home-map .gp-chip.gp-home-map-edge-pill.is-east {
     inset-inline-end: 0;
-  }
-
-  .gp-home-map-edge-pill:hover {
-    border-color: color-mix(in srgb, var(--gp-primary) 45%, transparent);
   }
 
   .gp-home-map-edge-pill svg {
@@ -6405,7 +6484,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    inline-size: min(46rem, 100%);
+    inline-size: min(54rem, 100%);
     max-block-size: calc(100% - var(--gp-map-bar-block) - var(--gp-space-sm));
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-lg);
@@ -6539,18 +6618,19 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     color: var(--gp-lime-200);
   }
 
-  /* A long theme name breaks between syllables, never mid-word. */
+  /* A chip's label stays on one line (DESIGN.md's chip rule). Four columns
+     fit the longest theme at the editor's full width; a narrower editor
+     lists fewer a row, down to one on a phone. */
   .gp-home-map-filter-option-label {
     min-width: 0;
-    overflow-wrap: break-word;
-    -webkit-hyphens: auto;
-    hyphens: auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  /* A narrow editor, on a small stage or a phone, lists two themes a row. */
-  @container gp-theme-editor (max-width: 40rem) {
+  @container gp-theme-editor (width < 53.5rem) {
     .gp-home-map-filter-panel.is-themes {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
     }
   }
 
@@ -8238,17 +8318,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       border-radius: var(--gp-radius-lg);
     }
 
-    /* At the opening view the whole height shows, so an up or down swipe
-       scrolls the page and a sideways one pans the map. Zoomed in, the map
-       takes every gesture. */
-    .gp-home-map-svg {
-      touch-action: pan-y;
-    }
-
-    .gp-home-map-canvas.is-zoomed .gp-home-map-svg {
-      touch-action: none;
-    }
-
     .gp-home-map-thread {
       opacity: 0.24;
       stroke-width: 0.18;
@@ -8286,11 +8355,10 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       justify-content: flex-end;
     }
 
-    .gp-home-map-edge-pill {
-      display: inline-flex;
+    .gp-home-map-controls > .gp-home-map-edge-pills {
+      display: block;
     }
 
-    .gp-home-map-edge-pill[hidden],
     .gp-home-map-theme-strip {
       display: none;
     }
@@ -8363,22 +8431,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       display: none;
     }
 
-    /* The live status leaves the row for the stage's top corner, trimmed to
-       its dot and Live; a failing feed shows in the error note instead. */
+    /* The live status leaves the row and sits just above its middle, over
+       the South Atlantic, clear of the edge pills and the error note. */
     .gp-home-map-freshness {
       position: absolute;
-      inset-block-start: 0;
-      inset-inline-start: 0;
-    }
-
-    .gp-home-map-freshness-sep,
-    .gp-home-map-freshness-age,
-    .gp-home-map-freshness[data-state='stale'] {
-      display: none;
-    }
-
-    .gp-home-map-canvas:has(.gp-home-map-freshness:not([hidden])) .gp-home-map-edge-pill.is-west {
-      inset-block-start: calc(30px + var(--gp-space-sm));
+      inset-block-end: calc(var(--gp-map-row) + var(--gp-space-sm));
+      inset-inline: 0;
+      margin-inline: auto;
+      inline-size: max-content;
     }
 
     /* The editor is a sheet over the stage's bottom, leaving the top of the
@@ -8404,10 +8464,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       min-height: var(--gp-map-row);
       box-sizing: border-box;
       justify-content: space-between;
-    }
-
-    .gp-home-map-canvas.has-map-state-problem .gp-home-map-edge-pill {
-      inset-block-start: calc(48px + var(--gp-space-xs) * 2 + 2px + var(--gp-space-sm));
     }
 
     /* The counts say what a filter left and the row offers the way back, so

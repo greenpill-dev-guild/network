@@ -48,14 +48,18 @@ export function pickState<T>(picked: ReadonlySet<T>, value: T): PickState {
 
 const matchCount = (count: number) => `${count} ${count === 1 ? 'matches' : 'match'} current filters`;
 
-/** The "All" theme chip's name, and the name of a theme that is the only one picked. */
-export const ALL_THEMES_NAME = 'Show every theme';
+/**
+ * The "All" theme chip's name. § 5 names it "Show every theme"; the visible
+ * "All" leads, so speech users can say what they see (WCAG 2.5.3).
+ */
+export const ALL_THEMES_NAME = 'All, show every theme';
 
 /**
  * A type pill's accessible name says what pressing it will do; `aria-pressed`
  * carries the state. The count is how many nodes of that type the theme
- * filters keep. Pressing the only picked type clears the type filter, which
- * shows every node only when no theme narrows the map either.
+ * filters keep. Every name holds the pill's visible label (WCAG 2.5.3).
+ * Pressing the only picked type clears the type filter, which shows every
+ * node only when no theme narrows the map either.
  */
 export function typePillName(options: {
   label: string;
@@ -72,7 +76,7 @@ export function typePillName(options: {
     case 'picked-with-others':
       return `Remove ${options.label}`;
     case 'only-picked':
-      return options.themesNarrow ? 'Show every node type' : 'Show all map nodes';
+      return `Remove ${options.label} to ${options.themesNarrow ? 'show every node type' : 'show all map nodes'}`;
   }
 }
 
@@ -94,7 +98,7 @@ export function themeChipName(options: {
     case 'picked-with-others':
       return `Remove ${options.label}`;
     case 'only-picked':
-      return ALL_THEMES_NAME;
+      return `Remove ${options.label} to show every theme`;
   }
 }
 
