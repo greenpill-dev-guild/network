@@ -12,10 +12,11 @@ import type { AssessmentPath as PathId } from '../../lib/garden-assessment';
 // its path one point, so a path's score is the number of questions whose
 // answers pointed to it.
 interface Props {
-  stewardCallHref?: string;
+  /** The steward booking link, `stewardCall` in `content/social-links.json`. */
+  stewardCallHref: string;
 }
 
-const { stewardCallHref = 'https://calendar.app.google/gia7UpaSVKwwEKxy5' } = Astro.props;
+const { stewardCallHref } = Astro.props;
 
 const QUESTIONS: Array<{
   id: string;
@@ -111,8 +112,8 @@ const RESULTS: Array<{
   title: string;
   body: string;
   secondaryLabel: string;
-  primaryCta: { label: string; href: string; external?: boolean };
-  ghostCta?: { label: string; href: string; external?: boolean };
+  primaryCta: { label: string; href: string };
+  ghostCta?: { label: string; href: string };
 }> = [
   {
     path: 'learn',
@@ -154,7 +155,7 @@ const RESULTS: Array<{
     title: 'Talk to a steward.',
     body: 'You sound ready for a human conversation. Book a call to talk chapters, guilds, partnerships, or where your coordination skills land best.',
     secondaryLabel: 'Steward (book a call)',
-    primaryCta: { label: 'Book a steward call', href: stewardCallHref, external: true },
+    primaryCta: { label: 'Book a steward call', href: stewardCallHref },
   },
 ];
 
@@ -248,22 +249,9 @@ const questionCount = QUESTIONS.length;
         <Text as="h4" variant="h3" class="gp-ga-result-title">{result.title}</Text>
         <Text variant="body" class="gp-ga-result-body">{result.body}</Text>
         <div class="gp-ga-result-ctas">
-          <Button
-            href={result.primaryCta.href}
-            target={result.primaryCta.external ? '_blank' : undefined}
-            rel={result.primaryCta.external ? 'noopener noreferrer' : undefined}
-          >
-            {result.primaryCta.label}
-          </Button>
+          <Button href={result.primaryCta.href}>{result.primaryCta.label}</Button>
           {result.ghostCta && (
-            <Button
-              href={result.ghostCta.href}
-              variant="ghost"
-              target={result.ghostCta.external ? '_blank' : undefined}
-              rel={result.ghostCta.external ? 'noopener noreferrer' : undefined}
-            >
-              {result.ghostCta.label}
-            </Button>
+            <Button href={result.ghostCta.href} variant="ghost">{result.ghostCta.label}</Button>
           )}
         </div>
       </article>

@@ -13,18 +13,15 @@ import {
   gardenHeroCta,
   gardenRampSteps,
   gardenStepHref,
-  gardenStewardCallHref,
 } from '../../lib/garden-ramp';
 
 const title = garden.title || 'Greenpill Garden';
 const summary = garden.summary || 'A participation ramp for people moving from reading about regeneration to joining chapters, contributing skills, and coordinating real-world public goods.';
 // With no steps in garden.json the page leaves the ramp out (see lib/garden-ramp.ts).
 const steps = gardenRampSteps(garden.steps);
-const stewardCallHref = gardenStewardCallHref(steps);
 const heroCta = gardenHeroCta(garden.stickyCta, steps.length);
 const seoTitle = garden.seo.title || `${title} · Greenpill Network`;
 const seoDescription = garden.seo.description || summary;
-const isExternalHref = (href = '') => /^https?:\/\//.test(href);
 ---
 
 <GpLayout
@@ -69,8 +66,7 @@ const isExternalHref = (href = '') => /^https?:\/\//.test(href);
           <div class="gp-garden-steps">
             {steps.map((step, index) => {
               const level = step.level || index + 1;
-              const stepHref = gardenStepHref(step, socialLinks.telegram);
-              const external = isExternalHref(stepHref);
+              const stepHref = gardenStepHref(step, socialLinks);
               return (
                 <article class="gp-garden-step" id={`step-${level}`}>
                   <div class="gp-garden-step-index">
@@ -82,17 +78,10 @@ const isExternalHref = (href = '') => /^https?:\/\//.test(href);
                     <Text variant="h3">{step.title}</Text>
                     <Text variant="body-sm">{step.body}</Text>
                     {level === 3 ? (
-                      <GardenAssessment stewardCallHref={stewardCallHref} />
+                      <GardenAssessment stewardCallHref={socialLinks.stewardCall} />
                     ) : step.cta?.label && stepHref && (
                       <div class="gp-garden-step-action">
-                        <Button
-                          href={stepHref}
-                          variant="ghost"
-                          target={external ? '_blank' : undefined}
-                          rel={external ? 'noopener noreferrer' : undefined}
-                        >
-                          {step.cta.label}
-                        </Button>
+                        <Button href={stepHref} variant="ghost">{step.cta.label}</Button>
                       </div>
                     )}
                   </div>

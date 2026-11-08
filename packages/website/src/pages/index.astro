@@ -324,7 +324,7 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
 
           <div class="gp-home-garden-grid">
             {gardenSteps.map((step, index) => {
-              const href = gardenStepHref(step, socialLinks.telegram);
+              const href = gardenStepHref(step, socialLinks);
               return (
                 <Card as="article" stack="md" class="gp-home-garden-card">
                   <header class="gp-home-garden-head">

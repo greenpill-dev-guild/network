@@ -8,9 +8,6 @@
  * content and still carried an old Telegram invite and a removed signup form.
  */
 
-/** Booking link for a steward call when step 4 of the ramp has none. */
-export const DEFAULT_STEWARD_CALL_HREF = 'https://calendar.app.google/gia7UpaSVKwwEKxy5';
-
 const DEFAULT_HERO_CTA = { label: 'Start with Step 1', href: '#step-1' };
 
 export interface GardenRampCta {
@@ -24,29 +21,31 @@ export interface GardenRampStep {
   cta?: GardenRampCta | null;
 }
 
+/**
+ * The `content/social-links.json` links that ramp steps use. The Telegram
+ * invite and the steward booking link live only there, so a rotated invite or
+ * a new booking calendar changes in one place; the footer and the
+ * assessment's Steward result read the same fields.
+ */
+export interface GardenRampLinks {
+  telegram: string;
+  stewardCall: string;
+}
+
 /** The configured ramp steps, or none when `garden.json` has no list. */
 export function gardenRampSteps<Step>(steps: readonly Step[] | null | undefined): Step[] {
   return Array.isArray(steps) ? [...steps] : [];
 }
 
 /**
- * Where a step's button links. The Telegram invite lives only in
- * `content/social-links.json`, so the Telegram step takes it from there and a
- * rotated invite changes in one place.
+ * Where a step's button links. The Telegram step and the steward call step
+ * take their link from `links`, whatever URL the step itself carries, wherever
+ * an editor moves them; every other step uses its own button URL.
  */
-export function gardenStepHref(step: GardenRampStep, telegramHref: string): string {
-  return step.surfaceType === 'telegram' ? telegramHref : step.cta?.href || '';
-}
-
-/**
- * The steward call link: the button of the step whose surface is the steward
- * call, wherever an editor moves it; failing that, step 4's button; failing
- * that, the default booking calendar.
- */
-export function gardenStewardCallHref(steps: readonly GardenRampStep[]): string {
-  const step = steps.find((candidate) => candidate.surfaceType === 'steward-call')
-    ?? steps.find((candidate) => (candidate.level ?? 0) === 4);
-  return step?.cta?.href || DEFAULT_STEWARD_CALL_HREF;
+export function gardenStepHref(step: GardenRampStep, links: GardenRampLinks): string {
+  if (step.surfaceType === 'telegram') return links.telegram;
+  if (step.surfaceType === 'steward-call') return links.stewardCall;
+  return step.cta?.href || '';
 }
 
 /**
