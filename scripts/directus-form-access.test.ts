@@ -154,15 +154,28 @@ test('the smoke refuses a steward who cannot read a form group, a list, or updat
       return { data: fieldsByCollection[path.replace('/fields/', '')] ?? [] };
     },
   });
+  // Every form group the Studio setup creates, with all its members.
+  const formOf = (collection: string) => Object.entries(FIELD_GROUPS_BY_COLLECTION[collection]).flatMap(([alias, group]) => [
+    { field: alias, meta: { group: null } },
+    ...group.fields.map((field) => ({ field, meta: { group: alias } })),
+  ]);
   const complete = {
-    chapters: [{ field: 'group_story', meta: { group: null } }, { field: 'summary', meta: { group: 'group_story' } }, { field: 'initiatives', meta: { group: 'group_story' } }],
-    guilds: [{ field: 'group_identity', meta: { group: null } }, { field: 'name', meta: { group: 'group_identity' } }, { field: 'projects', meta: { group: 'group_identity' } }],
+    chapters: formOf('chapters'),
+    guilds: formOf('guilds'),
     chapter_update_requests: [{ field: 'links' }, { field: 'proof_signals' }],
   };
   await assertStewardFormsReadable(steward(complete));
   await assert.rejects(
     assertStewardFormsReadable(steward({ ...complete, guilds: complete.guilds.filter((field) => field.field !== 'group_identity') })),
     /guilds form group\(s\) group_identity/
+  );
+  // A group hidden together with every member leaves no readable field naming it.
+  await assert.rejects(
+    assertStewardFormsReadable(steward({
+      ...complete,
+      guilds: complete.guilds.filter((field) => field.field !== 'group_links_media' && field.meta.group !== 'group_links_media'),
+    })),
+    /guilds form group\(s\) group_links_media/
   );
   await assert.rejects(
     assertStewardFormsReadable(steward({ ...complete, chapter_update_requests: [{ field: 'links' }] })),
