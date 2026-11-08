@@ -1539,6 +1539,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const id = target.getAttribute('data-node-id');
       const type = target.getAttribute('data-node-type');
       if (!id || !type) return;
+      // A selected chapter keeps the map at rest, as openSelected leaves it:
+      // no line reaches a chapter, so focusing one would only dim the rest.
+      // A blur, a resize or a list preview ending comes back here.
+      if (target === selectedFocusTarget && target.classList.contains('is-chapter')) {
+        clearFocusState();
+        return;
+      }
 
       root.classList.add('is-focused');
       const revealFocus = activeFocusNodeId !== id;
@@ -1549,6 +1556,10 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       }
 
       const adjacentIds = new Set<string>([id]);
+      // A list row previewed beside the selected node leaves that node lit;
+      // its coloured web stays too (.is-selected-adj).
+      const selectedId = selectedFocusTarget?.getAttribute('data-node-id');
+      if (selectedId) adjacentIds.add(selectedId);
       root.querySelectorAll<SVGPathElement>('.gp-home-map-thread').forEach((t) => {
         const from = t.getAttribute('data-from');
         const to = t.getAttribute('data-to');
@@ -2051,7 +2062,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const anchorY = (yPct / 100) * rootRect.height;
       const desiredX = xPct < 60 ? anchorX + offset : anchorX - cardRect.width - offset;
       const desiredY = yPct < 50 ? anchorY + offset : anchorY - cardRect.height - offset;
-      selectedEl.style.setProperty('--gp-selected-x', `${clampNumber(desiredX, inset, rootRect.width - cardRect.width - inset)}px`);
+      // Beside a docked list the card keeps to the map's side of it, so it
+      // never covers the search or the rows. Step 4 moves the card into the
+      // dock itself.
+      const dockRect = mapLayout() === 'dock' && listDrawer && !listDrawer.hidden ? listDrawer.getBoundingClientRect() : null;
+      const besideDock = dockRect && dockRect.width > 0 ? dockRect.left - rootRect.left - cardRect.width - inset : Number.NaN;
+      const maxX = besideDock >= inset ? besideDock : rootRect.width - cardRect.width - inset;
+      selectedEl.style.setProperty('--gp-selected-x', `${clampNumber(desiredX, inset, maxX)}px`);
       selectedEl.style.setProperty('--gp-selected-y', `${clampNumber(desiredY, inset, rootRect.height - cardRect.height - inset)}px`);
       selectedEl.style.setProperty('--gp-selected-transform', 'none');
     };
@@ -3023,25 +3040,42 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const LIST_GROUP_LABELS: Record<MapNodeType, string> = { chapter: 'Chapters', steward: 'Stewards', member: 'Members' };
     let listQuery = '';
     let listAnnounceTimer = 0;
-    // The pin a row points at, or the stack marker that stands for it.
+    // The node a hovered or focused row previews, and the pin or stack marker
+    // that stands for it on the map, which wears the ring.
+    let listTargetNode: HTMLElement | null = null;
     let listTarget: Element | null = null;
 
-    const clearListTarget = () => {
-      if (!listTarget) return;
-      listTarget.classList.remove('is-list-target');
+    // Rings the node's pin, or the stack marker that stands for it now.
+    const ringListTarget = (node: HTMLElement | null) => {
+      listTarget?.classList.remove('is-list-target');
       listTarget = null;
-      if (!selectedFocusTarget && !pointerFocusTarget && !hoveredStackKey) clearFocusState();
-    };
-
-    // Hovering or focusing a row rings its pin and shows what hover shows.
-    const previewListNode = (node: HTMLElement) => {
-      clearListTarget();
+      listTargetNode = node;
+      if (!node) return;
       const marker = node.classList.contains('is-clustered')
         ? overlapStacks.find((stack) => stack.members.some((member) => member.el === node))?.marker
         : null;
       listTarget = marker ?? node;
       listTarget.classList.add('is-list-target');
-      if (!selectedFocusTarget) setFocus(node);
+    };
+
+    // When a row's preview ends, the map goes back to the selected node, or
+    // to rest.
+    const clearListTarget = () => {
+      if (!listTargetNode) return;
+      ringListTarget(null);
+      if (pointerFocusTarget || hoveredStackKey) return;
+      clearFocus();
+    };
+
+    // Hovering or focusing a row rings its pin and shows what hover shows,
+    // beside a selected node too. A node an update has removed ends it.
+    const previewListNode = (node: HTMLElement) => {
+      if (!node.isConnected) {
+        clearListTarget();
+        return;
+      }
+      ringListTarget(node);
+      setFocus(node);
     };
 
     // Picking a row selects its node. A docked list stays open beside the
@@ -3062,6 +3096,33 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     // this map. Cleared when the list closes or opens for everything.
     let listSubset: { keys: Set<string>; label: string } | null = null;
     let listReturnKeys: string[] = [];
+
+    // Modal only on a phone, where the sheet covers the page. A dock or a
+    // sheet inside the stage leaves the map usable. An open list that the
+    // map's width carries across 520px reopens in the new mode with its
+    // search, scroll and focus; the close event that follows finds it open.
+    let listShownModal = false;
+    const showNodeListForLayout = () => {
+      if (!listDrawer) return;
+      const modal = mapLayout() === 'phone';
+      listDrawer.setAttribute('aria-modal', modal ? 'true' : 'false');
+      if (typeof listDrawer.show !== 'function' || typeof listDrawer.showModal !== 'function') {
+        listDrawer.setAttribute('open', '');
+        return;
+      }
+      if (listDrawer.open && listShownModal === modal) return;
+      const focused = document.activeElement instanceof HTMLElement && listDrawer.contains(document.activeElement)
+        ? document.activeElement
+        : null;
+      const scrollTop = listItems?.scrollTop ?? 0;
+      if (listDrawer.open) listDrawer.close();
+      if (modal) listDrawer.showModal();
+      else listDrawer.show();
+      listShownModal = modal;
+      if (listItems) listItems.scrollTop = scrollTop;
+      focused?.focus({ preventScroll: true });
+    };
+
     const openNodeList = (
       opener: HTMLElement | null = listToggle,
       subset: { keys: string[]; label: string } | null = null
@@ -3073,22 +3134,15 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       clearMapSurfaces();
       listSubset = subset ? { keys: new Set(subset.keys), label: subset.label } : null;
       if (listKicker) listKicker.textContent = listSubset?.label ?? 'Visible nodes';
-      // Each opening starts with an empty search.
+      // Each opening starts with an empty search and no old announcement.
       listQuery = '';
       if (listSearch) listSearch.value = '';
+      if (listLive) listLive.textContent = '';
       listToggle.setAttribute('aria-expanded', 'true');
       root.classList.add('has-list-drawer');
       listDrawer.hidden = false;
-      // Modal only on a phone, where the sheet covers the page. A dock or a
-      // sheet inside the stage leaves the map usable.
-      const modal = mapLayout() === 'phone';
-      listDrawer.setAttribute('aria-modal', modal ? 'true' : 'false');
       renderNodeList();
-      if (!listDrawer.open) {
-        if (modal && typeof listDrawer.showModal === 'function') listDrawer.showModal();
-        else if (typeof listDrawer.show === 'function') listDrawer.show();
-        else listDrawer.setAttribute('open', '');
-      }
+      showNodeListForLayout();
       // The strip has less room beside a docked list.
       layoutThemeStrip();
       window.requestAnimationFrame(() => {
@@ -3111,6 +3165,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       window.clearTimeout(listAnnounceTimer);
       clearListTarget();
       layoutThemeStrip();
+      // A selected node's card may sit where the dock no longer is.
+      syncSelectedOverlay();
     };
 
     // Focus goes back to the list's opener, or, when a rebuild replaced the
@@ -3228,9 +3284,10 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         listLive.textContent = listLive.textContent === announcement ? `${announcement} ` : announcement;
       }, LIST_ANNOUNCE_DELAY_MS);
     });
-    // Escape empties a search first; the next press closes the list.
-    listSearch?.addEventListener('keydown', (event) => {
-      if (event.key !== 'Escape' || !listSearch.value) return;
+    // Escape empties a search first, wherever focus is in the list; the next
+    // press closes it.
+    listDrawer?.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || !listSearch?.value) return;
       event.preventDefault();
       event.stopPropagation();
       listSearch.value = '';
@@ -3247,7 +3304,10 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       event.preventDefault();
       closeNodeList({ restoreFocus: true });
     });
+    // A list reopened before its close event arrives (a new mode, or opened
+    // again at once) is still open, so that close changes nothing.
     listDrawer?.addEventListener('close', () => {
+      if (listDrawer.open) return;
       syncNodeListClosed();
       if (restoreListFocusOnClose) restoreListFocus();
       restoreListFocusOnClose = false;
@@ -3982,6 +4042,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           renderOverlapStack(people, chapters, center, radius, centroidOf(anchors));
           taken.push({ center, radius });
         });
+      // A row's preview moves to the marker that now stands for its node.
+      if (listTargetNode) previewListNode(listTargetNode);
       // When nothing stands for those people any more (an update removed
       // them), the legend, the next control after the map, takes focus.
       if (active && (!active.isConnected || active.classList.contains('is-clustered')) && !focusControlFor(focusKeys)) {
@@ -5258,6 +5320,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const scheduleMapResizeSync = () => {
       // Before the debounce: focus must not wait on a control that just hid.
       keepChromeFocus();
+      // Nor must an open list wait to take the new width's mode.
+      if (listDrawer?.open && !listDrawer.hidden) showNodeListForLayout();
       window.clearTimeout(mapResizeTimer);
       mapResizeTimer = window.setTimeout(() => {
         syncViewToStage();
@@ -5266,7 +5330,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         keepChromeFocus();
         syncAlertBlock();
         applyNodeDensityScale();
-        const activeFocusTarget = selectedFocusTarget ?? pointerFocusTarget;
+        // A row's preview outranks the selection it sits beside.
+        const activeFocusTarget = listTargetNode ?? selectedFocusTarget ?? pointerFocusTarget;
         if (activeFocusTarget && !activeFocusTarget.classList.contains('is-filtered-out')) {
           setFocus(activeFocusTarget);
         }

@@ -2714,6 +2714,9 @@ test('home map list: a dock beside the map, a sheet inside the stage, a modal sh
   // "one polite live region announces the count once typing pauses"
   assert.match(component, /<p class="gp-home-map-sr" data-home-map-list-live aria-live="polite"><\/p>/);
   assert.match(component, /window\.clearTimeout\(listAnnounceTimer\);\s*listAnnounceTimer = window\.setTimeout\(\(\) => \{[\s\S]*?listSearchAnnouncement\(/);
+  // Each opening clears the last announcement along with the search, so a
+  // reopened list never reads out an old count (Codex on #59).
+  assert.match(component, /listQuery = '';\s*if \(listSearch\) listSearch\.value = '';\s*if \(listLive\) listLive\.textContent = '';/);
   // "Rows are at least 44px tall (mark, name, place cut with an ellipsis),
   // grouped by type with counts".
   assert.match(component, /\.gp-home-map-list-row \{[\s\S]*?min-block-size: 44px;/);
@@ -2721,7 +2724,19 @@ test('home map list: a dock beside the map, a sheet inside the stage, a modal sh
   // "Hovering or focusing a row rings its pin and shows its tooltip."
   assert.match(component, /row\.addEventListener\('pointerenter', \(\) => previewListNode\(node\)\);/);
   assert.match(component, /row\.addEventListener\('focus', \(\) => previewListNode\(node\)\);/);
-  assert.match(component, /listTarget\.classList\.add\('is-list-target'\);\s*if \(!selectedFocusTarget\) setFocus\(node\);/);
+  // A row previews beside a selected node too, and the selection's state
+  // comes back when the preview ends (Codex on #59). The selected node stays
+  // lit meanwhile, and a selected chapter's state is the map at rest.
+  assert.match(component, /const previewListNode = \(node: HTMLElement\) => \{[\s\S]*?ringListTarget\(node\);\s*setFocus\(node\);\s*\};/);
+  assert.doesNotMatch(component, /if \(!selectedFocusTarget\) setFocus\(node\);/);
+  assert.match(component, /const clearListTarget = \(\) => \{\s*if \(!listTargetNode\) return;\s*ringListTarget\(null\);\s*if \(pointerFocusTarget \|\| hoveredStackKey\) return;\s*clearFocus\(\);\s*\};/);
+  assert.match(component, /const selectedId = selectedFocusTarget\?\.getAttribute\('data-node-id'\);\s*if \(selectedId\) adjacentIds\.add\(selectedId\);/);
+  assert.match(component, /if \(target === selectedFocusTarget && target\.classList\.contains\('is-chapter'\)\) \{\s*clearFocusState\(\);\s*return;\s*\}/);
+  // Rebuilt stack markers take the ring over from the ones they replace,
+  // and a resize keeps the preview in front of the selection (Codex on #59).
+  const recomputeClusters = component.match(/const recomputeClustersNow = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(recomputeClusters, /if \(listTargetNode\) previewListNode\(listTargetNode\);/);
+  assert.match(component, /const activeFocusTarget = listTargetNode \?\? selectedFocusTarget \?\? pointerFocusTarget;/);
   assert.match(component, /\.gp-home-map-node-link\.is-list-target \.gp-home-map-node-ring \{/);
   assert.match(component, /\.gp-home-map-overlap-stack\.is-list-target \.gp-home-map-overlap-disc \{/);
   // A live update rebuilding the rows keeps keyboard focus on the same node.
@@ -2729,9 +2744,19 @@ test('home map list: a dock beside the map, a sheet inside the stage, a modal sh
   // "The list is non-modal on desktop: the map stays usable" and on phones
   // "The list opens as a full-height sheet, modal on phones as today". Width
   // picks the layout, never the pointer.
-  assert.match(component, /const modal = mapLayout\(\) === 'phone';/);
-  assert.match(component, /if \(modal && typeof listDrawer\.showModal === 'function'\) listDrawer\.showModal\(\);\s*else if \(typeof listDrawer\.show === 'function'\) listDrawer\.show\(\);/);
+  const showList = component.match(/const showNodeListForLayout = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(showList, /const modal = mapLayout\(\) === 'phone';/);
+  assert.match(showList, /if \(modal\) listDrawer\.showModal\(\);\s*else listDrawer\.show\(\);/);
+  assert.match(component, /renderNodeList\(\);\s*showNodeListForLayout\(\);/);
   assert.doesNotMatch(component, /listDrawer\.setAttribute\('aria-modal', isTouchMap\(\)/);
+  // An open list that crosses 520px reopens in the new mode, keeping its
+  // search, scroll and focus, and the close event that follows changes
+  // nothing (Codex on #59).
+  assert.match(showList, /if \(listDrawer\.open && listShownModal === modal\) return;/);
+  assert.match(showList, /if \(listDrawer\.open\) listDrawer\.close\(\);/);
+  assert.match(showList, /if \(listItems\) listItems\.scrollTop = scrollTop;\s*focused\?\.focus\(\{ preventScroll: true \}\);/);
+  assert.match(component, /const scheduleMapResizeSync = \(\) => \{[\s\S]*?if \(listDrawer\?\.open && !listDrawer\.hidden\) showNodeListForLayout\(\);[\s\S]*?window\.clearTimeout\(mapResizeTimer\);/);
+  assert.match(component, /listDrawer\?\.addEventListener\('close', \(\) => \{\s*if \(listDrawer\.open\) return;\s*syncNodeListClosed\(\);/);
   // The dock: "inset 12px, the stage's full height, about 340px wide", and
   // "While the dock is open, both bars end at its edge."
   const drawerCss = component.match(/\n  \.gp-home-map-list-drawer \{([^}]*)\}/)?.[1] ?? '';
@@ -2753,8 +2778,16 @@ test('home map list: a dock beside the map, a sheet inside the stage, a modal sh
   assert.match(component, /const activateListNode = \(node: HTMLElement, viaKeyboard: boolean\) => \{\s*clearListTarget\(\);\s*const docked = mapLayout\(\) === 'dock';\s*if \(!docked\) closeNodeList\(\);\s*activateMapNode\(node, viaKeyboard \|\| !docked\);/);
   // A mouse pick in the dock keeps focus on the list for the next row.
   assert.match(component, /row\.addEventListener\('click', \(event\) => activateListNode\(node, event\.detail === 0 \|\| row\.matches\(':focus-visible'\)\)\);/);
-  // Escape empties a search before it closes the list.
-  assert.match(component, /if \(event\.key !== 'Escape' \|\| !listSearch\.value\) return;\s*event\.preventDefault\(\);\s*event\.stopPropagation\(\);/);
+  // Escape empties a search before it closes the list, wherever focus is in
+  // the list, a row included (CodeRabbit on #59).
+  assert.match(component, /listDrawer\?\.addEventListener\('keydown', \(event\) => \{\s*if \(event\.key !== 'Escape' \|\| !listSearch\?\.value\) return;\s*event\.preventDefault\(\);\s*event\.stopPropagation\(\);/);
+  assert.doesNotMatch(component, /listSearch\?\.addEventListener\('keydown'/);
+  // Until step 4 moves it into the dock, a selected node's card keeps to the
+  // map's side of a docked list (CodeRabbit on #59), and finds its place
+  // again when the list closes.
+  assert.match(component, /const dockRect = mapLayout\(\) === 'dock' && listDrawer && !listDrawer\.hidden \? listDrawer\.getBoundingClientRect\(\) : null;/);
+  assert.match(component, /selectedEl\.style\.setProperty\('--gp-selected-x', `\$\{clampNumber\(desiredX, inset, maxX\)\}px`\);/);
+  assert.match(component, /const syncNodeListClosed = \(\) => \{[\s\S]*?layoutThemeStrip\(\);\s*\/\/[^\n]*\n\s*syncSelectedOverlay\(\);\s*\};/);
   // A touch screen opens the list at Close, so no on-screen keyboard rises.
   assert.match(component, /const typing = !window\.matchMedia\('\(pointer: coarse\)'\)\.matches;/);
 });
