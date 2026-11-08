@@ -16,11 +16,17 @@ export const NEWSLETTER_LOCAL_AGENT_ORIGIN = 'http://127.0.0.1:3303';
 /** How long the form waits for the agent before offering the Paragraph link. */
 export const NEWSLETTER_CLIENT_TIMEOUT_MS = 15_000;
 
-const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1', '[::1]']);
+/**
+ * The hosts of the agent's local CORS origins (`PUBLIC_CORS_ORIGINS` in
+ * packages/agent/src/app.ts allows http://localhost:3301 and
+ * http://127.0.0.1:3301). Another local host would only be refused by the
+ * local agent's CORS, so it is not routed there.
+ */
+const LOCAL_AGENT_HOSTNAMES = new Set(['localhost', '127.0.0.1']);
 
 /** The agent's signup URL: the local agent in development, the live one elsewhere. */
 export function newsletterSubscribeUrl(hostname: string): string {
-  const origin = LOCAL_HOSTNAMES.has(hostname) ? NEWSLETTER_LOCAL_AGENT_ORIGIN : NEWSLETTER_AGENT_ORIGIN;
+  const origin = LOCAL_AGENT_HOSTNAMES.has(hostname) ? NEWSLETTER_LOCAL_AGENT_ORIGIN : NEWSLETTER_AGENT_ORIGIN;
   return `${origin}${NEWSLETTER_SUBSCRIBE_ROUTE}`;
 }
 

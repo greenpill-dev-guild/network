@@ -308,11 +308,18 @@ test('the Garden email step shows the signup form and falls back to Paragraph', 
   });
 });
 
-test('the newsletter form posts to the agent and shows every answer', () => {
-  assert.equal(newsletterSubscribeUrl('greenpill.network'), `${NEWSLETTER_AGENT_ORIGIN}/newsletter/subscribe`);
+test('the newsletter form posts to the agent and shows every answer', async () => {
   assert.equal(NEWSLETTER_AGENT_ORIGIN, 'https://agent.greenpill.network');
-  for (const hostname of ['localhost', '127.0.0.1', '[::1]']) {
+  assert.equal(NEWSLETTER_LOCAL_AGENT_ORIGIN, 'http://127.0.0.1:3303');
+  // Only the hosts of the agent's local CORS origins use the local agent.
+  // Any other host posts to the live agent, whose CORS answers for itself.
+  const agentApp = await readFile(join(rootDir, 'packages/agent/src/app.ts'), 'utf8');
+  for (const hostname of ['localhost', '127.0.0.1']) {
     assert.equal(newsletterSubscribeUrl(hostname), `${NEWSLETTER_LOCAL_AGENT_ORIGIN}/newsletter/subscribe`);
+    assert.ok(agentApp.includes(`'http://${hostname}:3301'`), `the agent allows http://${hostname}:3301`);
+  }
+  for (const hostname of ['greenpill.network', 'www.greenpill.network', '0.0.0.0', '[::1]']) {
+    assert.equal(newsletterSubscribeUrl(hostname), `${NEWSLETTER_AGENT_ORIGIN}/newsletter/subscribe`);
   }
 
   assert.deepEqual(newsletterSignupView({ ok: true, status: 'subscribed' }), {
