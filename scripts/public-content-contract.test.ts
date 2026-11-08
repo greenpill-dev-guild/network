@@ -397,12 +397,11 @@ test('chapter initiative cards do not render dead links when no URL is present',
 test('cards on every page come from the Card primitive and do not move on hover', async () => {
   // Website QA, November 2026, finding 9: one card treatment. Pages place cards
   // and lay out what sits inside them; the surface (border, radius, card tone,
-  // hover) lives in components/ui/Card.astro. The map edit and moderation pages
-  // are standalone tools outside the site shell and keep their own styles.
-  const standalonePages = new Set(['map/edit.astro', 'map/moderate.astro']);
+  // hover) lives in components/ui/Card.astro. The standalone map edit and
+  // moderation pages use Card too (PRD-1422).
   const pageFiles = (await readdir(websitePagesDir, { recursive: true }))
     .map((file) => String(file).replaceAll('\\', '/'))
-    .filter((file) => file.endsWith('.astro') && !standalonePages.has(file));
+    .filter((file) => file.endsWith('.astro'));
   const sourcePaths = [
     ...pageFiles.map((file) => join(websitePagesDir, file)),
     join(rootDir, 'packages/website/src/components/page-sections/GardenAssessment.astro'),
@@ -429,6 +428,56 @@ test('cards on every page come from the Card primitive and do not move on hover'
   assert.doesNotMatch(cardStyles, /transform\s*:|box-shadow:\s*var\(--gp-shadow-card-lg\)/);
   assert.match(cardStyles, /\.gp-card\[hidden\]/, 'a filtered card must still hide');
   assert.match(card, /const Tag = href \? 'a' : \(as \?\? 'div'\);/);
+});
+
+test('a focused primary button keeps the focus ring under its glow', async () => {
+  // DESIGN.md: the lime focus ring marks every interactive element. The ring is
+  // a box-shadow in gp-tokens.css, and the primary glow would replace it, so the
+  // primary button's focus-visible state keeps both.
+  const button = await readFile(join(rootDir, 'packages/website/src/components/ui/Button.astro'), 'utf8');
+  assert.match(
+    button,
+    /\.gp-button\.is-primary:focus-visible\s*\{[^}]*box-shadow:\s*var\(--gp-shadow-focus\),\s*var\(--gp-shadow-pill\)/
+  );
+});
+
+// A stylesheet's top-level `selector { declarations }` rules, by selector.
+// Rules inside at-rule blocks (@container, @media and so on) are left out.
+function topLevelCssRules(css) {
+  const rules = new Map();
+  let depth = 0;
+  let start = 0;
+  let selector = '';
+  for (let index = 0; index < css.length; index += 1) {
+    if (css[index] === '{') {
+      if (depth === 0) {
+        selector = css.slice(start, index).trim();
+        start = index + 1;
+      }
+      depth += 1;
+    } else if (css[index] === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        if (!selector.startsWith('@')) rules.set(selector, css.slice(start, index));
+        start = index + 1;
+      }
+    }
+  }
+  return rules;
+}
+
+test('the standalone map pages reset the body margin that GpLayout resets elsewhere', async () => {
+  for (const [page, bodyClass] of [['map/edit.astro', 'map-edit-root'], ['map/moderate.astro', 'moderation-root']]) {
+    const source = await readFile(join(websitePagesDir, page), 'utf8');
+    assert.match(source, new RegExp(`<body class="gp-root ${bodyClass}">`), `${page} body classes`);
+    // Only a live top-level rule counts: not one in a comment or inside an
+    // @container or @media block that might not apply.
+    const css = [...source.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)]
+      .map((match) => match[1].replace(/\/\*[\s\S]*?\*\//g, ''))
+      .join('\n');
+    const bodyRule = topLevelCssRules(css).get(`.${bodyClass}`) ?? '';
+    assert.match(bodyRule, /(^|;)\s*margin:\s*0\s*(;|$)/, `${page} resets the body margin`);
+  }
 });
 
 test('noindex chapters keep their own page while staying out of discovery', async () => {
