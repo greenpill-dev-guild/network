@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import { pathToFileURL } from 'node:url';
-import { withLocaleLabelMeta, withLocaleLabels } from './directus-studio-labels.ts';
+import { keepOtherTranslations, withLocaleLabelMeta, withLocaleLabels } from './directus-studio-labels.ts';
 import {
   DIRECTUS_OPERATIONAL_COLLECTIONS,
   DIRECTUS_CHAPTER_IMAGE_FOLDER_ID,
@@ -1303,7 +1303,7 @@ async function patchFieldMeta(client, fieldPlan, relationKeys) {
   const plannedMeta = relationKeys.has(key) ? fieldPlan.meta : fallbackScalarRelationMeta(fieldPlan.meta);
   const meta = {
     ...(current?.data?.meta ?? {}),
-    ...plannedMeta,
+    ...keepOtherTranslations(current?.data?.meta, plannedMeta),
   };
 
   await client.request(`/fields/${encodePathSegment(fieldPlan.collection)}/${encodePathSegment(fieldPlan.field)}`, {
@@ -1416,9 +1416,11 @@ async function ensureGroupField(client, groupPlan) {
   const exists = (response?.data ?? []).some((item) => item.field === groupPlan.field);
 
   if (exists) {
-    await client.request(`/fields/${encodePathSegment(groupPlan.collection)}/${encodePathSegment(groupPlan.field)}`, {
+    const path = `/fields/${encodePathSegment(groupPlan.collection)}/${encodePathSegment(groupPlan.field)}`;
+    const current = await client.request(path);
+    await client.request(path, {
       method: 'PATCH',
-      body: { meta: groupPlan.meta },
+      body: { meta: keepOtherTranslations(current?.data?.meta, groupPlan.meta) },
     });
     return;
   }
@@ -1540,9 +1542,11 @@ export async function applyDirectusStudioMetadata(options: {
 
   for (const member of plan.extraGroupMembers) {
     try {
-      await client.request(`/fields/${encodePathSegment(member.collection)}/${encodePathSegment(member.field)}`, {
+      const path = `/fields/${encodePathSegment(member.collection)}/${encodePathSegment(member.field)}`;
+      const current = await client.request(path);
+      await client.request(path, {
         method: 'PATCH',
-        body: { meta: member.meta },
+        body: { meta: keepOtherTranslations(current?.data?.meta, member.meta) },
       });
       console.log(`Group assignment: ${member.collection}.${member.field}`);
     } catch {

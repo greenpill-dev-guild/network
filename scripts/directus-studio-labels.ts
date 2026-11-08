@@ -208,3 +208,23 @@ export function withLocaleLabelMeta<Meta extends Record<string, unknown>>(collec
   const translations = withLocaleLabels(collection, field, meta.translations as Translation[] | null | undefined);
   return translations && translations.length > 0 ? { ...meta, translations } : meta;
 }
+
+// Planned field metadata as it should be written over what the field has now.
+// Directus replaces a field's translations list whole, so the stored entries
+// are merged in here, when the stored list is known: a language the plan sets
+// is replaced, and any other one stays, such as a label added by hand in Data
+// Studio. Metadata that sets no translations comes back unchanged, which
+// leaves the stored ones alone.
+export function keepOtherTranslations<Meta extends Record<string, unknown>>(
+  currentMeta: Record<string, unknown> | null | undefined,
+  plannedMeta: Meta
+): Meta {
+  const planned = plannedMeta.translations;
+  if (!Array.isArray(planned)) return plannedMeta;
+  const stored = Array.isArray(currentMeta?.translations) ? (currentMeta.translations as Translation[]) : [];
+  const plannedLanguages = new Set((planned as Translation[]).map((entry) => entry.language));
+  return {
+    ...plannedMeta,
+    translations: [...stored.filter((entry) => !plannedLanguages.has(entry.language)), ...planned],
+  };
+}

@@ -519,9 +519,10 @@ labels for the fields and form groups of the steward-facing collections, from
 - The labels are drafts until native speakers review them; `DRAFT_LABEL_REVIEW`
   in the module records where the review stands. Field notes, dropdown
   choices, repeater fields, collection names and bookmark names stay English.
-- A rerun replaces this module's locales on each field and keeps every other
-  language, so it adds no duplicates. It also overwrites a label edited by hand
-  in Data Studio for one of these locales, so change the module instead.
+- A rerun replaces the labels the setup writes (English where it sets one, and
+  these locales) and keeps every other language stored on the field, including
+  labels added by hand in Data Studio, so it adds no duplicates. A hand edit to
+  one of these locales is overwritten, so change the module instead.
 
 ### Live Onboarding Mode
 

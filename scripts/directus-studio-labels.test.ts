@@ -4,6 +4,7 @@ import {
   DIRECTUS_LOCALE_KEYS_FOR_LABELS,
   STEWARD_FACING_COLLECTIONS,
   STUDIO_LABEL_LOCALES,
+  keepOtherTranslations,
   withLocaleLabels,
 } from './directus-studio-labels.ts';
 import { buildDirectusStudioMetadataPlan } from './directus-studio-setup.ts';
@@ -94,4 +95,35 @@ test('applying the labels again changes nothing, so a rerun adds no duplicates',
   // Fields outside the steward-facing collections are left alone.
   const untouched = [{ language: 'en-US', translation: 'Auto-off time' }];
   assert.equal(withLocaleLabels('map_node_intake_settings', 'live_onboarding_expires_at', untouched), untouched);
+});
+
+test('a rerun keeps labels stored in other languages and replaces the ones it sets', () => {
+  // Directus replaces a field's translations list whole, so the stored list is
+  // merged in when the metadata is written.
+  const planned = {
+    group: 'group_story',
+    translations: [
+      { language: 'en-US', translation: 'Story' },
+      { language: 'pt-BR', translation: 'História' },
+    ],
+  };
+  const stored = {
+    note: 'stored note',
+    translations: [
+      { language: 'fr-FR', translation: 'Histoire' },
+      { language: 'pt-BR', translation: 'older draft' },
+    ],
+  };
+  const written = keepOtherTranslations(stored, planned);
+  assert.deepEqual(written.translations, [
+    { language: 'fr-FR', translation: 'Histoire' },
+    { language: 'en-US', translation: 'Story' },
+    { language: 'pt-BR', translation: 'História' },
+  ]);
+  // The next run starts from what this one wrote and changes nothing.
+  assert.deepEqual(keepOtherTranslations(written, planned).translations, written.translations);
+  // Metadata that sets no translations leaves the stored ones alone.
+  const groupOnly = { group: 'group_story' };
+  assert.equal(keepOtherTranslations(stored, groupOnly), groupOnly);
+  assert.deepEqual(keepOtherTranslations(null, planned).translations, planned.translations);
 });
