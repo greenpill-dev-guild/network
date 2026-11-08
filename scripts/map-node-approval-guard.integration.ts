@@ -41,6 +41,8 @@ if (!LOCAL_HOSTS.has(serverUrl.hostname)) {
 const scratchName = `map_node_approval_proof_${randomUUID().slice(0, 8)}`;
 const scratchUrl = new URL(serverUrl);
 scratchUrl.pathname = `/${scratchName}`;
+// postgres.js lets a `database` query parameter override the path.
+scratchUrl.searchParams.delete('database');
 
 type Row = Record<string, any>;
 type Sql = NonNullable<ReturnType<typeof createDatabaseClient>>;
@@ -183,6 +185,9 @@ const guardTriggers = async () => (await sql!`
 try {
   await server.unsafe(`create database ${scratchName}`);
   sql = connect(scratchUrl);
+  // Nothing is written until the connection is known to be the scratch database.
+  const [connected] = await sql`select current_database() as name`;
+  assert.equal(connected.name, scratchName, 'the proof is not connected to its scratch database');
   // Migrations announce every "does not exist, skipping"; keep the output to the result.
   await sql`set client_min_messages = warning`;
 
@@ -383,6 +388,9 @@ try {
   const renameRequest = await insertUpdateRequest(renamed, { display_name: 'Renamed proof node' });
   await setRequestStatus(renameRequest, 'approved');
   assert.equal((await requestRow(renameRequest)).status, 'approved');
+  const [renamedNode] = await sql`select display_name from intake.map_node_submissions where id = ${renamed}::uuid`;
+  assert.equal(renamedNode.display_name, 'Renamed proof node');
+  assert.deepEqual(await state(renamed), ['approved', '-16.800000', '180.000000']);
 
   // --- Applying it again -------------------------------------------------------
   const settled = await everySubmission();
