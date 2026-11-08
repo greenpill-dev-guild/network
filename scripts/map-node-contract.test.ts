@@ -2651,6 +2651,15 @@ test('home map chrome: bars in the stage, a theme strip toolbar, one phone row, 
   assert.match(component, /@container \(max-width: 860px\) \{\s*\.gp-home-map-freshness-sep,\s*\.gp-home-map-freshness-age,\s*\.gp-home-map-freshness\[data-state='stale'\] \{\s*display: none;/);
   assert.match(phoneCss, /\.gp-home-map-freshness \{\s*position: absolute;\s*inset-block-end: calc\(var\(--gp-map-row\) \+ var\(--gp-space-sm\)\);/);
   assert.match(component, /const height = mapStateError && !mapStateError\.hidden && mapLayout\(\) === 'phone' \? mapStateError\.offsetHeight : 0;/);
+  // A layout change never strands keyboard focus (Codex on #56): crossing
+  // 520px while a strip chip has focus moves it to Themes before the 80ms
+  // resize debounce, and back again; a control remembers its focus only
+  // when it blurred because it hid.
+  assert.match(component, /const scheduleMapResizeSync = \(\) => \{\s*\/\/[^\n]*\n\s*keepChromeFocus\(\);/);
+  assert.match(component, /if \(themeStrip\?\.contains\(el\)\) return \[themesToggle, stripTabStop, themeAllChip, themeMoreChip\];/);
+  assert.match(component, /if \(el === themesToggle\) return \[stripTabStop, themeAllChip, themeMoreChip\];/);
+  assert.match(component, /if \(target && target\.getClientRects\(\)\.length > 0\) lastChromeFocus = null;/);
+  assert.match(component, /const next = counterpartsOf\(held\)\.find\(\(candidate\) => candidate && candidate\.getClientRects\(\)\.length > 0\);\s*next\?\.focus\(\{ preventScroll: true \}\);/);
 
   // WebMCP stays read-only and reads the new rule: no picked theme means
   // every theme shows.

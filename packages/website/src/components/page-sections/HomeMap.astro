@@ -5143,12 +5143,50 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       dropPointerFocus();
     }, { passive: true });
     window.addEventListener(PENDING_NODE_UPDATED_EVENT, renderLocalPending);
+    // ---- Focus across a layout change -----------------------------------------
+    // Some controls exist in one layout only: the theme strip and the zoom
+    // buttons on a wide map; Themes and the edge pills on a phone. When the
+    // container crosses 520px (a resize, a rotated device) while keyboard
+    // focus is on one that hides, focus moves to its counterpart in the new
+    // layout instead of falling to the page (Codex on #56).
+    const themesToggle = scope.querySelector('.gp-home-map-themes-toggle') as HTMLButtonElement | null;
+    const resetViewButton = scope.querySelector('[data-home-map-zoom="reset"]') as HTMLButtonElement | null;
+    // The chrome control that last held focus. A control that hides blurs
+    // with nowhere to go, so the memory outlives that blur, and only that one.
+    let lastChromeFocus: HTMLElement | null = null;
+    controlsEl?.addEventListener('focusin', (event) => {
+      if (event.target instanceof HTMLElement) lastChromeFocus = event.target;
+    });
+    controlsEl?.addEventListener('focusout', (event) => {
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (target && target.getClientRects().length > 0) lastChromeFocus = null;
+    });
+    const counterpartsOf = (el: HTMLElement): Array<HTMLElement | null> => {
+      if (themeStrip?.contains(el)) return [themesToggle, stripTabStop, themeAllChip, themeMoreChip];
+      if (el === themesToggle) return [stripTabStop, themeAllChip, themeMoreChip];
+      if (el.closest('.gp-home-map-edge-pills') || el.matches('[data-home-map-zoom]')) return [resetViewButton];
+      return [];
+    };
+    const keepChromeFocus = () => {
+      const active = document.activeElement;
+      const held = active instanceof HTMLElement && controlsEl?.contains(active)
+        ? active
+        : !active || active === document.body ? lastChromeFocus : null;
+      if (!held || held.getClientRects().length > 0) return;
+      const next = counterpartsOf(held).find((candidate) => candidate && candidate.getClientRects().length > 0);
+      next?.focus({ preventScroll: true });
+    };
+
     let mapResizeTimer = 0;
     const scheduleMapResizeSync = () => {
+      // Before the debounce: focus must not wait on a control that just hid.
+      keepChromeFocus();
       window.clearTimeout(mapResizeTimer);
       mapResizeTimer = window.setTimeout(() => {
         syncViewToStage();
         layoutThemeStrip();
+        // The strip may have hidden a chip that no longer fits.
+        keepChromeFocus();
         syncAlertBlock();
         applyNodeDensityScale();
         const activeFocusTarget = selectedFocusTarget ?? pointerFocusTarget;
