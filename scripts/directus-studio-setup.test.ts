@@ -4,7 +4,47 @@ import { dirname, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { buildDirectusOperationalPermissionPlan } from './directus-operational-content-setup.ts';
-import { buildDirectusStudioBookmarkPlan, buildDirectusStudioMetadataPlan } from './directus-studio-setup.ts';
+import { applyExtraGroupMembers, buildDirectusStudioBookmarkPlan, buildDirectusStudioMetadataPlan } from './directus-studio-setup.ts';
+
+test('group assignment skips only a field Directus confirms missing, and stops on any other failure', async () => {
+  const member = { collection: 'chapters', field: 'initiatives', meta: { group: 'group_story' } };
+  // fieldRead: what GET /fields/chapters/initiatives does; listed: the fields
+  // GET /fields/chapters returns.
+  const directus = (fieldRead: () => unknown, listed: string[] = []) => {
+    const patches: string[] = [];
+    return {
+      patches,
+      request: async (path: string, init: { method?: string } = {}) => {
+        if (init.method === 'PATCH') {
+          patches.push(path);
+          return { data: {} };
+        }
+        if (path.startsWith('/fields/chapters?')) return { data: listed.map((field) => ({ field })) };
+        return fieldRead();
+      },
+    };
+  };
+  const failing = (message: string) => () => { throw new Error(message); };
+
+  // Directus answers 403 for a field that does not exist: skipped once the field list agrees.
+  const missing = directus(failing('GET /fields/chapters/initiatives failed with 403: forbidden'));
+  await applyExtraGroupMembers(missing, [member]);
+  assert.deepEqual(missing.patches, []);
+
+  // A 403 on a field that exists is a permission problem, not a missing field.
+  await assert.rejects(
+    applyExtraGroupMembers(directus(failing('GET /fields/chapters/initiatives failed with 403: forbidden'), ['initiatives']), [member]),
+    /failed with 403/
+  );
+  // A server error or a network failure stops the setup instead of skipping labels.
+  await assert.rejects(applyExtraGroupMembers(directus(failing('GET /fields/chapters/initiatives failed with 503: unavailable')), [member]), /503/);
+  await assert.rejects(applyExtraGroupMembers(directus(failing('fetch failed')), [member]), /fetch failed/);
+
+  // A readable field gets its group.
+  const present = directus(() => ({ data: { meta: { translations: null } } }));
+  await applyExtraGroupMembers(present, [member]);
+  assert.deepEqual(present.patches, ['/fields/chapters/initiatives']);
+});
 
 test('Directus Studio metadata plan hides assignment collections and labels content collections', () => {
   const plan = buildDirectusStudioMetadataPlan(
@@ -172,8 +212,9 @@ test('chapter image alt text and credit sit under the upload and alt text is req
   }
   assert.equal(Number(imageFile?.meta.sort) < Number(imageAlt?.meta.sort), true);
   assert.equal(Number(imageAlt?.meta.sort) < Number(imageCredit?.meta.sort), true);
-  assert.deepEqual(imageAlt?.meta.translations, [{ language: 'en-US', translation: 'Image alt text' }]);
-  assert.deepEqual(imageCredit?.meta.translations, [{ language: 'en-US', translation: 'Image credit' }]);
+  const english = (field) => (field?.meta.translations ?? []).filter((entry) => entry.language === 'en-US');
+  assert.deepEqual(english(imageAlt), [{ language: 'en-US', translation: 'Image alt text' }]);
+  assert.deepEqual(english(imageCredit), [{ language: 'en-US', translation: 'Image credit' }]);
   assert.deepEqual(imageAlt?.meta.conditions, [
     {
       name: 'Alt text required with an uploaded image',

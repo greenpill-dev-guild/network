@@ -52,6 +52,9 @@ asking for access.
    - `Chapters`
    - `Chapter Initiatives`
    - `Chapter Update Requests`
+6. Optional: for field labels in Portuguese or Spanish, open your profile (your
+   avatar at the bottom left), set `Language` to `Portuguese (Brazil)` or any
+   `Spanish` option, and save. Field notes and choices stay in English for now.
 
 If the assigned chapter or guild is missing, message the Telegram steward chat
 with your chapter name and the email address used for your invite.

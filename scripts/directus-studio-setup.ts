@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { pathToFileURL } from 'node:url';
+import { keepOtherTranslations, withLocaleLabelMeta, withLocaleLabels } from './directus-studio-labels.ts';
 import {
   DIRECTUS_OPERATIONAL_COLLECTIONS,
   DIRECTUS_CHAPTER_IMAGE_FOLDER_ID,
@@ -1133,7 +1134,7 @@ export function buildDirectusStudioMetadataPlan(
           sort: group.sort,
           width: 'full',
           hidden: false,
-          translations: [{ language: 'en-US', translation: group.label }],
+          translations: withLocaleLabels(base, field, [{ language: 'en-US', translation: group.label }]),
         },
       }));
     }),
@@ -1145,16 +1146,16 @@ export function buildDirectusStudioMetadataPlan(
       return Object.entries(fields as Record<string, Record<string, unknown>>).map(([field, meta]) => ({
         collection,
         field,
-        meta: {
+        meta: withLocaleLabelMeta(base, field, {
           collection,
           field,
           ...withStudioLayers(base, field, meta),
-        },
+        }),
       }));
     }),
     // Alias fields owned by content:setup (initiatives, editor_assignments,
     // update_requests, projects) still need their group assignment; they get a
-    // meta-merge patch that only sets the group.
+    // meta-merge patch that sets only the group and the locale labels.
     extraGroupMembers: collections.flatMap((collection) => {
       const base = cleanCollectionName(collection);
       const lookup = fieldGroupLookup(base);
@@ -1165,7 +1166,7 @@ export function buildDirectusStudioMetadataPlan(
         .map(([field, groupField]) => ({
           collection,
           field,
-          meta: { collection, field, group: groupField },
+          meta: withLocaleLabelMeta(base, field, { collection, field, group: groupField }),
         }));
     }),
   };
@@ -1413,7 +1414,7 @@ async function patchFieldMeta(client, fieldPlan, relationKeys) {
   const plannedMeta = relationKeys.has(key) ? fieldPlan.meta : fallbackScalarRelationMeta(fieldPlan.meta);
   const meta = {
     ...(current?.data?.meta ?? {}),
-    ...plannedMeta,
+    ...keepOtherTranslations(current?.data?.meta, plannedMeta),
   };
 
   await client.request(`/fields/${encodePathSegment(fieldPlan.collection)}/${encodePathSegment(fieldPlan.field)}`, {
@@ -1518,6 +1519,41 @@ async function applyDirectusStudioBookmarks(client, collectionNames) {
   return applied;
 }
 
+// Directus 11.17.4 answers 403, not 404, when a field does not exist, even to
+// an administrator. A failed read counts as a missing field only when the
+// collection's field list confirms it; any other failure stops the setup.
+async function isMissingField(client, collection: string, field: string, error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (!/failed with (403|404)\b/.test(message)) return false;
+  const params = new URLSearchParams({ fields: 'field', limit: '-1' });
+  const response = await client.request(`/fields/${encodePathSegment(collection)}?${params.toString()}`);
+  return !(response?.data ?? []).some((item) => item.field === field);
+}
+
+// Puts the relation alias fields content:setup creates (such as
+// chapters.initiatives) into their form groups, with their labels.
+export async function applyExtraGroupMembers(client, members) {
+  for (const member of members) {
+    const path = `/fields/${encodePathSegment(member.collection)}/${encodePathSegment(member.field)}`;
+    let current;
+    try {
+      current = await client.request(path);
+    } catch (error) {
+      if (!(await isMissingField(client, member.collection, member.field, error))) throw error;
+      console.warn(
+        `Skipped group assignment for ${member.collection}.${member.field}: field not found. ` +
+        'Run directus:content:setup first so relation alias fields exist.'
+      );
+      continue;
+    }
+    await client.request(path, {
+      method: 'PATCH',
+      body: { meta: keepOtherTranslations(current?.data?.meta, member.meta) },
+    });
+    console.log(`Group assignment: ${member.collection}.${member.field}`);
+  }
+}
+
 async function ensureGroupField(client, groupPlan) {
   const params = new URLSearchParams();
   params.set('fields', 'field');
@@ -1526,9 +1562,11 @@ async function ensureGroupField(client, groupPlan) {
   const exists = (response?.data ?? []).some((item) => item.field === groupPlan.field);
 
   if (exists) {
-    await client.request(`/fields/${encodePathSegment(groupPlan.collection)}/${encodePathSegment(groupPlan.field)}`, {
+    const path = `/fields/${encodePathSegment(groupPlan.collection)}/${encodePathSegment(groupPlan.field)}`;
+    const current = await client.request(path);
+    await client.request(path, {
       method: 'PATCH',
-      body: { meta: groupPlan.meta },
+      body: { meta: keepOtherTranslations(current?.data?.meta, groupPlan.meta) },
     });
     return;
   }
@@ -1648,20 +1686,7 @@ export async function applyDirectusStudioMetadata(options: {
     }
   }
 
-  for (const member of plan.extraGroupMembers) {
-    try {
-      await client.request(`/fields/${encodePathSegment(member.collection)}/${encodePathSegment(member.field)}`, {
-        method: 'PATCH',
-        body: { meta: member.meta },
-      });
-      console.log(`Group assignment: ${member.collection}.${member.field}`);
-    } catch {
-      console.warn(
-        `Skipped group assignment for ${member.collection}.${member.field}: field not found. ` +
-        'Run directus:content:setup first so relation alias fields exist.'
-      );
-    }
-  }
+  await applyExtraGroupMembers(client, plan.extraGroupMembers);
 
   const hiddenTechnical = await hideTechnicalCollections(client, available);
 
