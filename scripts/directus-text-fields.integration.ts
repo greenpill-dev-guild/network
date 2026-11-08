@@ -58,6 +58,9 @@ function connect(url: URL): Sql {
 }
 
 let sql: Sql | null = null;
+// Cleanup drops only a database this run created, never one that happened to
+// have the same name.
+let created = false;
 const server = connect(serverUrl);
 
 // The default the way Directus reports it in a field's schema: a text literal
@@ -145,6 +148,7 @@ const digest = async () => (await sql!`
 
 try {
   await server.unsafe(`create database ${scratchName}`);
+  created = true;
   sql = connect(scratchUrl);
   // Nothing is written until the connection is known to be the scratch database.
   const [connected] = await sql`select current_database() as name`;
@@ -270,8 +274,10 @@ try {
   console.log('Text field database proof passed.');
 } finally {
   await sql?.end({ timeout: 3 }).catch(() => {});
-  await server.unsafe(`drop database if exists ${scratchName}`).catch((error) => {
-    console.error(`Could not drop scratch database ${scratchName}: ${String(error).slice(0, 160)}`);
-  });
+  if (created) {
+    await server.unsafe(`drop database if exists ${scratchName}`).catch((error) => {
+      console.error(`Could not drop scratch database ${scratchName}: ${String(error).slice(0, 160)}`);
+    });
+  }
   await server.end({ timeout: 3 }).catch(() => {});
 }
