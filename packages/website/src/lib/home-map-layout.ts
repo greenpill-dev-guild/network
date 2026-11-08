@@ -292,6 +292,96 @@ export function panMapView(view: MapBox, edge: MapEdge, drawing: MapBox = MAP_DR
   return { ...view, x: Math.min(Math.max(drawing.x, x), drawing.x + drawing.width - view.width) };
 }
 
+// ---- The inspector over the map -------------------------------------------
+// docs/design/map-polish-audit.md § 5: "When the node would sit under the
+// dock, the map pans it into the open area", and on a phone "The map pans
+// the node above the sheet." The map never resizes, so the view moves: it may
+// slide past the drawing's edge on the panel's side, because the panel hides
+// what lies there.
+
+/**
+ * A panel over one side of the stage: the inspector's dock at the east or
+ * west, or its sheet at the bottom. `share` is how much of the stage it
+ * covers along that axis, from 0 to 1.
+ */
+export type MapPanel = { side: 'east' | 'west' | 'south'; share: number };
+
+// Where a view's corner may go with a panel open: inside the drawing, except
+// on the panel's side, by as much as the panel covers and `clearance` more.
+const viewBoundsBeside = (view: MapBox, drawing: MapBox, panel: MapPanel | null, clearance: number) => {
+  const share = panel && panel.share > 0 ? Math.min(panel.share, 1) : 0;
+  const reachX = share && panel?.side !== 'south' ? share * view.width + clearance : 0;
+  const reachY = share && panel?.side === 'south' ? share * view.height + clearance : 0;
+  return {
+    minX: drawing.x - (panel?.side === 'west' ? reachX : 0),
+    maxX: drawing.x + drawing.width - view.width + (panel?.side === 'east' ? reachX : 0),
+    minY: drawing.y,
+    maxY: drawing.y + drawing.height - view.height + reachY,
+  };
+};
+
+/**
+ * clampMapView with a panel open: the same size limits, and the view may
+ * slide past the drawing's edge under the panel, by as much as the panel
+ * covers plus `clearance` (map units), so a node there can be brought out.
+ */
+export function clampMapViewBeside(
+  box: MapBox,
+  aspect: number,
+  maxZoom: number,
+  panel: MapPanel | null,
+  clearance = 0,
+  drawing: MapBox = MAP_DRAWING
+): MapBox {
+  const sized = clampMapView(box, aspect, maxZoom, drawing);
+  if (!panel || !(panel.share > 0)) return sized;
+  const bounds = viewBoundsBeside(sized, drawing, panel, clearance);
+  return {
+    ...sized,
+    x: Math.min(Math.max(box.x, bounds.minX), bounds.maxX),
+    y: Math.min(Math.max(box.y, bounds.minY), bounds.maxY),
+  };
+}
+
+/**
+ * The view moved as little as it takes for `point` to sit in the open part
+ * of the stage, `clearance` map units inside it: clear of the panel, and of
+ * the stage's other edges. A point already there leaves the view as it is.
+ * The move stops where clampMapViewBeside would stop it.
+ */
+export function panPointIntoOpenArea(
+  view: MapBox,
+  point: MapPoint,
+  panel: MapPanel | null,
+  clearance: number,
+  drawing: MapBox = MAP_DRAWING
+): MapBox {
+  const share = panel && panel.share > 0 ? Math.min(panel.share, 1) : 0;
+  const coverX = share && panel?.side !== 'south' ? share * view.width : 0;
+  const coverY = share && panel?.side === 'south' ? share * view.height : 0;
+  const left = view.x + (panel?.side === 'west' ? coverX : 0) + clearance;
+  const right = view.x + view.width - (panel?.side === 'east' ? coverX : 0) - clearance;
+  const top = view.y + clearance;
+  const bottom = view.y + view.height - coverY - clearance;
+  // An open part narrower than the clearance on both sides takes the point
+  // to its middle.
+  const shift = (value: number, low: number, high: number) => {
+    if (high < low) return value - (low + high) / 2;
+    if (value < low) return value - low;
+    if (value > high) return value - high;
+    return 0;
+  };
+  const dx = shift(point.x, left, right);
+  const dy = shift(point.y, top, bottom);
+  if (dx === 0 && dy === 0) return view;
+  const bounds = viewBoundsBeside(view, drawing, panel, clearance);
+  return {
+    ...view,
+    x: Math.min(Math.max(view.x + dx, bounds.minX), bounds.maxX),
+    y: Math.min(Math.max(view.y + dy, bounds.minY), bounds.maxY),
+  };
+}
+
 /** How many points lie past a view's west and east edges. */
 export function pointsBeyondView(view: MapBox, points: readonly MapPoint[]): Record<MapEdge, number> {
   let west = 0;
