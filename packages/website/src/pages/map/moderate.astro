@@ -1,6 +1,15 @@
 ---
 import '../../styles/gp-tokens.css';
+import Button from '../../components/ui/Button.astro';
+import Card from '../../components/ui/Card.astro';
+import Overline from '../../components/ui/Overline.astro';
 
+// The page behind a private moderation link stays outside the site shell: no
+// GpLayout header or footer, no web fonts (gp-tokens.css declares only the
+// stacks, so system fonts render), no WebMCP, no share metadata and no links.
+// The inline script in <head> takes the token out of the address bar before
+// any stylesheet loads, and the CSP's style-src 'self' 'unsafe-inline' covers
+// the token stylesheet and the component styles Astro inlines.
 const pageTitle = 'Review a Greenpill Network map node';
 const pageDescription = 'Private email-authenticated moderation for a pending Greenpill Network map node.';
 ---
@@ -277,183 +286,33 @@ const pageDescription = 'Private email-authenticated moderation for a pending Gr
     <title>{pageTitle}</title>
     <meta name="description" content={pageDescription} />
     <meta name="robots" content="noindex,nofollow,noarchive" />
-    <style is:inline>
-      :root {
-        color-scheme: dark;
-      }
-
-      * { box-sizing: border-box; }
-      html { min-height: 100%; background: var(--gp-green-950); }
-      body {
-        container-type: inline-size;
-        margin: 0;
-        min-height: 100dvh;
-        color: var(--gp-fg);
-        background: var(--gp-bg);
-        font-family: var(--gp-font-body);
-        line-height: 1.6;
-      }
-      button, textarea { font: inherit; }
-      button { min-height: 48px; }
-      [hidden] { display: none !important; }
-
-      main {
-        width: min(100% - 32px, 760px);
-        margin-inline: auto;
-        padding-block: clamp(32px, 8vw, 88px);
-      }
-      .eyebrow {
-        margin: 0 0 12px;
-        color: var(--gp-primary);
-        font: 700 var(--gp-overline)/1.2 var(--gp-font-mono);
-        letter-spacing: .14em;
-        text-transform: uppercase;
-      }
-      .panel {
-        padding: clamp(24px, 5vw, 48px);
-        border: 1px solid var(--gp-border);
-        border-radius: var(--gp-radius-lg);
-        background: color-mix(in srgb, var(--gp-surface) 96%, transparent);
-        box-shadow: var(--gp-shadow-card-lg);
-      }
-      h1, h2 {
-        margin: 0;
-        color: var(--gp-secondary);
-        font-family: var(--gp-font-display);
-        font-size: var(--gp-h1-size);
-        font-weight: 500;
-        line-height: 1.08;
-        letter-spacing: -.02em;
-      }
-      .lede { margin: 16px 0 0; color: var(--gp-fg-muted); }
-      .status-mark {
-        display: grid;
-        place-items: center;
-        width: 52px;
-        height: 52px;
-        margin-bottom: 20px;
-        border-radius: 50%;
-        background: var(--gp-primary);
-        color: var(--gp-primary-fg);
-        font-size: var(--gp-h3-size);
-        font-weight: 800;
-      }
-      #moderation-resolved[data-decision="rejected"] .status-mark {
-        background: var(--gp-secondary);
-      }
-      dl {
-        display: grid;
-        grid-template-columns: minmax(120px, .45fr) minmax(0, 1fr);
-        gap: 0;
-        margin: 32px 0 0;
-        border-block: 1px solid var(--gp-border);
-      }
-      dt, dd {
-        margin: 0;
-        padding-block: 14px;
-        border-bottom: 1px solid color-mix(in srgb, var(--gp-border) 70%, transparent);
-      }
-      dt { color: var(--gp-fg-muted); font-size: var(--gp-body-sm); font-weight: 700; }
-      dd { overflow-wrap: anywhere; }
-      dt:last-of-type, dd:last-of-type { border-bottom: 0; }
-      .themes { display: flex; flex-wrap: wrap; gap: 8px; }
-      .theme-chip {
-        display: inline-flex;
-        align-items: center;
-        min-height: 30px;
-        padding-inline: 12px;
-        border: 1px solid var(--gp-border);
-        border-radius: var(--gp-radius-pill);
-        color: var(--gp-primary);
-        font-size: var(--gp-label-sm);
-        font-weight: 700;
-      }
-      .expiry { margin: 20px 0 0; color: var(--gp-fg-muted); font-size: var(--gp-body-sm); }
-      .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
-      .button {
-        flex: 1 1 180px;
-        padding: 12px 22px;
-        border: 1px solid var(--gp-border);
-        border-radius: var(--gp-radius-pill);
-        background: transparent;
-        color: var(--gp-fg);
-        font-weight: 750;
-        cursor: pointer;
-      }
-      .button:hover { background: var(--gp-card); }
-      .button-primary { border-color: var(--gp-primary); background: var(--gp-primary); color: var(--gp-primary-fg); }
-      .button-primary:hover { background: var(--gp-primary-hover); }
-      .button-primary:active { background: var(--gp-lime-600); }
-      .button:disabled { cursor: not-allowed; opacity: .65; }
-      .error { margin: 16px 0 0; color: var(--gp-error); font-weight: 650; }
-
-      dialog {
-        width: min(100% - 32px, 520px);
-        padding: 0;
-        border: 1px solid var(--gp-border);
-        border-radius: var(--gp-radius-lg);
-        background: var(--gp-surface);
-        color: var(--gp-fg);
-        box-shadow: var(--gp-shadow-card-lg);
-      }
-      dialog::backdrop { background: color-mix(in srgb, var(--gp-green-950) 78%, transparent); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
-      .dialog-body { padding: 28px; }
-      .dialog-body h2 { font-size: var(--gp-h2-size); }
-      .dialog-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
-      label { display: block; margin-top: 20px; font-weight: 750; }
-      textarea {
-        width: 100%;
-        min-height: 120px;
-        margin-top: 8px;
-        padding: 14px;
-        resize: vertical;
-        border: 1px solid var(--gp-border);
-        border-radius: var(--gp-radius-md);
-        background: var(--gp-green-950);
-        color: var(--gp-fg);
-      }
-      .counter { margin: 4px 0 0; color: var(--gp-fg-muted); font-size: var(--gp-caption); text-align: right; }
-
-      @container (max-width: 560px) {
-        main { width: min(100% - 20px, 760px); padding-block: 20px; }
-        dl { grid-template-columns: 1fr; }
-        dt { padding-bottom: 0; border-bottom: 0; }
-        dd { padding-top: 4px; }
-        .actions { flex-direction: column; }
-        .button { flex-basis: auto; width: 100%; }
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
-      }
-    </style>
   </head>
-  <body class="gp-root">
-    <main>
-      <p class="eyebrow">Greenpill Network · Private moderation</p>
+  <body class="gp-root moderation-root">
+    <main class="moderation-page">
+      <Overline segments={['Greenpill Network', 'Private moderation']} />
 
-      <section id="moderation-loading" class="panel">
+      <Card as="section" variant="elevated" id="moderation-loading">
         <h1 tabindex="-1">Checking your review link…</h1>
         <p class="lede">Loading the pending node securely.</p>
-      </section>
+      </Card>
 
-      <section id="moderation-invalid" class="panel" hidden>
+      <Card as="section" variant="elevated" id="moderation-invalid" hidden>
         <h1 tabindex="-1">This review link is no longer valid</h1>
         <p class="lede">It may have expired, been revoked, or already been replaced. Use Directus as the fallback moderation queue.</p>
-      </section>
+      </Card>
 
-      <section id="moderation-failure" class="panel" role="alert" hidden>
+      <Card as="section" variant="elevated" id="moderation-failure" role="alert" hidden>
         <h1 tabindex="-1">We couldn’t load this review</h1>
         <p class="lede">Please reopen the original email and try again.</p>
-      </section>
+      </Card>
 
-      <section id="moderation-resolved" class="panel" aria-live="polite" hidden>
+      <Card as="section" variant="elevated" id="moderation-resolved" aria-live="polite" hidden>
         <div class="status-mark" aria-hidden="true">✓</div>
         <h1 id="moderation-resolved-title" tabindex="-1">Review complete</h1>
         <p id="moderation-resolved-message" class="lede">No further action is needed.</p>
-      </section>
+      </Card>
 
-      <article id="moderation-pending" class="panel" hidden>
+      <Card as="article" variant="elevated" id="moderation-pending" hidden>
         <h1 id="moderation-name" tabindex="-1">Pending map node</h1>
         <p class="lede">Review the public information below. Approving publishes this node to the public map.</p>
         <dl>
@@ -466,19 +325,19 @@ const pageDescription = 'Private email-authenticated moderation for a pending Gr
         <p id="moderation-expiry" class="expiry"></p>
         <p id="moderation-action-failure" class="error" role="alert" hidden></p>
         <div class="actions">
-          <button id="moderation-decline" class="button" type="button">Decline</button>
-          <button id="moderation-approve" class="button button-primary" type="button">Approve</button>
+          <Button id="moderation-decline" variant="ghost">Decline</Button>
+          <Button id="moderation-approve">Approve</Button>
         </div>
-      </article>
+      </Card>
     </main>
 
     <dialog id="moderation-approve-dialog" aria-labelledby="moderation-approve-title">
       <div class="dialog-body">
         <h2 id="moderation-approve-title">Approve this node?</h2>
         <p class="lede">The node will become visible on the public Greenpill Network map.</p>
-        <div class="dialog-actions">
-          <button id="moderation-approve-cancel" class="button" type="button">Cancel</button>
-          <button id="moderation-approve-confirm" class="button button-primary" type="button">Approve node</button>
+        <div class="actions">
+          <Button id="moderation-approve-cancel" variant="ghost">Cancel</Button>
+          <Button id="moderation-approve-confirm">Approve node</Button>
         </div>
       </div>
     </dialog>
@@ -490,11 +349,227 @@ const pageDescription = 'Private email-authenticated moderation for a pending Gr
         <label for="moderation-decline-note">Private decline note</label>
         <textarea id="moderation-decline-note" maxlength="500" placeholder="Optional context for the moderation record"></textarea>
         <p id="moderation-decline-count" class="counter">0 / 500</p>
-        <div class="dialog-actions">
-          <button id="moderation-decline-cancel" class="button" type="button">Cancel</button>
-          <button id="moderation-decline-confirm" class="button button-primary" type="button">Decline node</button>
+        <div class="actions">
+          <Button id="moderation-decline-cancel" variant="ghost">Cancel</Button>
+          <Button id="moderation-decline-confirm">Decline node</Button>
         </div>
       </div>
     </dialog>
   </body>
 </html>
+
+<style>
+  :global(:root) {
+    color-scheme: dark;
+  }
+
+  /* Outside GpLayout the body is the query container, for this page's
+     reflow and for Button's full-width rule at narrow widths. */
+  .moderation-root {
+    container-type: inline-size;
+    min-block-size: 100dvh;
+  }
+
+  /* Script-driven states toggle [hidden]; the layout rules below set display. */
+  :global([hidden]) {
+    display: none !important;
+  }
+
+  .moderation-page {
+    display: grid;
+    gap: var(--gp-space-md);
+    inline-size: min(100% - 2 * var(--gp-space-md), 760px);
+    margin-inline: auto;
+    padding-block: clamp(var(--gp-space-xl), 8vw, var(--gp-space-4xl));
+  }
+
+  .lede {
+    margin-block-start: var(--gp-space-md);
+    color: var(--gp-fg-muted);
+  }
+
+  .status-mark {
+    display: grid;
+    place-items: center;
+    inline-size: 52px;
+    block-size: 52px;
+    margin-block-end: var(--gp-space-lg);
+    border-radius: var(--gp-radius-pill);
+    background: var(--gp-primary);
+    color: var(--gp-primary-fg);
+    font-size: var(--gp-h3-size);
+    font-weight: 800;
+  }
+
+  #moderation-resolved[data-decision='rejected'] .status-mark {
+    background: var(--gp-secondary);
+  }
+
+  dl {
+    display: grid;
+    grid-template-columns: minmax(120px, 0.45fr) minmax(0, 1fr);
+    margin-block: var(--gp-space-xl) 0;
+    border-block: 1px solid var(--gp-border);
+  }
+
+  dt,
+  dd {
+    margin: 0;
+    padding-block: var(--gp-space-md);
+    border-block-end: 1px solid var(--gp-border-soft);
+  }
+
+  dt {
+    color: var(--gp-fg-muted);
+    font-size: var(--gp-body-sm);
+    font-weight: 700;
+  }
+
+  dd {
+    overflow-wrap: anywhere;
+  }
+
+  dt:last-of-type,
+  dd:last-of-type {
+    border-block-end: 0;
+  }
+
+  .themes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gp-space-sm);
+  }
+
+  /* Theme chips are spans the page script builds, outside this page's scope. */
+  .themes :global(.theme-chip) {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 30px;
+    padding-inline: var(--gp-space-md);
+    border: 1px solid var(--gp-border);
+    border-radius: var(--gp-radius-pill);
+    color: var(--gp-primary);
+    font-size: var(--gp-label-sm);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .expiry {
+    margin-block-start: var(--gp-space-lg);
+    color: var(--gp-fg-muted);
+    font-size: var(--gp-body-sm);
+  }
+
+  /* Form-level error banner (DESIGN.md > State Patterns > Error): the
+     terracotta border carries the tone, the copy stays in the body colour. */
+  .error {
+    margin-block-start: var(--gp-space-md);
+    padding-block: var(--gp-space-sm);
+    padding-inline: var(--gp-space-md);
+    border: 1px solid var(--gp-error);
+    border-radius: var(--gp-radius-md);
+    background: var(--gp-bg);
+    color: var(--gp-fg);
+    font-weight: 600;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gp-space-sm);
+    margin-block-start: var(--gp-space-xl);
+  }
+
+  .actions :global(.gp-button) {
+    flex: 1 1 180px;
+  }
+
+  dialog {
+    inline-size: min(100% - 2 * var(--gp-space-md), 520px);
+    padding: 0;
+    border: 1px solid var(--gp-border);
+    border-radius: var(--gp-radius-lg);
+    background: var(--gp-surface);
+    color: var(--gp-fg);
+    box-shadow: var(--gp-shadow-card-lg);
+  }
+
+  dialog::backdrop {
+    background: color-mix(in srgb, var(--gp-green-950) 78%, transparent);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+
+  .dialog-body {
+    padding: var(--gp-space-xl);
+  }
+
+  .dialog-body .actions {
+    margin-block-start: var(--gp-space-lg);
+  }
+
+  label {
+    display: block;
+    margin-block-start: var(--gp-space-lg);
+    font-size: var(--gp-label-md);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  textarea {
+    inline-size: 100%;
+    min-block-size: 7.5rem;
+    margin-block-start: var(--gp-space-sm);
+    padding: var(--gp-space-md);
+    resize: vertical;
+    border: 1px solid var(--gp-border);
+    border-radius: var(--gp-radius-md);
+    background: var(--gp-green-950);
+    color: var(--gp-fg);
+    font: inherit;
+  }
+
+  textarea::placeholder {
+    color: var(--gp-fg-dim);
+  }
+
+  textarea:focus {
+    border-color: var(--gp-primary);
+  }
+
+  .counter {
+    margin-block-start: var(--gp-space-xs);
+    color: var(--gp-fg-muted);
+    font-size: var(--gp-caption);
+    text-align: end;
+  }
+
+  @container (max-width: 560px) {
+    .moderation-page {
+      inline-size: min(100% - var(--gp-space-lg), 760px);
+      padding-block: var(--gp-space-lg);
+    }
+
+    dl {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    dt {
+      padding-block-end: 0;
+      border-block-end: 0;
+    }
+
+    dd {
+      padding-block-start: var(--gp-space-xs);
+    }
+
+    .actions {
+      flex-direction: column;
+    }
+
+    .actions :global(.gp-button) {
+      flex-basis: auto;
+      inline-size: 100%;
+    }
+  }
+</style>

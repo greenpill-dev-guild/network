@@ -393,12 +393,11 @@ test('chapter initiative cards do not render dead links when no URL is present',
 test('cards on every page come from the Card primitive and do not move on hover', async () => {
   // Website QA, November 2026, finding 9: one card treatment. Pages place cards
   // and lay out what sits inside them; the surface (border, radius, card tone,
-  // hover) lives in components/ui/Card.astro. The map edit and moderation pages
-  // are standalone tools outside the site shell and keep their own styles.
-  const standalonePages = new Set(['map/edit.astro', 'map/moderate.astro']);
+  // hover) lives in components/ui/Card.astro. The standalone map edit and
+  // moderation pages use Card too (PRD-1422).
   const pageFiles = (await readdir(websitePagesDir, { recursive: true }))
     .map((file) => String(file).replaceAll('\\', '/'))
-    .filter((file) => file.endsWith('.astro') && !standalonePages.has(file));
+    .filter((file) => file.endsWith('.astro'));
   const sourcePaths = [
     ...pageFiles.map((file) => join(websitePagesDir, file)),
     join(rootDir, 'packages/website/src/components/page-sections/GardenAssessment.astro'),
