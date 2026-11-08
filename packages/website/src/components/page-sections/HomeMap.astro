@@ -1,6 +1,7 @@
 ---
 import { getOperationalChapters } from '../../lib/operational-content';
 import { isPublicMapCoordinate } from '@greenpill-network/shared/map-locations';
+import { normalizePublicMapThemeSlugs } from '@greenpill-network/shared/map-nodes';
 import { PUBLIC_MAP_THEMES } from '@greenpill-network/shared/map-state';
 import { WORLD_LAND_RINGS, type WorldLandRing } from '../../data/world-land-rings';
 
@@ -115,7 +116,10 @@ const chapterNodes: ChapterNode[] = chapters
       name: c.data.name,
       city: c.data.city || '',
       region: c.data.region || '',
-      themes: [],
+      // Chapters join the theme filters with the themes stewards set in
+      // Directus (Afo, 2026-11-07), read the way the agent reads them for its
+      // own chapter nodes. A chapter without themes shows under all themes only.
+      themes: normalizePublicMapThemeSlugs(c.data.themeSlugs),
       x: lonToX(c.data.long),
       y: latToY(c.data.lat),
       href: `/chapters/${c.id}`,
@@ -182,33 +186,44 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         ))}
       </g>
 
-      {/* mycelial threads — theme-tinted relationship edges. pathLength
-          normalizes every path so the stroke-dash grow-in lands the same
-          duration regardless of arc length. */}
-      <g class="gp-home-map-threads" aria-hidden="true">
-        {edges.map((edge, idx) => {
-          const growDelay = (idx % 12) * 0.12;
-          return (
-            <path
-              class="gp-home-map-thread is-entering"
-              data-from={edge.fromId}
-              data-to={edge.toId}
-              data-theme={edge.theme}
-              d={edge.d}
-              pathLength="1"
-              stroke={themeColor(edge.theme)}
-              style={`--thread-color: ${themeColor(edge.theme)}; --thread-grow-delay: ${growDelay}s; animation-delay: ${growDelay}s;`}
-            />
-          );
-        })}
+      {/* Threads bow out between their nodes, so a long one can leave the
+          drawing; this keeps every line inside it, also where the SVG box is
+          taller or wider than the map it draws. */}
+      <defs>
+        <clipPath id="gp-home-map-drawing" clipPathUnits="userSpaceOnUse">
+          <rect x="0" y="0" width={VIEW_W} height={MAP_VIEW_H} />
+        </clipPath>
+      </defs>
+
+      <g class="gp-home-map-thread-layer" clip-path="url(#gp-home-map-drawing)" aria-hidden="true">
+        {/* mycelial threads — theme-tinted relationship edges. pathLength
+            normalizes every path so the stroke-dash grow-in lands the same
+            duration regardless of arc length. */}
+        <g class="gp-home-map-threads" aria-hidden="true">
+          {edges.map((edge, idx) => {
+            const growDelay = (idx % 12) * 0.12;
+            return (
+              <path
+                class="gp-home-map-thread is-entering"
+                data-from={edge.fromId}
+                data-to={edge.toId}
+                data-theme={edge.theme}
+                d={edge.d}
+                pathLength="1"
+                stroke={themeColor(edge.theme)}
+                style={`--thread-color: ${themeColor(edge.theme)}; --thread-grow-delay: ${growDelay}s; animation-delay: ${growDelay}s;`}
+              />
+            );
+          })}
+        </g>
+        <g class="gp-home-map-threads" data-home-map-dynamic-threads aria-hidden="true"></g>
+        {/* Per-shared-theme parallel strands for the selected node only. Built
+            client-side by intersecting the two endpoints' public themes — no
+            payload change. Kept in its own group so it never affects the base
+            thread/edge-hit sets. */}
+        <g class="gp-home-map-selection-strands" data-home-map-selection-strands aria-hidden="true"></g>
+        <g class="gp-home-map-thread-hits" data-home-map-dynamic-thread-hits aria-hidden="true"></g>
       </g>
-      <g class="gp-home-map-threads" data-home-map-dynamic-threads aria-hidden="true"></g>
-      {/* Per-shared-theme parallel strands for the selected node only. Built
-          client-side by intersecting the two endpoints' public themes — no
-          payload change. Kept in its own group so it never affects the base
-          thread/edge-hit sets. */}
-      <g class="gp-home-map-selection-strands" data-home-map-selection-strands aria-hidden="true"></g>
-      <g class="gp-home-map-thread-hits" data-home-map-dynamic-thread-hits aria-hidden="true"></g>
 
       {/* chapter nodes — lime anchors with stable invisible hit targets */}
       <g class="gp-home-map-chapters">
@@ -267,6 +282,15 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       <button type="button" class="gp-home-map-legend-reset" data-home-map-filter-reset hidden>Show all</button>
     </div>
 
+    {/* The map's error state: stewards and members could not be loaded or
+        refreshed. Chapters come with the page and keep working. It comes
+        before the filter note, which moves below it on a wide map. */}
+    <div class="gp-home-map-state-error" data-home-map-state-error hidden>
+      <span data-home-map-state-error-text></span>
+      <button type="button" data-home-map-state-retry>Try again</button>
+    </div>
+    <p class="gp-home-map-sr" data-home-map-state-live aria-live="polite"></p>
+
     {/* Says how many nodes a filter leaves and offers the way back. On a wide
         map it appears only when three or fewer remain, because that reads as an
         empty map; the compact map shows it for any filter, in place of the
@@ -277,9 +301,16 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     </div>
     <p class="gp-home-map-sr" data-home-map-filter-live aria-live="polite"></p>
 
-    <div class="gp-home-map-freshness" data-home-map-freshness data-state="live" role="status" aria-live="polite" hidden>
+    {/* The Live pill says how current the stewards and members on the map
+        are: "Live · Updated just now" while live intake is on, "Updated 5 min
+        ago" once refreshes keep failing. Its age changes every minute, so it
+        is not a live region; the status line with the error note announces
+        what matters. The rules are in lib/home-map-live.ts. */}
+    <div class="gp-home-map-freshness" data-home-map-freshness data-state="live" hidden>
       <span class="gp-home-map-freshness-dot" aria-hidden="true"></span>
-      <span data-home-map-freshness-label>Live</span>
+      <span class="gp-home-map-freshness-label" data-home-map-freshness-label>Live</span>
+      <span class="gp-home-map-freshness-sep" data-home-map-freshness-sep aria-hidden="true" hidden>·</span>
+      <span class="gp-home-map-freshness-age" data-home-map-freshness-age hidden></span>
     </div>
 
     {/* Focus card — populated by inline script on hover/focus */}
@@ -601,11 +632,21 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   } from '@greenpill-network/shared/map-node-storage';
   import {
     fanHasRoomForTargets,
+    formatPickerCoordinate,
     groupOverlappingPins,
     layoutFan,
     pickerPointToLocation,
     separateLabels,
   } from '../../lib/home-map-layout';
+  import {
+    describeMapStateFeed,
+    mapStateAnnouncement,
+    nextMapStatePollDelay,
+    recordMapStateFailure,
+    recordMapStateSuccess,
+    startMapStateFeed,
+    type MapStateStatus,
+  } from '../../lib/home-map-live';
 
   type DynamicMapNodeType = 'chapter' | 'steward' | 'member';
 
@@ -695,6 +736,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const zoomButtons = Array.from(scope.querySelectorAll('[data-home-map-zoom]')) as HTMLButtonElement[];
     const freshnessEl = root.querySelector('[data-home-map-freshness]') as HTMLElement | null;
     const freshnessLabel = root.querySelector('[data-home-map-freshness-label]') as HTMLElement | null;
+    const freshnessSep = root.querySelector('[data-home-map-freshness-sep]') as HTMLElement | null;
+    const freshnessAge = root.querySelector('[data-home-map-freshness-age]') as HTMLElement | null;
+    const mapStateError = root.querySelector('[data-home-map-state-error]') as HTMLElement | null;
+    const mapStateErrorText = root.querySelector('[data-home-map-state-error-text]') as HTMLElement | null;
+    const mapStateRetry = root.querySelector('[data-home-map-state-retry]') as HTMLButtonElement | null;
+    const mapStateLive = root.querySelector('[data-home-map-state-live]') as HTMLElement | null;
     const listDrawer = root.querySelector('[data-home-map-list]') as HTMLDialogElement | null;
     const listToggle = root.querySelector('[data-home-map-list-toggle]') as HTMLButtonElement | null;
     const listClose = root.querySelector('[data-home-map-list-close]') as HTMLButtonElement | null;
@@ -1600,7 +1647,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     const isGestureBlocked = (target: EventTarget | null) => (
       target instanceof Element &&
-      Boolean(target.closest('.gp-home-map-controls, .gp-home-map-legend, .gp-home-map-filter-note, .gp-home-map-focus, .gp-home-map-selected, .gp-home-map-edge-tooltip, .gp-home-map-list-drawer'))
+      Boolean(target.closest('.gp-home-map-controls, .gp-home-map-legend, .gp-home-map-filter-note, .gp-home-map-state-error, .gp-home-map-focus, .gp-home-map-selected, .gp-home-map-edge-tooltip, .gp-home-map-list-drawer'))
     );
 
     const pointerDistance = (a: PointerEvent, b: PointerEvent) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
@@ -2010,16 +2057,18 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       }
       if (selectedThemesEl) {
         selectedThemesEl.textContent = '';
-        if (!isChapter) {
-          member.themes.slice(0, 4).forEach((slug) => {
-            const chip = document.createElement('span');
-            applyScope(chip);
-            chip.textContent = themeLabel(slug);
-            chip.style.setProperty('--chip-color', themeColor(slug));
-            selectedThemesEl.append(chip);
-          });
-        }
-        selectedThemesEl.hidden = isChapter || selectedThemesEl.childElementCount === 0;
+        // A person picks up to four themes. A chapter shows every theme its
+        // stewards set in Directus, since any of them can be why a theme
+        // filter kept it on the map.
+        const shownThemes = isChapter ? member.themes : member.themes.slice(0, 4);
+        shownThemes.forEach((slug) => {
+          const chip = document.createElement('span');
+          applyScope(chip);
+          chip.textContent = themeLabel(slug);
+          chip.style.setProperty('--chip-color', themeColor(slug));
+          selectedThemesEl.append(chip);
+        });
+        selectedThemesEl.hidden = selectedThemesEl.childElementCount === 0;
       }
       if (selectedNote) {
         selectedNote.textContent = member.publicNote;
@@ -2080,7 +2129,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         chapterSlug: slug,
         publicNote: '',
         profileUrl: '',
-        themes: [],
+        themes: nodeThemes(link),
         lat: 0,
         long: 0,
         approved: false,
@@ -2131,8 +2180,9 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       return nodeMatchesThemeFilters(node);
     };
 
+    // Chapters match on the themes stewards set for them in Directus, like
+    // people do on their own; a node without themes shows under all themes only.
     const nodeMatchesThemeFilters = (node: Element) => {
-      if (filterTypeFor(node.getAttribute('data-node-type')) === 'chapter') return true;
       if (!allThemeCount || activeThemes.size === allThemeCount) return true;
       return nodeThemes(node).some((theme) => activeThemes.has(theme));
     };
@@ -2370,7 +2420,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       // satellites once one is picked, and the picked one is the target.
       const insideMap = event.composedPath().some((node) => (
         node instanceof Element &&
-        node.matches('.gp-home-map-node-link, .gp-home-map-clusters, .gp-home-map-selected, .gp-home-map-controls, .gp-home-map-legend, .gp-home-map-edge-tooltip, .gp-home-map-list-drawer')
+        node.matches('.gp-home-map-node-link, .gp-home-map-clusters, .gp-home-map-selected, .gp-home-map-controls, .gp-home-map-legend, .gp-home-map-state-error, .gp-home-map-edge-tooltip, .gp-home-map-list-drawer')
       ));
       if (insideMap) return;
       if (isTouchMap() && isRecentTouchMapClick() && nodeAtPointer(event as MouseEvent, 44)) return;
@@ -3678,9 +3728,9 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     // ---- /map/state fetch + live growth ------------------------------------
     // Fetched on load, again after every successful submit, and on a visible-page
-    // watch so already-open browsers discover live mode without a refresh.
-    const LIVE_POLL_INTERVAL_MS = 2000;
-    const WATCH_POLL_INTERVAL_MS = 5000;
+    // watch so already-open browsers discover live mode without a refresh. The
+    // cadence, the backoff after failures, and what the Live pill and the error
+    // say come from lib/home-map-live.ts.
     // Abort a stalled /map/state fetch so a slow agent can't wedge the poll.
     const MAP_STATE_TIMEOUT_MS = 8000;
     let pollTimer: number | null = null;
@@ -3691,12 +3741,41 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     let mapIsVisible = true;
     let mapVisibilityObserved = false;
     let replayAfterCurrentLoad = false;
-    const renderMapMode = () => {
-      if (!freshnessEl || !freshnessLabel) return;
-      const isLive = intakeMode === 'live';
-      freshnessEl.dataset.state = intakeMode;
-      freshnessEl.hidden = !isLive;
-      if (freshnessLabel.textContent !== 'Live') freshnessLabel.textContent = 'Live';
+    let mapStateFeed = startMapStateFeed();
+    let lastMapStateStatus: MapStateStatus | null = null;
+
+    const setTextIfChanged = (el: HTMLElement | null, text: string) => {
+      if (el && el.textContent !== text) el.textContent = text;
+    };
+
+    const renderMapStateStatus = () => {
+      const status = describeMapStateFeed(mapStateFeed, intakeMode, Date.now());
+      if (freshnessEl) {
+        freshnessEl.hidden = !status.pill.visible;
+        freshnessEl.dataset.state = status.pill.tone;
+      }
+      setTextIfChanged(freshnessLabel, status.pill.label);
+      if (freshnessLabel) freshnessLabel.hidden = !status.pill.label;
+      setTextIfChanged(freshnessAge, status.pill.age);
+      if (freshnessAge) freshnessAge.hidden = !status.pill.age;
+      if (freshnessSep) freshnessSep.hidden = !(status.pill.label && status.pill.age);
+      if (mapStateError) {
+        const hadFocus = mapStateError.contains(document.activeElement);
+        mapStateError.hidden = !status.problem;
+        mapStateError.dataset.problem = status.problem?.kind ?? '';
+        setTextIfChanged(mapStateErrorText, status.problem?.message ?? '');
+        // The note closes under a keyboard user who pressed Try again: hand
+        // focus to the legend rather than drop it to the top of the page.
+        if (hadFocus && !status.problem) legendItems[0]?.focus({ preventScroll: true });
+      }
+      // The compact map gives the error its own row under the drawing.
+      root.classList.toggle('has-map-state-problem', Boolean(status.problem));
+      const announcement = mapStateAnnouncement(lastMapStateStatus, status);
+      if (announcement && mapStateLive) {
+        // The same words twice in a row are not read again unless they change.
+        mapStateLive.textContent = mapStateLive.textContent === announcement ? `${announcement}\u00a0` : announcement;
+      }
+      lastMapStateStatus = status;
     };
 
     const stopPolling = () => {
@@ -3707,7 +3786,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       pollIntervalMs = null;
     };
 
-    const startPolling = (intervalMs = intakeMode === 'live' ? LIVE_POLL_INTERVAL_MS : WATCH_POLL_INTERVAL_MS) => {
+    const startPolling = (intervalMs: number) => {
       if (pollTimer !== null && pollIntervalMs === intervalMs) return;
       stopPolling();
       pollIntervalMs = intervalMs;
@@ -3730,20 +3809,20 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       mapStateInFlight = true;
       const shouldReplay = Boolean(options.replay || replayAfterCurrentLoad);
       replayAfterCurrentLoad = false;
-      let nextPollIntervalMs = WATCH_POLL_INTERVAL_MS;
       const controller = new AbortController();
       const abortTimer = window.setTimeout(() => controller.abort(), MAP_STATE_TIMEOUT_MS);
+      let responseLoaded = false;
       try {
         const response = await fetch(`${agentBaseUrl}/map/state`, { cache: 'no-store', signal: controller.signal });
-        if (!response.ok) {
-          renderMapMode();
-          return;
-        }
+        // A refused request fails like an unreachable agent: it is counted,
+        // shown on the map, and retried after a backoff (finally, below).
+        if (!response.ok) throw new Error(`/map/state answered ${response.status}`);
         const state = await response.json();
+        responseLoaded = true;
         intakeMode = state?.intakeMode === 'live' ? 'live' : 'moderated';
-        nextPollIntervalMs = intakeMode === 'live' ? LIVE_POLL_INTERVAL_MS : WATCH_POLL_INTERVAL_MS;
+        mapStateFeed = recordMapStateSuccess(Date.now());
         setModeCopy(intakeMode);
-        renderMapMode();
+        renderMapStateStatus();
 
         const nodes = Array.isArray(state?.nodes) ? state.nodes : [];
         const approved = nodes.filter(
@@ -3785,15 +3864,32 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         replayAfterCurrentLoad = false;
         if (replayNow) replayVisibleMapReturn();
 
-      } catch {
-        // Agent unavailable, timed out, or aborted: keep the SSR baseline. No-op.
-        renderMapMode();
+      } catch (error) {
+        // A fault while drawing a good response is this page's bug, not the
+        // agent's: let it surface rather than count it as a failed request.
+        if (responseLoaded) throw error;
+        // Unreachable, refused, timed out, or not JSON. The chapters and the
+        // people already drawn stay on the map; the failure counts toward the
+        // map's error and the backoff.
+        mapStateFeed = recordMapStateFailure(mapStateFeed);
+        renderMapStateStatus();
       } finally {
         window.clearTimeout(abortTimer);
         mapStateInFlight = false;
-        startPolling(nextPollIntervalMs);
+        startPolling(nextMapStatePollDelay(mapStateFeed, intakeMode));
       }
     };
+
+    // Try again asks at once, whatever the backoff was waiting for.
+    mapStateRetry?.addEventListener('click', () => {
+      void loadMapState();
+    });
+
+    // The pill's age keeps counting between requests, which can be a minute
+    // apart while the agent is failing.
+    window.setInterval(() => {
+      if (document.visibilityState === 'visible' && freshnessEl && !freshnessEl.hidden) renderMapStateStatus();
+    }, 30_000);
 
     if ('IntersectionObserver' in window) {
       const mapVisibilityObserver = new IntersectionObserver((entries) => {
@@ -3919,8 +4015,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     };
 
     const renderLocationCoordinates = (lat: number, long: number) => {
-      if (locationCoordinateLat) locationCoordinateLat.value = lat.toFixed(6);
-      if (locationCoordinateLong) locationCoordinateLong.value = long.toFixed(6);
+      if (locationCoordinateLat) locationCoordinateLat.value = formatPickerCoordinate(lat);
+      if (locationCoordinateLong) locationCoordinateLong.value = formatPickerCoordinate(long);
     };
 
     const readLocationCoordinate = (value: unknown, min: number, max: number): number | null => {
@@ -3935,8 +4031,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       // A chosen place supersedes any in-flight lookup or stale search result.
       invalidateLocationRequests();
       placeInput.value = location.label;
-      latInput.value = location.lat.toFixed(6);
-      longInput.value = location.long.toFixed(6);
+      latInput.value = formatPickerCoordinate(location.lat);
+      longInput.value = formatPickerCoordinate(location.long);
       locationConfirmationInput.value = location.confirmationId;
       renderLocationPin(location.lat, location.long);
       renderLocationCoordinates(location.lat, location.long);
@@ -5202,9 +5298,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     line-height: 1.1;
   }
 
-  /* Reset chip, in the legend and in the note below: only while filtering. */
+  /* Reset chip, in the legend and in the note below: only while filtering.
+     The error note's Try again is the same ghost chip. */
   .gp-home-map-legend-reset,
-  .gp-home-map-filter-note button {
+  .gp-home-map-filter-note button,
+  .gp-home-map-state-error button {
     appearance: none;
     box-sizing: border-box;
     flex: none;
@@ -5231,14 +5329,17 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
   /* The class display wins over the UA [hidden] rule, so hide explicitly. */
   .gp-home-map-legend-reset[hidden],
-  .gp-home-map-filter-note[hidden] {
+  .gp-home-map-filter-note[hidden],
+  .gp-home-map-state-error[hidden] {
     display: none;
   }
 
   .gp-home-map-legend-reset:hover,
   .gp-home-map-legend-reset:focus-visible,
   .gp-home-map-filter-note button:hover,
-  .gp-home-map-filter-note button:focus-visible {
+  .gp-home-map-filter-note button:focus-visible,
+  .gp-home-map-state-error button:hover,
+  .gp-home-map-state-error button:focus-visible {
     border-color: color-mix(in srgb, var(--gp-primary) 38%, transparent);
     color: var(--gp-fg);
   }
@@ -5269,6 +5370,37 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     line-height: 1.3;
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
+  }
+
+  /* The map's error state (DESIGN.md, Error): a small surface with a 1px
+     error border that names the failure and offers Try again. It sits under
+     the legend whose steward and member counts it explains. */
+  .gp-home-map-state-error {
+    position: absolute;
+    inset-block-start: 72px;
+    inset-inline-end: 12px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: var(--gp-space-sm);
+    max-width: calc(100% - 24px);
+    padding: var(--gp-space-xs) var(--gp-space-xs) var(--gp-space-xs) var(--gp-space-md);
+    border: 1px solid var(--gp-error);
+    border-radius: var(--gp-radius-pill);
+    background: var(--gp-map-pop-bg);
+    color: var(--gp-fg);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-body-sm);
+    line-height: 1.3;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+
+  /* On a wide map a sparse-filter note shares that spot; it moves below. */
+  @container (width > 720px) {
+    .gp-home-map-state-error:not([hidden]) ~ .gp-home-map-filter-note {
+      inset-block-start: calc(72px + 44px + var(--gp-space-sm));
+    }
   }
 
   .gp-home-map-freshness {
@@ -5306,6 +5438,16 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   }
 
   .gp-home-map-freshness [data-home-map-freshness-label] {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  .gp-home-map-freshness-sep {
+    flex: none;
+  }
+
+  /* The age gives way first when the pill runs short of room. */
+  .gp-home-map-freshness-age {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -5324,6 +5466,18 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   .gp-home-map-freshness[data-state='live'] {
     color: var(--gp-fg);
     border-color: color-mix(in srgb, var(--gp-map-member) 42%, transparent);
+  }
+
+  /* Refreshes are failing: no Live claim, the age of what is on the map, and
+     the error colour on the dot and border. */
+  .gp-home-map-freshness[data-state='stale'] {
+    color: var(--gp-fg-muted);
+    border-color: color-mix(in srgb, var(--gp-error) 48%, transparent);
+  }
+
+  .gp-home-map-freshness[data-state='stale'] .gp-home-map-freshness-dot {
+    background: var(--gp-error);
+    box-shadow: none;
   }
 
   /* Focus card */
@@ -6019,7 +6173,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
   .gp-home-map-selected[data-selected-type='chapter'] .gp-home-map-selected-kicker,
   .gp-home-map-selected[data-selected-type='chapter'] .gp-home-map-selected-note,
-  .gp-home-map-selected[data-selected-type='chapter'] .gp-home-map-selected-themes,
   .gp-home-map-selected[data-selected-type='chapter'] .gp-home-map-selected-edge-list,
   .gp-home-map-selected[data-selected-type='chapter'] .gp-home-map-update {
     display: none;
@@ -6589,14 +6742,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     line-height: 1.15;
     text-align: left;
     cursor: pointer;
-    transition: background 160ms ease, border-color 160ms ease, opacity 160ms ease, transform 160ms ease;
+    transition: background 160ms ease, border-color 160ms ease, opacity 160ms ease;
   }
 
+  /* Hover and focus change colour only (DESIGN.md: no lift). Focus also keeps
+     the global ring. */
   .gp-home-map-addnode-theme:hover,
   .gp-home-map-addnode-theme:focus-visible {
-    transform: translateY(-1px);
     border-color: color-mix(in srgb, var(--theme-color, var(--gp-map-member)) 70%, transparent);
-    outline: none;
   }
 
   .gp-home-map-addnode-theme[aria-pressed='true'] {
@@ -6605,10 +6758,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-color, var(--gp-map-member)) 16%, transparent);
   }
 
+  /* The pressed ring above would replace the global focus ring. */
+  .gp-home-map-addnode-theme[aria-pressed='true']:focus-visible {
+    box-shadow: var(--gp-shadow-focus);
+  }
+
   .gp-home-map-addnode-theme:disabled {
     opacity: 0.36;
     cursor: not-allowed;
-    transform: none;
   }
 
   .gp-home-map-addnode-theme-dot {
@@ -7173,7 +7330,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     letter-spacing: 0.005em;
     line-height: 1;
     cursor: pointer;
-    transition: transform 160ms ease, opacity 160ms ease, background 200ms cubic-bezier(0.4, 0, 0.2, 1), border-color 200ms cubic-bezier(0.4, 0, 0.2, 1), color 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 160ms ease, background 200ms cubic-bezier(0.4, 0, 0.2, 1), border-color 200ms cubic-bezier(0.4, 0, 0.2, 1), color 200ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .gp-home-map-addnode-next,
@@ -7191,19 +7348,17 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     background: var(--gp-primary-hover);
   }
 
-  .gp-home-map-addnode-next:not(:disabled):hover,
+  /* Hover and focus change colour only (DESIGN.md: no lift). The pill's glow
+     replaces the global focus ring, so focus puts the ring back over it. */
   .gp-home-map-addnode-next:focus-visible,
-  .gp-home-map-addnode-submit:not(:disabled):hover,
   .gp-home-map-addnode-submit:focus-visible {
-    transform: translateY(-1px);
-    outline: none;
+    box-shadow: var(--gp-shadow-focus), var(--gp-shadow-pill);
   }
 
   .gp-home-map-addnode-next:disabled,
   .gp-home-map-addnode-submit:disabled {
     opacity: 0.46;
     cursor: not-allowed;
-    transform: none;
   }
 
   @container (max-width: 860px) {
@@ -7238,7 +7393,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       min-height: 0;
     }
 
-    .gp-home-map-addnode-dialog h2 {
+    /* Room for the back and close buttons beside the title, on the first
+       step too: its own max-width rule is more specific than this one, and
+       at 375 its title ran under the close button. */
+    .gp-home-map-addnode-dialog h2,
+    .gp-home-map-addnode-step[data-walkthrough-step='themes'] h2 {
       max-width: calc(100% - 96px);
       font-size: 32px;
       white-space: normal;
@@ -7356,9 +7515,39 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       /* One row of chrome: a 44px touch target, the row's padding and border. */
       --gp-map-row: calc(44px + var(--gp-space-xs) * 2 + 2px);
       --gp-map-lower: var(--gp-map-row);
+      --gp-map-alert: 0px;
       aspect-ratio: auto;
-      block-size: calc(44cqw + var(--gp-map-edge) * 4 + var(--gp-map-row) + var(--gp-map-lower));
+      block-size: calc(44cqw + var(--gp-map-edge) * 4 + var(--gp-map-row) + var(--gp-map-lower) + var(--gp-map-alert));
       border-radius: var(--gp-radius-lg);
+    }
+
+    /* A failing feed adds a row for its error between the drawing and the
+       legend: over the drawing it would cover pins. The page below moves
+       down by that row while the error lasts. */
+    .gp-home-map-canvas.has-map-state-problem {
+      --gp-map-alert: calc(var(--gp-map-row) + var(--gp-map-edge));
+    }
+
+    .gp-home-map-state-error {
+      inset-block-start: auto;
+      inset-block-end: calc(var(--gp-map-edge) * 3 + var(--gp-map-row) + var(--gp-map-lower));
+      inset-inline: var(--gp-map-edge);
+      max-width: none;
+      min-height: var(--gp-map-row);
+      box-sizing: border-box;
+      justify-content: space-between;
+    }
+
+    .gp-home-map-state-error button {
+      min-height: 44px;
+    }
+
+    /* The compact pill keeps its dot and Live; a failing feed shows in the
+       error row instead of over the drawing. */
+    .gp-home-map-freshness-sep,
+    .gp-home-map-freshness-age,
+    .gp-home-map-freshness[data-state='stale'] {
+      display: none;
     }
 
     .gp-home-map-canvas.has-selected-node {

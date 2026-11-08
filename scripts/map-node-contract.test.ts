@@ -22,11 +22,26 @@ import {
 import { toPublicOperationalLocations } from '@greenpill-network/shared/public-content';
 import {
   fanHasRoomForTargets,
+  formatPickerCoordinate,
   groupOverlappingPins,
   layoutFan,
   pickerPointToLocation,
   separateLabels,
 } from '../packages/website/src/lib/home-map-layout.ts';
+import {
+  describeMapStateFeed,
+  formatUpdatedAgo,
+  LIVE_POLL_INTERVAL_MS,
+  MAP_STATE_STALE_MESSAGE,
+  MAP_STATE_UNAVAILABLE_MESSAGE,
+  mapStateAnnouncement,
+  MAX_RETRY_INTERVAL_MS,
+  nextMapStatePollDelay,
+  recordMapStateFailure,
+  recordMapStateSuccess,
+  startMapStateFeed,
+  WATCH_POLL_INTERVAL_MS,
+} from '../packages/website/src/lib/home-map-live.ts';
 import {
   createMapNodeSubmission,
   createMapNodeUpdateRequest,
@@ -1119,6 +1134,29 @@ test('home map enforces the up-to-four-theme activity rule', async () => {
   assert.ok(themeGuardIndex < fetchIndex, 'up-to-four rule is enforced before the network call');
 });
 
+test('home map walkthrough: no hover lift, a visible focus ring, and a title clear of the close button at 375', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  const cssRule = (selector: string) => {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return component.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`))?.[1] ?? '';
+  };
+  // DESIGN.md: hover and focus change colour, never position. The theme
+  // choices and the Next and Submit pills lifted 1px (qa-system-pass).
+  assert.doesNotMatch(component, /translateY\(-1px\)/);
+  assert.doesNotMatch(cssRule('.gp-home-map-addnode-theme'), /transform/);
+  assert.match(cssRule('.gp-home-map-addnode-theme:hover,\n  .gp-home-map-addnode-theme:focus-visible'), /border-color:/);
+  // Both kept a focus style only through the lift once their own shadows hid
+  // the global ring, so the ring is put back explicitly.
+  assert.match(cssRule(".gp-home-map-addnode-theme[aria-pressed='true']:focus-visible"), /box-shadow: var\(--gp-shadow-focus\);/);
+  assert.match(cssRule('.gp-home-map-addnode-next:focus-visible,\n  .gp-home-map-addnode-submit:focus-visible'), /box-shadow: var\(--gp-shadow-focus\), var\(--gp-shadow-pill\);/);
+  // At 375 the first step's title ran under the close button: its own
+  // max-width rule outranked the compact one that leaves room for the buttons.
+  assert.match(component, /\.gp-home-map-addnode-dialog h2,\n    \.gp-home-map-addnode-step\[data-walkthrough-step='themes'\] h2 \{\n      max-width: calc\(100% - 96px\);/);
+});
+
 test('home map grows live: reconciles, polls visibly, and redraws after submit', async () => {
   const component = await readFile(
     new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
@@ -1139,10 +1177,14 @@ test('home map grows live: reconciles, polls visibly, and redraws after submit',
   assert.ok(redrawIndex !== -1, 'submit handler must refresh /map/state after a successful submit');
 
   // Already-open browsers keep watching for live mode, then tighten to the live
-  // cadence once the agent reports intakeMode: live.
-  assert.match(component, /const LIVE_POLL_INTERVAL_MS = 2000/);
-  assert.match(component, /const WATCH_POLL_INTERVAL_MS = 5000/);
-  assert.match(component, /nextPollIntervalMs = intakeMode === 'live' \? LIVE_POLL_INTERVAL_MS : WATCH_POLL_INTERVAL_MS/);
+  // cadence once the agent reports intakeMode: live. The cadence and the
+  // backoff after failures come from lib/home-map-live.ts (tested below,
+  // PRD-1423); the map polls only while its page is visible.
+  assert.equal(nextMapStatePollDelay(startMapStateFeed(), 'moderated'), WATCH_POLL_INTERVAL_MS);
+  assert.equal(nextMapStatePollDelay(startMapStateFeed(), 'live'), LIVE_POLL_INTERVAL_MS);
+  assert.equal(WATCH_POLL_INTERVAL_MS, 5000);
+  assert.equal(LIVE_POLL_INTERVAL_MS, 2000);
+  assert.match(component, /from '\.\.\/\.\.\/lib\/home-map-live'/);
   assert.match(component, /document\.visibilityState === 'visible'/);
   assert.match(component, /setInterval/);
 
@@ -1155,7 +1197,20 @@ test('home map grows live: reconciles, polls visibly, and redraws after submit',
   assert.match(component, /if \(mapStateInFlight\) \{[\s\S]*?if \(options\.replay\) replayAfterCurrentLoad = true;[\s\S]*?return;[\s\S]*?\}\s*mapStateInFlight = true;/);
   assert.match(component, /new AbortController\(\)/);
   assert.match(component, /setTimeout\(\(\) => controller\.abort\(\), MAP_STATE_TIMEOUT_MS\)/);
-  assert.match(component, /window\.clearTimeout\(abortTimer\);\s*mapStateInFlight = false;\s*startPolling\(nextPollIntervalMs\);/);
+
+  // Failures are no longer silent (PRD-1423; until then a refused response
+  // returned quietly and the catch was empty). A refused or unreachable
+  // request counts toward the map's error and the backoff, and the next poll
+  // waits as long as the feed says. A fault while drawing a good response is
+  // the page's own bug and is rethrown, not blamed on the agent.
+  const loadStart = component.indexOf('const loadMapState = async');
+  const loadBlock = component.slice(loadStart, component.indexOf('\n    };\n', loadStart));
+  assert.match(loadBlock, /if \(!response\.ok\) throw new Error\(/);
+  assert.match(loadBlock, /responseLoaded = true;[\s\S]*?mapStateFeed = recordMapStateSuccess\(Date\.now\(\)\);/);
+  assert.match(loadBlock, /catch \(error\) \{[\s\S]*?if \(responseLoaded\) throw error;[\s\S]*?mapStateFeed = recordMapStateFailure\(mapStateFeed\);\s*renderMapStateStatus\(\);/);
+  assert.match(loadBlock, /window\.clearTimeout\(abortTimer\);\s*mapStateInFlight = false;\s*startPolling\(nextMapStatePollDelay\(mapStateFeed, intakeMode\)\);/);
+  assert.doesNotMatch(loadBlock, /No-op/);
+  assert.doesNotMatch(component, /renderMapMode/);
 
   // Returning to a visible map refetches state and replays the connection reveal
   // once. Reduced-motion users still get the refresh, but no animation replay.
@@ -1177,6 +1232,97 @@ test('home map grows live: reconciles, polls visibly, and redraws after submit',
   assert.match(component, /nodeMatchesThemeFilters\(node\)/);
   assert.match(component, /count\.textContent = String\(countValue\)/);
   assert.match(component, /is-type-filter-match/);
+});
+
+test('home map live feed: the Live pill tells freshness, failures show on the map, and retries back off', async () => {
+  const at = Date.UTC(2026, 10, 7, 12, 0, 0);
+  const minutes = (n: number) => n * 60_000;
+
+  // Ages read at minute steps.
+  assert.equal(formatUpdatedAgo(0), 'just now');
+  assert.equal(formatUpdatedAgo(59_999), 'just now');
+  assert.equal(formatUpdatedAgo(minutes(1)), '1 min ago');
+  assert.equal(formatUpdatedAgo(minutes(59)), '59 min ago');
+  assert.equal(formatUpdatedAgo(minutes(60)), '1 hour ago');
+  assert.equal(formatUpdatedAgo(minutes(150)), '2 hours ago');
+  assert.equal(formatUpdatedAgo(minutes(60 * 24)), '1 day ago');
+  assert.equal(formatUpdatedAgo(minutes(60 * 72)), '3 days ago');
+  assert.equal(formatUpdatedAgo(-5_000), 'just now', 'a clock that runs behind never reads as the future');
+
+  // Before the first answer there is nothing to say yet.
+  const fresh = startMapStateFeed();
+  assert.deepEqual(describeMapStateFeed(fresh, 'moderated', at).problem, null);
+  assert.equal(describeMapStateFeed(fresh, 'moderated', at).pill.visible, false);
+
+  // A first load that fails is an error at once: the map is missing a layer.
+  const neverLoaded = recordMapStateFailure(fresh);
+  assert.deepEqual(describeMapStateFeed(neverLoaded, 'moderated', at).problem, { kind: 'unavailable', message: MAP_STATE_UNAVAILABLE_MESSAGE });
+  assert.equal(describeMapStateFeed(neverLoaded, 'live', at).pill.visible, false, 'no Live claim before anything loaded');
+
+  // Loaded: moderated intake keeps the pill hidden, as it always has; live
+  // intake shows Live with the age.
+  const loaded = recordMapStateSuccess(at);
+  assert.deepEqual(describeMapStateFeed(loaded, 'moderated', at), { pill: { visible: false, tone: 'live', label: 'Live', age: '' }, problem: null });
+  assert.deepEqual(describeMapStateFeed(loaded, 'live', at + 20_000), { pill: { visible: true, tone: 'live', label: 'Live', age: 'Updated just now' }, problem: null });
+
+  // One failed refresh after a load is a blip; the second is an error, the
+  // pill drops its Live claim and shows the age of what is on the map.
+  const blip = recordMapStateFailure(loaded);
+  assert.equal(describeMapStateFeed(blip, 'live', at + minutes(1)).problem, null);
+  const stale = recordMapStateFailure(blip);
+  for (const mode of ['live', 'moderated'] as const) {
+    assert.deepEqual(describeMapStateFeed(stale, mode, at + minutes(3.5)), {
+      pill: { visible: true, tone: 'stale', label: '', age: 'Updated 3 min ago' },
+      problem: { kind: 'stale', message: MAP_STATE_STALE_MESSAGE },
+    });
+  }
+  assert.equal(recordMapStateSuccess(at + minutes(4)).consecutiveFailures, 0, 'a success clears the failures');
+
+  // Retries back off from the mode's cadence, doubling up to a minute. With
+  // jitter at its middle (random 0.5) the delays are exact; at its ends they
+  // stay within 20 per cent and never pass the minute.
+  const afterFailures = (count: number) => Array.from({ length: count }).reduce<ReturnType<typeof startMapStateFeed>>(
+    (feed) => recordMapStateFailure(feed),
+    recordMapStateSuccess(at)
+  );
+  const middle = () => 0.5;
+  assert.deepEqual([1, 2, 3, 4, 5, 6].map((count) => nextMapStatePollDelay(afterFailures(count), 'moderated', middle)), [5000, 10000, 20000, 40000, 60000, 60000]);
+  assert.deepEqual([1, 2, 3, 4, 5, 6, 7].map((count) => nextMapStatePollDelay(afterFailures(count), 'live', middle)), [2000, 4000, 8000, 16000, 32000, 60000, 60000]);
+  assert.equal(nextMapStatePollDelay(afterFailures(1), 'moderated', () => 0), 4000);
+  assert.equal(nextMapStatePollDelay(afterFailures(1), 'moderated', () => 0.999999), 6000);
+  assert.equal(nextMapStatePollDelay(afterFailures(12), 'moderated', () => 0.999999), MAX_RETRY_INTERVAL_MS);
+  assert.equal(nextMapStatePollDelay(afterFailures(400), 'live', middle), MAX_RETRY_INTERVAL_MS, 'a long outage still retries once a minute');
+
+  // A screen reader hears the changes that matter, once each; the age ticking
+  // up is not one of them.
+  const status = (feed: ReturnType<typeof startMapStateFeed>, mode: 'live' | 'moderated', now = at) => describeMapStateFeed(feed, mode, now);
+  assert.equal(mapStateAnnouncement(null, status(neverLoaded, 'moderated')), MAP_STATE_UNAVAILABLE_MESSAGE);
+  assert.equal(mapStateAnnouncement(status(neverLoaded, 'moderated'), status(recordMapStateFailure(neverLoaded), 'moderated')), '');
+  assert.equal(mapStateAnnouncement(status(neverLoaded, 'moderated'), status(loaded, 'moderated')), 'Stewards and members are up to date.');
+  assert.equal(mapStateAnnouncement(status(loaded, 'moderated'), status(loaded, 'live')), 'The map is live: new stewards and members appear as they join.');
+  assert.equal(mapStateAnnouncement(status(loaded, 'live'), status(loaded, 'live', at + minutes(5))), '');
+  assert.equal(mapStateAnnouncement(status(loaded, 'live'), status(stale, 'live')), MAP_STATE_STALE_MESSAGE);
+
+  // The component draws what the feed says: the pill is no live region any
+  // more (its age changes every minute), the error note sits on the map with
+  // Try again, and Try again asks at once.
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  const pill = component.match(/<div class="gp-home-map-freshness"[^>]*>/)?.[0] ?? '';
+  assert.ok(pill, 'the Live pill must exist');
+  assert.doesNotMatch(pill, /aria-live|role="status"/);
+  assert.match(component, /<div class="gp-home-map-state-error" data-home-map-state-error hidden>\s*<span data-home-map-state-error-text><\/span>\s*<button type="button" data-home-map-state-retry>Try again<\/button>/);
+  assert.match(component, /<p class="gp-home-map-sr" data-home-map-state-live aria-live="polite"><\/p>/);
+  assert.match(component, /mapStateRetry\?\.addEventListener\('click', \(\) => \{\s*void loadMapState\(\);/);
+  assert.match(component, /const status = describeMapStateFeed\(mapStateFeed, intakeMode, Date\.now\(\)\);/);
+  assert.match(component, /root\.classList\.toggle\('has-map-state-problem', Boolean\(status\.problem\)\)/);
+  // DESIGN.md (Error): a 1px error border, and the error stays on the map.
+  assert.match(component, /\.gp-home-map-state-error \{[\s\S]*?border: 1px solid var\(--gp-error\);/);
+  // The error is part of the map's chrome, not the drawing: no gesture or
+  // outside click starts on it.
+  assert.match(component, /target\.closest\('[^']*\.gp-home-map-state-error[^']*'\)/);
 });
 
 test('home map thread motion is one-shot and poll-stable', async () => {
@@ -1228,6 +1374,31 @@ test('home map thread motion is one-shot and poll-stable', async () => {
   assert.match(renderBlock, /dynamicThreadHitsGroup\.append\(hit\)/);
   assert.match(renderBlock, /data-kind/);
   assert.match(renderBlock, /data-source/);
+});
+
+test('home map clips every thread to the drawing', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  // Threads bow out between their nodes, so a long one could leave the map
+  // (the July audit saw strands exit the top-right corner). One clip path the
+  // size of the drawing holds every thread layer, the hover hit lines too.
+  assert.match(component, /<clipPath id="gp-home-map-drawing" clipPathUnits="userSpaceOnUse">\s*<rect x="0" y="0" width=\{VIEW_W\} height=\{MAP_VIEW_H\} \/>/);
+  const layerStart = component.indexOf('<g class="gp-home-map-thread-layer" clip-path="url(#gp-home-map-drawing)"');
+  const layerEnd = component.indexOf('<g class="gp-home-map-chapters">', layerStart);
+  assert.ok(layerStart !== -1 && layerEnd !== -1, 'the clipped thread layer must sit before the chapters');
+  const layer = component.slice(layerStart, layerEnd);
+  for (const group of [
+    '<g class="gp-home-map-threads" aria-hidden="true">',
+    'data-home-map-dynamic-threads',
+    'data-home-map-selection-strands',
+    'data-home-map-dynamic-thread-hits',
+  ]) {
+    assert.ok(layer.includes(group), `${group} must be inside the clipped layer`);
+  }
+  // Pins are not clipped: chapters and people sit outside the layer.
+  assert.equal(layer.includes('data-home-map-members'), false);
 });
 
 test('home map focus cards are anchored near nodes, not bottom-left panels', async () => {
@@ -1323,9 +1494,13 @@ test('home map mobile touch mode supports bounded zoom and compact connection ro
   assert.match(component, /\.gp-home-map-selected-edge-list:not\(\[hidden\]\)\s*{[\s\S]*?display:\s*block/);
   // Compact maps keep their chrome off the drawing: the canvas adds a band
   // below the map for the legend row and the controls row, and the band grows
-  // to fit the selected node's bar, which takes the controls' place.
+  // to fit the selected node's bar, which takes the controls' place. A map
+  // whose people failed to load also gets a row for its error (PRD-1423), so
+  // the error covers no pins either.
   const compactCss = component.match(/@container \(max-width: 720px\) \{([\s\S]*?)\n  \}\n/)?.[1] ?? '';
-  assert.match(compactCss, /\.gp-home-map-canvas\s*{[\s\S]*?aspect-ratio:\s*auto;[\s\S]*?block-size:\s*calc\(44cqw \+ var\(--gp-map-edge\) \* 4 \+ var\(--gp-map-row\) \+ var\(--gp-map-lower\)\)/);
+  assert.match(compactCss, /\.gp-home-map-canvas\s*{[\s\S]*?--gp-map-alert:\s*0px;[\s\S]*?aspect-ratio:\s*auto;[\s\S]*?block-size:\s*calc\(44cqw \+ var\(--gp-map-edge\) \* 4 \+ var\(--gp-map-row\) \+ var\(--gp-map-lower\) \+ var\(--gp-map-alert\)\)/);
+  assert.match(compactCss, /\.gp-home-map-canvas\.has-map-state-problem\s*{\s*--gp-map-alert:\s*calc\(var\(--gp-map-row\) \+ var\(--gp-map-edge\)\);/);
+  assert.match(compactCss, /\.gp-home-map-state-error\s*{[\s\S]*?inset-block-end:\s*calc\(var\(--gp-map-edge\) \* 3 \+ var\(--gp-map-row\) \+ var\(--gp-map-lower\)\);/);
   assert.match(compactCss, /\.gp-home-map-canvas\.has-selected-node\s*{[\s\S]*?--gp-map-lower:\s*max\(var\(--gp-map-row\), calc\(var\(--gp-map-selected-clearance, 186px\) - 18px\)\)/);
   assert.match(compactCss, /\.gp-home-map-svg\s*{[\s\S]*?inset:\s*var\(--gp-map-edge\) 0 auto;[\s\S]*?aspect-ratio:\s*var\(--gp-map-aspect\)/);
   assert.match(compactCss, /\.gp-home-map-legend,\s*\.gp-home-map-canvas\.has-selected-node \.gp-home-map-legend\s*{[\s\S]*?inset-block-end:\s*calc\(var\(--gp-map-edge\) \* 2 \+ var\(--gp-map-lower\)\)/);
@@ -1600,14 +1775,31 @@ test('home map chapters open an inspect card and carry one link (progressive enh
   assert.match(component, /is-chapter-jump/);
   assert.match(component, /selectChapterBySlug/);
 
-  // Chapters are geographic anchors in the live map: no invented theme chips,
-  // no redundant "Chapter node" label, no relationship/edit rows.
-  assert.match(component, /themes:\s*\[\]/);
-  assert.match(component, /if \(filterTypeFor\(node\.getAttribute\('data-node-type'\)\) === 'chapter'\) return true/);
+  // Chapters join the theme filters with the themes stewards set in Directus.
+  // This changes June's rule on purpose: chapters then carried `themes: []`
+  // and passed every theme filter. Afo, asked on 2026-11-07 "Should chapters
+  // join the map's theme filters using the themes stewards set in Directus?",
+  // answered "Yes, use Directus themes" (PRD-1423). The build reads each
+  // chapter's approved themeSlugs the way the agent does; a chapter without
+  // themes shows under all themes only, like anyone else.
+  assert.doesNotMatch(component, /themes:\s*\[\]/);
+  assert.match(component, /themes: normalizePublicMapThemeSlugs\(c\.data\.themeSlugs\)/);
+  assert.match(component, /data-node-themes=\{c\.themes\.join\(' '\)\}/);
+  assert.doesNotMatch(component, /=== 'chapter'\) return true/);
+  const themeMatcher = component.match(/const nodeMatchesThemeFilters = \(node: Element\) => \{([\s\S]*?)\n    \};/)?.[1] ?? '';
+  assert.match(themeMatcher, /^\s*if \(!allThemeCount \|\| activeThemes\.size === allThemeCount\) return true;\s*return nodeThemes\(node\)\.some\(\(theme\) => activeThemes\.has\(theme\)\);\s*$/);
+  assert.deepEqual(normalizePublicMapThemeSlugs(['currency', 'public', 'events']), ['mutual', 'public', 'events'], 'Directus slugs read as map themes');
+  // A chapter's card lists all its themes, since any of them can be why a
+  // filter kept it; a person's card keeps its four.
+  assert.match(component, /themes: nodeThemes\(link\),/);
+  assert.match(component, /const shownThemes = isChapter \? member\.themes : member\.themes\.slice\(0, 4\);/);
+  assert.match(component, /selectedThemesEl\.hidden = selectedThemesEl\.childElementCount === 0;/);
+  assert.doesNotMatch(component, /\[data-selected-type='chapter'\] \.gp-home-map-selected-themes/);
+
+  // Still no redundant "Chapter node" label and no relationship/edit rows.
   assert.match(component, /selectedEl\.dataset\.selectedType = member\.type/);
   assert.match(component, /data-selected-type='chapter'/);
   assert.match(component, /selectedKicker\.hidden = isChapter/);
-  assert.match(component, /selectedThemesEl\.hidden = isChapter/);
   assert.match(component, /if \(selectedEdgeList\) selectedEdgeList\.hidden = true/);
   assert.match(component, /if \(updateWrap\) updateWrap\.hidden = isChapter \|\| !member\.approved/);
   assert.match(component, /selectedKicker\.textContent = member\.owned/);
@@ -1813,6 +2005,29 @@ test('home map location picker ignores a pin dragged off the map instead of clam
   // move is ignored, so the pending point stays, and release confirms it.
   assert.match(component, /const updateDraggedPin = \(event: PointerEvent\) => \{\s*const point = pointFromLocationPointer\(event\);\s*if \(!point\) return;\s*pendingLocationPoint = point;/);
   assert.match(component, /const endLocationDrag = \(event: PointerEvent\) => \{[\s\S]*?if \(pendingLocationPoint\) void confirmDraggedLocation\(pendingLocationPoint\);/);
+});
+
+test('home map location picker writes zero without a sign on the prime meridian and the equator', async () => {
+  // A pin a hair west of Greenwich read "-0.000000" (qa-map-polish handoff).
+  assert.equal(formatPickerCoordinate(-0.0000004), '0.000000');
+  assert.equal(formatPickerCoordinate(-0), '0.000000');
+  assert.equal(formatPickerCoordinate(-0.0000004 * 1e3), '-0.000400', 'a real western value keeps its sign');
+  assert.equal(formatPickerCoordinate(0.0000004), '0.000000');
+  assert.equal(formatPickerCoordinate(-0.12775), '-0.127750');
+  assert.equal(formatPickerCoordinate(51.5072), '51.507200');
+  // A drag across the picker's middle lands on longitude zero within floating
+  // point, and the form shows and sends it unsigned.
+  const nearMeridian = pickerPointToLocation({ x: 99.99999999, y: 40 }, { width: 200, height: 88, worldHeight: 100 });
+  assert.ok(nearMeridian && nearMeridian.long < 0);
+  assert.equal(formatPickerCoordinate(nearMeridian!.long), '0.000000');
+
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  assert.doesNotMatch(component, /\.toFixed\(6\)/, 'every picker coordinate goes through formatPickerCoordinate');
+  assert.match(component, /locationCoordinateLong\.value = formatPickerCoordinate\(long\)/);
+  assert.match(component, /longInput\.value = formatPickerCoordinate\(location\.long\)/);
 });
 
 test('home map stack and fan geometry: grouping, in-bounds fans and readable names', () => {
