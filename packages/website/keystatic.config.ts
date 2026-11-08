@@ -131,6 +131,23 @@ const previewCardField = fields.object({
   cta: ctaField,
 }, { label: 'Preview Card' });
 
+// Home page ecosystem rows. Each entry links to the organization's own site;
+// the home page skips entries without a name or an https address.
+const ecosystemEntriesField = (label: string) => fields.array(
+  fields.object({
+    name: fields.text({ label: 'Name', validation: { isRequired: true } }),
+    blurb: fields.text({ label: 'One-line description' }),
+    href: fields.text({
+      label: 'Official site',
+      validation: {
+        isRequired: true,
+        pattern: { regex: /^https:\/\/\S+$/, message: 'Use the full https:// address of the organization’s own site.' },
+      },
+    }),
+  }),
+  { label, itemLabel: (props) => props.fields.name.value },
+);
+
 const regionOptions = [
   { label: 'Americas', value: 'americas' },
   { label: 'Africa', value: 'africa' },
@@ -353,6 +370,10 @@ export default config({
         featuredChapterSlugs: slugListField('Featured Chapter Slugs', 'Chapter Slug'),
         featuredStorySlugs: slugListField('Featured Story Slugs', 'Story Slug'),
         featuredResourceSlugs: slugListField('Featured Resource Slugs', 'Resource Slug'),
+        ecosystem: fields.object({
+          partners: ecosystemEntriesField('Partners and collaborators'),
+          tools: ecosystemEntriesField('Tools we build with'),
+        }, { label: 'Ecosystem (communities we coordinate with)' }),
         media: mediaField,
         seo: seoField,
       },
@@ -368,7 +389,6 @@ export default config({
         featuredBookSlugs: slugListField('Featured Book Slugs', 'Book Slug'),
         featuredResourceSlugs: slugListField('Featured Resource Slugs', 'Resource Slug'),
         featuredGuildSlugs: slugListField('Featured Guild Slugs', 'Guild Slug'),
-        gardenCard: libraryCardField,
         proofSignals: proofSignalsField,
         seo: seoField,
       },
@@ -440,6 +460,7 @@ export default config({
             levelLabel: fields.text({ label: 'Level Label' }),
             surfaceType: fields.select({
               label: 'Surface Type',
+              description: 'Telegram and Steward Call steps link to their Social Links entry, so their CTA URL stays empty.',
               options: [
                 { label: 'Email', value: 'email' },
                 { label: 'Telegram', value: 'telegram' },
@@ -473,7 +494,6 @@ export default config({
         emailPreview: previewCardField,
         telegramPreview: previewCardField,
         assessmentPreview: previewCardField,
-        stewardCallPreview: previewCardField,
         media: mediaField,
         seo: seoField,
       },
@@ -503,12 +523,24 @@ export default config({
         discord: fields.url({ label: 'Discord' }),
         workspaceLogin: fields.url({ label: 'Workspace Login' }),
         garden: fields.text({ label: 'Garden Path' }),
-        twitter: fields.url({ label: 'Twitter/X' }),
+        // Required fields are the footer's links, so it never shows one without a URL.
+        twitter: fields.url({ label: 'Twitter/X', validation: { isRequired: true } }),
         twitterList: fields.url({ label: 'Twitter Chapter List' }),
-        telegram: fields.url({ label: 'Telegram' }),
-        warpcast: fields.url({ label: 'Warpcast' }),
-        hub: fields.url({ label: 'Hub' }),
-        youtube: fields.url({ label: 'YouTube' }),
+        telegram: fields.url({ label: 'Telegram', validation: { isRequired: true } }),
+        farcaster: fields.url({ label: 'Farcaster', validation: { isRequired: true } }),
+        linkedin: fields.url({ label: 'LinkedIn', validation: { isRequired: true } }),
+        hub: fields.url({ label: 'Regen Coordination Hub', validation: { isRequired: true } }),
+        codeOfConduct: fields.url({ label: 'Code of Conduct', validation: { isRequired: true } }),
+        events: fields.url({ label: 'Events calendar (Luma)', validation: { isRequired: true } }),
+        // The one steward booking link: the Garden ramp's Steward Call step,
+        // the assessment's Steward result and the footer all read it.
+        stewardCall: fields.url({
+          label: 'Steward call booking',
+          description: 'Used by the Garden Steward Call step, the assessment and the footer.',
+          validation: { isRequired: true },
+        }),
+        youtube: fields.url({ label: 'YouTube', validation: { isRequired: true } }),
+        github: fields.url({ label: 'GitHub repository (footer)', validation: { isRequired: true } }),
       },
     }),
   },

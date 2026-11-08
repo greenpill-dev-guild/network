@@ -419,7 +419,7 @@ What each page does at the three reference widths. This is the acceptance contra
 
 | Page | Desktop (1440) | Tablet (1024) | Mobile (375) |
 |---|---|---|---|
-| **Home** | Hero with mycelial map left + node CTA right; Library bento at 4-up book covers; Stories grid 3-up; Podcast strip cover + body + timer inline | Map full-width; bento collapses to 2-col at `≤1100px` container width (Library card 3-up books); Stories 2-up | Map stacked; map overlay reflows to bottom pill row; hero CTAs `width: 100%`; podcast cover stacks above meta + timer; books grid 2-up; Stories 1-up; hero card chip ellipsizes |
+| **Home** | Hero with mycelial map left + node CTA right; Library bento at 4-up book covers; Stories grid 3-up; Podcast strip cover + body + timer inline | Map full-width; bento collapses to 2-col at `≤1100px` container width (Library card 3-up books); Stories 2-up | Map stacked, its stage at least 60svh; map overlay reflows to bottom pill row; hero CTAs `width: 100%`; podcast cover stacks above meta + timer; books grid 2-up; Stories 1-up; hero card chip ellipsizes |
 | **Chapters** | Hero map + stats overlay; "Featured chapters" 3-up; full directory 3-col; Sister chapters 3-col | Map full-width; directory 2-col; Sister chapters 2-col | Map overlay → bottom pill row; directory and Sister chapters **collapse to 1-col at `≤520px`** (status chips and city titles need the room); region filter row wraps to 2 rows |
 | **Chapter (detail)** | Hero photo + steward card side-by-side; events 2-col; Sister chapters 3-col | Hero stacks; events 2-col; Sister chapters 2-col | Hero stacks; events 1-col; Sister chapters 1-col; breadcrumb collapses middle crumbs to `…`; RSVP CTAs `width: 100%` |
 | **Library** | Editorial hero + 4-up book rail; Knowledge Garden 3-col; podcast list inline | Book rail 3-up; Knowledge Garden 2-col | Hero stacks; book rail horizontal scroll with edge fade; Knowledge Garden 1-col; podcast list cover stacks above meta |
@@ -548,6 +548,12 @@ The component vocabulary is small and reused across all eight pages. The full vi
 - **`card-elevated`** — `card-elev` background, 32px padding. Used for featured / hero content where extra weight is needed.
 
 Cards never use horizontal scroll-snap rails by default — use a real grid with `gap: spacing.xl`. Rails (book covers, podcast tiles) are the exception and use the `GP_RailArrows` control.
+
+### Calls to action
+
+- **`CtaStrip`** (`ui/CtaStrip.astro`) is the page-level call to action: an overline, a `headline-md` title and a muted `body-md` line, with one `button-primary` and at most one `button-ghost` beside them. Copy and buttons stack at ≤760px container width. Pages compose it; they do not build their own CTA panel.
+- **`lift`** (default) is the page CTA on `/chapters`, chapter pages and guild pages: a `surface` panel with a `border-soft` hairline and `rounded.xl`. Lime stays on the primary button. The panel carries no lime border, lime tint or glow. Decided by Afo on 2026-11-07 (PRD-1422).
+- **`soft`** drops the panel for a hairline rule above the copy. No page uses it yet.
 
 ### Chrome
 

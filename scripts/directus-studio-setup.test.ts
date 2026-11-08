@@ -3,6 +3,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { buildDirectusOperationalPermissionPlan } from './directus-operational-content-setup.ts';
 import { buildDirectusStudioBookmarkPlan, buildDirectusStudioMetadataPlan } from './directus-studio-setup.ts';
 
 test('Directus Studio metadata plan hides assignment collections and labels content collections', () => {
@@ -182,6 +183,52 @@ test('chapter image alt text and credit sit under the upload and alt text is req
   ]);
 });
 
+// How Data Studio 11.17 reads a field condition: every field the rule names
+// must be present, `_nnull` refuses only null, and `_nempty` refuses only ''.
+function conditionMatches(rule: Record<string, any>, item: Record<string, unknown>): boolean {
+  const [key, value] = Object.entries(rule)[0];
+  if (key === '_and') return (value as Array<Record<string, any>>).every((part) => conditionMatches(part, item));
+  const [operator, operand] = Object.entries(value as Record<string, unknown>)[0];
+  const actual = item[key];
+  if (actual === undefined) return false;
+  if (operator === '_nnull') return actual !== null;
+  if (operator === '_nempty') return actual !== '';
+  if (operator === '_nin') return !(operand as unknown[]).includes(actual);
+  throw new Error(`conditionMatches does not know ${operator}`);
+}
+
+test('a proposed image needs alt text unless a reviewer is sending the request back', () => {
+  const plan = buildDirectusStudioMetadataPlan();
+  const requestField = (name: string) => plan.fields.find((field) => (
+    field.collection === 'chapter_update_requests' && field.field === name
+  ));
+  const conditions = requestField('proposed_image_alt')?.meta.conditions as Array<{
+    rule: Record<string, any>;
+    required: boolean;
+  }>;
+  assert.equal(conditions.length, 1);
+  const [{ rule, required }] = conditions;
+  assert.equal(required, true);
+  // Data Studio skips a condition whose rule has more than one top-level key.
+  assert.equal(Object.keys(rule).length, 1);
+
+  const image = 'https://example.org/photo.jpg';
+  const needsAlt = (item: Record<string, unknown>) => conditionMatches(rule, item);
+  for (const request_status of ['draft', 'pending_review', 'accepted']) {
+    assert.equal(needsAlt({ proposed_image: image, request_status }), true, request_status);
+  }
+  for (const request_status of ['needs_changes', 'declined', 'archived']) {
+    assert.equal(needsAlt({ proposed_image: image, request_status }), false, request_status);
+  }
+  // No image proposed: '' is the stored empty value, and null is what an
+  // emptied input holds when it does not save an empty string.
+  assert.equal(needsAlt({ proposed_image: '', request_status: 'draft' }), false);
+  assert.equal(needsAlt({ proposed_image: null, request_status: 'draft' }), false);
+
+  // Emptying the image saves '', which the column accepts. Directus refuses null.
+  assert.deepEqual(requestField('proposed_image')?.meta.options, { iconRight: 'link', clear: true });
+});
+
 test('every content notification kind has a Data Studio label', async () => {
   // The newest migration that defines the kind constraint is the authority.
   const migrationsDir = resolve(dirname(fileURLToPath(import.meta.url)), '../packages/agent/migrations');
@@ -198,4 +245,31 @@ test('every content notification kind has a Data Studio label', async () => {
   const labelled = (kind?.meta.options as { choices: Array<{ value: string }> }).choices.map((choice) => choice.value);
 
   assert.deepEqual([...labelled].sort(), [...allowedKinds].sort());
+});
+
+test('the quarantine bookmark lists records still missing from the site, through fields publishers can read', () => {
+  const plan = buildDirectusStudioMetadataPlan(['review_notifications'], [], [], []);
+  const resolvedAt = plan.fields.find((field) => field.collection === 'review_notifications' && field.field === 'resolved_at');
+  assert.equal(resolvedAt?.meta.interface, 'datetime');
+  assert.equal(resolvedAt?.meta.readonly, true);
+
+  const quarantined = buildDirectusStudioBookmarkPlan(['review_notifications'])
+    .find((bookmark) => bookmark.bookmark === 'Quarantined records');
+  // A resolved alert is history. The working list is what is missing right now.
+  assert.deepEqual(quarantined?.filter, {
+    _and: [{ kind: { _eq: 'record_quarantined' } }, { resolved_at: { _null: true } }],
+  });
+
+  // Directus refuses a filter or a column on a field the role cannot read.
+  const publisherRead = buildDirectusOperationalPermissionPlan(undefined, [], [], [], ['review_notifications'])
+    .permissions.find((permission) => (
+      permission.role === quarantined?.role &&
+      permission.collection === 'review_notifications' &&
+      permission.action === 'read'
+    ));
+  const filteredFields = (quarantined?.filter as { _and: Array<Record<string, unknown>> })._and
+    .flatMap((rule) => Object.keys(rule));
+  for (const field of [...filteredFields, ...(quarantined?.layout_query.tabular.fields ?? [])]) {
+    assert.ok(publisherRead?.fields.includes(field), `publishers cannot read review_notifications.${field}`);
+  }
 });

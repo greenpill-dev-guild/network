@@ -1,5 +1,6 @@
 ---
 interface Props {
+  id?: string;
   href?: string;
   variant?: 'primary' | 'ghost';
   fullWidth?: boolean;
@@ -56,6 +57,12 @@ const classes = ['gp-button', `is-${variant}`, fullWidth ? 'is-full' : '', class
 
   .gp-button.is-primary:hover {
     background: var(--gp-primary-hover);
+  }
+
+  /* The global focus ring is a box-shadow (gp-tokens.css), and the glow above
+     would replace it, so a focused primary button keeps both. */
+  .gp-button.is-primary:focus-visible {
+    box-shadow: var(--gp-shadow-focus), var(--gp-shadow-pill);
   }
 
   .gp-button.is-primary:active {

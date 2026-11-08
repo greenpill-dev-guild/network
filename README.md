@@ -167,6 +167,10 @@ override.
 
 The current public site deployment can remain on GitHub Pages. Because this is a monorepo, do not use the branch/folder picker to look for `packages/website/dist`; GitHub Pages branch publishing only supports the repository root or `/docs`. In repository settings, set Pages source to **GitHub Actions**. The `.github/workflows/github-pages.yml` workflow installs from the checked-in Bun lockfile, runs `bun run build:website`, and publishes `packages/website/dist`. `.github/workflows/pages-deploy-recovery.yml` watches each run and cancels one that hangs, so a stuck deploy cannot hold up the runs behind it.
 
+Before uploading, Pages runs `bun --no-env-file scripts/pages-artifact-size.ts` from the repo root. The built site must stay below 990,000,000 bytes, leaving room for archive overhead under GitHub Pages' 1 GB limit. The check counts every output file and reports the largest files if the budget is exceeded.
+
+The Library PDFs account for most of the site's size. Their web optimization preserves download paths, pages, text, page dimensions, bookmarks and links. RGB images retain their pixel dimensions and use high-quality JPEG compression without chroma subsampling; the original PDFs remain in Git history. File hashes, size changes and preservation checks are recorded in `docs/library-pdf-optimization.json`. PDF processing is a maintenance step, not a build dependency.
+
 If we later migrate the public site to Vercel, use the repo root as the project root, `bun install --frozen-lockfile` as install command, `bun run build:website` as build command, and `packages/website/dist` as output directory.
 
 ## Agent And Local Postgres

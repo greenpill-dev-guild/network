@@ -1,10 +1,10 @@
 {
   "name": "GreenSofa",
-  "city": "Taipei (distributed)",
+  "city": "Distributed",
   "country": "Taiwan",
   "region": "asia",
   "status": "active",
-  "summary": "Taiwan-based Greenpill node advancing Ethereum localism, Hypercerts experiments, public-goods tooling, and civic funding events.",
+  "summary": "GreenSofa, also known as Greenpill Taiwan, grows Ethereum public goods culture in Taiwan as a team within FAB DAO. It brings funding and tools such as Gitcoin, Giveth and Hypercerts to Taiwan's civic tech community, working with g0v and local NGOs.",
   "introQuote": "",
   "introQuoteAttribution": "",
   "image": "/images/chapters/greensofa-ethereum-localism.jpg",
@@ -46,9 +46,9 @@
       "kind": "external"
     },
     {
-      "label": "Taiwan Hypercerts Dashboard",
+      "label": "Green Sofa Hypercerts dashboard",
       "url": "https://fabdaotw.github.io/",
-      "subtext": "Public dashboard",
+      "subtext": "Public goods in Taiwan",
       "handle": "FAB DAO",
       "action": "Open",
       "icon": "impact",
@@ -91,18 +91,22 @@
   "featuredStory": {},
   "featuredStorySlugs": [],
   "authoredResourceSlugs": [],
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "featuredWeight": 90,
   "proofSignals": [
     {
-      "label": "Public Goods Tooling Retro Funding",
+      "label": "Public goods tooling retro funding",
       "value": "2,794 USDC",
-      "source": "S025 HackMD",
+      "source": "HackMD",
       "href": "https://hackmd.io/@greensofa/home"
     },
     {
-      "label": "Taiwan Hypercerts Dashboard",
+      "label": "Green Sofa Hypercerts dashboard",
       "value": "Public dashboard",
-      "source": "S058",
+      "source": "FAB DAO",
       "href": "https://fabdaotw.github.io/"
     }
   ],
@@ -116,7 +120,7 @@
   },
   "seo": {
     "title": "GreenSofa · Greenpill Network",
-    "description": "GreenSofa is a Taiwan Greenpill chapter with public funding receipts, Hypercerts dashboard work, and public-goods tooling proof.",
+    "description": "GreenSofa, also known as Greenpill Taiwan, grows Ethereum public goods culture in Taiwan with funding and tools for the civic tech community.",
     "ogImage": "/images/chapters/greensofa-ethereum-localism.jpg",
     "canonicalPath": "/chapters/greensofa",
     "noindex": false

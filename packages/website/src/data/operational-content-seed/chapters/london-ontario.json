@@ -4,7 +4,7 @@
   "country": "Canada",
   "region": "americas",
   "status": "active",
-  "summary": "Collaborative build nights and local public-goods software work rooted in London, Ontario.",
+  "summary": "Greenpill London Ontario is led by the Institute for Community Sustainability, which runs circular economy projects such as a Repair Café and a Thing Library. On April 28, 2026, the chapter presented Vibe Coding for Good, a build night at Reimagine Co.",
   "introQuote": "",
   "introQuoteAttribution": "",
   "image": "/images/chapters/greenpill-london-ontario-event.jpg",
@@ -65,17 +65,14 @@
   "impactSources": {
     "impactEnabled": true,
     "greenGoodsGardenAddress": "0x4055530dB392FB2B56037065A512c5b283D90A10",
-    "greenGoodsChainId": 42161,
-    "karmaProjectUID": "",
-    "karmaProjectSlug": "",
-    "karmaCommunitySlug": ""
+    "greenGoodsChainId": 42161
   },
   "featuredWeight": 45,
   "proofSignals": [
     {
       "label": "Public build night",
-      "value": "April 28, 2025",
-      "source": "S033",
+      "value": "April 28, 2026",
+      "source": "TechAlliance",
       "href": "https://www.techalliance.ca/news/events/vibe-coding-for-good-a-collaborative-build-night-reimagine-co-presented-by-greenpill-london-ontario/"
     }
   ],
@@ -89,7 +86,7 @@
   },
   "seo": {
     "title": "Greenpill London Ontario · Greenpill Network",
-    "description": "Greenpill London Ontario has public event proof through the Vibe Coding for Good build night at Reimagine Co.",
+    "description": "Greenpill London Ontario is led by the Institute for Community Sustainability and hosts local events such as the Vibe Coding for Good build night.",
     "ogImage": "/images/chapters/greenpill-london-ontario-event.jpg",
     "canonicalPath": "/chapters/london-ontario",
     "noindex": false

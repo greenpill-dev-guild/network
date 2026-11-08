@@ -1,65 +1,73 @@
 {
-  "title": "GreenSofa Taiwan Public-Goods Tooling Receipts",
+  "title": "GreenSofa's Public Funding Record in Taiwan",
   "status": "published",
   "category": "chapter",
   "publishDate": "2026-03",
-  "updatedDate": "",
-  "dek": "GreenSofa's public HackMD itemizes public-goods tooling funding and links to a Taiwan Hypercerts Dashboard.",
-  "excerpt": "A high-confidence source-backed story for GreenSofa / Greenpill Taiwan.",
+  "updatedDate": "2026-11-06",
+  "dek": "GreenSofa, also known as Greenpill Taiwan, keeps a public record of the rounds it has raised funds in, most recently 2,794 USDC in retro funding for public goods tooling.",
+  "excerpt": "Since 2023, GreenSofa has documented its grants, donations and community funding experiments on one public page.",
   "region": "asia",
-  "tag": "Impact Tracking",
+  "tag": "Funding",
   "tags": [
     "greensofa",
     "taiwan",
     "hypercerts",
     "public-goods-tooling"
   ],
-  "body": "GreenSofa is one of the stronger public chapter proof surfaces in the research artifact.\n\nThe HackMD source itemizes public funding receipts, and the FAB DAO dashboard gives the website a public Hypercerts-related proof surface. Use the exact receipt claims only with source links visible.\n\n## Sources\n\n- S025: https://hackmd.io/@greensofa/home\n- S058: https://fabdaotw.github.io/\n- S026: https://giveth.io/project/greensofa-greenpill-taiwan",
+  "body": "GreenSofa, also known as Greenpill Taiwan, was founded on September 13, 2023. It aims to bring more people into the regenerative Web3 world, in line with the visions of Greenpill and Formosa Art Bank DAO (FAB DAO), a Taiwanese community that mints nonprofit NFTs and designs blockchain education for the public.\n\nThe chapter keeps a running record of its funding on HackMD. Recent entries include:\n\n- March 2026: 2,794 USDC from Public Goods Tooling Development: Retro Funding, through Charmverse.\n- December 2025: 2,000 DAI from the Public Goods Tooling Development Garden, through Gardens.\n- August 2025: an Ethereum 10 Years Anniversary event, with 350 DAI in grants.\n- April 2025: funding from two Gitcoin Grants 23 rounds, Hypercerts for Nature Stewards and Regen Coordination Global.\n- February 2025: donations through Giveth's Loving on Public Goods campaign.\n\nEarlier entries go back to the Gitcoin Grants 19 GreenPill Network round in November 2023, a donation to earthquake relief in Japan in January 2024, and the GreenPill x Octant Community Round in March 2024.\n\nGreenSofa also maintains a Hypercerts dashboard that documents local public good contributions in Taiwan, and it has a project page on Giveth.",
   "image": "/images/chapters/greensofa-ethereum-localism.jpg",
-  "author": "Greenpill Network research",
-  "authorRole": "Source-backed seed copy",
+  "author": "",
+  "authorRole": "",
   "authorBio": "",
   "authorSlug": "",
   "authorAvatar": "",
   "relatedChapter": "greensofa",
   "relatedGuild": "",
-  "relatedStorySlugs": [],
+  "relatedStorySlugs": [
+    "greenpill-earth-week"
+  ],
   "continueReadingStorySlugs": [
-    "greenpill-brasil-gg20-climate-milestones",
-    "greenpill-nigeria-water-cup"
+    "greenpill-earth-week",
+    "greenpill-phangan-environmental-monitoring",
+    "greenpill-brasil-gg20-climate-milestones"
   ],
   "themeSlugs": [
     "public",
-    "desci",
-    "opensrc",
+    "funding",
     "impact",
-    "funding"
+    "opensrc"
   ],
   "translations": [],
   "proofSignals": [
     {
-      "label": "Public Goods Tooling Retro Funding",
-      "value": "2,794 USDC",
-      "source": "S025",
+      "label": "GreenSofa's public funding record",
+      "value": "Introducing GreenSofa",
+      "source": "HackMD",
       "href": "https://hackmd.io/@greensofa/home"
     },
     {
-      "label": "Taiwan Hypercerts Dashboard",
-      "value": "Public dashboard",
-      "source": "S058",
+      "label": "Hypercerts dashboard for Taiwan",
+      "value": "Green Sofa Dashboard",
+      "source": "GitHub Pages",
       "href": "https://fabdaotw.github.io/"
+    },
+    {
+      "label": "Project page",
+      "value": "GreenSofa | GreenPill Taiwan",
+      "source": "Giveth",
+      "href": "https://giveth.io/project/greensofa-greenpill-taiwan"
     }
   ],
   "featuredWeight": 90,
-  "readTime": "3 min read",
+  "readTime": "",
   "media": {
     "image": "/images/chapters/greensofa-ethereum-localism.jpg",
-    "imageAlt": "GreenSofa Ethereum Localism event cover.",
+    "imageAlt": "Luma event cover for FAB DAO x GreenSofa (Greenpill Taiwan): Ethereum Localism past and future.",
     "ogImage": "/images/chapters/greensofa-ethereum-localism.jpg"
   },
   "seo": {
-    "title": "GreenSofa Taiwan Public-Goods Tooling Receipts · Greenpill Stories",
-    "description": "Source-backed story for GreenSofa / Greenpill Taiwan public-goods tooling receipts and Hypercerts dashboard work.",
+    "title": "GreenSofa's Public Funding Record in Taiwan · Greenpill Stories",
+    "description": "GreenSofa (Greenpill Taiwan) keeps a public record of its grants and donations, most recently 2,794 USDC in retro funding for public goods tooling.",
     "ogImage": "/images/chapters/greensofa-ethereum-localism.jpg",
     "canonicalPath": "/stories/greensofa-taiwan-public-goods-tooling",
     "noindex": false

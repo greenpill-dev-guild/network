@@ -2,10 +2,10 @@
   "title": "Take the Greenpill with Greenpill Nigeria",
   "status": "published",
   "category": "chapter",
-  "publishDate": "2025",
-  "updatedDate": "",
-  "dek": "A public Hub source supports Nigeria's 10-week ReFi and public-goods education program.",
-  "excerpt": "Greenpill Nigeria ran a 10-week education series introducing ReFi and public-goods concepts.",
+  "publishDate": "2025-08-05",
+  "updatedDate": "2026-11-06",
+  "dek": "From May 5 to July 14, 2025, Greenpill Nigeria ran a ten-week ReFi and public goods workshop series with eight Web3 communities.",
+  "excerpt": "Greenpill Nigeria's Take the Greenpill series taught ReFi, public goods, DAOs and DePIN to more than 250 learners, the chapter reports.",
   "region": "africa",
   "tag": "Education",
   "tags": [
@@ -13,21 +13,23 @@
     "refi",
     "nigeria"
   ],
-  "body": "The research artifact identifies this public Hub thread as a strong education proof point for Greenpill Nigeria.\n\nFor page implementation, this should support education-oriented chapter cards, story filters, and proof signals. Avoid adding attendee counts or completion metrics that the source does not explicitly support.\n\n## Sources\n\n- S016: https://hub.regencoordination.xyz/t/take-the-greenpill-with-greenpill-nigeria-10-weeks-of-refi-education/324",
+  "body": "Take the Greenpill was a 10-week ReFi and public goods workshop series that Greenpill Nigeria ran from May 5 to July 14, 2025. Its aim was to demystify regenerative finance and public goods for Nigerian Web3 communities, so people would not only learn about them but build with purpose.\n\nThe workshops were delivered online, four hours over two days for each community. In its recap on the Regen Coordination Hub on August 5, 2025, the chapter reported reaching 8 Web3 communities and more than 250 learners across 16 sessions.\n\n## What the series covered\n\n- What ReFi is, beyond DeFi\n- Public goods, and why open, free infrastructure matters\n- DAOs and new ways to coordinate\n- DePIN and climate\n- Examples such as Gitcoin and Greenpill Network\n\nLearners used tools including POAP, Impact Miner and Karma GAP.\n\n## Closing with Ethereum at 10\n\nThe series closed with in-person Ethereum at 10 meetups in Awka and Enugu, which the chapter reported drew more than 70 builders, learners and leaders for talks, networking and games. Next, the chapter planned to launch local environmental work, starting with Water Cup.",
   "image": "/images/chapters/greenpill-nigeria-education.jpeg",
-  "author": "Greenpill Network research",
-  "authorRole": "Source-backed seed copy",
+  "author": "",
+  "authorRole": "",
   "authorBio": "",
   "authorSlug": "",
   "authorAvatar": "",
   "relatedChapter": "nigeria",
   "relatedGuild": "",
   "relatedStorySlugs": [
-    "greenpill-nigeria-water-cup"
-  ],
-  "continueReadingStorySlugs": [
     "greenpill-nigeria-water-cup",
     "ethereum-at-10-awka"
+  ],
+  "continueReadingStorySlugs": [
+    "ethereum-at-10-awka",
+    "greenpill-nigeria-water-cup",
+    "greenpill-nigeria-tech-and-sun-round"
   ],
   "themeSlugs": [
     "education",
@@ -37,22 +39,22 @@
   "translations": [],
   "proofSignals": [
     {
-      "label": "Education program",
-      "value": "10 weeks",
-      "source": "S016",
+      "label": "Greenpill Nigeria recap, August 5, 2025",
+      "value": "Take the Greenpill with Greenpill Nigeria, 10 Weeks of ReFi Education",
+      "source": "Regen Coordination Hub",
       "href": "https://hub.regencoordination.xyz/t/take-the-greenpill-with-greenpill-nigeria-10-weeks-of-refi-education/324"
     }
   ],
   "featuredWeight": 80,
-  "readTime": "2 min read",
+  "readTime": "",
   "media": {
     "image": "/images/chapters/greenpill-nigeria-education.jpeg",
-    "imageAlt": "Greenpill Nigeria ReFi education group photo.",
+    "imageAlt": "A group of Greenpill Nigeria community members, many in Greenpill T-shirts.",
     "ogImage": "/images/chapters/greenpill-nigeria-education.jpeg"
   },
   "seo": {
     "title": "Take the Greenpill with Greenpill Nigeria · Greenpill Stories",
-    "description": "Source-backed seed story for Greenpill Nigeria's 10-week ReFi and public-goods education program.",
+    "description": "Greenpill Nigeria's Take the Greenpill series: ten weeks of ReFi and public goods workshops with eight Web3 communities, May to July 2025.",
     "ogImage": "/images/chapters/greenpill-nigeria-education.jpeg",
     "canonicalPath": "/stories/take-the-greenpill-nigeria-refi-education",
     "noindex": false

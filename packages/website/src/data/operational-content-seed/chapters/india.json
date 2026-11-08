@@ -4,7 +4,7 @@
   "country": "India",
   "region": "asia",
   "status": "inactive",
-  "summary": "Adjacent public source-backed chapter record from the Regen Coordination Hub. It is not one of the priority 14 research rows, so feature only after a steward confirms current public activity.",
+  "summary": "Greenpill India ran public goods sessions and workshops in 2023 and 2024, including at the Indian Institute of Science, and is not active right now.",
   "introQuote": "",
   "introQuoteAttribution": "",
   "image": "",
@@ -36,14 +36,19 @@
     "greensofa",
     "uncommons"
   ],
+  "featuredStory": {},
   "featuredStorySlugs": [],
   "authoredResourceSlugs": [],
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "featuredWeight": 15,
   "proofSignals": [
     {
       "label": "Public Hub thread",
       "value": "Greenpill India updates",
-      "source": "S040",
+      "source": "Regen Hub",
       "href": "https://hub.regencoordination.xyz/t/greenpill-india-updates/97"
     }
   ],
@@ -54,7 +59,7 @@
   },
   "seo": {
     "title": "Greenpill India · Greenpill Network",
-    "description": "Greenpill India has an adjacent public Hub source and needs steward confirmation for launch feature placement.",
+    "description": "Greenpill India ran public goods sessions and workshops in 2023 and 2024 and is not active right now.",
     "ogImage": "",
     "canonicalPath": "/chapters/india",
     "noindex": true

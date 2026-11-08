@@ -3,7 +3,7 @@
   "status": "active",
   "guild": "dev-guild",
   "summary": "Dev Guild workstream using validator infrastructure and vault routing to create recurring public-goods funding.",
-  "description": "The Public Goods Staking Protocol is a Greenpill Dev Guild workstream sourced from the Dev Guild Paragraph series. Public sources describe a path where validator infrastructure, Dappnode, Obol distributed validator technology, Lido CSM, and Octant-aligned vault routing can help communities generate recurring funding for public goods. Treat Squad Staking as part of this workstream, not a separate project seed in this batch.",
+  "description": "The Public Goods Staking Protocol coordinates validator squads to create long-term funding for public goods, drawing on validator infrastructure, Dappnode, Obol distributed validator technology, Lido CSM and Octant-aligned vault routing.",
   "image": "",
   "techStack": [
     "Ethereum validators",

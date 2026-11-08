@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "feature": {
+    "slug": "website-qa-2026-11",
+    "title": "Website QA Pass, November 2026",
+    "kind": "feature",
+    "stage": "archive"
+  },
+  "workflow": {
+    "overall_status": "archived",
+    "priority": "p1",
+    "created_at": "2026-11-06T22:51:19Z",
+    "updated_at": "2026-11-07T22:28:39Z"
+  },
+  "links": {
+    "brief": "brief.md",
+    "spec": "spec.md",
+    "plan": "plan.todo.md",
+    "eval": "eval.md"
+  },
+  "notes": [
+    "status.json is authoritative for hub state.",
+    ".plans carries planning truth; packages carry runtime contracts.",
+    "Source: Afo's 2026-11-06 website review, the 2026-07-16 call decisions, the 2026-09-24 audit, and open P-PRD-19 issues PRD-739 and PRD-625.",
+    "Sessions are listed in plan.todo.md. Lanes map as ui = qa-home-garden, qa-assessment, qa-library, qa-guilds (template), qa-brand-shell, qa-map-polish; content = qa-stories, qa-guilds (research), qa-chapters; platform = qa-map-data, podcast feed refresh; qa_pass_1 = qa-system-pass; qa_pass_2 = Codex and CodeRabbit PR review plus post-deploy checks.",
+    "2026-11-06: Afo approved the launch. D1 keep and fix the assessment; D2 remove the ecoregion layer; batch A (qa-map-data, qa-home-garden, qa-guilds, qa-stories) started.",
+    "2026-11-07: D3 decided (Paragraph subscriptions). Open PRs: #33 hub, #34 qa-home-garden (waits on the new Telegram invite), #35 qa-map-data (its coordinate repair waits on Afo's approval in that session). Batch B rolls in as batch A sessions reach their PRs: qa-library started (PRD-1413); qa-assessment ready as a start card (PRD-1414); qa-brand-shell and qa-chapters to follow.",
+    "2026-11-07 later: all batch B sessions except qa-assessment have started. Open PRs #34 to #39; Afo changed D4 to keep the illustrated background with its seams fixed (PR #39). Only conflict among open PRs: #35 and #39 in SiteFooter.astro; merge #35 first.",
+    "2026-11-07 final: PRs #33 to #44 are merged and verified live; every session sub-issue is Done, and PRD-1408 is closed. PRD-739 (P0 shipped in #41; P1 and P2 open) and PRD-1417 stay open as their own issues. The em-dash check runs in agentic:check; its pull-request workflow (finding 18) waits on Afo's OK and is tracked in PRD-1419. Afo's account checks (revoke the old Telegram invite, test a real Paragraph signup) are in PRD-1420, the chapter seed sync from qa-chapters is in PRD-1421, and the leftover polish (map editor cards, CTA panels, one steward booking link) is in PRD-1422. Follow-ups are listed in plan.todo.md, Final state."
+  ],
+  "taxonomy": {
+    "initiative": "public-experience",
+    "tracks": ["ui", "content", "platform"],
+    "work_types": ["qa-remediation", "content-accuracy", "design-system"],
+    "surfaces": ["website-home", "website-garden", "website-library", "website-guilds", "website-stories", "website-chapters", "website-map", "website-shell"],
+    "depends_on_features": []
+  },
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "completed",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "content": {
+      "owner": "claude",
+      "status": "completed",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "platform": {
+      "owner": "claude",
+      "status": "completed",
+      "depends_on": [],
+      "handoff": "handoffs/README.md"
+    },
+    "qa_pass_1": {
+      "owner": "claude",
+      "status": "completed",
+      "depends_on": ["ui", "content", "platform"],
+      "handoff": "handoffs/README.md"
+    },
+    "qa_pass_2": {
+      "owner": "codex",
+      "status": "completed",
+      "depends_on": ["qa_pass_1"],
+      "handoff": "handoffs/README.md"
+    }
+  },
+  "history": [
+    {
+      "timestamp": "2026-11-06T22:51:19Z",
+      "actor": "claude",
+      "lane": "system",
+      "status": "scaffolded",
+      "note": "Scaffolded from Afo's 2026-11-06 QA review with findings, session roster, decisions and acceptance checks, and moved to active in the same commit on his launch approval."
+    },
+    {
+      "timestamp": "2026-11-06T22:54:28Z",
+      "actor": "claude",
+      "lane": "system",
+      "status": "activated",
+      "note": "Linear mirror recorded (PRD-1408 to PRD-1412); batch A sessions (qa-map-data, qa-home-garden, qa-guilds, qa-stories) started right after this commit."
+    },
+    {
+      "timestamp": "2026-11-07T00:32:48Z",
+      "actor": "claude",
+      "lane": "system",
+      "status": "in_progress",
+      "note": "PRs #34 (qa-home-garden) and #35 (qa-map-data) open; D3 decided; qa-library started as PRD-1413; qa-assessment ready as PRD-1414."
+    },
+    {
+      "timestamp": "2026-11-07T19:54:00Z",
+      "actor": "claude",
+      "lane": "system",
+      "status": "completed",
+      "note": "Wave 1 and qa-map-polish merged (#33 to #43) and verified live; the ui, content and platform lanes are complete."
+    },
+    {
+      "timestamp": "2026-11-07T21:45:00Z",
+      "actor": "claude",
+      "lane": "qa_pass_1",
+      "status": "in_progress",
+      "note": "qa-system-pass opened #44 (PRD-1418): one card treatment, the em-dash check, the refreshed fallback snapshot, footer links in social-links.json. Gate passed and Brave QA with axe recorded in handoffs/qa-system-pass.md. Waiting on Afo's OK for the em-dash pull-request workflow, then merge and post-deploy checks."
+    },
+    {
+      "timestamp": "2026-11-07T22:23:56Z",
+      "actor": "claude",
+      "lane": "qa_pass_1",
+      "status": "completed",
+      "note": "#44 merged as 8075333 after its checks passed and its 16 review threads (CodeQL alert 12 and 15 CodeRabbit findings) were fixed and resolved; Codex found nothing."
+    },
+    {
+      "timestamp": "2026-11-07T22:28:00Z",
+      "actor": "claude",
+      "lane": "qa_pass_2",
+      "status": "completed",
+      "note": "Post-deploy checks on greenpill.network after Pages run 42420430610: shared cards on home, /chapters, a chapter, both guilds, /stories, a story, /library and /garden; the /chapters region filter, no em dash in page copy apart from one podcast feed title, no source-backed caption, footer links, no overflow at 375, no seams at 1920, network-agent ready."
+    },
+    {
+      "timestamp": "2026-11-07T22:28:39Z",
+      "actor": "claude",
+      "lane": "system",
+      "status": "archived",
+      "note": "All lanes complete; PRD-1418 and PRD-1408 Done; finding 18's pull-request workflow moved to PRD-1419, Afo's Telegram and Paragraph checks to PRD-1420, the chapter seed sync to PRD-1421, leftover polish to PRD-1422; hub moved active -> archive."
+    }
+  ]
+}

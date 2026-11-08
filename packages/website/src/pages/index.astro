@@ -12,8 +12,11 @@ import HomeMap from '../components/page-sections/HomeMap.astro';
 import homePage from '../content/home-page.json';
 import garden from '../content/garden.json';
 import podcast from '../content/podcast.json';
+import podcastFeed from '../data/podcast-feed-snapshot.json';
+import socialLinks from '../content/social-links.json';
 import { getOperationalChapters, getOperationalGuilds } from '../lib/operational-content';
 import { publicGuildPath } from '../lib/public-routes';
+import { gardenRampSteps, gardenStepHref } from '../lib/garden-ramp';
 
 const chapters = await getOperationalChapters();
 const guilds = await getOperationalGuilds();
@@ -42,30 +45,37 @@ const writersGuild = guilds.find((g) => g.id === 'writers-guild');
 const devGuildPath = publicGuildPath(devGuild?.id);
 const writersGuildPath = publicGuildPath(writersGuild?.id);
 
-const proofSignal = homePage.proofSignals?.find((s) => s.label === 'Podcast archive');
-const podcastEpisodeCount = proofSignal?.value ?? '296 episodes';
-const podcastHref = proofSignal?.href ?? 'https://podcasts.apple.com/us/podcast/greenpill/id1609313639';
+// Same source as the Library: the RSS feed snapshot, refreshed at build time.
+const podcastEpisodeCount = `${podcastFeed.episodeCount} episodes`;
+const applePodcastsHref = 'https://podcasts.apple.com/us/podcast/greenpill/id1609313639';
 
 const activeChapterCount = chapters.length;
 
-const ecosystem = [
-  { name: 'Gitcoin', blurb: 'Public goods funding network', href: 'https://gitcoin.co/' },
-  { name: 'ReFi DAO', blurb: 'Regenerative finance network', href: 'https://refidao.com/' },
-  { name: 'Regen Coordination', blurb: 'Shared coordination hub', href: 'https://hub.regencoordination.xyz/' },
-  { name: 'Octant', blurb: 'Epoch-based public goods', href: 'https://octant.app/' },
-  { name: 'VDAO', blurb: 'Resilience and systems season', href: 'https://128c3f4a-6136-477c-8898-83d022a2d198.libsyn.com/vdao-ep-12-the-hidden-risks-of-stablecoins-and-why-decentralization-matters-michael' },
-  { name: 'Network Nations', blurb: 'Network coordination series', href: 'https://128c3f4a-6136-477c-8898-83d022a2d198.libsyn.com/nn-ep15-catalysing-network-nations-community-building-with-benjamin-life-patricia-parkinson' },
-  { name: 'Bread Cooperative', blurb: 'Solidarity funding network', href: 'https://bread.coop/' },
-  { name: 'Hypercerts', blurb: 'Impact proof infrastructure', href: 'https://hypercerts.org/' },
-];
+// Ecosystem entries are editorial content in home-page.json: one row of
+// partner communities and one row of tools, each linking to the
+// organization's own site. Incomplete entries are skipped, not rendered.
+type EcosystemEntry = { name?: string; blurb?: string; href?: string };
+const isListableOrg = (org: EcosystemEntry) =>
+  Boolean(org.name?.trim() && org.href && /^https:\/\//.test(org.href));
+const ecosystemRows = [
+  { key: 'partners', label: 'Partners and collaborators', items: homePage.ecosystem?.partners ?? [] },
+  { key: 'tools', label: 'Tools we build with', items: homePage.ecosystem?.tools ?? [] },
+]
+  .map((row) => ({ ...row, items: (row.items as EcosystemEntry[]).filter(isListableOrg) }))
+  .filter((row) => row.items.length > 0);
 
-const gardenSteps = (garden.steps ?? []).slice(0, 4);
+// With no steps in garden.json the home page leaves the ramp section out.
+const gardenSteps = gardenRampSteps(garden.steps).slice(0, 4);
 
 const heroTitle = homePage.hero?.title || homePage.title || 'A global regenerative network.';
 const heroDek = homePage.hero?.body || homePage.hero?.dek ||
   `Drop in to see who you connect with - by theme, role, and what you bring or seek. ${activeChapterCount} chapters and counting.`;
 
-const primaryCta = homePage.hero?.primaryCta ?? { label: 'Find your people', href: '/garden' };
+// The hero's primary action browses the map when it points at it; HomeMap
+// then opens its node list. Any other URL is an ordinary link.
+const MAP_ANCHOR = '#network-map';
+const primaryCta = homePage.hero?.primaryCta ?? { label: 'Find your people', href: MAP_ANCHOR };
+const primaryBrowsesMap = primaryCta.href === MAP_ANCHOR;
 const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', href: '/chapters' };
 ---
 
@@ -91,7 +101,11 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
           <Text variant="body-lg" class="gp-home-hero-dek">{heroDek}</Text>
 
           <div class="gp-home-hero-actions">
-            <Button type="button" data-home-map-open aria-haspopup="dialog">{primaryCta.label}</Button>
+            <Button
+              href={primaryCta.href}
+              data-home-map-browse={primaryBrowsesMap ? '' : undefined}
+              aria-haspopup={primaryBrowsesMap ? 'dialog' : undefined}
+            >{primaryCta.label}</Button>
             <Button href={secondaryCta.href} variant="ghost">{secondaryCta.label}</Button>
           </div>
         </div>
@@ -113,7 +127,7 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
             {publishedStories.slice(0, 4).map((story, idx) => {
               const region = (story.data.region || 'global').replace(/-/g, ' ');
               return (
-                <a class={`gp-home-story is-row-${idx + 1}`} href={`/stories/${story.id}`}>
+                <Card href={`/stories/${story.id}`} stack="md" class={`gp-home-story is-row-${idx + 1}`}>
                   <div class="gp-home-story-art" aria-hidden="true">
                     {story.data.image ? (
                       <img src={story.data.image} alt={story.data.media?.imageAlt || ''} loading="lazy" decoding="async" />
@@ -129,7 +143,7 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
                     </Text>
                     <ArrowLink size="sm">Read the story</ArrowLink>
                   </div>
-                </a>
+                </Card>
               );
             })}
           </div>
@@ -158,14 +172,14 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
             <Overline>Library · Knowledge commons</Overline>
             <Text variant="h2">The Greenpill commons.</Text>
             <Text variant="body" class="gp-home-section-dek">
-              Books, podcast conversations, public guild writing, and field guides — open and made by the network.
+              Books, podcast conversations, and public guild writing: open and made by the network.
             </Text>
           </div>
           <ArrowLink href="/library">Browse the library</ArrowLink>
         </div>
 
         <div class="gp-home-lib-grid">
-          <Card variant="elevated" padded="lg" class="gp-home-lib-books">
+          <Card variant="elevated" padded="lg" stack="md" class="gp-home-lib-books">
             <header class="gp-home-lib-head">
               <Overline>Books · {books.length} titles</Overline>
               <Text variant="mono">All free</Text>
@@ -174,15 +188,9 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
             <div class="gp-home-book-grid">
               {featuredBooks.map((book, index) => {
                 const href = book.data.ebookLink || '/library';
-                const external = href.startsWith('http');
                 const eager = index < 4;
                 return (
-                  <a
-                    class="gp-home-book"
-                    href={href}
-                    target={external ? '_blank' : undefined}
-                    rel={external ? 'noopener' : undefined}
-                  >
+                  <a class="gp-home-book" href={href}>
                     {book.data.image && (
                       <img
                         src={book.data.image}
@@ -204,7 +212,7 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
             </footer>
           </Card>
 
-          <Card variant="elevated" padded="lg" class="gp-home-lib-podcast">
+          <Card variant="elevated" padded="lg" stack="md" class="gp-home-lib-podcast">
             <header class="gp-home-lib-head">
               <Overline>Podcast · {podcastEpisodeCount}</Overline>
               <Text variant="mono">Public archive</Text>
@@ -226,7 +234,7 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
                   <Text variant="body-sm">{podcast.secondaryDescription}</Text>
                 )}
                 <div class="gp-home-podcast-cta">
-                  <Button href={podcastHref} variant="ghost">Listen on Apple Podcasts</Button>
+                  <Button href={applePodcastsHref} variant="ghost">Listen on Apple Podcasts</Button>
                   <ArrowLink href={podcast.youtubeLink || 'https://www.youtube.com/@Green_Pill_Podcast'} size="sm">Watch on YouTube</ArrowLink>
                 </div>
               </div>
@@ -236,21 +244,19 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
           {(devGuild && devGuildPath) || (writersGuild && writersGuildPath) ? (
             <div class="gp-home-lib-guild-pair">
               {devGuild && devGuildPath && (
-                <a class="gp-home-lib-tile gp-home-lib-dev" href={devGuildPath}>
+                <Card href={devGuildPath} stack="sm" class="gp-home-lib-tile gp-home-lib-dev">
                   <Overline>Guild · {devGuild.data.status}</Overline>
                   <Text variant="h3">{devGuild.data.name}</Text>
                   <Text variant="body-sm">{devGuild.data.summary}</Text>
                   <div class="gp-home-lib-guild-foot">
-                    <Text variant="mono">
-                      {(devGuild.data.outputs?.length ?? 0)} public outputs
-                    </Text>
+                    <Text variant="mono">Open-source coordination tools</Text>
                     <ArrowLink size="sm">Visit guild</ArrowLink>
                   </div>
-                </a>
+                </Card>
               )}
 
               {writersGuild && writersGuildPath && (
-                <a class="gp-home-lib-tile gp-home-lib-writers" href={writersGuildPath}>
+                <Card href={writersGuildPath} stack="sm" class="gp-home-lib-tile gp-home-lib-writers">
                   <Overline tone="muted">Guild · {writersGuild.data.status}</Overline>
                   <Text variant="h3">{writersGuild.data.name}</Text>
                   <Text variant="body-sm">{writersGuild.data.summary}</Text>
@@ -258,26 +264,10 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
                     <Text variant="mono">Stories, translations, longform</Text>
                     <ArrowLink size="sm">Visit guild</ArrowLink>
                   </div>
-                </a>
+                </Card>
               )}
             </div>
           ) : null}
-
-          <a class="gp-home-lib-tile gp-home-lib-toolkit" href="/library#tools-guides">
-            <Overline>Regen toolkit</Overline>
-            <Text variant="h3">Field-tested guides for local action.</Text>
-            <Text variant="body-sm">Green Goods docs · Regen Coordination Hub threads · Dev Guild writing.</Text>
-            <ArrowLink>Open the toolkit</ArrowLink>
-          </a>
-
-          <div class="gp-home-lib-tile gp-home-lib-soon">
-            <header class="gp-home-lib-head">
-              <Overline tone="muted">Knowledge map</Overline>
-              <span class="gp-home-soon-pill">In design</span>
-            </header>
-            <Text variant="h3">A living atlas of regenerative practice.</Text>
-            <Text variant="body-sm">Cross-link every book, episode, and field guide into one navigable terrain.</Text>
-          </div>
         </div>
       </Container>
     </section>
@@ -288,55 +278,67 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
           <Overline>Ecosystem · Communities we coordinate with</Overline>
           <Text variant="h2" class="gp-home-eco-title">Stronger together.</Text>
           <Text variant="body" class="gp-home-eco-dek">
-            Greenpill sits inside a wider regenerative web3 ecosystem — funders, builders, storytellers, scientists.
-            A few of the communities we coordinate with.
+            Greenpill works inside a wider regenerative web3 ecosystem of funders, builders, and storytellers.
+            These are the communities we work alongside and the tools we build with.
           </Text>
         </div>
 
-        <div class="gp-home-eco-grid">
-          {ecosystem.map((org) => (
-            <a class="gp-home-eco-tile" href={org.href} target="_blank" rel="noopener">
-              <span class="gp-home-eco-mark" aria-hidden="true"></span>
-              <span class="gp-home-eco-name">{org.name}</span>
-              <span class="gp-home-eco-blurb">{org.blurb}</span>
-            </a>
-          ))}
-        </div>
-      </Container>
-    </section>
-
-    <section class="gp-home-section gp-home-garden" id="garden-ramp">
-      <Container size="2xl">
-        <div class="gp-home-section-head">
-          <div class="gp-home-section-head-copy">
-            <Overline>Participate · Enter the Garden</Overline>
-            <Text variant="h2">Meet the network where you are.</Text>
-            <Text variant="body" class="gp-home-section-dek">
-              Four public, low-pressure ways into Greenpill. Pick whichever matches the moment you are in.
-            </Text>
+        {ecosystemRows.map((row) => (
+          <div class={`gp-home-eco-row is-${row.key}`}>
+            <Overline as="h3" tone="muted" class="gp-home-eco-label">{row.label}</Overline>
+            <ul class="gp-home-eco-grid" role="list">
+              {row.items.map((org) => (
+                <li class="gp-home-eco-item">
+                  <Card href={org.href} padded="sm" class="gp-home-eco-tile">
+                    <span class="gp-home-eco-mark" aria-hidden="true"></span>
+                    <span class="gp-home-eco-name">{org.name}</span>
+                    {org.blurb && <span class="gp-home-eco-blurb">{org.blurb}</span>}
+                  </Card>
+                </li>
+              ))}
+            </ul>
           </div>
-          <ArrowLink href="/garden">Open the Garden</ArrowLink>
-        </div>
-
-        <div class="gp-home-garden-grid">
-          {gardenSteps.map((step, index) => (
-            <article class="gp-home-garden-card">
-              <header class="gp-home-garden-head">
-                <span class="gp-home-garden-num">{String(step.level ?? index + 1).padStart(2, '0')}</span>
-                {step.friction && <Text variant="mono">{step.friction}</Text>}
-              </header>
-              <Text variant="h3" class="gp-home-garden-title">{step.title}</Text>
-              <Text variant="body-sm" class="gp-home-garden-body">{step.body}</Text>
-              <footer class="gp-home-garden-foot">
-                {step.cta?.href && step.cta?.label && (
-                  <Button href={step.cta.href} variant="ghost">{step.cta.label}</Button>
-                )}
-              </footer>
-            </article>
-          ))}
-        </div>
+        ))}
       </Container>
     </section>
+
+    {gardenSteps.length > 0 && (
+      <section class="gp-home-section gp-home-garden" id="garden-ramp">
+        <Container size="2xl">
+          <div class="gp-home-section-head">
+            <div class="gp-home-section-head-copy">
+              <Overline>Participate · Enter the Garden</Overline>
+              <Text variant="h2">Meet the network where you are.</Text>
+              <Text variant="body" class="gp-home-section-dek">
+                Four public, low-pressure ways into Greenpill. Pick whichever matches the moment you are in.
+              </Text>
+            </div>
+            <ArrowLink href="/garden">Open the Garden</ArrowLink>
+          </div>
+
+          <div class="gp-home-garden-grid">
+            {gardenSteps.map((step, index) => {
+              const href = gardenStepHref(step, socialLinks);
+              return (
+                <Card as="article" stack="md" class="gp-home-garden-card">
+                  <header class="gp-home-garden-head">
+                    <span class="gp-home-garden-num">{String(step.level ?? index + 1).padStart(2, '0')}</span>
+                    {step.friction && <Text variant="mono">{step.friction}</Text>}
+                  </header>
+                  <Text variant="h3" class="gp-home-garden-title">{step.title}</Text>
+                  <Text variant="body-sm" class="gp-home-garden-body">{step.body}</Text>
+                  <footer class="gp-home-garden-foot">
+                    {href && step.cta?.label && (
+                      <Button href={href} variant="ghost">{step.cta.label}</Button>
+                    )}
+                  </footer>
+                </Card>
+              );
+            })}
+          </div>
+        </Container>
+      </section>
+    )}
   </main>
 </GpLayout>
 
@@ -382,9 +384,9 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
     }
   }
 
+  /* The map sizes itself (see HomeMap); the hero only gives it the full row. */
   .gp-home-hero-map {
-    width: min(100%, 128dvh);
-    margin: 0 auto;
+    width: 100%;
   }
 
   .gp-home-hero-inner :global(.gp-home-hero-dek) {
@@ -442,35 +444,18 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
   .gp-home-stories-grid.count-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .gp-home-stories-grid.count-1 { grid-template-columns: minmax(0, 1fr); }
 
-  .gp-home-story {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gp-space-md);
-    padding: clamp(var(--gp-space-lg), 2vw, var(--gp-space-xl));
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-lg);
-    background: var(--gp-card);
-    color: var(--gp-fg);
-    text-decoration: none;
-    min-width: 0;
-    transition: border-color 200ms cubic-bezier(0.22, 1, 0.36, 1), background 200ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  .gp-home-story:hover {
-    border-color: rgba(184, 232, 53, 0.32);
-    background: var(--gp-card-elev);
-  }
-
-  .gp-home-stories-grid.count-4 .gp-home-story.is-row-1 {
+  /* Story cards are Card links (components/ui/Card.astro); the page only
+     places them in the bento. */
+  .gp-home-stories-grid.count-4 :global(.gp-home-story.is-row-1) {
     grid-column: 1 / 3;
     grid-row: 1 / 2;
     display: grid;
     grid-template-columns: minmax(180px, 0.78fr) minmax(0, 1fr);
     align-items: center;
   }
-  .gp-home-stories-grid.count-4 .gp-home-story.is-row-2 { grid-column: 3 / 4; grid-row: 1 / 2; }
-  .gp-home-stories-grid.count-4 .gp-home-story.is-row-3 { grid-column: 1 / 2; grid-row: 2 / 3; }
-  .gp-home-stories-grid.count-4 .gp-home-story.is-row-4 {
+  .gp-home-stories-grid.count-4 :global(.gp-home-story.is-row-2) { grid-column: 3 / 4; grid-row: 1 / 2; }
+  .gp-home-stories-grid.count-4 :global(.gp-home-story.is-row-3) { grid-column: 1 / 2; grid-row: 2 / 3; }
+  .gp-home-stories-grid.count-4 :global(.gp-home-story.is-row-4) {
     grid-column: 2 / 4;
     grid-row: 2 / 3;
     display: grid;
@@ -478,8 +463,8 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
     align-items: center;
   }
 
-  .gp-home-stories-grid.count-4 .gp-home-story.is-row-1 .gp-home-story-art,
-  .gp-home-stories-grid.count-4 .gp-home-story.is-row-4 .gp-home-story-art {
+  .gp-home-stories-grid.count-4 :global(.gp-home-story.is-row-1) .gp-home-story-art,
+  .gp-home-stories-grid.count-4 :global(.gp-home-story.is-row-4) .gp-home-story-art {
     height: 100%;
     min-height: 180px;
     aspect-ratio: auto;
@@ -534,10 +519,10 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
      placeholder visual + headline + body + single ghost CTA, sitting on
      a card-elevated surface. Lays out as a two-column composition that
      gestures at the bento rhythm without pretending to be one. The
-     outer card is rendered by the Card component, so :global() lifts
-     the scope id from this selector while the visual/copy children
-     inside the page template stay scoped. */
-  :global(.gp-home-stories-empty) {
+     outer card is rendered by the Card component, so the section reaches
+     it through :global() while the visual/copy children inside the page
+     template stay scoped. */
+  .gp-home-stories :global(.gp-home-stories-empty) {
     display: grid;
     grid-template-columns: 220px minmax(0, 1fr);
     gap: clamp(var(--gp-space-lg), 3vw, var(--gp-space-2xl));
@@ -587,42 +572,23 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
     margin-top: var(--gp-space-xs);
   }
 
-  /* Library bento */
+  /* Library bento: books span both rows on the left; podcast over the guild
+     pair on the right. */
   .gp-home-lib-grid {
     display: grid;
     grid-template-columns: repeat(12, 1fr);
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto;
     gap: clamp(14px, 1.5vw, 20px);
   }
 
   .gp-home-lib-grid :global(.gp-home-lib-books) {
     grid-column: 1 / 6;
     grid-row: 1 / 3;
-    display: flex;
-    flex-direction: column;
-    gap: var(--gp-space-md);
   }
 
   .gp-home-lib-grid :global(.gp-home-lib-podcast) {
     grid-column: 6 / 13;
     grid-row: 1 / 2;
-    display: flex;
-    flex-direction: column;
-    gap: var(--gp-space-md);
-  }
-
-  .gp-home-lib-tile {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gp-space-sm);
-    padding: clamp(var(--gp-space-lg), 2vw, var(--gp-space-xl));
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-lg);
-    background: var(--gp-card);
-    text-decoration: none;
-    color: var(--gp-fg);
-    min-width: 0;
-    transition: border-color 200ms cubic-bezier(0.22, 1, 0.36, 1), background 200ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .gp-home-lib-guild-pair {
@@ -635,28 +601,15 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
     min-width: 0;
   }
 
-  .gp-home-lib-guild-pair .gp-home-lib-tile {
+  .gp-home-lib-guild-pair :global(.gp-home-lib-tile) {
     min-height: 100%;
   }
 
-  .gp-home-lib-tile :global(.gp-text.is-body-sm) {
+  .gp-home-lib-guild-pair :global(.gp-home-lib-tile .gp-text.is-body-sm) {
     display: -webkit-box;
     overflow: hidden;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
-  }
-
-  .gp-home-lib-grid .gp-home-lib-toolkit { grid-column: 1 / 7; grid-row: 3 / 4; }
-  .gp-home-lib-grid .gp-home-lib-soon    { grid-column: 7 / 13; grid-row: 3 / 4; }
-
-  .gp-home-lib-soon {
-    background: linear-gradient(135deg, rgba(240, 220, 160, 0.08), rgba(20, 63, 48, 0.4));
-    border-color: rgba(240, 220, 160, 0.18);
-  }
-
-  a.gp-home-lib-tile:hover {
-    border-color: rgba(184, 232, 53, 0.32);
-    background: var(--gp-card-elev);
   }
 
   .gp-home-lib-head {
@@ -701,15 +654,11 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
     object-fit: cover;
     border-radius: var(--gp-radius-sm);
     background: var(--gp-green-800);
-    transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  .gp-home-book:hover img {
-    transform: translateY(-3px);
   }
 
   .gp-home-book-meta {
     color: var(--gp-fg-muted);
+    transition: color 120ms cubic-bezier(0.4, 0, 0.2, 1);
     text-transform: none;
     letter-spacing: 0;
     font-family: var(--gp-font-body);
@@ -719,6 +668,10 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
     overflow: hidden;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
+  }
+
+  .gp-home-book:hover .gp-home-book-meta {
+    color: var(--gp-fg);
   }
 
   .gp-home-lib-foot {
@@ -766,28 +719,6 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
     margin-top: var(--gp-space-sm);
   }
 
-  .gp-home-soon-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border: 1px solid rgba(240, 220, 160, 0.42);
-    border-radius: var(--gp-radius-pill);
-    color: var(--gp-secondary);
-    font-family: var(--gp-font-mono);
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .gp-home-soon-pill::before {
-    content: '';
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--gp-secondary);
-  }
-
   /* Ecosystem */
   .gp-home-eco-intro {
     display: flex;
@@ -803,39 +734,52 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
     max-width: 60ch;
   }
 
-  /* Compact tiles — dot + name on one row, blurb beneath. The section keeps
-     all seven communities while taking roughly half its former height. */
+  /* Two labeled rows (partners, then tools) of compact centered tiles:
+     dot, name, one-line blurb. */
+  .gp-home-eco-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--gp-space-md);
+  }
+
+  .gp-home-eco-row + .gp-home-eco-row {
+    margin-block-start: var(--gp-space-xl);
+  }
+
+  .gp-home-eco-row :global(.gp-home-eco-label) {
+    justify-content: center;
+  }
+
   .gp-home-eco-grid {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: var(--gp-space-sm);
+    inline-size: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
 
-  .gp-home-eco-tile {
-    flex: 1 1 260px;
-    max-width: 320px;
+  /* 230px basis / 252px cap: nine partners wrap 5 + 4 at 1440 and 3 + 3 + 3
+     at 1024, with no lone tile on a row. */
+  .gp-home-eco-item {
+    display: flex;
+    flex: 1 1 230px;
+    max-inline-size: 252px;
+    min-inline-size: 0;
+  }
+
+  .gp-home-eco-item :global(.gp-home-eco-tile) {
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: var(--gp-space-xs);
     text-align: center;
-    padding-block: var(--gp-space-sm);
-    padding-inline: var(--gp-space-md);
     min-height: 92px;
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-lg);
-    background: var(--gp-card);
-    text-decoration: none;
-    color: var(--gp-fg);
-    transition: border-color 200ms cubic-bezier(0.22, 1, 0.36, 1), background 200ms cubic-bezier(0.22, 1, 0.36, 1);
-    min-width: 0;
-  }
-
-  .gp-home-eco-tile:hover {
-    border-color: rgba(184, 232, 53, 0.42);
-    background: var(--gp-card-elev);
   }
 
   .gp-home-eco-mark {
@@ -847,8 +791,10 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
     flex: none;
   }
 
-  .gp-home-eco-tile:hover .gp-home-eco-mark {
-    box-shadow: 0 0 14px color-mix(in srgb, var(--gp-primary) 70%, transparent);
+  /* Tools carry a gold dot so the second row reads as a different kind. */
+  .gp-home-eco-row.is-tools .gp-home-eco-mark {
+    background: var(--gp-secondary);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--gp-secondary) 35%, transparent);
   }
 
   .gp-home-eco-name {
@@ -877,14 +823,7 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
     gap: clamp(14px, 1.5vw, 20px);
   }
 
-  .gp-home-garden-card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gp-space-md);
-    padding: clamp(var(--gp-space-lg), 2vw, var(--gp-space-xl));
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-lg);
-    background: var(--gp-card);
+  .gp-home-garden-grid :global(.gp-home-garden-card) {
     min-height: 260px;
   }
 
@@ -902,11 +841,11 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
     line-height: 1;
   }
 
-  .gp-home-garden-card :global(.gp-home-garden-title) {
+  .gp-home-garden-grid :global(.gp-home-garden-title) {
     color: var(--gp-fg);
   }
 
-  .gp-home-garden-card :global(.gp-home-garden-body) {
+  .gp-home-garden-grid :global(.gp-home-garden-body) {
     color: var(--gp-fg-muted);
     display: -webkit-box;
     overflow: hidden;
@@ -926,10 +865,10 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
       grid-template-columns: 1fr 1fr;
       grid-template-rows: auto auto auto;
     }
-    .gp-home-stories-grid.count-4 .gp-home-story.is-row-1 { grid-column: 1 / 3; grid-row: auto; }
-    .gp-home-stories-grid.count-4 .gp-home-story.is-row-2 { grid-column: 1 / 2; grid-row: auto; }
-    .gp-home-stories-grid.count-4 .gp-home-story.is-row-3 { grid-column: 2 / 3; grid-row: auto; }
-    .gp-home-stories-grid.count-4 .gp-home-story.is-row-4 { grid-column: 1 / 3; grid-row: auto; }
+    .gp-home-stories-grid.count-4 :global(.gp-home-story.is-row-1) { grid-column: 1 / 3; grid-row: auto; }
+    .gp-home-stories-grid.count-4 :global(.gp-home-story.is-row-2) { grid-column: 1 / 2; grid-row: auto; }
+    .gp-home-stories-grid.count-4 :global(.gp-home-story.is-row-3) { grid-column: 2 / 3; grid-row: auto; }
+    .gp-home-stories-grid.count-4 :global(.gp-home-story.is-row-4) { grid-column: 1 / 3; grid-row: auto; }
     .gp-home-stories-grid.count-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
     .gp-home-lib-grid {
@@ -945,8 +884,6 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
       grid-column: 1 / 3;
       grid-row: auto;
     }
-    .gp-home-lib-grid .gp-home-lib-toolkit { grid-column: 1 / 2; grid-row: auto; }
-    .gp-home-lib-grid .gp-home-lib-soon    { grid-column: 2 / 3; grid-row: auto; }
 
     .gp-home-garden-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -970,32 +907,33 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
     .gp-home-stories-grid.count-4 {
       grid-template-columns: 1fr;
     }
-    /* Reset the count-4 bento placements at matching (0,4,0) specificity —
-       the max-width:1100px block above is still active here, so a low-specificity
-       reset would lose and leave the tablet bento's implicit columns at mobile. */
-    .gp-home-stories-grid.count-4 .gp-home-story.is-row-1,
-    .gp-home-stories-grid.count-4 .gp-home-story.is-row-2,
-    .gp-home-stories-grid.count-4 .gp-home-story.is-row-3,
-    .gp-home-stories-grid.count-4 .gp-home-story.is-row-4 {
+    /* Reset the count-4 bento placements at the same specificity as the
+       tablet placements: the max-width:1100px block above is still active
+       here, so a weaker reset would lose and keep the tablet bento's
+       implicit columns at mobile. */
+    .gp-home-stories-grid.count-4 :global(.gp-home-story.is-row-1),
+    .gp-home-stories-grid.count-4 :global(.gp-home-story.is-row-2),
+    .gp-home-stories-grid.count-4 :global(.gp-home-story.is-row-3),
+    .gp-home-stories-grid.count-4 :global(.gp-home-story.is-row-4) {
       grid-column: 1 / -1;
       grid-row: auto;
     }
 
-    .gp-home-stories-grid.count-4 .gp-home-story.is-row-1,
-    .gp-home-stories-grid.count-4 .gp-home-story.is-row-4 {
+    .gp-home-stories-grid.count-4 :global(.gp-home-story.is-row-1),
+    .gp-home-stories-grid.count-4 :global(.gp-home-story.is-row-4) {
       display: flex;
       grid-template-columns: none;
       align-items: stretch;
     }
 
-    .gp-home-stories-grid.count-4 .gp-home-story.is-row-1 .gp-home-story-art,
-    .gp-home-stories-grid.count-4 .gp-home-story.is-row-4 .gp-home-story-art {
+    .gp-home-stories-grid.count-4 :global(.gp-home-story.is-row-1) .gp-home-story-art,
+    .gp-home-stories-grid.count-4 :global(.gp-home-story.is-row-4) .gp-home-story-art {
       height: auto;
       min-height: 0;
       aspect-ratio: 16 / 10;
     }
 
-    :global(.gp-home-stories-empty) {
+    .gp-home-stories :global(.gp-home-stories-empty) {
       grid-template-columns: 1fr;
       justify-items: start;
     }
@@ -1008,9 +946,7 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
     }
     .gp-home-lib-grid :global(.gp-home-lib-books),
     .gp-home-lib-grid :global(.gp-home-lib-podcast),
-    .gp-home-lib-guild-pair,
-    .gp-home-lib-grid .gp-home-lib-toolkit,
-    .gp-home-lib-grid .gp-home-lib-soon {
+    .gp-home-lib-guild-pair {
       grid-column: 1 / -1;
     }
 
@@ -1035,16 +971,16 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
       gap: var(--gp-space-sm);
     }
 
-    .gp-home-eco-tile {
+    .gp-home-eco-item {
       flex-basis: min(100%, 240px);
-      max-width: 100%;
+      max-inline-size: 100%;
     }
 
     .gp-home-garden-grid {
       grid-template-columns: 1fr;
     }
 
-    .gp-home-garden-card {
+    .gp-home-garden-grid :global(.gp-home-garden-card) {
       min-height: 0;
     }
   }

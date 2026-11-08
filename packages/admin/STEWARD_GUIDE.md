@@ -56,10 +56,24 @@ asking for access.
 If the assigned chapter or guild is missing, message the Telegram steward chat
 with your chapter name and the email address used for your invite.
 
+## Where To Start
+
+Data Studio opens on `Chapters`. In the sidebar, the bookmarks under each
+collection open your own work:
+
+- `My chapter` and `My guild`: the records you edit.
+- `My chapter initiatives` and `My guild projects`: their initiatives and
+  projects, at any status.
+- `My chapter change requests` and `My change request outcomes`: requests you
+  are working on, and decided ones with the reviewer's notes.
+- `My chapter impact sync`: whether your chapter's impact sources synced, and
+  the last error if they did not.
+- `Published chapter reference`: every live chapter, for comparison.
+
 ## First 10-Minute Walkthrough
 
-1. Open `Chapters`.
-2. Use `Published chapter reference` to find the current public chapter profile.
+1. Open the `My chapter` bookmark under `Chapters`.
+2. Use `Published chapter reference` to compare with other public chapter profiles.
 3. Do not change `slug`; it controls URLs and assignments.
 4. Review the basic public fields:
    - `name`
@@ -144,6 +158,16 @@ Create a request with:
 - `proof_signals`: public proof signals to add or update.
 - `request_status`: use `draft` while editing, then `pending_review`.
 
+Fill in `proposed_image` only when you want a different image. Once the
+request is accepted, that image replaces the one your chapter shows, including
+an image you uploaded, and its alt text and credit come from the request. To
+keep the current image, leave `proposed_image` empty. Alt text or credit
+entered without an image update the image your chapter already shows.
+
+A draft prepared for you before a steward sync starts with your chapter's
+current summary and primary link, and proposes no image. Left as prepared, it
+changes nothing about your chapter.
+
 Use the structured link rows instead of raw JSON for normal public links:
 
 ```json
@@ -165,6 +189,11 @@ Use structured proof signal rows for source-backed public claims:
   "href": "https://example.org/source"
 }
 ```
+
+A proposed image needs alt text: one sentence describing what the picture
+shows, for people who cannot see it. The form does not save a draft or send a
+request for review with an image and no alt text. If you decide not to propose
+an image after all, empty `proposed_image` and save.
 
 Use `requested_changes` only as an advanced fallback for unusual edits that do
 not fit the structured fields above.

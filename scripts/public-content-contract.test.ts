@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readdir, readFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -12,15 +13,29 @@ import {
   toPublicOperationalContentSnapshot,
   toPublicWebsiteBuildMetadata,
 } from '@greenpill-network/shared/public-content';
+import { formatContentDate } from '../packages/website/src/lib/content-dates.ts';
+import { chapterPageSlugs, hasChapterPage } from '../packages/website/src/lib/chapter-pages.ts';
 import {
   buildDirectusOperationalPermissionPlan,
 } from './directus-operational-content-setup.ts';
+import {
+  gardenHeroCta,
+  gardenRampSteps,
+  gardenStepHref,
+} from '../packages/website/src/lib/garden-ramp.ts';
 import {
   loadChapterEnrichment,
 } from './directus-chapter-enrichment.ts';
 import {
   loadOperationalEnrichment,
 } from './directus-operational-enrichment.ts';
+import { readOperationalSeedCollection } from './operational-content-seed.ts';
+import {
+  minimumRecentEpisodes,
+  parseFeed,
+  snapshotProblems,
+  writeSnapshotFromFeed,
+} from './podcast-feed-snapshot.ts';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const editorialContentDir = join(rootDir, 'packages/website/src/content');
@@ -47,6 +62,7 @@ const chapterInitiativesMigrationPath = join(rootDir, 'packages/agent/migrations
 const chapterImageUploadsMigrationPath = join(rootDir, 'packages/agent/migrations/022_chapter_image_uploads.sql');
 const contentPublishHealthMigrationPath = join(rootDir, 'packages/agent/migrations/028_content_publish_health.sql');
 const chapterImageAltCreditMigrationPath = join(rootDir, 'packages/agent/migrations/029_chapter_image_alt_credit.sql');
+const snapshotAlertEpisodesMigrationPath = join(rootDir, 'packages/agent/migrations/030_snapshot_alert_episodes.sql');
 const activeChapterEnrichmentSlugs = [
   'brasil',
   'c-te-d-ivoire',
@@ -62,10 +78,14 @@ const activeChapterEnrichmentSlugs = [
   'toronto',
 ];
 const requiredEnrichedInitiativeSlugs = [
-  'cape-town-ethereum-at-10',
-  'germany-refi-community-activation',
   'greensofa-ethereum-localism-public-goods-tooling',
   'kenya-regenerative-agriculture-hub',
+];
+// Initiatives the qa-chapters change set (PRD-625) marked inactive because
+// they finished. They stay published, and the enrichment leaves them alone.
+const inactiveInitiativeSlugs = [
+  'cape-town-ethereum-at-10',
+  'germany-refi-community-activation',
   'ottawa-reimagining-our-future',
   'toronto-local-impact-web3-solutions',
 ];
@@ -203,6 +223,51 @@ test('public content references only generated chapters and published stories', 
   assert.deepEqual(problems, []);
 });
 
+test('the Garden ramp is left out, not broken, when garden.json has no steps', () => {
+  // garden.json without a steps list, with an empty list, and with null.
+  for (const configured of [undefined, [], null]) {
+    const steps = gardenRampSteps(configured);
+    assert.deepEqual(steps, []);
+    // "Start with Step 1" would point at an anchor the page no longer has.
+    assert.equal(gardenHeroCta({ label: 'Start with Step 1', href: '#step-1' }, steps.length), null);
+    assert.equal(gardenHeroCta(undefined, steps.length), null);
+  }
+  // A hero button that leads elsewhere still renders.
+  assert.deepEqual(gardenHeroCta({ label: 'Browse chapters', href: '/chapters' }, 0), {
+    label: 'Browse chapters',
+    href: '/chapters',
+  });
+});
+
+test('the Garden ramp keeps configured steps and takes the Telegram invite and booking link from social links', () => {
+  const links = {
+    telegram: 'https://t.me/+approvalGatedInvite',
+    stewardCall: 'https://calendar.example/steward',
+  };
+  const configured = [
+    { level: 1, surfaceType: 'email', cta: { label: 'Subscribe on Paragraph', href: 'https://paragraph.com/@greenpill/subscribe' } },
+    { level: 2, surfaceType: 'telegram', cta: { label: 'Open Telegram', href: 'https://t.me/+staleInvite' } },
+    { level: 4, surfaceType: 'steward-call', cta: { label: 'Book a call', href: 'https://calendar.example/stale' } },
+  ];
+  const steps = gardenRampSteps(configured);
+
+  assert.deepEqual(steps, configured);
+  // A URL left on the Telegram or steward call step is ignored.
+  assert.deepEqual(
+    steps.map((step) => gardenStepHref(step, links)),
+    ['https://paragraph.com/@greenpill/subscribe', links.telegram, links.stewardCall],
+  );
+  // The steward call step takes the booking link wherever an editor moves it,
+  // and a step 4 of another kind keeps its own button.
+  assert.equal(gardenStepHref({ level: 2, surfaceType: 'steward-call', cta: { href: '' } }, links), links.stewardCall);
+  assert.equal(gardenStepHref({ level: 4, surfaceType: 'garden', cta: { href: '/garden' } }, links), '/garden');
+  assert.deepEqual(gardenHeroCta({ label: 'Start with Step 1', href: '#step-1' }, steps.length), {
+    label: 'Start with Step 1',
+    href: '#step-1',
+  });
+  assert.deepEqual(gardenHeroCta(undefined, steps.length), { label: 'Start with Step 1', href: '#step-1' });
+});
+
 test('operational content snapshot is public-safe and derived from approved operational collections', async () => {
   const snapshot = assertPublicOperationalContentSnapshot(
     JSON.parse(await readFile(snapshotPath, 'utf8'))
@@ -324,8 +389,95 @@ test('chapter initiatives are operational records and projects stay guild-owned'
 test('chapter initiative cards do not render dead links when no URL is present', async () => {
   const source = await readFile(chapterPagePath, 'utf8');
 
-  assert.match(source, /<article class="gp-chapter-initiative">/);
+  // Card renders an <article> when there is no href, and a link otherwise.
+  assert.match(source, /<Card href=\{href \|\| undefined\} as="article"/);
   assert.doesNotMatch(source, /href=\{href \|\| '#'\}/);
+});
+
+test('cards on every page come from the Card primitive and do not move on hover', async () => {
+  // Website QA, November 2026, finding 9: one card treatment. Pages place cards
+  // and lay out what sits inside them; the surface (border, radius, card tone,
+  // hover) lives in components/ui/Card.astro. The standalone map edit and
+  // moderation pages use Card too (PRD-1422).
+  const pageFiles = (await readdir(websitePagesDir, { recursive: true }))
+    .map((file) => String(file).replaceAll('\\', '/'))
+    .filter((file) => file.endsWith('.astro'));
+  const sourcePaths = [
+    ...pageFiles.map((file) => join(websitePagesDir, file)),
+    join(rootDir, 'packages/website/src/components/page-sections/GardenAssessment.astro'),
+    join(rootDir, 'packages/website/src/components/page-sections/BookDialog.astro'),
+  ];
+  const problems = [];
+  for (const path of sourcePaths) {
+    const source = await readFile(path, 'utf8');
+    const styles = [...source.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((match) => match[1]).join('\n');
+    for (const [, selectorText, body] of styles.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const selector = selectorText.trim().replace(/\s+/g, ' ');
+      if (/background:\s*var\(--gp-card(-elev)?\)/.test(body) && /border-radius:/.test(body)) {
+        problems.push(`${path}: ${selector} repeats the card surface; use Card`);
+      }
+      if (/:hover/.test(selector) && /transform:/.test(body)) {
+        problems.push(`${path}: ${selector} moves on hover (DESIGN.md Motion)`);
+      }
+    }
+  }
+  assert.deepEqual(problems, []);
+
+  const card = await readFile(join(rootDir, 'packages/website/src/components/ui/Card.astro'), 'utf8');
+  const cardStyles = card.slice(card.indexOf('<style>'));
+  assert.doesNotMatch(cardStyles, /transform\s*:|box-shadow:\s*var\(--gp-shadow-card-lg\)/);
+  assert.match(cardStyles, /\.gp-card\[hidden\]/, 'a filtered card must still hide');
+  assert.match(card, /const Tag = href \? 'a' : \(as \?\? 'div'\);/);
+});
+
+test('a focused primary button keeps the focus ring under its glow', async () => {
+  // DESIGN.md: the lime focus ring marks every interactive element. The ring is
+  // a box-shadow in gp-tokens.css, and the primary glow would replace it, so the
+  // primary button's focus-visible state keeps both.
+  const button = await readFile(join(rootDir, 'packages/website/src/components/ui/Button.astro'), 'utf8');
+  assert.match(
+    button,
+    /\.gp-button\.is-primary:focus-visible\s*\{[^}]*box-shadow:\s*var\(--gp-shadow-focus\),\s*var\(--gp-shadow-pill\)/
+  );
+});
+
+// A stylesheet's top-level `selector { declarations }` rules, by selector.
+// Rules inside at-rule blocks (@container, @media and so on) are left out.
+function topLevelCssRules(css) {
+  const rules = new Map();
+  let depth = 0;
+  let start = 0;
+  let selector = '';
+  for (let index = 0; index < css.length; index += 1) {
+    if (css[index] === '{') {
+      if (depth === 0) {
+        selector = css.slice(start, index).trim();
+        start = index + 1;
+      }
+      depth += 1;
+    } else if (css[index] === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        if (!selector.startsWith('@')) rules.set(selector, css.slice(start, index));
+        start = index + 1;
+      }
+    }
+  }
+  return rules;
+}
+
+test('the standalone map pages reset the body margin that GpLayout resets elsewhere', async () => {
+  for (const [page, bodyClass] of [['map/edit.astro', 'map-edit-root'], ['map/moderate.astro', 'moderation-root']]) {
+    const source = await readFile(join(websitePagesDir, page), 'utf8');
+    assert.match(source, new RegExp(`<body class="gp-root ${bodyClass}">`), `${page} body classes`);
+    // Only a live top-level rule counts: not one in a comment or inside an
+    // @container or @media block that might not apply.
+    const css = [...source.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)]
+      .map((match) => match[1].replace(/\/\*[\s\S]*?\*\//g, ''))
+      .join('\n');
+    const bodyRule = topLevelCssRules(css).get(`.${bodyClass}`) ?? '';
+    assert.match(bodyRule, /(^|;)\s*margin:\s*0\s*(;|$)/, `${page} resets the body margin`);
+  }
 });
 
 test('noindex chapters keep their own page while staying out of discovery', async () => {
@@ -347,6 +499,49 @@ test('noindex chapters keep their own page while staying out of discovery', asyn
     /getStaticPaths\(\)[\s\S]*?getOperationalChapterPages\(\)/
   );
   assert.match(chapterPage, /noindex=\{data\.seo\?\.noindex\}/);
+});
+
+test('inactive and archived chapters get no page anywhere; forming and active chapters keep theirs', async () => {
+  assert.equal(hasChapterPage({ status: 'active' }), true);
+  assert.equal(hasChapterPage({ status: 'forming' }), true);
+  assert.equal(hasChapterPage({}), true);
+  assert.equal(hasChapterPage({ status: 'inactive' }), false);
+  assert.equal(hasChapterPage({ status: ' Archived ' }), false);
+
+  // The page route, the chapter index, the home map, the sitemap and related
+  // chapters all read chapters through getOperationalChapterPages, so the
+  // rule has to live there for no link to point at a page that is not built.
+  const librarySource = await readFile(operationalContentLibraryPath, 'utf8');
+  assert.match(
+    librarySource,
+    /getOperationalChapterPages\(\)[\s\S]*?getOperationalCollection\('chapters'\)[\s\S]*?hasChapterPage\(item\.data\)/
+  );
+});
+
+test('locations and impact-source feeds only list chapters that get a page', async () => {
+  assert.deepEqual(
+    [...chapterPageSlugs([
+      { slug: 'open', status: 'active' },
+      { slug: 'starting', status: 'forming' },
+      { slug: 'paused', status: 'inactive' },
+      { slug: 'closed', status: 'archived' },
+      { status: 'active' },
+    ])].sort(),
+    ['open', 'starting']
+  );
+
+  // The snapshot's precomputed locations and impact-source bindings leave out
+  // only noindex chapters, and both link to /chapters/<slug>, so the website
+  // filters them against the chapters that get a page.
+  const librarySource = await readFile(operationalContentLibraryPath, 'utf8');
+  assert.match(
+    librarySource,
+    /getOperationalLocations\(\)[\s\S]*?chapterPageSlugs\(snapshot\.chapters\)[\s\S]*?locations\.filter\(/
+  );
+  assert.match(
+    librarySource,
+    /getOperationalImpactSourceBindings\(\)[\s\S]*?chapterPageSlugs\(snapshot\.chapters\)[\s\S]*?bindings\.chapters\.filter\(/
+  );
 });
 
 test('chapter pages render approved media and steward avatar cards', async () => {
@@ -449,8 +644,85 @@ test('site shell keeps the graphic page background visible', async () => {
 
   assert.match(header, /background:\s*none|rgba\(7,\s*24,\s*15,\s*0\.[0-6]/);
   assert.doesNotMatch(header, /var\(--gp-bg\)\s*92%/);
-  assert.match(footer, /rgba\(7,\s*24,\s*15,\s*0\)/);
+  // The footer paints no background of its own at any width, so the page
+  // background shows through.
+  const footerRules = [...footer.matchAll(/\.gp-site-footer\s*\{([^}]*)\}/g)];
+  assert.notEqual(footerRules.length, 0);
+  for (const [, declarations] of footerRules) {
+    assert.doesNotMatch(declarations, /background/);
+  }
   assert.doesNotMatch(footer, /background:\s*var\(--gp-green-950\)/);
+});
+
+test('footer links come from social-links.json, with Keystatic fields to edit them', async () => {
+  const [footer, socialLinksSource, keystaticConfig] = await Promise.all([
+    readFile(join(websiteShellDir, 'SiteFooter.astro'), 'utf8'),
+    readFile(join(editorialContentDir, 'social-links.json'), 'utf8'),
+    readFile(keystaticConfigPath, 'utf8'),
+  ]);
+  const socialLinks = JSON.parse(socialLinksSource);
+  const frontmatter = footer.slice(0, footer.indexOf('<footer'));
+
+  // Outside links live in content/social-links.json; the footer keeps none,
+  // and leaves out a link whose URL an editor removed.
+  assert.doesNotMatch(footer, /https?:\/\//);
+  assert.match(footer, /\.filter\(\(item\) => item\.href\)/);
+  const footerKeys = ['twitter', 'farcaster', 'telegram', 'linkedin', 'youtube', 'hub', 'codeOfConduct', 'events', 'stewardCall', 'github'];
+  for (const key of footerKeys) {
+    assert.match(socialLinks[key], /^https:\/\//, `social-links.json ${key}`);
+    assert.match(footer, new RegExp(`socialLinks\\.${key}\\b`), `footer reads ${key}`);
+  }
+  // hub.greenpill.network does not load; the footer's Hub is the Regen Coordination Hub.
+  assert.equal(socialLinks.hub, 'https://hub.regencoordination.xyz');
+
+  const schemaBlock = /socialLinks: singleton\(\{[\s\S]*?schema: \{([\s\S]*?)\n\s*\},\n\s*\}\),/.exec(keystaticConfig)?.[1] ?? '';
+  for (const key of Object.keys(socialLinks)) {
+    assert.match(schemaBlock, new RegExp(`\\b${key}: fields\\.`), `Keystatic socialLinks field ${key}`);
+  }
+  for (const key of footerKeys) {
+    assert.match(schemaBlock, new RegExp(`\\b${key}: fields\\.url\\(\\{[^}]*validation: \\{ isRequired: true \\}`), `Keystatic requires ${key}`);
+  }
+});
+
+test('the steward booking link has one source: stewardCall in social-links.json', async () => {
+  const [socialLinks, garden] = await Promise.all([readJson('social-links.json'), readJson('garden.json')]);
+  assert.match(socialLinks.stewardCall, /^https:\/\//);
+
+  // Like the Telegram step, the steward call step keeps no URL of its own,
+  // and the unused preview card that carried another copy is gone.
+  const callSteps = garden.steps.filter((step) => step.surfaceType === 'steward-call');
+  assert.equal(callSteps.length, 1);
+  assert.equal(callSteps[0].cta.href, '');
+  assert.equal('stewardCallPreview' in garden, false);
+
+  // No page, component, library, content file or Keystatic default keeps a copy.
+  const websiteDir = join(rootDir, 'packages/website');
+  const sourceFiles = [
+    ...await readFilesWithExtensions(join(websiteDir, 'src'), ['.astro', '.ts', '.json', '.md']),
+    keystaticConfigPath,
+  ];
+  const copies = [];
+  for (const filePath of sourceFiles) {
+    if ((await readFile(filePath, 'utf8')).includes(socialLinks.stewardCall)) {
+      copies.push(filePath.slice(websiteDir.length + 1));
+    }
+  }
+  assert.deepEqual(copies, ['src/content/social-links.json']);
+});
+
+test('page calls to action share CtaStrip, which keeps lime on the button', async () => {
+  // DESIGN.md > Calls to action (PRD-1422): the lift panel steps the green
+  // scale and leaves lime to the primary button, with no lime border, tint or glow.
+  const strip = await readFile(join(rootDir, 'packages/website/src/components/ui/CtaStrip.astro'), 'utf8');
+  const stripStyles = strip.slice(strip.indexOf('<style>'));
+  assert.doesNotMatch(stripStyles, /--gp-primary|--gp-lime|184,\s*232,\s*53|::before/);
+  assert.match(stripStyles, /\.gp-cta-strip\.is-lift \{[^}]*background: var\(--gp-surface\)/);
+
+  for (const page of ['chapters/index.astro', 'chapters/[slug].astro', 'guilds/[slug].astro']) {
+    const source = await readFile(join(websitePagesDir, page), 'utf8');
+    assert.match(source, /<CtaStrip\b/, `${page} uses CtaStrip`);
+    assert.doesNotMatch(source, /cta-inner|cta-actions/, `${page} keeps no CTA panel of its own`);
+  }
 });
 
 test('library podcast section uses RSS snapshot and in-page audio', async () => {
@@ -461,17 +733,241 @@ test('library podcast section uses RSS snapshot and in-page audio', async () => 
   const podcastSnapshot = JSON.parse(podcastSnapshotSource);
 
   assert.equal(podcastSnapshot.sourceUrl, 'https://rss.libsyn.com/shows/400481/destinations/3304589.xml');
-  assert.equal(podcastSnapshot.episodeCount, 296);
-  assert.equal(podcastSnapshot.episodes.length >= 8, true);
-  assert.equal(podcastSnapshot.episodes.every((episode) => episode.title && episode.audioUrl), true);
+  // The count is whatever the feed carried when the snapshot was taken; the
+  // Pages build refreshes it, so pin its shape rather than a number.
+  assert.equal(Number.isInteger(podcastSnapshot.episodeCount), true);
+  assert.equal(podcastSnapshot.episodeCount >= podcastSnapshot.episodes.length, true);
+  // The committed fallback meets the same checks a refresh must pass.
+  assert.deepEqual(snapshotProblems(podcastSnapshot), []);
 
   assert.match(libraryPage, /import podcastFeed/);
+  assert.match(libraryPage, /podcastFeed\.episodeCount/);
   assert.match(libraryPage, /id="podcast"/);
   assert.match(libraryPage, /<audio class="gp-library-audio/);
-  assert.match(libraryPage, /gardenGuides\.map/);
   assert.doesNotMatch(libraryPage, /episodeResources\.map/);
   assert.doesNotMatch(libraryPage, /guideResources\.map/);
   assert.doesNotMatch(libraryPage, /gp-library-play/);
+});
+
+function podcastFeedItem(title: string, urls: { link?: string; audioUrl?: string; image?: string } = {}) {
+  const slug = title.toLowerCase().replace(/\W+/g, '-');
+  return [
+    '<item>',
+    `<title>${title}</title>`,
+    `<link>${urls.link ?? `https://example.com/episodes/${slug}`}</link>`,
+    `<enclosure url="${urls.audioUrl ?? `https://example.com/audio/${slug}.mp3`}" type="audio/mpeg" length="1000"/>`,
+    urls.image ? `<itunes:image href="${urls.image}"/>` : '',
+    '</item>',
+  ].join('');
+}
+
+function podcastFeedXml(items: string[], channel: { link?: string; image?: string } = {}) {
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<rss version="2.0">',
+    '<channel>',
+    '<title>Test feed</title>',
+    `<link>${channel.link ?? 'https://example.com/'}</link>`,
+    '<description>A feed for tests.</description>',
+    `<itunes:image href="${channel.image ?? 'https://example.com/cover.jpg'}"/>`,
+    ...items,
+    '</channel>',
+    '</rss>',
+  ].join('\n');
+}
+
+test('podcast refresh publishes only https links and media from the feed', () => {
+  const { snapshot } = parseFeed(podcastFeedXml([
+    podcastFeedItem('Safe episode'),
+    podcastFeedItem('Script image', { image: 'javascript:alert(1)' }),
+    podcastFeedItem('Script link', { link: 'javascript:alert(document.domain)' }),
+    // unwrap() decodes entities twice, so this becomes javascript: too.
+    podcastFeedItem('Encoded script link', { link: '&amp;#106;avascript:alert(1)' }),
+    podcastFeedItem('Hidden script link', { link: '<![CDATA[ JaVa\tScRiPt:alert(1)]]>' }),
+    podcastFeedItem('Relative link', { link: '/episodes/relative' }),
+    podcastFeedItem('Data audio', { audioUrl: 'data:audio/mpeg;base64,AAAA' }),
+    podcastFeedItem('Plain http audio', { audioUrl: 'http://example.com/audio.mp3' }),
+  ]));
+
+  assert.deepEqual(snapshot.episodes.map((episode) => episode.title), ['Safe episode', 'Script image']);
+  // A bad episode image falls back to the channel cover instead of dropping the episode.
+  assert.equal(snapshot.episodes[1].image, 'https://example.com/cover.jpg');
+  assert.doesNotMatch(JSON.stringify(snapshot), /javascript:|data:|http:\/\//i);
+
+  const { snapshot: hostileChannel } = parseFeed(podcastFeedXml(
+    [podcastFeedItem('Safe episode')],
+    { link: 'javascript:alert(1)', image: 'javascript:alert(2)' },
+  ));
+
+  assert.equal(hostileChannel.siteUrl, '');
+  assert.equal(hostileChannel.image, '');
+  assert.equal(hostileChannel.episodes[0].image, '');
+});
+
+test('podcast refresh keeps the existing snapshot when the feed is short', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'podcast-snapshot-'));
+  const targetPath = join(directory, 'podcast-feed-snapshot.json');
+  const playable = (count: number) => Array.from({ length: count }, (_, index) => podcastFeedItem(`Episode ${index + 1}`));
+
+  try {
+    await writeFile(targetPath, '{"committed":true}\n');
+    // Skipped items do not count toward the minimum.
+    const shortFeed = podcastFeedXml([
+      ...playable(minimumRecentEpisodes - 1),
+      podcastFeedItem('Script link', { link: 'javascript:alert(1)' }),
+    ]);
+
+    await assert.rejects(writeSnapshotFromFeed(shortFeed, targetPath), /snapshot checks/);
+    assert.equal(await readFile(targetPath, 'utf8'), '{"committed":true}\n');
+
+    await writeSnapshotFromFeed(podcastFeedXml(playable(minimumRecentEpisodes)), targetPath);
+    const written = JSON.parse(await readFile(targetPath, 'utf8'));
+    assert.equal(written.episodes.length, minimumRecentEpisodes);
+    assert.deepEqual(snapshotProblems(written), []);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('library lists guilds under the anchor that guild breadcrumbs link to, without the retired Knowledge Garden block', async () => {
+  const [libraryPage, libraryContentSource] = await Promise.all([
+    readFile(libraryPagePath, 'utf8'),
+    readFile(join(editorialContentDir, 'library.json'), 'utf8'),
+  ]);
+  const libraryContent = JSON.parse(libraryContentSource);
+
+  assert.match(libraryPage, /id="guilds"/);
+  assert.doesNotMatch(libraryPage, /Knowledge Garden|gardenGuides|gp-library-garden/);
+  // Search results and link previews describe only what the page holds.
+  assert.doesNotMatch(libraryPage, /Garden onboarding/);
+  assert.doesNotMatch(libraryContent.seo.description, /Garden/);
+});
+
+test('every book links to files that ship with the site and opens a detail dialog', async () => {
+  const publicDir = join(rootDir, 'packages/website/public');
+  const libraryPage = await readFile(libraryPagePath, 'utf8');
+  const problems = [];
+
+  for (const [slug, book] of await readCollection('books')) {
+    const siteLinks = [
+      ['image', book.image],
+      ['ebookLink', book.ebookLink],
+      ...(book.formats ?? []).map((format, index) => [`formats[${index}].link`, format.link]),
+      ...(book.translations ?? []).map((translation, index) => [`translations[${index}].link`, translation.link]),
+    ];
+    for (const [field, link] of siteLinks) {
+      if (typeof link !== 'string' || !link) {
+        problems.push(`books/${slug}.json ${field} is empty`);
+        continue;
+      }
+      if (!link.startsWith('/')) continue;
+      const file = await stat(join(publicDir, decodeURI(link))).catch(() => null);
+      if (!file?.isFile()) {
+        problems.push(`books/${slug}.json ${field} points at missing file ${link}`);
+      }
+    }
+    if (!book.ebookLink?.startsWith('/pdf/')) {
+      problems.push(`books/${slug}.json ebookLink should be a site PDF so the cover works without JavaScript`);
+    }
+  }
+
+  assert.deepEqual(problems, []);
+  assert.match(libraryPage, /<BookDialog/);
+  assert.match(libraryPage, /href=\{book\.data\.ebookLink\}/);
+  assert.match(libraryPage, /data-book-dialog-trigger=/);
+});
+
+test('scheduled Pages builds refresh the podcast snapshot without blocking the publish', async () => {
+  const workflow = await readFile(join(rootDir, '.github/workflows/github-pages.yml'), 'utf8');
+  const refreshStep = workflow.match(/- name: Refresh podcast feed snapshot\n([\s\S]*?)\n\n/)?.[1] ?? '';
+
+  assert.match(workflow, /schedule:/);
+  assert.match(refreshStep, /continue-on-error: true/);
+  assert.match(refreshStep, /run: bun --no-env-file scripts\/podcast-feed-snapshot\.ts/);
+  assert.equal(
+    workflow.indexOf('- name: Refresh podcast feed snapshot') < workflow.indexOf('- name: Build website'),
+    true,
+  );
+});
+
+test('Garden assessment counts every pick and restores answers saved in either shape', async () => {
+  const { scoreAssessment, assessmentPicks } = await import('../packages/website/src/lib/garden-assessment.ts');
+
+  // Single choices score as they did before any question took several answers.
+  assert.deepEqual(
+    scoreAssessment({ q1: ['build'], q2: ['build'], q3: ['story'], q4: ['story'], q5: ['local'], q6: ['learn'], q7: ['steward'] }),
+    { primary: 'build', secondary: 'story', score: 2 },
+  );
+
+  // Every ticked box counts. Without the two checkbox groups these single
+  // choices would tie all five paths; with them, Build leads on 3 of 7.
+  assert.deepEqual(
+    scoreAssessment({ q1: ['build', 'story'], q2: ['local'], q3: ['build', 'steward'], q4: ['build'], q5: ['story'], q6: ['steward'], q7: ['learn'] }),
+    { primary: 'build', secondary: null, score: 3 },
+  );
+
+  // A question adds at most one point to a path: ticking every box lifts all
+  // five paths equally, and a repeated pick counts once.
+  assert.deepEqual(
+    scoreAssessment({
+      q1: ['learn', 'local', 'build', 'story', 'steward'],
+      q2: ['local'],
+      q3: ['story', 'story'],
+      q4: ['story'],
+      q5: ['learn'],
+      q6: ['story'],
+      q7: ['local'],
+    }),
+    { primary: 'story', secondary: null, score: 4 },
+  );
+
+  // Answers saved before this change held one path string per question.
+  assert.deepEqual(assessmentPicks('learn', true), ['learn']);
+  assert.deepEqual(assessmentPicks(['local', 'unknown', 'local', 'build'], true), ['local', 'build']);
+  assert.deepEqual(assessmentPicks(['story', 'build'], false), ['story']);
+  assert.deepEqual(assessmentPicks(undefined, false), []);
+  assert.deepEqual(assessmentPicks({ path: 'learn' }, true), []);
+});
+
+test('Garden assessment keeps answers picked before its script restores saved ones', async () => {
+  const { restoreAssessmentAnswers } = await import('../packages/website/src/lib/garden-assessment.ts');
+  const questions = [
+    { id: 'q1', multiple: true },
+    { id: 'q2', multiple: false },
+    { id: 'q3', multiple: true },
+  ];
+
+  // Nothing picked on the page yet: saved answers come back in either shape.
+  assert.deepEqual(restoreAssessmentAnswers(questions, {}, { q1: ['local', 'build'], q2: 'learn' }), {
+    answers: { q1: ['local', 'build'], q2: ['learn'] },
+    changed: false,
+  });
+
+  // A slow load: the visitor picked q3 before the script ran, and the saved
+  // payload has no q3. The pick stays, and the merged answers need saving.
+  assert.deepEqual(restoreAssessmentAnswers(questions, { q3: ['story'] }, { q1: ['local'] }), {
+    answers: { q1: ['local'], q3: ['story'] },
+    changed: true,
+  });
+
+  // A pick already on the page wins over a saved answer to the same question.
+  assert.deepEqual(restoreAssessmentAnswers(questions, { q2: ['steward'] }, { q2: ['learn'] }), {
+    answers: { q2: ['steward'] },
+    changed: true,
+  });
+
+  // The browser put back the same picks that were saved: nothing new to save.
+  assert.deepEqual(restoreAssessmentAnswers(questions, { q1: ['build', 'local'] }, { q1: ['local', 'build'] }), {
+    answers: { q1: ['build', 'local'] },
+    changed: false,
+  });
+
+  // No saved payload, or one that is not an object.
+  assert.deepEqual(restoreAssessmentAnswers(questions, {}, undefined), { answers: {}, changed: false });
+  assert.deepEqual(restoreAssessmentAnswers(questions, { q2: ['local'] }, 'not an object'), {
+    answers: { q2: ['local'] },
+    changed: true,
+  });
 });
 
 test('operational content snapshot generation quarantines unsafe records and rejects non-published input', () => {
@@ -796,6 +1292,46 @@ test('the committed fallback snapshot projects to itself', async () => {
   }
 });
 
+test('seed files and the agent write the same fallback snapshot for the same content', async () => {
+  // content:snapshot (seed files) and content:snapshot:from-agent write the
+  // same file, so for the same content they must write the same bytes,
+  // whatever key order a seed file uses (PRD-1421).
+  const committed = JSON.parse(await readFile(snapshotPath, 'utf8'));
+  const reversed = (value) => {
+    if (Array.isArray(value)) return value.map(reversed);
+    if (!value || typeof value !== 'object') return value;
+    return Object.fromEntries(Object.entries(value).reverse().map(([key, nested]) => [key, reversed(nested)]));
+  };
+  const folders = {
+    themes: 'themes',
+    people: 'people',
+    chapters: 'chapters',
+    chapterInitiatives: 'chapter-initiatives',
+    guilds: 'guilds',
+    projects: 'projects',
+  };
+  const seedDir = await mkdtemp(join(tmpdir(), 'operational-seed-'));
+  try {
+    const input = {};
+    for (const [collection, folder] of Object.entries(folders)) {
+      await mkdir(join(seedDir, folder));
+      for (const { slug, id: _id, ...record } of committed[collection]) {
+        await writeFile(join(seedDir, folder, `${slug}.json`), `${JSON.stringify(reversed(record), null, 2)}\n`);
+      }
+      input[collection] = await readOperationalSeedCollection(seedDir, folder);
+    }
+    const rebuilt = toPublicOperationalContentSnapshot({ ...input, generatedAt: committed.generatedAt });
+    // Compared as lines of the written file, so key order counts.
+    const actual = JSON.stringify(rebuilt, null, 2).split('\n');
+    const expected = JSON.stringify(committed, null, 2).split('\n');
+    const line = expected.findIndex((text, index) => actual[index] !== text);
+    assert.equal(line, -1, `line ${line + 1}: expected ${expected[line]?.trim()}, got ${actual[line]?.trim()}`);
+    assert.equal(actual.length, expected.length);
+  } finally {
+    await rm(seedDir, { recursive: true, force: true });
+  }
+});
+
 test('chapter image projection is stable when a published snapshot is projected again', () => {
   const first = projectChapters([
     {
@@ -855,6 +1391,32 @@ test('chapter image migration adds alt text and credit without disturbing live c
   assert.doesNotMatch(migration, /STORAGE_TIGRIS_SECRET|DATABASE_URL/);
 });
 
+test('alert episode migration makes only open snapshot alerts unique and keeps the alert history', async () => {
+  const migration = await readFile(snapshotAlertEpisodesMigrationPath, 'utf8');
+
+  assert.match(migration, /add column if not exists resolved_at timestamptz;/);
+  // A resolved row no longer blocks the alert for the record's next episode.
+  assert.match(
+    migration,
+    /create unique index content_review_notification_quarantine_idx\s+on content\.review_notifications \(kind, record_collection, record_slug\)\s+where kind = 'record_quarantined' and resolved_at is null;/
+  );
+  assert.match(
+    migration,
+    /create unique index content_review_notification_image_withheld_idx\s+on content\.review_notifications \(record_slug\)\s+where kind = 'chapter_image_withheld' and resolved_at is null;/
+  );
+  // The earlier migrations create these names only when they are missing, so
+  // applying one of them after this keeps the open-only definition.
+  const reviewNotificationsMigration = await readFile(
+    join(rootDir, 'packages/agent/migrations/026_content_review_notifications.sql'),
+    'utf8'
+  );
+  const imageMigration = await readFile(chapterImageAltCreditMigrationPath, 'utf8');
+  assert.match(reviewNotificationsMigration, /create unique index if not exists content_review_notification_quarantine_idx/);
+  assert.match(imageMigration, /create unique index if not exists content_review_notification_image_withheld_idx/);
+  // Sent alerts stay on record: no row is removed or rewritten.
+  assert.doesNotMatch(migration, /delete from|truncate|update content\.review_notifications/i);
+});
+
 test('chapter upload migration preserves legacy URLs and projects only a Directus file id', async () => {
   const migration = await readFile(chapterImageUploadsMigrationPath, 'utf8');
   assert.match(migration, /add column if not exists image_file uuid/);
@@ -903,6 +1465,9 @@ test('Directus operational enrichment targets public guilds and visible initiati
   assert.deepEqual(guildImageStatuses.sort(), ['dev-guild:approved', 'writers-guild:approved']);
   for (const slug of requiredEnrichedInitiativeSlugs) {
     assert.equal(initiativeSlugs.has(slug), true);
+  }
+  for (const slug of inactiveInitiativeSlugs) {
+    assert.equal(initiativeSlugs.has(slug), false);
   }
   assert.equal(enrichment.chapterInitiatives.some((initiative) => initiative.chapterSlug === 'uncommons'), false);
   assert.equal(emailLike.test(JSON.stringify(enrichment)), false);
@@ -1051,4 +1616,19 @@ test('operational content migration preserves existing Directus-owned rows', asy
   assert.doesNotMatch(script, /data = excluded\.data/);
   assert.match(migration, /join content\.guilds guild on guild\.slug = project\.guild_slug/);
   assert.match(migration, /guild\.publication_status = 'published'/);
+});
+
+test('content dates read as words and never show a day that is not on the calendar', () => {
+  assert.equal(formatContentDate('2026'), '2026');
+  assert.equal(formatContentDate('2026-03'), 'Mar 2026');
+  assert.equal(formatContentDate(' 2026-03-05 '), 'Mar 5, 2026');
+  assert.equal(formatContentDate('2024-02-29'), 'Feb 29, 2024');
+  assert.equal(formatContentDate('2026-02-29'), 'Feb 2026');
+  assert.equal(formatContentDate('2026-02-31'), 'Feb 2026');
+  assert.equal(formatContentDate('2026-04-31'), 'Apr 2026');
+  assert.equal(formatContentDate('2026-03-00'), 'Mar 2026');
+  assert.equal(formatContentDate('2026-13'), '2026');
+  assert.equal(formatContentDate('2026-00-10'), '2026');
+  assert.equal(formatContentDate('March 2026'), '');
+  assert.equal(formatContentDate(undefined), '');
 });

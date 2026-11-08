@@ -1,0 +1,353 @@
+# PRD-1409 nine-row repair on production, 2026-11-07 (network-agent v79, main 1358466).
+# Run inside the agent machine with: fly ssh console -a network-agent -C "node -e 'eval(atob(process.argv[1]))' -- <base64 of repair-map-node-coordinates.cjs> [--apply]"
+# Runner sha256 dc600e3ded20d3be3fdacc03e96a2363bc6e6c55798180ca2e25549723b32536 (identical to main).
+
+## 1. Dry run before the change (about 07:01 UTC)
+{
+  "mode": "dry-run",
+  "ready": 9,
+  "total": 9,
+  "report": [
+    {
+      "id": "f52473d0-4d12-4e4e-a726-0dbb62d870d2",
+      "place": "Florida",
+      "status": "approved",
+      "current": [
+        90,
+        97.76261
+      ],
+      "expected": [
+        90,
+        97.76261
+      ],
+      "proposed": [
+        27.756767,
+        -81.463984
+      ],
+      "ready": true
+    },
+    {
+      "id": "79b7119a-6d6f-4680-9d6d-30fc7b509f43",
+      "place": "Taiwan",
+      "status": "approved",
+      "current": [
+        90,
+        176.912492
+      ],
+      "expected": [
+        90,
+        176.912492
+      ],
+      "proposed": [
+        23.973937,
+        120.982018
+      ],
+      "ready": true
+    },
+    {
+      "id": "8804877c-508e-446d-bf27-bbb23b76598a",
+      "place": "Awka",
+      "status": "approved",
+      "current": [
+        56.462976,
+        -180
+      ],
+      "expected": [
+        56.462976,
+        -180
+      ],
+      "proposed": [
+        6.218947,
+        7.077437
+      ],
+      "ready": true
+    },
+    {
+      "id": "21cb7662-1a87-4922-8373-4376f07a9c7c",
+      "place": "Port Harcourt",
+      "status": "approved",
+      "current": [
+        0,
+        0
+      ],
+      "expected": [
+        0,
+        0
+      ],
+      "proposed": [
+        4.767658,
+        7.018853
+      ],
+      "ready": true
+    },
+    {
+      "id": "fc0cb8bd-7be9-4c48-a1d1-5ed013834e07",
+      "place": "Rotterdam, Netherlands",
+      "status": "approved",
+      "current": [
+        0,
+        0
+      ],
+      "expected": [
+        0,
+        0
+      ],
+      "proposed": [
+        51.924442,
+        4.47775
+      ],
+      "ready": true
+    },
+    {
+      "id": "10c4c9cb-baea-4e0b-983c-179c3eb88b1f",
+      "place": "Brooklyn, new york",
+      "status": "approved",
+      "current": [
+        -22.9068,
+        -43.1729
+      ],
+      "expected": [
+        -22.9068,
+        -43.1729
+      ],
+      "proposed": [
+        40.652601,
+        -73.949721
+      ],
+      "ready": true
+    },
+    {
+      "id": "0a76afe9-f1c1-4032-acf8-cd89f5329209",
+      "place": "Ashkelon, Israel",
+      "status": "approved",
+      "current": [
+        -22.9068,
+        -43.1729
+      ],
+      "expected": [
+        -22.9068,
+        -43.1729
+      ],
+      "proposed": [
+        31.665319,
+        34.565044
+      ],
+      "ready": true
+    },
+    {
+      "id": "1cc9c540-9678-4a62-9418-f0bc9431f378",
+      "place": "Ashkelon, Israel",
+      "status": "approved",
+      "current": [
+        -22.9068,
+        -43.1729
+      ],
+      "expected": [
+        -22.9068,
+        -43.1729
+      ],
+      "proposed": [
+        31.665319,
+        34.565044
+      ],
+      "ready": true
+    },
+    {
+      "id": "20bb327b-e9ca-4b1d-a1c5-999c57c5ec49",
+      "place": "Campinas",
+      "status": "approved",
+      "current": [
+        -20.157804,
+        -48.541667
+      ],
+      "expected": [
+        -20.157804,
+        -48.541667
+      ],
+      "proposed": [
+        -22.905639,
+        -47.059564
+      ],
+      "ready": true
+    }
+  ]
+}
+
+## 2. --apply
+{
+  "mode": "apply",
+  "runId": "0f27b0a7-439b-494b-bbbb-201c5a01f930",
+  "changed": 9,
+  "total": 9
+}
+
+## 3. Dry run after the change: no row is left at its old values
+{
+  "mode": "dry-run",
+  "ready": 0,
+  "total": 9,
+  "report": [
+    {
+      "id": "f52473d0-4d12-4e4e-a726-0dbb62d870d2",
+      "place": "Florida",
+      "status": "approved",
+      "current": [
+        27.756767,
+        -81.463984
+      ],
+      "expected": [
+        90,
+        97.76261
+      ],
+      "proposed": [
+        27.756767,
+        -81.463984
+      ],
+      "ready": false
+    },
+    {
+      "id": "79b7119a-6d6f-4680-9d6d-30fc7b509f43",
+      "place": "Taiwan",
+      "status": "approved",
+      "current": [
+        23.973937,
+        120.982018
+      ],
+      "expected": [
+        90,
+        176.912492
+      ],
+      "proposed": [
+        23.973937,
+        120.982018
+      ],
+      "ready": false
+    },
+    {
+      "id": "8804877c-508e-446d-bf27-bbb23b76598a",
+      "place": "Awka",
+      "status": "approved",
+      "current": [
+        6.218947,
+        7.077437
+      ],
+      "expected": [
+        56.462976,
+        -180
+      ],
+      "proposed": [
+        6.218947,
+        7.077437
+      ],
+      "ready": false
+    },
+    {
+      "id": "21cb7662-1a87-4922-8373-4376f07a9c7c",
+      "place": "Port Harcourt",
+      "status": "approved",
+      "current": [
+        4.767658,
+        7.018853
+      ],
+      "expected": [
+        0,
+        0
+      ],
+      "proposed": [
+        4.767658,
+        7.018853
+      ],
+      "ready": false
+    },
+    {
+      "id": "fc0cb8bd-7be9-4c48-a1d1-5ed013834e07",
+      "place": "Rotterdam, Netherlands",
+      "status": "approved",
+      "current": [
+        51.924442,
+        4.47775
+      ],
+      "expected": [
+        0,
+        0
+      ],
+      "proposed": [
+        51.924442,
+        4.47775
+      ],
+      "ready": false
+    },
+    {
+      "id": "10c4c9cb-baea-4e0b-983c-179c3eb88b1f",
+      "place": "Brooklyn, new york",
+      "status": "approved",
+      "current": [
+        40.652601,
+        -73.949721
+      ],
+      "expected": [
+        -22.9068,
+        -43.1729
+      ],
+      "proposed": [
+        40.652601,
+        -73.949721
+      ],
+      "ready": false
+    },
+    {
+      "id": "0a76afe9-f1c1-4032-acf8-cd89f5329209",
+      "place": "Ashkelon, Israel",
+      "status": "approved",
+      "current": [
+        31.665319,
+        34.565044
+      ],
+      "expected": [
+        -22.9068,
+        -43.1729
+      ],
+      "proposed": [
+        31.665319,
+        34.565044
+      ],
+      "ready": false
+    },
+    {
+      "id": "1cc9c540-9678-4a62-9418-f0bc9431f378",
+      "place": "Ashkelon, Israel",
+      "status": "approved",
+      "current": [
+        31.665319,
+        34.565044
+      ],
+      "expected": [
+        -22.9068,
+        -43.1729
+      ],
+      "proposed": [
+        31.665319,
+        34.565044
+      ],
+      "ready": false
+    },
+    {
+      "id": "20bb327b-e9ca-4b1d-a1c5-999c57c5ec49",
+      "place": "Campinas",
+      "status": "approved",
+      "current": [
+        -22.905639,
+        -47.059564
+      ],
+      "expected": [
+        -20.157804,
+        -48.541667
+      ],
+      "proposed": [
+        -22.905639,
+        -47.059564
+      ],
+      "ready": false
+    }
+  ]
+}

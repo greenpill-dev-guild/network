@@ -8,6 +8,7 @@ import {
   DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS,
   createDirectusClient,
 } from './directus-operational-content-setup.ts';
+import { applyDirectusOperatorDashboard } from './directus-studio-dashboard.ts';
 
 const OPERATIONAL_COLLECTION_META = Object.freeze({
   themes: {
@@ -108,7 +109,7 @@ const MAP_NODE_MODERATION_COLLECTIONS = Object.freeze([
 
 // Optional collections: configured when the migration has landed, silently
 // skipped otherwise (unlike the core lists, which fail hard).
-const OPTIONAL_CONTENT_COLLECTIONS = Object.freeze(['review_notifications']);
+const OPTIONAL_CONTENT_COLLECTIONS = Object.freeze(['review_notifications', 'publish_health']);
 const OPTIONAL_INTAKE_COLLECTIONS = Object.freeze(['map_node_intake_settings']);
 const OPTIONAL_IMPACT_COLLECTIONS = Object.freeze(['chapter_impact_snapshots']);
 
@@ -117,8 +118,17 @@ const OPTIONAL_COLLECTION_META = Object.freeze({
     hidden: false,
     singleton: false,
     icon: 'notifications_active',
-    note: 'Delivery audit for content review notifications and public-snapshot quarantine alerts. Failed rows need operator follow-up; quarantined rows mean a record is missing from the public site.',
+    note: 'Delivery audit for content review notifications and public-snapshot quarantine alerts. Failed rows need operator follow-up; a quarantined row with no Resolved At time means the record is still missing from the public site.',
     display_template: '{{ kind }} · {{ status }}',
+  },
+  // One row the agent's watchdog keeps. The operator dashboard shows it, so it
+  // stays out of the sidebar. Not a singleton: Insights panels skip those.
+  publish_health: {
+    hidden: true,
+    singleton: false,
+    icon: 'monitor_heart',
+    note: 'Website publish health recorded by the agent watchdog: when the deployed snapshot was made, when content last changed, the latest Pages run, and open alerts. Read it on the Operator overview dashboard.',
+    display_template: '{{ checked_at }}',
   },
   map_node_intake_settings: {
     hidden: false,
@@ -133,6 +143,22 @@ const OPTIONAL_COLLECTION_META = Object.freeze({
     note: 'Read-only cached impact results per chapter. Check status and last error here after editing a chapter\'s impact sources.',
     display_template: '{{ chapter_slug }}',
   },
+});
+
+// Sidebar order. Data Studio opens a new user on the first collection in it,
+// so a steward lands on Chapters, where the My chapter bookmark sits, and not
+// on the first collection by name (Chapter Impact Snapshots). Every other
+// collection this setup manages has its sort cleared, so an order set by hand
+// in the Data Model cannot put one ahead of these; they follow, by name.
+const COLLECTION_SORT: Readonly<Record<string, number>> = Object.freeze({
+  chapters: 1,
+  chapter_initiatives: 2,
+  chapter_update_requests: 3,
+  guilds: 4,
+  projects: 5,
+  people: 6,
+  themes: 7,
+  chapter_impact_snapshots: 8,
 });
 
 // Purely technical storage that only clutters the admin sidebar.
@@ -385,12 +411,12 @@ const number = (sort, note = null, width = 'half') => fieldMeta({
   interface: 'input',
   options: { type: 'number' },
 });
-const url = (sort, note = null, width = 'half') => fieldMeta({
+const url = (sort, note = null, width = 'half', options = null) => fieldMeta({
   sort,
   note,
   width,
   interface: 'input',
-  options: { iconRight: 'link' },
+  options: { iconRight: 'link', ...(options ?? {}) },
 });
 const imageFile = (sort, note = null, width = 'half') => fieldMeta({
   sort,
@@ -542,7 +568,7 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
     oneliner: input(8, 'One-line public description.', 'half'),
     image: url(9, 'Primary public image URL.', 'half'),
     cadence: input(10, 'Public meeting or working cadence.', 'half'),
-    stewards: json(11, 'Public steward cards for this guild.'),
+    stewards: json(11, 'Hats and roles on the guild page, one entry per hat: {"group": "Guild stewardship", "role": "Core steward", "name": "…"}. Use "holders": ["…", "…"] for several people, leave both out for an open hat, and add "href" to link the hat. Entries without "role" are not shown.'),
     steward_slugs: tags(12, 'Person slugs for public steward references.'),
     member_slugs: tags(13, 'Person slugs for public member references.'),
     public_members: json(14, 'Public member cards.'),
@@ -550,11 +576,11 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
     links: json(16, 'Array of public guild links.'),
     connect_links: json(17, 'Public ways to connect with the guild.'),
     mandate_paragraphs: json(18, 'Public mandate paragraphs.'),
-    outputs: json(19, 'Public guild outputs.'),
+    outputs: json(19, 'Work the guild published: {"kind": "Book", "date": "2024", "label": "…", "summary": "…", "href": "…", "contributors": ["…"]}. The section reads "Published by the guild" when every entry has a kind.'),
     principles: json(20, 'Public guild principles.'),
     featured_weight: number(21, 'Higher numbers appear earlier in featured placements.', 'half'),
-    proof_signals: json(22, 'Array of public proof signals.'),
-    media: json(23, 'Optional public media metadata.'),
+    proof_signals: json(22, 'Array of public proof signals. Not shown on the guild page.'),
+    media: json(23, 'Image fields, plus "appearances" for the Media and appearances section: [{"kind": "podcast", "source": "…", "title": "…", "href": "…", "date": "2026-11-05", "people": ["…"]}]. The first appearance is the lead card.'),
     seo: json(24, 'Optional SEO controls.'),
     ...workflow(),
   },
@@ -593,7 +619,10 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
     summary: requiredTextarea(5, 'Plain-language summary of what should change and why.'),
     proposed_summary: textarea(6, 'Optional replacement text for the public chapter summary. Leave blank if the current summary should stay.'),
     proposed_primary_link: url(7, 'Optional replacement main public link for the chapter.', 'half'),
-    proposed_image: url(8, 'Optional replacement public image URL.', 'half'),
+    // The column is `not null default ''`. Data Studio saves null for an
+    // emptied input unless told otherwise, and Directus refuses null here, so
+    // without `clear` a proposed image could never be taken off a request.
+    proposed_image: url(8, 'Optional replacement public image URL.', 'half', { clear: true }),
     proposed_image_alt: textarea(9, 'Required if proposing a new image. Describe the image for screen readers.'),
     proposed_image_credit: input(10, 'Optional public credit for the proposed image.', 'half'),
     links: fieldMeta({
@@ -851,11 +880,24 @@ const FIELD_META_OVERRIDES = Object.freeze({
   chapter_update_requests: {
     proposed_primary_link: urlValidation('proposed_primary_link'),
     proposed_image: urlValidation('proposed_image'),
+    // Data Studio only treats null as missing, so this works because
+    // proposed_image_alt is nullable with no default (migration 031).
     proposed_image_alt: {
       conditions: [
         {
           name: 'Alt text required with a proposed image',
-          rule: { proposed_image: { _nempty: true } },
+          // One top-level key: Directus skips a condition whose rule has more.
+          rule: {
+            _and: [
+              // `_nempty` alone counts null as a value, and null is what an
+              // emptied input holds unless it saves an empty string.
+              { proposed_image: { _nnull: true } },
+              { proposed_image: { _nempty: true } },
+              // A reviewer can still send back, decline, or archive a request
+              // that lacks alt text. Drafting, submitting, and accepting need it.
+              { request_status: { _nin: ['needs_changes', 'declined', 'archived'] } },
+            ],
+          },
           required: true,
         },
       ],
@@ -886,6 +928,26 @@ const FIELD_META_ADDITIONS = Object.freeze({
   },
 });
 
+// A read-only timestamp shown as "12 minutes ago", here and in the operator
+// dashboard's freshness panel, which renders fields through their display.
+const relativeTime = (sort: number, note: string | null = null) => ({
+  sort,
+  width: 'half',
+  interface: 'datetime',
+  display: 'datetime',
+  display_options: { relative: true },
+  readonly: true,
+  note,
+});
+
+// GitHub Actions run conclusions as the publish-health watchdog stores them.
+const PAGES_CONCLUSION_CHOICES = Object.freeze([
+  { text: 'Success', value: 'success', foreground: '#FFFFFF', background: '#2F7D32' },
+  { text: 'Failure', value: 'failure', foreground: '#FFFFFF', background: '#B42318' },
+  { text: 'Cancelled', value: 'cancelled', foreground: '#FFFFFF', background: '#7D4F00' },
+  { text: 'Timed out', value: 'timed_out', foreground: '#FFFFFF', background: '#B42318' },
+]);
+
 // Field metadata for the optional collections (only applied when present).
 const OPTIONAL_FIELD_META = Object.freeze({
   review_notifications: {
@@ -915,6 +977,7 @@ const OPTIONAL_FIELD_META = Object.freeze({
     provider_error: { sort: 10, width: 'half', readonly: true },
     sent_at: { sort: 11, width: 'half', interface: 'datetime', readonly: true },
     created_at: { sort: 12, width: 'half', interface: 'datetime', readonly: true },
+    resolved_at: { sort: 13, width: 'half', interface: 'datetime', readonly: true, note: 'Quarantine and withheld-image alerts only. Set when a later public snapshot no longer drops the record or withholds the image. Empty means the record is still affected; it alerts again only after this is set.' },
   },
   map_node_intake_settings: {
     live_onboarding_enabled: {
@@ -931,6 +994,30 @@ const OPTIONAL_FIELD_META = Object.freeze({
     },
     updated_by: { sort: 3, width: 'half', readonly: true },
     updated_at: { sort: 4, width: 'half', interface: 'datetime', readonly: true },
+  },
+  publish_health: {
+    id: { sort: 1, width: 'half', readonly: true, hidden: true },
+    deployed_snapshot_generated_at: relativeTime(2, 'When the snapshot in the deployed site was made.'),
+    content_watermark: relativeTime(3, 'Latest change to published content. The site is behind while this is later than the deployed snapshot.'),
+    deployed_build_at: relativeTime(4, 'When the deployed site was built.'),
+    checked_at: relativeTime(5, 'Last watchdog check.'),
+    latest_pages_conclusion: {
+      sort: 6,
+      width: 'half',
+      readonly: true,
+      display: 'labels',
+      display_options: { choices: PAGES_CONCLUSION_CHOICES },
+    },
+    latest_pages_completed_at: relativeTime(7, 'When the latest GitHub Pages run finished.'),
+    latest_pages_run_url: { sort: 8, width: 'full', readonly: true },
+    stale_alert_active: { sort: 9, width: 'half', interface: 'boolean', readonly: true },
+    build_failed_alert_active: { sort: 10, width: 'half', interface: 'boolean', readonly: true },
+    stale_recovered_at: relativeTime(11),
+    build_failed_recovered_at: relativeTime(12),
+    latest_pages_run_id: { sort: 13, readonly: true, hidden: true },
+    stale_threshold_ms: { sort: 14, readonly: true, hidden: true },
+    created_at: { sort: 15, interface: 'datetime', readonly: true, hidden: true },
+    updated_at: { sort: 16, interface: 'datetime', readonly: true, hidden: true },
   },
   chapter_impact_snapshots: {
     chapter_slug: { sort: 1, width: 'half', readonly: true },
@@ -1025,6 +1112,7 @@ export function buildDirectusStudioMetadataPlan(
               unarchive_value: 'draft',
             }
             : {}),
+          sort: COLLECTION_SORT[base] ?? null,
           ...meta,
         },
       };
@@ -1117,6 +1205,35 @@ const STUDIO_BOOKMARKS = Object.freeze([
     filter: { chapter_slug: { _in: '$CURRENT_USER.chapter_editor_assignments.chapter_slug' } },
     fields: ['title', 'chapter_slug', 'publication_status', 'updated_at'],
   },
+  // The rest of the steward landing set: a guild steward's own records, and the
+  // impact sync result for the chapter whose impact sources a steward edits.
+  {
+    role: 'Greenpill Steward Editor',
+    collection: 'guilds',
+    bookmark: 'My guild',
+    icon: 'groups',
+    color: '#2f7d32',
+    filter: { slug: { _in: '$CURRENT_USER.guild_editor_assignments.guild_slug' } },
+    fields: ['name', 'type', 'publication_status', 'updated_at'],
+  },
+  {
+    role: 'Greenpill Steward Editor',
+    collection: 'projects',
+    bookmark: 'My guild projects',
+    icon: 'construction',
+    color: '#6a6a00',
+    filter: { guild_slug: { _in: '$CURRENT_USER.guild_editor_assignments.guild_slug' } },
+    fields: ['name', 'guild_slug', 'publication_status', 'updated_at'],
+  },
+  {
+    role: 'Greenpill Steward Editor',
+    collection: 'chapter_impact_snapshots',
+    bookmark: 'My chapter impact sync',
+    icon: 'insights',
+    color: '#2f7d32',
+    filter: { chapter_slug: { _in: '$CURRENT_USER.chapter_editor_assignments.chapter_slug' } },
+    fields: ['chapter_slug', 'synced_at', 'error_count', 'last_error'],
+  },
   {
     role: 'Greenpill Steward Editor',
     collection: 'chapter_update_requests',
@@ -1150,8 +1267,21 @@ const STUDIO_BOOKMARKS = Object.freeze([
     bookmark: 'Quarantined records',
     icon: 'report',
     color: '#b42318',
-    filter: { kind: { _eq: 'record_quarantined' } },
+    // Records missing from the public site right now. Resolved alerts stay in
+    // the collection as history and are left out of this list.
+    filter: { _and: [{ kind: { _eq: 'record_quarantined' } }, { resolved_at: { _null: true } }] },
     fields: ['record_collection', 'record_slug', 'quarantine_reason', 'status', 'created_at'],
+  },
+  {
+    role: 'Greenpill Trusted Publisher',
+    collection: 'review_notifications',
+    bookmark: 'Withheld chapter images',
+    icon: 'hide_image',
+    color: '#7d4f00',
+    // Published chapters shown without their image right now; the record slug
+    // is the chapter. Resolved alerts are history and stay out of the list.
+    filter: { _and: [{ kind: { _eq: 'chapter_image_withheld' } }, { resolved_at: { _null: true } }] },
+    fields: ['record_slug', 'status', 'created_at'],
   },
   {
     role: 'Greenpill Steward Editor',
@@ -1536,6 +1666,13 @@ export async function applyDirectusStudioMetadata(options: {
   const hiddenTechnical = await hideTechnicalCollections(client, available);
 
   const bookmarks = await applyDirectusStudioBookmarks(client, [
+    ...operationalCollections,
+    ...workflowCollections,
+    ...mapModerationCollections,
+    ...optionalCollections,
+  ]);
+
+  await applyDirectusOperatorDashboard(client, [
     ...operationalCollections,
     ...workflowCollections,
     ...mapModerationCollections,

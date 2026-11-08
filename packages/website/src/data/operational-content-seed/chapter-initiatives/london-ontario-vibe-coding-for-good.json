@@ -1,9 +1,9 @@
 {
   "chapterSlug": "london-ontario",
   "title": "Vibe Coding for Good",
-  "status": "active",
-  "summary": "Collaborative build night at Reimagine Co presented by Greenpill London Ontario on April 28, 2025.",
-  "description": "The current London Ontario chapter record uses the public TechAlliance event listing as the launch-safe proof for this local build-night initiative.",
+  "status": "inactive",
+  "summary": "Collaborative build night at Reimagine Co presented by Greenpill London Ontario on April 28, 2026.",
+  "description": "An evening build night at Reimagine Co, 206 Piccadilly St, London, Ontario, organized by Greenpill London Ontario with Heenal Rajani.",
   "themeSlugs": [
     "opensrc",
     "events",
@@ -23,12 +23,15 @@
   "proofSignals": [
     {
       "label": "Public build night",
-      "value": "April 28, 2025",
-      "source": "S033",
+      "value": "April 28, 2026",
+      "source": "TechAlliance",
       "href": "https://www.techalliance.ca/news/events/vibe-coding-for-good-a-collaborative-build-night-reimagine-co-presented-by-greenpill-london-ontario/"
     }
   ],
-  "impactSources": {},
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "relatedStorySlugs": [
     "vibe-coding-good-london-ontario"
   ],

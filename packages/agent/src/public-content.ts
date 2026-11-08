@@ -7,7 +7,7 @@ import type {
   QuarantinedOperationalRecord,
   WithheldChapterImage,
 } from '@greenpill-network/shared/public-content';
-import { enqueueChapterImageWithheldAlerts, enqueueQuarantineAlerts } from './content-operations.js';
+import { reconcileSnapshotAlerts } from './content-operations.js';
 import { createDatabaseClient } from './db.js';
 import { AgentDataError } from './map-nodes.js';
 
@@ -76,10 +76,41 @@ function toChapterProjectionInput(rows: UnknownRecord[], directusPublicUrl: stri
   return { chapters, uploadedChapterImageUrls };
 }
 
+// Serialize the observation and its alert changes across requests and replicas.
+// A lock taken after the content reads would still let an old observation reopen
+// an episode that a newer render already resolved. Advisory locks write no rows.
+//
+// The wait is bounded. A render that cannot get the lock in time serves the same
+// snapshot without touching alerts, and the next render records them. Without
+// the bound, one stuck render would hold up every other one, the website
+// build's included, each holding a database connection while it waits.
 export async function getPublicOperationalContentSnapshot(
   sql: SqlLike,
   now: Date | string = new Date(),
   directusPublicUrl = directusPublicUrlFromEnv()
+): Promise<PublicOperationalContentSnapshot> {
+  const render = async (tx: SqlLike) => {
+    await tx`set local lock_timeout = '2s'`;
+    await tx`select pg_advisory_xact_lock(713026030)`;
+    return readPublicOperationalContentSnapshot(tx, now, directusPublicUrl);
+  };
+  try {
+    // Database proofs and other callers may already own a transaction.
+    return typeof sql.savepoint === 'function'
+      ? await sql.savepoint(render)
+      : await sql.begin(render);
+  } catch (error) {
+    if ((error as { code?: unknown } | null)?.code !== '55P03') throw error;
+    console.warn('public_snapshot_alerts_skipped', { reason: 'lock_timeout' });
+    return readPublicOperationalContentSnapshot(sql, now, directusPublicUrl, { recordAlerts: false });
+  }
+}
+
+async function readPublicOperationalContentSnapshot(
+  sql: SqlLike,
+  now: Date | string = new Date(),
+  directusPublicUrl = directusPublicUrlFromEnv(),
+  { recordAlerts = true }: { recordAlerts?: boolean } = {}
 ): Promise<PublicOperationalContentSnapshot> {
   const themes = await sql`
     select slug, data
@@ -135,13 +166,15 @@ export async function getPublicOperationalContentSnapshot(
 
   if (quarantined.length > 0) {
     console.warn('public_operational_content_records_quarantined', quarantined);
-    await enqueueQuarantineAlerts(sql, quarantined);
   }
 
   if (withheldChapterImages.length > 0) {
     console.warn('public_operational_content_chapter_images_withheld', withheldChapterImages);
-    await enqueueChapterImageWithheldAlerts(sql, withheldChapterImages);
   }
+
+  // Also runs when nothing is quarantined or withheld: only a render that no
+  // longer finds a record affected can end that record's alert episode.
+  if (recordAlerts) await reconcileSnapshotAlerts(sql, { quarantined, withheldChapterImages });
 
   return snapshot;
 }

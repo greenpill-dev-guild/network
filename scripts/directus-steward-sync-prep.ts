@@ -27,7 +27,6 @@ type ChapterRecord = {
   country?: string;
   summary?: string;
   primary_link?: string;
-  image?: string;
 };
 
 type PrepResult = {
@@ -116,6 +115,13 @@ function chapterLabel(chapter: ChapterRecord) {
   return cleanString(chapter.name) || chapter.slug;
 }
 
+// A prepared draft proposes nothing until a steward edits it: accepting it as
+// prepared must leave the chapter as it was. The current summary and primary
+// link are safe to preload, because applying them again changes nothing.
+//
+// The image is not. An accepted image becomes the chapter's one image: it
+// replaces an uploaded one and takes the request's alt text and credit, blank
+// included. So the three image fields are left for the steward to fill in.
 export function buildChapterUpdateRequestDraft(chapter: ChapterRecord, options: Pick<PrepOptions, 'titlePrefix'>) {
   const name = chapterLabel(chapter);
   return {
@@ -124,15 +130,12 @@ export function buildChapterUpdateRequestDraft(chapter: ChapterRecord, options: 
     summary: `Steward sync draft for reviewing ${name}'s public chapter profile before publisher review.`,
     proposed_summary: cleanString(chapter.summary),
     proposed_primary_link: cleanString(chapter.primary_link),
-    proposed_image: cleanString(chapter.image),
-    proposed_image_alt: '',
-    proposed_image_credit: '',
     requested_changes: {
       starterChecklist: [
         'Confirm the public chapter summary is current.',
         'Confirm the primary public link and add any missing public links.',
         'Add proof signals with public sources when available.',
-        'Add or confirm a public image, alt text, and image credit.',
+        'Leave the proposed image empty to keep the current chapter image, or add a new public image URL with its alt text and credit.',
         'Move request_status to pending_review when ready for publisher review.',
       ],
       currentReference: {
@@ -183,7 +186,7 @@ async function resolveCollections(client) {
 async function getChapter(client, collection: string, slug: string): Promise<ChapterRecord> {
   const params = new URLSearchParams();
   params.set('filter[slug][_eq]', slug);
-  params.set('fields', 'slug,name,city,country,summary,primary_link,image');
+  params.set('fields', 'slug,name,city,country,summary,primary_link');
   params.set('limit', '1');
 
   const response = await client.request(`/items/${encodeCollection(collection)}?${params.toString()}`);

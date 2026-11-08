@@ -3,8 +3,8 @@
   "city": "Denver",
   "country": "United States",
   "region": "americas",
-  "status": "forming",
-  "summary": "Held as a legacy chapter record from the existing site. This pass did not find Denver in the provided priority research artifact, so detailed public copy needs steward backfill before launch.",
+  "status": "inactive",
+  "summary": "Greenpill Denver hosted a Monthly Earth Day cleanup on the South Platte River trail in March 2024 and is not active right now.",
   "introQuote": "",
   "introQuoteAttribution": "",
   "image": "",
@@ -20,28 +20,26 @@
   ],
   "links": [
     {
-      "label": "Legacy X account",
+      "label": "X",
       "url": "https://twitter.com/GreenpillDenver",
-      "subtext": "Needs steward backfill",
+      "subtext": "Chapter account",
       "handle": "@GreenpillDenver",
-      "action": "Review",
+      "action": "Follow",
       "icon": "x",
       "kind": "social"
     }
   ],
   "connectLinks": [],
   "relatedChapterSlugs": [],
+  "featuredStory": {},
   "featuredStorySlugs": [],
   "authoredResourceSlugs": [],
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "featuredWeight": 0,
-  "proofSignals": [
-    {
-      "label": "Legacy record",
-      "value": "Needs source review",
-      "source": "Existing repo content",
-      "href": "https://twitter.com/GreenpillDenver"
-    }
-  ],
+  "proofSignals": [],
   "media": {
     "image": "",
     "imageAlt": "",
@@ -49,7 +47,7 @@
   },
   "seo": {
     "title": "Greenpill Denver · Greenpill Network",
-    "description": "Greenpill Denver is a legacy chapter record that needs steward review before launch feature placement.",
+    "description": "Greenpill Denver hosted a Monthly Earth Day cleanup in March 2024 and is not active right now.",
     "ogImage": "",
     "canonicalPath": "/chapters/denver",
     "noindex": true

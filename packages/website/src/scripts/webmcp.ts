@@ -105,18 +105,21 @@ const summarizeMap = (input: Record<string, unknown> = {}) => {
       type: item.dataset.legendType || '',
       count: Number.parseInt(item.querySelector('[data-home-map-type-count]')?.textContent || '0', 10) || 0,
     }));
+  // The theme editor's toggles list every theme. The map narrows, then adds:
+  // a pressed toggle is a picked theme, and no pick means every theme shows.
   const themeFilters = Array.from(scope.querySelectorAll<HTMLButtonElement>('[data-theme-filter]'))
     .map((button) => ({
       theme: button.dataset.themeFilter || '',
-      label: cleanText(button.textContent || ''),
-      active: button.getAttribute('aria-pressed') !== 'false',
+      label: cleanText(button.querySelector('.gp-home-map-filter-option-label')?.textContent || button.textContent || ''),
+      picked: button.getAttribute('aria-pressed') === 'true',
     }));
+  const pickedThemes = themeFilters.filter((item) => item.picked);
 
   return {
     available: true,
     visibleNodeCount: nodeElements.length,
     visibleTypes,
-    activeThemes: themeFilters.filter((item) => item.active).map((item) => item.label || item.theme),
+    activeThemes: (pickedThemes.length ? pickedThemes : themeFilters).map((item) => item.label || item.theme),
     selectedNode: selected
       ? {
           kicker: cleanText(selected.querySelector('[data-selected-kicker]')?.textContent || ''),

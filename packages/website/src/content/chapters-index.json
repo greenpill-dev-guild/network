@@ -2,8 +2,8 @@
   "hero": {
     "overline": "Chapters",
     "title": "The local nodes of the Greenpill network.",
-    "dek": "Browse public chapter records, regional anchors, and source-backed activity across the network.",
-    "body": "The index should present the complete public chapter directory with clear region and status filtering.",
+    "dek": "Find a Greenpill chapter near you and see what it is working on.",
+    "body": "Filter by region and status to find a chapter near you.",
     "primaryCta": {
       "label": "Find a chapter",
       "href": "/chapters",
@@ -25,19 +25,19 @@
     "regionLabel": "Region",
     "statusLabel": "Status",
     "searchPlaceholder": "Search chapters",
-    "emptyState": "No source-backed chapter records match this filter yet."
+    "emptyState": "No chapters match this filter yet."
   },
   "proofSignals": [
     {
-      "label": "Primary chapter directory",
+      "label": "Chapter updates",
       "value": "Regen Coordination Hub",
-      "source": "S003",
-      "href": "https://hub.regencoordination.xyz/c/updates/chapter-updates/14"
+      "source": "Regen Hub",
+      "href": "https://hub.regencoordination.xyz/c/greenpill/greenpill-chapters/14"
     }
   ],
   "seo": {
     "title": "Chapters · Greenpill Network",
-    "description": "Browse source-backed Greenpill chapter records, local activity, public proof links, and steward review gaps.",
+    "description": "Find Greenpill chapters around the world and see what each one is working on.",
     "ogImage": "",
     "canonicalPath": "/chapters",
     "noindex": false

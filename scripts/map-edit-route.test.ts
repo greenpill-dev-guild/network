@@ -227,11 +227,20 @@ test('built map edit route clears tokens before resource links and avoids token 
   assert.equal(html.includes('<a '), false);
 });
 
-test('built map edit route defines the H1 type token it relies on', () => {
-  // The standalone page carries its own inline tokens; a missing --gp-h1-size
-  // previously rendered the panel H1 at the tiny UA default size.
-  assert.match(routeHtml, /--gp-h1-size:\s*clamp\(/);
-  assert.match(routeHtml, /font-size:\s*var\(--gp-h1-size\)/);
+test('built map edit route takes the H1 type token from the shared token stylesheet', async () => {
+  // The page used to carry a partial inline copy of the tokens, and a missing
+  // --gp-h1-size once rendered the panel H1 at the tiny UA default size. It now
+  // imports gp-tokens.css, whose .gp-root base rules size the H1.
+  assert.match(routeHtml, /<body class="gp-root[ "]/);
+  assert.doesNotMatch(routeHtml, /--gp-bg:\s*#/i, 'no inline copy of the tokens');
+  const linkedCss = await Promise.all(
+    [...routeHtml.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)]
+      .map((match) => readFile(join(rootDir, 'packages/website/dist', match[1]), 'utf8'))
+  );
+  const inlineCss = [...routeHtml.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((match) => match[1]);
+  const css = [...linkedCss, ...inlineCss].join('\n');
+  assert.match(css, /--gp-h1-size:\s*clamp\(/);
+  assert.match(css, /\.gp-root h1[^{]*\{[^}]*font-size:\s*var\(--gp-h1-size\)/);
 });
 
 test('map edit ignores stale place-search responses', () => {

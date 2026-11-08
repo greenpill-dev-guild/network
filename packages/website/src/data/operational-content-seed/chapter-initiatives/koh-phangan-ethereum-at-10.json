@@ -1,9 +1,9 @@
 {
   "chapterSlug": "koh-pha-ngan",
   "title": "10 Years of Ethereum Phangan",
-  "status": "active",
-  "summary": "Public local event page connected to Greenpill Koh Phangan's regenerative finance and public-goods activity.",
-  "description": "The current Koh Phangan chapter record links a public Luma event page and keeps the event as a source-backed activation rather than a standalone public route.",
+  "status": "inactive",
+  "summary": "A celebration of Ethereum's tenth anniversary on July 30, 2025, hosted by GreenPill Phangan and ReFi Phangan at MESTO on Koh Phangan.",
+  "description": "An evening program on Koh Phangan that included the Ethereum Foundation's anniversary livestream.",
   "themeSlugs": [
     "events",
     "public",
@@ -24,11 +24,14 @@
     {
       "label": "Public event",
       "value": "10 Years of Ethereum",
-      "source": "S038",
+      "source": "Luma",
       "href": "https://luma.com/k057yjjx"
     }
   ],
-  "impactSources": {},
+  "impactSources": {
+    "impactEnabled": false,
+    "greenGoodsChainId": 42161
+  },
   "relatedStorySlugs": [],
   "relatedResourceSlugs": [
     "crypto-altruism-ep138-refi-phangan"

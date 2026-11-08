@@ -1,28 +1,36 @@
 ---
 import Button from '../ui/Button.astro';
+import Card from '../ui/Card.astro';
 import Text from '../ui/Text.astro';
+import type { AssessmentPath as PathId } from '../../lib/garden-assessment';
 
-// Local-only Garden Step 3 self-assessment. Seven questions, five
-// contribution paths. Answers and the computed result live ONLY in this
-// browser's localStorage — no account, no email, no backend, no analytics.
+// Local-only Garden Step 3 self-assessment: seven questions, five
+// contribution paths. Questions marked `multiple` take several answers
+// (checkboxes); the rest take one (radios). Answers and the computed result
+// live only in this browser's localStorage: no account, no email, no backend,
+// no analytics. Scoring lives in `lib/garden-assessment.ts`: every pick gives
+// its path one point, so a path's score is the number of questions whose
+// answers pointed to it.
 interface Props {
-  stewardCallHref?: string;
+  /** The steward booking link, `stewardCall` in `content/social-links.json`. */
+  stewardCallHref: string;
 }
 
-const { stewardCallHref = 'https://calendar.app.google/gia7UpaSVKwwEKxy5' } = Astro.props;
-
-type PathId = 'learn' | 'local' | 'build' | 'story' | 'steward';
+const { stewardCallHref } = Astro.props;
 
 const QUESTIONS: Array<{
   id: string;
   prompt: string;
+  /** Checkbox group ("Choose all that apply") instead of one radio choice. */
+  multiple?: boolean;
   options: Array<{ path: PathId; label: string }>;
 }> = [
   {
     id: 'q1',
     prompt: 'What pulls you toward regeneration right now?',
+    multiple: true,
     options: [
-      { path: 'learn', label: 'Understanding the ideas — regen, public goods, coordination' },
+      { path: 'learn', label: 'Understanding the ideas: regen, public goods, coordination' },
       { path: 'local', label: 'Doing something practical where I live' },
       { path: 'build', label: 'Building tools and open-source infrastructure' },
       { path: 'story', label: 'Documenting the work so it travels' },
@@ -42,13 +50,14 @@ const QUESTIONS: Array<{
   },
   {
     id: 'q3',
-    prompt: 'What is the strongest thing you bring today?',
+    prompt: 'What do you bring today?',
+    multiple: true,
     options: [
       { path: 'build', label: 'Technical skills: code, design, or data' },
       { path: 'story', label: 'Writing, media, or translation' },
       { path: 'local', label: 'Local knowledge and neighbors who trust me' },
       { path: 'steward', label: 'Organizing, facilitation, and follow-through' },
-      { path: 'learn', label: 'Curiosity — I am here to absorb' },
+      { path: 'learn', label: 'Curiosity: I am here to absorb' },
     ],
   },
   {
@@ -69,7 +78,7 @@ const QUESTIONS: Array<{
       { path: 'build', label: 'In a small crew, shipping iteratively' },
       { path: 'local', label: 'Side by side, in person, hands dirty' },
       { path: 'steward', label: 'Across groups, aligning and unblocking' },
-      { path: 'learn', label: 'Solo for now — reading at my own pace' },
+      { path: 'learn', label: 'Solo for now, reading at my own pace' },
       { path: 'story', label: 'One-on-one conversations worth retelling' },
     ],
   },
@@ -78,7 +87,7 @@ const QUESTIONS: Array<{
     prompt: 'Which Greenpill surface would you open first?',
     options: [
       { path: 'local', label: 'The chapters map' },
-      { path: 'learn', label: 'The Library — books, podcast, guides' },
+      { path: 'learn', label: 'The Library: books, podcast, guides' },
       { path: 'story', label: 'The field stories' },
       { path: 'build', label: 'The Dev Guild repos' },
       { path: 'steward', label: 'A call with a steward' },
@@ -103,15 +112,15 @@ const RESULTS: Array<{
   title: string;
   body: string;
   secondaryLabel: string;
-  primaryCta: { label: string; href: string; external?: boolean };
-  ghostCta?: { label: string; href: string; external?: boolean };
+  primaryCta: { label: string; href: string };
+  ghostCta?: { label: string; href: string };
 }> = [
   {
     path: 'learn',
     name: 'Learn',
     title: 'Start in the Library.',
     body: 'Read the books, queue the podcast, and follow the public guides. The knowledge commons is free, and understanding the ideas is a real contribution.',
-    secondaryLabel: 'Learn — browse the Library',
+    secondaryLabel: 'Learn (browse the Library)',
     primaryCta: { label: 'Browse the Library', href: '/library' },
   },
   {
@@ -119,7 +128,7 @@ const RESULTS: Array<{
     name: 'Local',
     title: 'Find your people on the ground.',
     body: 'Browse the chapter directory for activity near you, then put yourself on the network map so nearby regens can find you.',
-    secondaryLabel: 'Local — find a chapter near you',
+    secondaryLabel: 'Local (find a chapter near you)',
     primaryCta: { label: 'Browse chapters', href: '/chapters' },
     ghostCta: { label: 'Add yourself to the map', href: '/#join-map' },
   },
@@ -128,7 +137,7 @@ const RESULTS: Array<{
     name: 'Build',
     title: 'Build with the Dev Guild.',
     body: 'Open tooling, real deployments, and a public repo trail. Bring code, design, or data skills to the guild shipping the network’s stack.',
-    secondaryLabel: 'Build — visit the Dev Guild',
+    secondaryLabel: 'Build (visit the Dev Guild)',
     primaryCta: { label: 'Visit the Dev Guild', href: '/guilds/dev-guild' },
   },
   {
@@ -136,7 +145,7 @@ const RESULTS: Array<{
     name: 'Story',
     title: 'Help tell the network’s story.',
     body: 'Read how chapters document their field work, then bring your own reporting, writing, or translation to the commons.',
-    secondaryLabel: 'Story — read the field stories',
+    secondaryLabel: 'Story (read the field stories)',
     primaryCta: { label: 'Read the stories', href: '/stories' },
     ghostCta: { label: 'Visit the Writers Guild', href: '/guilds/writers-guild' },
   },
@@ -144,9 +153,9 @@ const RESULTS: Array<{
     path: 'steward',
     name: 'Steward',
     title: 'Talk to a steward.',
-    body: 'You sound ready for a human conversation — book a call to talk chapters, guilds, partnerships, or where your coordination skills land best.',
-    secondaryLabel: 'Steward — book a call',
-    primaryCta: { label: 'Book a steward call', href: stewardCallHref, external: true },
+    body: 'You sound ready for a human conversation. Book a call to talk chapters, guilds, partnerships, or where your coordination skills land best.',
+    secondaryLabel: 'Steward (book a call)',
+    primaryCta: { label: 'Book a steward call', href: stewardCallHref },
   },
 ];
 
@@ -161,27 +170,44 @@ const questionCount = QUESTIONS.length;
 
   <form class="gp-ga-form" data-ga-form action="#assessment" method="get">
     <ol class="gp-ga-questions">
-      {QUESTIONS.map((question, index) => (
-        <li>
-          <fieldset class="gp-ga-q">
-            <legend class="gp-ga-q-legend">
-              <span class="gp-ga-q-num" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
-              <span class="gp-ga-q-prompt">{question.prompt}</span>
-            </legend>
-            <div class="gp-ga-options">
-              {question.options.map((option) => {
-                const inputId = `ga-${question.id}-${option.path}`;
-                return (
-                  <label class="gp-ga-option" for={inputId}>
-                    <input type="radio" id={inputId} name={question.id} value={option.path} />
-                    <span>{option.label}</span>
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
-        </li>
-      ))}
+      {QUESTIONS.map((question, index) => {
+        // The cue is an instruction, so it describes the group instead of
+        // joining its name (the legend).
+        const hintId = question.multiple ? `ga-${question.id}-hint` : undefined;
+        return (
+          <li>
+            <Card
+              as="fieldset"
+              class="gp-ga-q"
+              data-ga-question={question.id}
+              data-ga-multiple={question.multiple ? 'true' : undefined}
+              aria-describedby={hintId}
+            >
+              <legend class="gp-ga-q-legend">
+                <span class="gp-ga-q-num" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+                <span class="gp-ga-q-prompt">{question.prompt}</span>
+              </legend>
+              {hintId && <p class="gp-ga-q-hint" id={hintId}>Choose all that apply</p>}
+              <div class="gp-ga-options">
+                {question.options.map((option) => {
+                  const inputId = `ga-${question.id}-${option.path}`;
+                  return (
+                    <label class="gp-ga-option" for={inputId}>
+                      <input
+                        type={question.multiple ? 'checkbox' : 'radio'}
+                        id={inputId}
+                        name={question.id}
+                        value={option.path}
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </Card>
+          </li>
+        );
+      })}
     </ol>
 
     <div class="gp-ga-form-foot">
@@ -201,7 +227,16 @@ const questionCount = QUESTIONS.length;
     </noscript>
   </form>
 
-  <div class="gp-ga-result-wrap" data-ga-result-wrap hidden role="region" aria-label="Your assessment result">
+  <Card
+    variant="elevated"
+    padded="lg"
+    stack="md"
+    class="gp-ga-result-wrap"
+    data-ga-result-wrap
+    hidden
+    role="region"
+    aria-label="Your assessment result"
+  >
     {RESULTS.map((result) => (
       <article
         class="gp-ga-result"
@@ -214,26 +249,15 @@ const questionCount = QUESTIONS.length;
         <Text as="h4" variant="h3" class="gp-ga-result-title">{result.title}</Text>
         <Text variant="body" class="gp-ga-result-body">{result.body}</Text>
         <div class="gp-ga-result-ctas">
-          <Button
-            href={result.primaryCta.href}
-            target={result.primaryCta.external ? '_blank' : undefined}
-            rel={result.primaryCta.external ? 'noopener noreferrer' : undefined}
-          >
-            {result.primaryCta.label}
-          </Button>
+          <Button href={result.primaryCta.href}>{result.primaryCta.label}</Button>
           {result.ghostCta && (
-            <Button
-              href={result.ghostCta.href}
-              variant="ghost"
-              target={result.ghostCta.external ? '_blank' : undefined}
-              rel={result.ghostCta.external ? 'noopener noreferrer' : undefined}
-            >
-              {result.ghostCta.label}
-            </Button>
+            <Button href={result.ghostCta.href} variant="ghost">{result.ghostCta.label}</Button>
           )}
         </div>
       </article>
     ))}
+
+    <p class="gp-ga-basis" data-ga-basis></p>
 
     <p class="gp-ga-secondary" data-ga-secondary hidden>
       Close second: <a data-ga-secondary-link href="/garden#assessment"></a>
@@ -243,14 +267,24 @@ const questionCount = QUESTIONS.length;
       <p class="gp-ga-saved" data-ga-saved></p>
       <button type="button" class="gp-ga-reset" data-ga-retake>Retake the assessment</button>
     </div>
-  </div>
+  </Card>
 </div>
 
 <script>
+  import {
+    isAssessmentPath,
+    restoreAssessmentAnswers,
+    scoreAssessment,
+    type AssessmentAnswers as Answers,
+    type AssessmentResult as Result,
+  } from '../../lib/garden-assessment';
+
   (() => {
+    // The key keeps its v1 name so answers saved before multi-answer
+    // questions still restore; the payload's `version` tracks its shape
+    // (v1: one path string per question; v2: an array of paths).
     const STORAGE_KEY = 'greenpill.gardenAssessment.v1';
-    const PATH_ORDER = ['learn', 'local', 'build', 'story', 'steward'] as const;
-    type PathId = (typeof PATH_ORDER)[number];
+    const STORAGE_VERSION = 2;
 
     const root = document.querySelector('[data-garden-assessment]') as HTMLElement | null;
     if (!root) return;
@@ -263,23 +297,31 @@ const questionCount = QUESTIONS.length;
     const resultPanels = Array.from(root.querySelectorAll('[data-ga-result]')) as HTMLElement[];
     const secondaryEl = root.querySelector('[data-ga-secondary]') as HTMLElement | null;
     const secondaryLink = root.querySelector('[data-ga-secondary-link]') as HTMLAnchorElement | null;
+    const basisEl = root.querySelector('[data-ga-basis]') as HTMLElement | null;
     const savedEl = root.querySelector('[data-ga-saved]') as HTMLElement | null;
     const retakeButton = root.querySelector('[data-ga-retake]') as HTMLButtonElement | null;
     if (!form || !resultWrap) return;
 
-    const questionNames = Array.from(
-      new Set(
-        (Array.from(form.querySelectorAll('input[type="radio"]')) as HTMLInputElement[]).map((input) => input.name)
-      )
-    );
-    const questionCount = questionNames.length;
-    const isPath = (value: unknown): value is PathId => PATH_ORDER.includes(value as PathId);
+    const questions = (Array.from(form.querySelectorAll('[data-ga-question]')) as HTMLElement[])
+      .map((fieldset) => ({
+        id: fieldset.dataset.gaQuestion ?? '',
+        multiple: fieldset.dataset.gaMultiple === 'true',
+      }))
+      .filter((question) => question.id !== '');
+    const questionCount = questions.length;
+    const inputsFor = (questionId: string) =>
+      Array.from(form.querySelectorAll(`input[name="${questionId}"]`)) as HTMLInputElement[];
 
-    const readAnswers = () => {
-      const answers: Record<string, PathId> = {};
-      for (const name of questionNames) {
-        const checked = form.querySelector(`input[name="${name}"]:checked`) as HTMLInputElement | null;
-        if (checked && isPath(checked.value)) answers[name] = checked.value;
+    // A question counts as answered once it has at least one pick: the
+    // checked radio, or every ticked box of a checkbox group.
+    const readAnswers = (): Answers => {
+      const answers: Answers = {};
+      for (const { id } of questions) {
+        const picks = inputsFor(id)
+          .filter((input) => input.checked)
+          .map((input) => input.value)
+          .filter(isAssessmentPath);
+        if (picks.length > 0) answers[id] = picks;
       }
       return answers;
     };
@@ -295,11 +337,11 @@ const questionCount = QUESTIONS.length;
       }
     };
 
-    const save = (answers: Record<string, PathId>, result: { primary: PathId; secondary: PathId | null } | null) => {
+    const save = (answers: Answers, result: Result | null) => {
       try {
         window.localStorage.setItem(
           STORAGE_KEY,
-          JSON.stringify({ version: 1, answers, result, updatedAt: new Date().toISOString() })
+          JSON.stringify({ version: STORAGE_VERSION, answers, result, updatedAt: new Date().toISOString() })
         );
       } catch {
         // Private-mode or full storage: the assessment still works, it just
@@ -315,20 +357,12 @@ const questionCount = QUESTIONS.length;
       }
     };
 
-    const computeResult = (answers: Record<string, PathId>) => {
-      const scores = new Map<PathId, number>(PATH_ORDER.map((path) => [path, 0]));
-      for (const value of Object.values(answers)) {
-        scores.set(value, (scores.get(value) ?? 0) + 1);
-      }
-      const ranked = [...PATH_ORDER].sort((a, b) => (scores.get(b) ?? 0) - (scores.get(a) ?? 0));
-      const primary = ranked[0];
-      const secondary = (scores.get(ranked[1]) ?? 0) === (scores.get(primary) ?? 0) ? ranked[1] : null;
-      return { primary, secondary };
-    };
-
     const syncProgress = () => {
       const answered = Object.keys(readAnswers()).length;
-      if (progressEl) progressEl.textContent = `${answered} of ${questionCount} answered`;
+      const progress = `${answered} of ${questionCount} answered`;
+      // Rewrite the live region only when the count changes, so ticking a
+      // second box in the same question is not announced again.
+      if (progressEl && progressEl.textContent !== progress) progressEl.textContent = progress;
       if (submitButton) submitButton.disabled = answered < questionCount;
       if (resetButton) resetButton.hidden = answered === 0;
     };
@@ -339,12 +373,17 @@ const questionCount = QUESTIONS.length;
       syncProgress();
     };
 
-    const showResult = (result: { primary: PathId; secondary: PathId | null }, updatedAt?: string) => {
+    const showResult = (result: Result, updatedAt?: string) => {
       let focusTarget: HTMLElement | null = null;
       for (const panel of resultPanels) {
         const active = panel.dataset.gaResult === result.primary;
         panel.hidden = !active;
-        if (active) focusTarget = panel.querySelector('.gp-ga-result-title');
+        if (active) {
+          focusTarget = panel.querySelector('.gp-ga-result-title');
+          if (basisEl) {
+            basisEl.textContent = `Your answers pointed to ${panel.dataset.gaName || result.primary} in ${result.score} of the ${questionCount} questions.`;
+          }
+        }
       }
       if (secondaryEl && secondaryLink) {
         const secondaryPanel = result.secondary
@@ -352,8 +391,19 @@ const questionCount = QUESTIONS.length;
           : undefined;
         if (secondaryPanel) {
           secondaryLink.textContent = secondaryPanel.dataset.gaSecondaryLabel || secondaryPanel.dataset.gaName || '';
-          const href = (secondaryPanel.querySelector('a') as HTMLAnchorElement | null)?.getAttribute('href');
-          if (href) secondaryLink.setAttribute('href', href);
+          const source = secondaryPanel.querySelector('a') as HTMLAnchorElement | null;
+          const href = source?.getAttribute('href');
+          if (source && href) {
+            secondaryLink.setAttribute('href', href);
+            // The panel's link went through the site-wide link rule when the
+            // page was built; copy its new-tab attributes too, so an external
+            // destination (the steward call) opens and is described the same way.
+            for (const name of ['target', 'rel', 'aria-describedby']) {
+              const value = source.getAttribute(name);
+              if (value === null) secondaryLink.removeAttribute(name);
+              else secondaryLink.setAttribute(name, value);
+            }
+          }
           secondaryEl.hidden = false;
         } else {
           secondaryEl.hidden = true;
@@ -389,7 +439,7 @@ const questionCount = QUESTIONS.length;
         syncProgress();
         return;
       }
-      const result = computeResult(answers);
+      const result = scoreAssessment(answers);
       save(answers, result);
       const focusTarget = showResult(result);
       if (focusTarget) {
@@ -401,23 +451,24 @@ const questionCount = QUESTIONS.length;
     resetButton?.addEventListener('click', resetAll);
     retakeButton?.addEventListener('click', () => {
       resetAll();
-      const firstOption = form.querySelector('input[type="radio"]') as HTMLInputElement | null;
+      const firstOption = form.querySelector('.gp-ga-option input') as HTMLInputElement | null;
       firstOption?.focus();
     });
 
-    // Restore the latest local state: re-check saved answers, and if the
-    // assessment was completed, show the recomputed result after refresh.
+    // Restore the latest local state. Picks made before this script ran (a
+    // slow load) stay; saved answers fill only the questions without one,
+    // and a merged state is saved. If every question is answered, show the
+    // recomputed result.
     const stored = loadStored();
-    if (stored?.answers && typeof stored.answers === 'object') {
-      for (const [name, value] of Object.entries(stored.answers)) {
-        if (!questionNames.includes(name) || !isPath(value)) continue;
-        const input = form.querySelector(`input[name="${name}"][value="${value}"]`) as HTMLInputElement | null;
-        if (input) input.checked = true;
-      }
-      const answers = readAnswers();
-      if (Object.keys(answers).length === questionCount) {
-        showResult(computeResult(answers), typeof stored.updatedAt === 'string' ? stored.updatedAt : undefined);
-      }
+    const restored = restoreAssessmentAnswers(questions, readAnswers(), stored?.answers);
+    for (const { id } of questions) {
+      const picks: string[] = restored.answers[id] ?? [];
+      for (const input of inputsFor(id)) input.checked = picks.includes(input.value);
+    }
+    if (restored.changed) save(restored.answers, null);
+    if (Object.keys(restored.answers).length === questionCount) {
+      const savedAt = !restored.changed && typeof stored?.updatedAt === 'string' ? stored.updatedAt : undefined;
+      showResult(scoreAssessment(restored.answers), savedAt);
     }
     syncProgress();
 
@@ -459,7 +510,6 @@ const questionCount = QUESTIONS.length;
   }
 
   .gp-ga-form[hidden],
-  .gp-ga-result-wrap[hidden],
   .gp-ga-result[hidden],
   .gp-ga-secondary[hidden],
   .gp-ga-reset[hidden] {
@@ -475,21 +525,21 @@ const questionCount = QUESTIONS.length;
     list-style: none;
   }
 
-  .gp-ga-q {
-    margin: 0;
-    padding: var(--gp-space-lg);
-    border: 1px solid var(--gp-border-soft);
-    border-radius: var(--gp-radius-lg);
-    background: var(--gp-card);
-    min-width: 0;
-  }
+  /* Each question is a Card fieldset (components/ui/Card.astro). */
 
+  /* Standard legend reset. A floated legend is no longer the fieldset's
+     "rendered legend", so it lays out inside the card padding like any other
+     block instead of sitting across the card's top border. The next block
+     clears it; the spacing lives on the legend because a cleared block's own
+     top margin is absorbed by clearance. */
   .gp-ga-q-legend {
+    float: inline-start;
+    inline-size: 100%;
     display: flex;
     align-items: baseline;
     gap: var(--gp-space-sm);
     padding: 0;
-    margin-bottom: var(--gp-space-md);
+    margin: 0 0 var(--gp-space-md);
     color: var(--gp-fg);
     font-family: var(--gp-font-body);
     font-size: var(--gp-body-md);
@@ -506,7 +556,25 @@ const questionCount = QUESTIONS.length;
     letter-spacing: 0.08em;
   }
 
+  .gp-ga-q-legend:has(+ .gp-ga-q-hint) {
+    margin-block-end: var(--gp-space-xs);
+  }
+
+  .gp-ga-q-hint {
+    clear: both;
+    margin: 0 0 var(--gp-space-md);
+    /* fg-muted, not fg-dim: small text on the card must hold 4.5:1. */
+    color: var(--gp-fg-muted);
+    font-family: var(--gp-font-mono);
+    font-size: var(--gp-label-sm);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1.3;
+    text-transform: uppercase;
+  }
+
   .gp-ga-options {
+    clear: both;
     display: grid;
     grid-template-columns: 1fr;
     gap: var(--gp-space-sm);
@@ -629,16 +697,7 @@ const questionCount = QUESTIONS.length;
     color: var(--gp-primary);
   }
 
-  .gp-ga-result-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gp-space-md);
-    padding: var(--gp-space-xl);
-    border: 1px solid color-mix(in srgb, var(--gp-primary) 32%, transparent);
-    border-radius: var(--gp-radius-lg);
-    background: var(--gp-card-elev);
-    min-width: 0;
-  }
+  /* The result is an elevated Card (components/ui/Card.astro). */
 
   .gp-ga-result {
     display: flex;
@@ -676,6 +735,7 @@ const questionCount = QUESTIONS.length;
     margin-top: var(--gp-space-xs);
   }
 
+  .gp-ga-basis,
   .gp-ga-secondary {
     margin: 0;
     color: var(--gp-fg-muted);
@@ -712,14 +772,6 @@ const questionCount = QUESTIONS.length;
   }
 
   @container (max-width: 640px) {
-    .gp-ga-q {
-      padding: var(--gp-space-md);
-    }
-
-    .gp-ga-result-wrap {
-      padding: var(--gp-space-lg);
-    }
-
     .gp-ga-form-foot,
     .gp-ga-result-foot {
       align-items: stretch;
