@@ -661,6 +661,21 @@ test('the steward booking link has one source: stewardCall in social-links.json'
   assert.deepEqual(copies, ['src/content/social-links.json']);
 });
 
+test('page calls to action share CtaStrip, which keeps lime on the button', async () => {
+  // DESIGN.md > Calls to action (PRD-1422): the lift panel steps the green
+  // scale and leaves lime to the primary button, with no lime border, tint or glow.
+  const strip = await readFile(join(rootDir, 'packages/website/src/components/ui/CtaStrip.astro'), 'utf8');
+  const stripStyles = strip.slice(strip.indexOf('<style>'));
+  assert.doesNotMatch(stripStyles, /--gp-primary|--gp-lime|184,\s*232,\s*53|::before/);
+  assert.match(stripStyles, /\.gp-cta-strip\.is-lift \{[^}]*background: var\(--gp-surface\)/);
+
+  for (const page of ['chapters/index.astro', 'chapters/[slug].astro', 'guilds/[slug].astro']) {
+    const source = await readFile(join(websitePagesDir, page), 'utf8');
+    assert.match(source, /<CtaStrip\b/, `${page} uses CtaStrip`);
+    assert.doesNotMatch(source, /cta-inner|cta-actions/, `${page} keeps no CTA panel of its own`);
+  }
+});
+
 test('library podcast section uses RSS snapshot and in-page audio', async () => {
   const [libraryPage, podcastSnapshotSource] = await Promise.all([
     readFile(libraryPagePath, 'utf8'),
