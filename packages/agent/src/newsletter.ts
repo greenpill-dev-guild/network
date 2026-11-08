@@ -17,7 +17,9 @@ import {
  * the publication. It answers 200 `{"success": true}`; 400 for a body without
  * a usable email or wallet; 401 for a bad key; 404 when the publication is
  * missing; 500 for its own errors. It does not duplicate an existing
- * subscriber, and its docs do not say what status that case gets.
+ * subscriber and documents no separate answer for that case, so the agent
+ * sends `already_subscribed` for no answer today (see
+ * `resultForParagraphResponse`).
  *
  * Rate limiting keys on `fly-client-ip`, like the map-node submission limit:
  * Fly's proxy is the only way in, and it sets that header. Off Fly (local dev)
@@ -86,7 +88,6 @@ export interface NewsletterRepositoryOptions {
 }
 
 const SUBSCRIBED: NewsletterSubscribeResult = { status: 200, body: { ok: true, status: 'subscribed' } };
-const ALREADY_SUBSCRIBED: NewsletterSubscribeResult = { status: 200, body: { ok: true, status: 'already_subscribed' } };
 const INVALID_EMAIL: NewsletterSubscribeResult = { status: 400, body: { ok: false, error: 'invalid_email' } };
 const NOT_CONFIGURED: NewsletterSubscribeResult = { status: 503, body: { ok: false, error: 'newsletter_not_configured' } };
 const UNAVAILABLE: NewsletterSubscribeResult = { status: 502, body: { ok: false, error: 'newsletter_unavailable' } };
@@ -160,21 +161,26 @@ async function readJsonBody(response: Response): Promise<unknown> {
   }
 }
 
-/** Maps Paragraph's answer to a public result. Nothing from its body reaches the client. */
+/**
+ * Maps Paragraph's answer to a public result. Only the answers its OpenAPI
+ * documents for this endpoint get a meaning; nothing from the body reaches
+ * the client.
+ *
+ * - 200 `{"success": true}`: subscribed. Paragraph keeps one entry per
+ *   address and documents no separate answer for an existing subscriber, so
+ *   a repeat signup reads as subscribed too.
+ * - 400 ("must provide email or wallet"): the agent only sends an address it
+ *   checked, so this means Paragraph refused the address.
+ * - Anything else, including an undocumented 2xx or 409: unavailable, so the
+ *   form offers the Paragraph link instead of claiming an outcome no one
+ *   confirmed.
+ */
 function resultForParagraphResponse(status: number, payload: unknown): NewsletterSubscribeResult {
-  if (status >= 200 && status < 300) {
-    // Only Paragraph's documented acknowledgment counts as a signup. A 2xx
-    // without `{"success": true}` is unconfirmed, so the form offers the
-    // Paragraph link rather than claim a subscription that may not exist.
+  if (status === 200) {
     const confirmed = Boolean(payload) && typeof payload === 'object' && (payload as { success?: unknown }).success === true;
     return confirmed ? SUBSCRIBED : UNAVAILABLE;
   }
-  // Paragraph's docs list no 409, but a conflict can only mean the address is
-  // already on the list, which counts as success.
-  if (status === 409) return ALREADY_SUBSCRIBED;
-  // The only input is an address the agent already checked, so Paragraph
-  // refusing the request means Paragraph refused the address.
-  if (status === 400 || status === 422) return INVALID_EMAIL;
+  if (status === 400) return INVALID_EMAIL;
   return UNAVAILABLE;
 }
 

@@ -21,6 +21,12 @@ export const NEWSLETTER_EMAIL_MAX_LENGTH = 254;
  */
 export const NEWSLETTER_TRAP_FIELD = 'website';
 
+/**
+ * `already_subscribed` is kept for a verified duplicate signal from Paragraph.
+ * Its docs define none (an existing subscriber "will not be duplicated", with
+ * no separate answer), so the agent does not send it today, and a repeat
+ * signup reads as `subscribed`.
+ */
 export const NEWSLETTER_SUBSCRIBE_STATUSES = ['subscribed', 'already_subscribed'] as const;
 
 export const NEWSLETTER_SUBSCRIBE_ERRORS = [

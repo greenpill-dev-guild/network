@@ -1697,19 +1697,23 @@ test('newsletter subscribe adds the address to Paragraph with the publication ke
 
 test('newsletter subscribe maps every Paragraph answer to a public result', async () => {
   const providerBody = (status) => ({ success: false, msg: `Paragraph said ${status} for ${NEWSLETTER_RAW_EMAIL}` });
+  // Only the answers Paragraph documents for this endpoint get a meaning:
+  // 200 {"success": true} and 400. Everything else is unconfirmed, and the
+  // form offers the Paragraph link instead of claiming an outcome.
   const cases = [
     { status: 200, body: { success: true }, expected: NEWSLETTER_SUBSCRIBED, reported: false },
-    { status: 201, body: { success: true }, expected: NEWSLETTER_SUBSCRIBED, reported: false },
-    { status: 409, body: providerBody(409), expected: { status: 200, body: { ok: true, status: 'already_subscribed' } }, reported: false },
     { status: 400, body: providerBody(400), expected: NEWSLETTER_INVALID, reported: true },
-    { status: 422, body: providerBody(422), expected: NEWSLETTER_INVALID, reported: true },
-    // A 2xx counts only with Paragraph's `{"success": true}`: anything else is
-    // unconfirmed, and the form offers the Paragraph link instead.
     { status: 200, body: providerBody(200), expected: NEWSLETTER_UNAVAILABLE, reported: true },
     { status: 200, body: {}, expected: NEWSLETTER_UNAVAILABLE, reported: true },
     { status: 200, body: { success: 'true' }, expected: NEWSLETTER_UNAVAILABLE, reported: true },
+    { status: 200, body: undefined, expected: NEWSLETTER_UNAVAILABLE, reported: true },
+    // Undocumented answers: a 409 is not read as "already subscribed", and
+    // no other 2xx or 4xx is read as a signup or a refused address.
+    { status: 201, body: { success: true }, expected: NEWSLETTER_UNAVAILABLE, reported: true },
     { status: 201, body: undefined, expected: NEWSLETTER_UNAVAILABLE, reported: true },
     { status: 204, body: undefined, expected: NEWSLETTER_UNAVAILABLE, reported: true },
+    { status: 409, body: { success: false, msg: `Subscriber ${NEWSLETTER_RAW_EMAIL} already exists` }, expected: NEWSLETTER_UNAVAILABLE, reported: true },
+    { status: 422, body: providerBody(422), expected: NEWSLETTER_UNAVAILABLE, reported: true },
     ...[401, 403, 404, 429, 500, 503].map((status) => ({
       status,
       body: providerBody(status),
