@@ -32,6 +32,11 @@ function assertLocalized(where: string, translations: Translation[] | null | und
 test('label locales are keys Directus offers its users', () => {
   assert.ok(managedLocales.some((key) => STUDIO_LABEL_LOCALES[key] === 'pt'));
   assert.ok(managedLocales.some((key) => STUDIO_LABEL_LOCALES[key] === 'es'));
+  // Data Studio does not fall back between Spanish variants, so every Spanish
+  // key Directus offers needs the labels. pt-PT is left out on purpose.
+  for (const key of DIRECTUS_LOCALE_KEYS_FOR_LABELS.filter((locale) => locale.startsWith('es-'))) {
+    assert.equal(STUDIO_LABEL_LOCALES[key], 'es', `${key} needs the Spanish labels`);
+  }
   for (const key of managedLocales) {
     assert.ok(DIRECTUS_LOCALE_KEYS_FOR_LABELS.includes(key), `${key} is not a Directus 11.17.4 language`);
   }

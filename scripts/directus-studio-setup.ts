@@ -1408,6 +1408,41 @@ async function applyDirectusStudioBookmarks(client, collectionNames) {
   return applied;
 }
 
+// Directus 11.17.4 answers 403, not 404, when a field does not exist, even to
+// an administrator. A failed read counts as a missing field only when the
+// collection's field list confirms it; any other failure stops the setup.
+async function isMissingField(client, collection: string, field: string, error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (!/failed with (403|404)\b/.test(message)) return false;
+  const params = new URLSearchParams({ fields: 'field', limit: '-1' });
+  const response = await client.request(`/fields/${encodePathSegment(collection)}?${params.toString()}`);
+  return !(response?.data ?? []).some((item) => item.field === field);
+}
+
+// Puts the relation alias fields content:setup creates (such as
+// chapters.initiatives) into their form groups, with their labels.
+export async function applyExtraGroupMembers(client, members) {
+  for (const member of members) {
+    const path = `/fields/${encodePathSegment(member.collection)}/${encodePathSegment(member.field)}`;
+    let current;
+    try {
+      current = await client.request(path);
+    } catch (error) {
+      if (!(await isMissingField(client, member.collection, member.field, error))) throw error;
+      console.warn(
+        `Skipped group assignment for ${member.collection}.${member.field}: field not found. ` +
+        'Run directus:content:setup first so relation alias fields exist.'
+      );
+      continue;
+    }
+    await client.request(path, {
+      method: 'PATCH',
+      body: { meta: keepOtherTranslations(current?.data?.meta, member.meta) },
+    });
+    console.log(`Group assignment: ${member.collection}.${member.field}`);
+  }
+}
+
 async function ensureGroupField(client, groupPlan) {
   const params = new URLSearchParams();
   params.set('fields', 'field');
@@ -1540,22 +1575,7 @@ export async function applyDirectusStudioMetadata(options: {
     }
   }
 
-  for (const member of plan.extraGroupMembers) {
-    try {
-      const path = `/fields/${encodePathSegment(member.collection)}/${encodePathSegment(member.field)}`;
-      const current = await client.request(path);
-      await client.request(path, {
-        method: 'PATCH',
-        body: { meta: keepOtherTranslations(current?.data?.meta, member.meta) },
-      });
-      console.log(`Group assignment: ${member.collection}.${member.field}`);
-    } catch {
-      console.warn(
-        `Skipped group assignment for ${member.collection}.${member.field}: field not found. ` +
-        'Run directus:content:setup first so relation alias fields exist.'
-      );
-    }
-  }
+  await applyExtraGroupMembers(client, plan.extraGroupMembers);
 
   const hiddenTechnical = await hideTechnicalCollections(client, available);
 

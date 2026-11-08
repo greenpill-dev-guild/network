@@ -523,6 +523,10 @@ labels for the fields and form groups of the steward-facing collections, from
   these locales) and keeps every other language stored on the field, including
   labels added by hand in Data Studio, so it adds no duplicates. A hand edit to
   one of these locales is overwritten, so change the module instead.
+- The setup reads each field's stored labels and then writes them back with its
+  own. Directus has no atomic merge for field metadata, so a label someone
+  saves in Data Studio between that read and write is lost. Run the setup when
+  nobody is editing field labels, and check hand-added labels afterwards.
 
 ### Live Onboarding Mode
 
