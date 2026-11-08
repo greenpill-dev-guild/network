@@ -482,8 +482,9 @@ Before a steward sync:
 1. Run database migrations, including the chapter update request table.
 2. Run `bun run directus:content:setup`.
 3. Run `bun run directus:studio:setup` to apply labels, field guidance, preview
-   links, and role bookmarks such as `Published chapter reference`, `My draft
-   initiatives`, `My chapter change requests`, and `Pending chapter reviews`.
+   links, the steward landing bookmarks listed in the guide's "Where To Start",
+   publisher bookmarks such as `Pending chapter reviews`, and the operator
+   dashboard below.
 4. Invite stewards with `bun run directus:users:invite -- --input stewards.tsv`.
 5. Assign chapters or guilds with
    `bun run directus:content-access -- assign --input assignments.tsv`.
@@ -497,6 +498,39 @@ Before a steward sync:
    Directus system invite so stewards know what to prepare.
 8. Run `bun run directus:steward:smoke` against representative assigned and
    unassigned scopes.
+
+### Operator Dashboard
+
+`bun run directus:studio:setup` keeps one Insights dashboard, **Operator
+overview**, in `scripts/directus-studio-dashboard.ts`. Trusted Publishers and
+administrators see it; steward roles have no Insights access. It shows:
+
+- Reviews waiting: chapter change requests and initiatives in Pending Review,
+  map pins waiting for approval, and the requests that have waited longest.
+- Alerts: content and map moderation emails that failed after their retries,
+  records the public snapshot drops, and withheld chapter images.
+- Publish health, from the watchdog's row in `content.publish_health`: an open
+  stale-site or failed-build alert, when the deployed snapshot was made, the
+  last content edit, and the last check. If the check time stops moving, the
+  watchdog has stopped.
+- Impact sync: chapters whose last sync failed, snapshots past their refresh
+  time, and the latest error per chapter.
+
+Each count's note says where to find the records behind it, usually a
+Trusted Publisher bookmark such as `Withheld chapter images`. Map submissions
+are counted, never listed. The dashboard and its panels have fixed ids, so a
+rerun updates them in place, and a panel added to this dashboard by hand is
+removed on the next run. Build any other dashboard separately.
+
+Data Studio loads every panel in one GraphQL request built from the viewer's
+permissions. A panel that names a field the viewer cannot read fails that
+request and empties the whole dashboard, so every panel reads only fields the
+Trusted Publisher policy grants (`directus:content:setup` adds read access to
+this dashboard, its panels, and `publish_health`), and
+`scripts/directus-studio-dashboard.test.ts` checks it. A metric panel counts its
+collection's primary key, because a count with no field becomes `count { * }`,
+which GraphQL refuses. A metric whose query fails shows 0, so a dashboard of
+zeros after a schema change is worth a second look.
 
 For local rehearsal, prefer `bun run directus:local:bootstrap` after
 `bun run db:migrate`. If a root `.env.local` points at a non-local Directus,

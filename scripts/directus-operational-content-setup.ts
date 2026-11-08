@@ -43,6 +43,7 @@ export const DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS = Object.freeze([
 // optional group is not a search-path failure.
 export const DIRECTUS_CONTENT_OPS_COLLECTIONS = Object.freeze([
   'review_notifications',
+  'publish_health',
 ]);
 
 export const DIRECTUS_IMPACT_COLLECTIONS = Object.freeze([
@@ -55,6 +56,9 @@ export const DIRECTUS_CHAPTER_IMAGE_FOLDER_ID = 'bd3c5b2d-8b70-4ee1-b8a8-bb78c36
 export const DIRECTUS_CHAPTER_IMAGE_FOLDER_NAME = 'Chapter Images';
 export const DIRECTUS_PUBLIC_POLICY_NAME = '$t:public_label';
 export const DIRECTUS_PUBLISHED_CHAPTER_IMAGE_ALIAS = 'published_chapter_image';
+// The operator Insights dashboard that directus:studio:setup maintains. A fixed
+// id lets the setup update it in place and lets the read grant below name it.
+export const DIRECTUS_OPERATOR_DASHBOARD_ID = '9e6b7dc4-6a5f-47ac-8ab1-19d22a341604';
 
 const DIRECTUS_CHAPTER_IMAGE_MIME_TYPES = Object.freeze([
   'image/avif',
@@ -894,17 +898,50 @@ function buildChapterImagePermissions() {
   ];
 }
 
+// The publish-health watchdog's timestamps and alert flags. Leaves out the run
+// id, the configured threshold, and row bookkeeping.
+export const PUBLISH_HEALTH_READ_FIELDS = Object.freeze([
+  'id',
+  'content_watermark',
+  'deployed_build_at',
+  'deployed_snapshot_generated_at',
+  'latest_pages_conclusion',
+  'latest_pages_completed_at',
+  'latest_pages_run_url',
+  'checked_at',
+  'stale_alert_active',
+  'build_failed_alert_active',
+  'stale_recovered_at',
+  'build_failed_recovered_at',
+]);
+
 // Read-only operational visibility (applied only when the collection exists):
 // - content.review_notifications: publishers watch failed deliveries and
 //   quarantined records.
+// - content.publish_health: publishers see whether the deployed site is
+//   current, on the operator dashboard.
 // - impact.chapter_impact_snapshots: stewards and publishers see impact sync
 //   results and errors for the bindings they edit.
 function buildContentOperationsPermissions(contentOpsCollectionNames = [], impactCollectionNames = []) {
   const contentOps = new Map(contentOpsCollectionNames.map((collection) => [baseCollectionName(collection), collection]));
   const impact = new Map(impactCollectionNames.map((collection) => [collection.replace(/^impact[._]/, ''), collection]));
   const reviewNotifications = contentOps.get('review_notifications');
+  const publishHealth = contentOps.get('publish_health');
   const impactSnapshots = impact.get('chapter_impact_snapshots');
   const permissions = [];
+
+  if (publishHealth) {
+    permissions.push({
+      role: 'Greenpill Trusted Publisher',
+      policy: 'Greenpill Trusted Publisher',
+      collection: publishHealth,
+      action: 'read',
+      permissions: null,
+      validation: null,
+      presets: null,
+      fields: PUBLISH_HEALTH_READ_FIELDS,
+    });
+  }
 
   if (reviewNotifications) {
     const fields = [
@@ -961,6 +998,51 @@ function buildContentOperationsPermissions(contentOpsCollectionNames = [], impac
   }
 
   return permissions;
+}
+
+// Trusted Publishers open the operator dashboard in Insights, and only that
+// one: Data Studio shows the Insights module to a non-admin who can read
+// dashboards, and each panel reads its collection with the viewer's own
+// permissions. Steward roles get no Insights access.
+export const OPERATOR_DASHBOARD_VIEWER_ROLES = Object.freeze(['Greenpill Trusted Publisher']);
+
+function buildOperatorDashboardPermissions() {
+  return OPERATOR_DASHBOARD_VIEWER_ROLES.flatMap((role) => [
+    {
+      role,
+      policy: role,
+      collection: 'directus_dashboards',
+      action: 'read',
+      permissions: { id: { _eq: DIRECTUS_OPERATOR_DASHBOARD_ID } },
+      validation: null,
+      presets: null,
+      fields: ['id', 'name', 'icon', 'note', 'color'],
+    },
+    {
+      role,
+      policy: role,
+      collection: 'directus_panels',
+      action: 'read',
+      permissions: { dashboard: { _eq: DIRECTUS_OPERATOR_DASHBOARD_ID } },
+      validation: null,
+      presets: null,
+      fields: [
+        'id',
+        'dashboard',
+        'name',
+        'icon',
+        'color',
+        'show_header',
+        'note',
+        'type',
+        'position_x',
+        'position_y',
+        'width',
+        'height',
+        'options',
+      ],
+    },
+  ]);
 }
 
 // Machine role for the built-in Directus MCP server (mcp_enabled is turned on
@@ -1464,6 +1546,7 @@ export function buildDirectusOperationalPermissionPlan(
         assignedEditorCollectionMap(collections, stewardWorkflowCollectionNames)
       ),
       ...buildContentOperationsPermissions(contentOpsCollectionNames, impactCollectionNames),
+      ...buildOperatorDashboardPermissions(),
       ...buildContentAgentPermissions(collections, stewardWorkflowCollectionNames),
     ],
   };
@@ -2149,6 +2232,8 @@ export async function applyDirectusOperationalContentAccess(options: {
     ...impactCollections,
     'directus_files',
     'directus_folders',
+    'directus_dashboards',
+    'directus_panels',
   ]);
 
   for (const permission of plan.permissions) {
