@@ -302,3 +302,102 @@ export function pointsBeyondView(view: MapBox, points: readonly MapPoint[]): Rec
   }
   return { west, east };
 }
+
+// ---- Pins on the drawing's edge -------------------------------------------
+// docs/design/map-polish-audit.md § 5, "Edge pins": "A valid point on the
+// map's edge, such as a confirmed place on the 180th meridian, still draws
+// half outside the drawing. The build keeps the audit's clamp: the rendered
+// pin and its hover and focus target sit inside the drawable inset, and the
+// data keeps the true coordinate."
+
+/** A pin's hit circle at its smallest, in map units. */
+export const PIN_HIT_RADIUS = 4.8;
+
+/**
+ * Where a pin is drawn: its point, kept `inset` map units inside the
+ * drawing so the pin and its hit circle never cross the edge. Only the
+ * drawing moves; the node keeps its true coordinate.
+ */
+export function clampPinToDrawing(point: MapPoint, inset = PIN_HIT_RADIUS, drawing: MapBox = MAP_DRAWING): MapPoint {
+  return {
+    x: Math.min(Math.max(point.x, drawing.x + inset), drawing.x + drawing.width - inset),
+    y: Math.min(Math.max(point.y, drawing.y + inset), drawing.y + drawing.height - inset),
+  };
+}
+
+// ---- Labels at rest -------------------------------------------------------
+// § 5: "Chapter labels at rest ... The highest featuredWeight goes first.
+// Each label tries right, left, above and below its dot, and hides when it
+// would touch another label, a pin, a badge, a bar or the dock."
+
+export type LabelSide = 'right' | 'left' | 'above' | 'below';
+
+/** The order a label tries the sides of its dot. */
+export const LABEL_SIDES: readonly LabelSide[] = ['right', 'left', 'above', 'below'];
+
+export type MapCircle = { center: MapPoint; radius: number };
+
+/** A label to place: its dot, the gap it keeps from it, and its size. */
+export type LabelRequest = { anchor: MapPoint; gap: number; width: number; height: number };
+
+export type PlacedLabel = { side: LabelSide; box: MapBox } | null;
+
+/** The box a label takes on one side of its dot, centred on that side. */
+export function labelBoxOnSide(request: LabelRequest, side: LabelSide): MapBox {
+  const { anchor, gap, width, height } = request;
+  switch (side) {
+    case 'right':
+      return { x: anchor.x + gap, y: anchor.y - height / 2, width, height };
+    case 'left':
+      return { x: anchor.x - gap - width, y: anchor.y - height / 2, width, height };
+    case 'above':
+      return { x: anchor.x - width / 2, y: anchor.y - gap - height, width, height };
+    case 'below':
+      return { x: anchor.x - width / 2, y: anchor.y + gap, width, height };
+  }
+}
+
+// Touching counts: boxes that share an edge, or a circle that reaches a box.
+const boxesTouch = (a: MapBox, b: MapBox) => (
+  a.x <= b.x + b.width && b.x <= a.x + a.width && a.y <= b.y + b.height && b.y <= a.y + a.height
+);
+
+const boxTouchesCircle = (box: MapBox, circle: MapCircle) => {
+  const nearestX = Math.min(Math.max(circle.center.x, box.x), box.x + box.width);
+  const nearestY = Math.min(Math.max(circle.center.y, box.y), box.y + box.height);
+  return Math.hypot(circle.center.x - nearestX, circle.center.y - nearestY) <= circle.radius;
+};
+
+const boxInside = (box: MapBox, bounds: MapBox) => (
+  box.x >= bounds.x &&
+  box.y >= bounds.y &&
+  box.x + box.width <= bounds.x + bounds.width &&
+  box.y + box.height <= bounds.y + bounds.height
+);
+
+/**
+ * Places labels in the order given, the most important first. Each takes the
+ * first side of its dot where it lies inside `bounds` (the map in view) and
+ * touches no circle (pins, badges), no box (bars, the dock) and no label
+ * placed before it. A label with no such side hides (null). A label's own
+ * dot never blocks it, because its gap clears the dot's circle.
+ */
+export function placeMapLabels(
+  requests: readonly LabelRequest[],
+  obstacles: { circles: readonly MapCircle[]; boxes: readonly MapBox[] },
+  bounds: MapBox
+): PlacedLabel[] {
+  const placed: MapBox[] = [];
+  return requests.map((request) => {
+    for (const side of LABEL_SIDES) {
+      const box = labelBoxOnSide(request, side);
+      if (!boxInside(box, bounds)) continue;
+      if (obstacles.circles.some((circle) => boxTouchesCircle(box, circle))) continue;
+      if (obstacles.boxes.some((other) => boxesTouch(box, other))) continue;
+      if (placed.some((other) => boxesTouch(box, other))) continue;
+      placed.push(box);
+      return { side, box };
+    }
+    return null;
+  });
+}

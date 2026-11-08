@@ -23,15 +23,20 @@ import { toPublicOperationalLocations } from '@greenpill-network/shared/public-c
 import {
   ATLANTIC_CENTER_X,
   clampMapView,
+  clampPinToDrawing,
   defaultMapView,
   fanHasRoomForTargets,
   formatPickerCoordinate,
   groupOverlappingPins,
+  LABEL_SIDES,
+  labelBoxOnSide,
   largestMapView,
   layoutFan,
   MAP_DRAWING,
   panMapView,
   pickerPointToLocation,
+  PIN_HIT_RADIUS,
+  placeMapLabels,
   pointsBeyondView,
   separateLabels,
 } from '../packages/website/src/lib/home-map-layout.ts';
@@ -2366,9 +2371,10 @@ test('home map keeps focus, hover and selection honest when stacks rebuild', asy
   // Scrolling keeps the preview of a marker or satellite that has keyboard focus.
   assert.match(component, /active\.matches\('\.gp-home-map-node-link:focus-visible, \[data-home-map-cluster\]:focus-visible, \.gp-home-map-cluster-sat:focus-visible'\)/);
   // New map controls and the compact band use spacing tokens; heights derive
-  // from the 44px touch target.
+  // from the 44px touch target, which step 3 names once as --gp-map-target
+  // (§ 5: "Icon-only controls (zoom, close, reset) are 44 by 44px").
   assert.match(component, /--gp-map-edge: var\(--gp-space-sm\);/);
-  assert.match(component, /--gp-map-row: calc\(44px \+ var\(--gp-space-xs\) \* 2 \+ 2px\);/);
+  assert.match(component, /--gp-map-row: calc\(var\(--gp-map-target\) \+ var\(--gp-space-xs\) \* 2 \+ 2px\);/);
   assert.match(component, /\.gp-home-map-join \{[\s\S]*?min-height: calc\(40px \+ var\(--gp-space-xs\) \* 2 \+ 2px\);\s*padding: 0 var\(--gp-space-md\);/);
 });
 
@@ -2597,16 +2603,17 @@ test('home map chrome: bars in the stage, a theme strip toolbar, one phone row, 
 
   // Hit targets (DESIGN.md:431 to 441, § 5): text buttons reach 48px, chips
   // are 30px under a fine pointer and 44px under a coarse one and in the
-  // phone row, and icon-only controls are 44 by 44px.
+  // phone row, and icon-only controls are 44 by 44px. Step 3 names the 44px
+  // target once as --gp-map-target; the sizes are unchanged.
   assert.match(component, /\.gp-home-map-list-toggle,\s*\.gp-home-map-themes-toggle \{[\s\S]*?min-height: calc\(40px \+ var\(--gp-space-xs\) \* 2 \+ 2px\);/);
   assert.match(component, /--gp-map-chip: 30px;/);
-  assert.match(component, /@media \(pointer: coarse\) \{\s*\.gp-home-map-canvas \{\s*--gp-map-chip: 44px;/);
+  assert.match(component, /@media \(pointer: coarse\) \{\s*\.gp-home-map-canvas \{\s*--gp-map-chip: var\(--gp-map-target\);/);
   assert.match(component, /\.gp-home-map \.gp-chip \{\s*min-height: var\(--gp-map-chip\);/);
-  assert.match(component, /\.gp-home-map-zoom-controls button \{\s*min-width: 44px;\s*min-height: 44px;/);
-  assert.match(component, /\.gp-home-map-theme-editor-close \{\s*width: 44px;\s*height: 44px;/);
+  assert.match(component, /\.gp-home-map-zoom-controls button \{\s*min-width: var\(--gp-map-target\);\s*min-height: var\(--gp-map-target\);/);
+  assert.match(component, /\.gp-home-map-theme-editor-close \{\s*width: var\(--gp-map-target\);\s*height: var\(--gp-map-target\);/);
   const phoneCss = component.match(/@container \(max-width: 520px\) \{([\s\S]*?)\n  \}\n/)?.[1] ?? '';
   assert.match(phoneCss, /\.gp-home-map-list-toggle,\s*\.gp-home-map-themes-toggle,\s*\.gp-home-map-join \{\s*min-height: var\(--gp-map-row\);/);
-  assert.match(phoneCss, /\.gp-home-map \.gp-chip\.gp-home-map-legend-item,\s*\.gp-home-map \.gp-chip\.gp-home-map-legend-reset \{\s*min-height: 44px;/);
+  assert.match(phoneCss, /\.gp-home-map \.gp-chip\.gp-home-map-legend-item,\s*\.gp-home-map \.gp-chip\.gp-home-map-legend-reset \{\s*min-height: var\(--gp-map-target\);/);
   // § 5: "the row scrolls behind a mask-image edge fade", on one line, and a
   // phone opens the editor from Themes, not from the strip.
   assert.match(phoneCss, /\.gp-home-map-control-row \{[\s\S]*?flex-wrap: nowrap;[\s\S]*?overflow-x: auto;[\s\S]*?mask-image: var\(--gp-map-edge-fade\);/);
@@ -2835,9 +2842,129 @@ test('home map list: a dock beside the map, a sheet inside the stage, a modal sh
   // again when the list closes.
   assert.match(component, /const dockRect = mapLayout\(\) === 'dock' && listDrawer && !listDrawer\.hidden \? listDrawer\.getBoundingClientRect\(\) : null;/);
   assert.match(component, /selectedEl\.style\.setProperty\('--gp-selected-x', `\$\{clampNumber\(desiredX, inset, maxX\)\}px`\);/);
-  assert.match(component, /const syncNodeListClosed = \(\) => \{[\s\S]*?layoutThemeStrip\(\);\s*\/\/[^\n]*\n\s*syncSelectedOverlay\(\);\s*\};/);
+  assert.match(component, /const syncNodeListClosed = \(\) => \{[\s\S]*?layoutThemeStrip\(\);\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*syncSelectedOverlay\(\);\s*scheduleChapterLabels\(\);\s*\};/);
   // A touch screen opens the list at Close, so no on-screen keyboard rises.
   assert.match(component, /const typing = !window\.matchMedia\('\(pointer: coarse\)'\)\.matches;/);
+});
+
+test('home map edge pins and labels at rest: the clamp and the placement rules', () => {
+  // § 5, "Edge pins": "the rendered pin and its hover and focus target sit
+  // inside the drawable inset, and the data keeps the true coordinate."
+  assert.equal(PIN_HIT_RADIUS, 4.8);
+  assert.deepEqual(clampPinToDrawing({ x: 100, y: 40 }), { x: 100, y: 40 });
+  const lonToX = (lon: number) => ((lon + 180) / 360) * 200;
+  const latToY = (lat: number) => ((90 - lat) / 180) * 100;
+  // A confirmed place on the 180th meridian, and the -180 that clipped Amio.
+  assert.deepEqual(clampPinToDrawing({ x: lonToX(180), y: latToY(-17.7) }), { x: 200 - PIN_HIT_RADIUS, y: latToY(-17.7) });
+  assert.deepEqual(clampPinToDrawing({ x: lonToX(-180), y: latToY(0) }), { x: PIN_HIT_RADIUS, y: latToY(0) });
+  // The far north, and a point south of the drawing's crop at about 68°S.
+  assert.equal(clampPinToDrawing({ x: 100, y: latToY(90) }).y, PIN_HIT_RADIUS);
+  assert.equal(clampPinToDrawing({ x: 100, y: latToY(-75) }).y, MAP_DRAWING.height - PIN_HIT_RADIUS);
+  // Only the drawing moves: the point passed in is left as it was.
+  const truePoint = { x: 200, y: 0 };
+  clampPinToDrawing(truePoint);
+  assert.deepEqual(truePoint, { x: 200, y: 0 });
+
+  // § 5: "Each label tries right, left, above and below its dot, and hides
+  // when it would touch another label, a pin, a badge, a bar or the dock."
+  assert.deepEqual([...LABEL_SIDES], ['right', 'left', 'above', 'below']);
+  const request = { anchor: { x: 50, y: 40 }, gap: 2, width: 10, height: 3 };
+  assert.deepEqual(labelBoxOnSide(request, 'right'), { x: 52, y: 38.5, width: 10, height: 3 });
+  assert.deepEqual(labelBoxOnSide(request, 'left'), { x: 38, y: 38.5, width: 10, height: 3 });
+  assert.deepEqual(labelBoxOnSide(request, 'above'), { x: 45, y: 35, width: 10, height: 3 });
+  assert.deepEqual(labelBoxOnSide(request, 'below'), { x: 45, y: 42, width: 10, height: 3 });
+  const bounds = { x: 0, y: 0, width: 200, height: 88 };
+  const none = { circles: [], boxes: [] };
+  assert.equal(placeMapLabels([request], none, bounds)[0]?.side, 'right');
+  // Off the map in view on the right: the left side.
+  assert.equal(placeMapLabels([request], none, { x: 0, y: 0, width: 60, height: 88 })[0]?.side, 'left');
+  // A pin on the right, then a bar on the left: above; all four blocked: hidden.
+  const pinRight = { center: { x: 56, y: 40 }, radius: 1 };
+  assert.equal(placeMapLabels([request], { circles: [pinRight], boxes: [] }, bounds)[0]?.side, 'left');
+  const barLeft = { x: 30, y: 30, width: 12, height: 20 };
+  assert.equal(placeMapLabels([request], { circles: [pinRight], boxes: [barLeft] }, bounds)[0]?.side, 'above');
+  const dockAboveAndBelow = { x: 40, y: 30, width: 20, height: 30 };
+  assert.equal(placeMapLabels([request], { circles: [], boxes: [dockAboveAndBelow] }, bounds)[0], null);
+  // Touching counts: a box that shares the right label's edge blocks it.
+  const touching = { x: 62, y: 38.5, width: 5, height: 3 };
+  assert.equal(placeMapLabels([request], { circles: [], boxes: [touching] }, bounds)[0]?.side, 'left');
+  // The first label is placed first; the next keeps clear of it.
+  const second = { anchor: { x: 50, y: 42 }, gap: 2, width: 10, height: 3 };
+  const placed = placeMapLabels([request, second], none, bounds);
+  assert.deepEqual(placed.map((label) => label?.side), ['right', 'left']);
+  // A label's own dot never blocks it: the gap clears the dot's circle.
+  const ownDot = { center: request.anchor, radius: 1.5 };
+  assert.equal(placeMapLabels([request], { circles: [ownDot], boxes: [] }, bounds)[0]?.side, 'right');
+});
+
+test('home map labels and hit targets: chapter labels at rest, 44px pins and badges, 48px text buttons', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  // Edge pins: chapters and people are drawn through the clamp, and their
+  // lines end where the pins are drawn; the data keeps its true coordinate.
+  assert.match(component, /const pin = clampPinToDrawing\(\{ x: lonToX\(c\.data\.long\), y: latToY\(c\.data\.lat\) \}\);/);
+  assert.match(component, /x: pin\.x,\s*y: pin\.y,/);
+  assert.match(component, /const \{ x, y \} = clampPinToDrawing\(\{ x: lonToX\(member\.long\), y: latToY\(member\.lat\) \}\);/);
+  assert.match(component, /const drawn = clampPinToDrawing\(\{ x: lonToX\(long\), y: latToY\(lat\) \}\);\s*nodeById\.set\(id, \{\s*x: existing\?\.x \?\? drawn\.x,\s*y: existing\?\.y \?\? drawn\.y,/);
+  assert.match(component, /<circle class="gp-home-map-node-hit" cx=\{c\.x\} cy=\{c\.y\} r=\{PIN_HIT_RADIUS\} \/>/);
+  assert.match(component, /const NODE_HIT_RADIUS = PIN_HIT_RADIUS;/);
+
+  // § 5: "pins and badges stay at least 44px at every map size (their hit
+  // circles scale with the map)".
+  assert.match(component, /const POINTER_TARGET_RADIUS_PX = 22;/);
+  assert.match(component, /const minTargetRadius = \(\) => pxToViewBox\(POINTER_TARGET_RADIUS_PX\);/);
+  assert.match(component, /const pinHitRadius = \(\) => Math\.max\(NODE_HIT_RADIUS, minTargetRadius\(\)\);/);
+  assert.match(component, /const hitRadius = Math\.max\(pinRadius, r \+ 3\.2, minViewRadius\);/);
+  assert.match(component, /const hitRadius = Math\.max\(markerRadius \+ pxToViewBox\(3\), minTargetRadius\(\)\);/);
+  const recomputeClusters = component.match(/const recomputeClustersNow = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(recomputeClusters, /syncPinHitTargets\(\);\s*layoutChapterLabels\(\);/);
+
+  // § 5: "Chapter labels at rest: Manrope 600 at 12px in --gp-fg-muted with
+  // a dark halo, without the leading 'Greenpill ' ... The highest
+  // featuredWeight goes first ... People never get labels at rest. Labels dim
+  // while a node is selected." Phones: "No labels at rest."
+  assert.match(component, /data-featured-weight=\{c\.featuredWeight\}/);
+  assert.match(component, /<g class="gp-home-map-members" data-home-map-members><\/g>[\s\S]*?<g class="gp-home-map-chapter-labels" data-home-map-chapter-labels aria-hidden="true"><\/g>[\s\S]*?<g class="gp-home-map-clusters" data-home-map-clusters><\/g>/);
+  assert.match(component, /\.gp-home-map-chapter-label \{\s*fill: var\(--gp-fg-muted\);\s*font-family: var\(--gp-font-body\);\s*font-weight: 600;\s*paint-order: stroke;\s*stroke: var\(--gp-green-950\);/);
+  assert.match(component, /\.gp-home-map-canvas\.has-selected-node \.gp-home-map-chapter-label,\s*\.gp-home-map-canvas\.is-focused \.gp-home-map-chapter-label \{\s*opacity: 0\.35;/);
+  const phoneCss = component.match(/@container \(max-width: 520px\) \{([\s\S]*?)\n  \}\n/)?.[1] ?? '';
+  assert.match(phoneCss, /\.gp-home-map-chapter-labels \{\s*display: none;/);
+  const layoutLabels = component.match(/const layoutChapterLabels = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(layoutLabels, /if \(mapLayout\(\) === 'phone'\) return;/);
+  assert.match(layoutLabels, /\.filter\(\(pin\) => pin\.classList\.contains\('is-chapter'\)\)/);
+  assert.match(layoutLabels, /\.sort\(\(a, b\) => b\.weight - a\.weight \|\| a\.name\.localeCompare\(b\.name, 'en'\)\);/);
+  assert.match(layoutLabels, /const fontSize = cssPx\('--gp-label-sm', 12\) \* px;/);
+  assert.match(layoutLabels, /placeMapLabels\(/);
+  assert.match(layoutLabels, /\.\.\.overlapStacks\.map\(/);
+  assert.match(component, /const chapterLabelText = \(name: string\) => name\.replace\(\/\^Greenpill\\s\+\/i, ''\) \|\| name;/);
+  assert.match(component, /'\.gp-home-map-theme-strip',[\s\S]*?'\.gp-home-map-legend',[\s\S]*?'\.gp-home-map-end-group',[\s\S]*?'\.gp-home-map-list-drawer',/);
+  // The dock and the bars move without a stacks rebuild: one layout a frame.
+  assert.match(component, /scheduleChapterLabels = \(\) => \{\s*window\.cancelAnimationFrame\(chapterLabelFrame\);\s*chapterLabelFrame = window\.requestAnimationFrame\(layoutChapterLabels\);/);
+
+  // Sizes, set once on the map's figure so the join walkthrough shares them.
+  const mapRule = component.match(/\n  \.gp-home-map \{([\s\S]*?)\n  \}\n/)?.[1] ?? '';
+  assert.match(mapRule, /--gp-map-target: 44px;\s*--gp-map-icon: 16px;\s*--gp-map-mark: 10px;\s*--gp-map-button: 48px;/);
+  // § 5: "Every text button under 48px goes to 48px, and the contract test
+  // asserts that minimum." List, Themes and Join the map are 50px; the edge
+  // pills 48px; Try again, Clear and Done are the 48px Button; the card's
+  // Edit this node and its form's buttons now reach 48px too.
+  assert.match(component, /\.gp-home-map-join \{[\s\S]*?min-height: calc\(40px \+ var\(--gp-space-xs\) \* 2 \+ 2px\);/);
+  assert.match(component, /\.gp-home-map \.gp-chip\.gp-home-map-edge-pill \{[\s\S]*?min-height: 48px;/);
+  assert.match(component, /\.gp-home-map-update-trigger \{\s*min-height: var\(--gp-map-button\);/);
+  assert.match(component, /\.gp-home-map-update-actions button \{\s*min-height: var\(--gp-map-button\);/);
+  assert.doesNotMatch(component, /\.gp-home-map-update-trigger \{\s*min-height: (?:36|40)px;/);
+  // "Icon-only controls (zoom, close, reset) are 44 by 44px".
+  assert.match(component, /\.gp-home-map-selected-close \{\s*position: absolute;[\s\S]*?width: var\(--gp-map-target\);\s*height: var\(--gp-map-target\);/);
+  assert.match(component, /\.gp-home-map-selected-edge-open \{[\s\S]*?width: var\(--gp-map-target\);\s*height: var\(--gp-map-target\);/);
+  assert.match(component, /\.gp-home-map-addnode-close \{[\s\S]*?width: var\(--gp-map-target\);\s*height: var\(--gp-map-target\);/);
+  assert.match(component, /\.gp-home-map-addnode-back \{[\s\S]*?width: var\(--gp-map-target\);\s*height: var\(--gp-map-target\);/);
+  assert.doesNotMatch(component, /width: (?:34|38)px;\s*height: (?:34|38)px;/);
+  // Pill links follow the chip rule: 30px under a fine pointer, 44px under a
+  // coarse one and on a phone.
+  assert.match(component, /\.gp-home-map-selected-link \{\s*appearance: none;\s*display: inline-flex;\s*align-items: center;\s*min-height: var\(--gp-map-chip\);/);
+  assert.match(phoneCss, /\.gp-home-map-selected-link \{\s*min-height: var\(--gp-map-target\);/);
 });
 
 // ---------------------------------------------------------------------------
