@@ -4,8 +4,9 @@ import { pathToFileURL } from 'node:url';
 import {
   ASSIGNED_EDITOR_POLICY_NAME,
   buildAssignedEditorPermissions,
-  chapterSelectorReadFields,
+  formReadAliases,
 } from './directus-content-access.ts';
+import { withFormGroups } from './directus-form-groups.ts';
 
 export const DIRECTUS_OPERATIONAL_COLLECTIONS = Object.freeze([
   'themes',
@@ -577,7 +578,7 @@ function buildStewardWorkflowPermissions(collectionNames = []) {
         permissions: null,
         validation: null,
         presets: null,
-        fields: CHAPTER_UPDATE_REQUEST_READ_FIELDS,
+        fields: [...CHAPTER_UPDATE_REQUEST_READ_FIELDS, ...formReadAliases(chapterUpdateRequests)],
       },
       {
         role: 'Greenpill Trusted Publisher',
@@ -1414,7 +1415,7 @@ export function buildDirectusOperationalPermissionPlan(
         permissions: statusFilter(['published']),
         validation: null,
         presets: null,
-        fields: [...collectionFields(collection, { read: true }), ...chapterSelectorReadFields(collection)],
+        fields: [...collectionFields(collection, { read: true }), ...formReadAliases(collection)],
       },
       {
         role: 'Greenpill Trusted Publisher',
@@ -1424,7 +1425,7 @@ export function buildDirectusOperationalPermissionPlan(
         permissions: null,
         validation: null,
         presets: null,
-        fields: [...collectionFields(collection, { publisher: true, read: true }), ...chapterSelectorReadFields(collection)],
+        fields: [...collectionFields(collection, { publisher: true, read: true }), ...formReadAliases(collection)],
       },
       {
         role: 'Greenpill Trusted Publisher',
@@ -1434,7 +1435,7 @@ export function buildDirectusOperationalPermissionPlan(
         permissions: null,
         validation: statusFilter(publisherStatuses),
         presets: { publication_status: 'draft' },
-        fields: collectionFields(collection, { publisher: true }),
+        fields: withFormGroups(collection, collectionFields(collection, { publisher: true })),
       },
       {
         role: 'Greenpill Trusted Publisher',
@@ -1444,7 +1445,7 @@ export function buildDirectusOperationalPermissionPlan(
         permissions: null,
         validation: statusFilter(publisherStatuses),
         presets: null,
-        fields: collectionFields(collection, { publisher: true }),
+        fields: withFormGroups(collection, collectionFields(collection, { publisher: true })),
       }
     );
   }

@@ -477,8 +477,11 @@ test('chapter selectors retain the readable inverse relation without granting ne
       assert(reads.some((p) => p.fields.includes(identityGroup)), `${policy}: the picker would omit chapter identity fields`);
     }
     for (const permission of plan.permissions.filter((p) => p.collection === chapters && ['create', 'update'].includes(p.action))) {
+      // The inverse relation stays read-only: no nested writes through a chapter.
       assert.equal(permission.fields.includes('update_requests'), false, permission.policy);
-      assert.equal(permission.fields.includes(identityGroup), false, permission.policy);
+      // The identity group alias goes with the identity fields a grant writes,
+      // or Data Studio disables them. A group alias holds no data.
+      assert.equal(permission.fields.includes(identityGroup), permission.fields.includes('name'), permission.policy);
     }
     const requestRead = plan.permissions.find((p) => p.policy === ASSIGNED_EDITOR_POLICY_NAME && p.collection === requests && p.action === 'read');
     assert.deepEqual((requestRead?.permissions as any)._and[1], {

@@ -209,6 +209,50 @@ export async function assertStewardLandingBookmarks(
   }
 }
 
+// Data Studio leaves out every field whose form group the viewer cannot read,
+// and disables every field whose group the viewer cannot update. Without the
+// group aliases a steward opens their guild to an empty form and their chapter
+// to its first group only, read-only. The lists are the one-to-many fields the
+// steward guide sends them to; they are read-only.
+const STEWARD_FORM_LISTS: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  chapters: ['initiatives'],
+  guilds: ['projects'],
+  chapter_update_requests: ['links', 'proof_signals'],
+});
+
+export async function assertStewardFormsReadable(steward) {
+  const own = (await steward.request('/permissions/me'))?.data ?? {};
+  for (const [collection, lists] of Object.entries(STEWARD_FORM_LISTS)) {
+    const fields = ((await steward.request(`/fields/${encodePathSegment(collection)}`))?.data ?? []) as Array<{
+      field: string;
+      meta?: { group?: string | null } | null;
+    }>;
+    const readable = new Set(fields.map((field) => field.field));
+    const unreadableGroups = [...new Set(fields
+      .map((field) => field.meta?.group)
+      .filter((group): group is string => Boolean(group) && !readable.has(group as string)))];
+    if (unreadableGroups.length > 0) {
+      throw new Error(
+        `Stewards cannot read the ${collection} form group(s) ${unreadableGroups.join(', ')}, so Data Studio hides the fields in them. Re-run directus:content:setup.`
+      );
+    }
+    const missingLists = lists.filter((field) => !readable.has(field));
+    if (missingLists.length > 0) {
+      throw new Error(`Stewards cannot read the ${collection} list field(s) ${missingLists.join(', ')}. Re-run directus:content:setup.`);
+    }
+    const writable = new Set<string>(own?.[collection]?.update?.fields ?? []);
+    if (writable.has('*')) continue;
+    const disabledGroups = [...new Set(fields
+      .filter((field) => field.meta?.group && writable.has(field.field) && !writable.has(field.meta.group))
+      .map((field) => field.meta?.group as string))];
+    if (disabledGroups.length > 0) {
+      throw new Error(
+        `Stewards can update ${collection} fields in ${disabledGroups.join(', ')} but not the group itself, so Data Studio shows them disabled. Re-run directus:content:setup.`
+      );
+    }
+  }
+}
+
 async function expectForbidden(label: string, action: () => Promise<unknown>) {
   try {
     await action();
@@ -453,6 +497,7 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
         throw new Error('The chapter picker identity fields or their group are unavailable. Re-run directus:content:setup.');
       }
     }
+    await assertStewardFormsReadable(steward);
 
     const assignmentRead = await steward.request('/items/chapter_editor_assignments?fields=chapter_slug&limit=-1');
     const assignmentSlugs = new Set((assignmentRead?.data ?? []).map((record) => record.chapter_slug));

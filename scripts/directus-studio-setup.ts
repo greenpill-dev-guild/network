@@ -8,6 +8,7 @@ import {
   DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS,
   createDirectusClient,
 } from './directus-operational-content-setup.ts';
+import { FIELD_GROUPS_BY_COLLECTION } from './directus-form-groups.ts';
 import { applyDirectusOperatorDashboard } from './directus-studio-dashboard.ts';
 
 const OPERATIONAL_COLLECTION_META = Object.freeze({
@@ -172,82 +173,6 @@ const TECHNICAL_COLLECTIONS_TO_HIDE = Object.freeze([
   'map_node_location_repairs',
   'map_node_edit_tokens',
 ]);
-
-interface FieldGroup {
-  label: string;
-  sort: number;
-  fields: readonly string[];
-}
-
-// Form groups: members get meta.group; the group alias fields are created by
-// ensureGroupField during apply. Field names not listed stay ungrouped.
-const FIELD_GROUPS_BY_COLLECTION: Readonly<Record<string, Readonly<Record<string, FieldGroup>>>> = Object.freeze({
-  chapters: {
-    group_identity: {
-      label: 'Identity & Location',
-      sort: 1,
-      fields: ['slug', 'name', 'city', 'country', 'region', 'entity_status', 'founded', 'latitude', 'longitude'],
-    },
-    group_story: {
-      label: 'Story',
-      sort: 2,
-      fields: [
-        'summary', 'intro_quote', 'intro_quote_attribution', 'stewards', 'steward_slugs', 'theme_slugs',
-        'related_chapter_slugs', 'featured_story', 'featured_story_slugs', 'authored_resource_slugs',
-        'featured_weight', 'initiatives',
-      ],
-    },
-    group_links_media: {
-      label: 'Links & Media',
-      sort: 3,
-      fields: [
-        'primary_link', 'links', 'connect_links', 'image_file', 'image_alt', 'image_credit', 'image', 'media',
-        'proof_signals', 'seo',
-      ],
-    },
-    group_impact: {
-      label: 'Impact',
-      sort: 4,
-      fields: ['impact_sources'],
-    },
-    group_workflow: {
-      label: 'Publishing & Workflow',
-      sort: 5,
-      fields: [
-        'publication_status', 'published_at', 'reviewed_at', 'reviewed_by', 'created_at', 'updated_at', 'data',
-        'editor_assignments', 'update_requests',
-      ],
-    },
-  },
-  guilds: {
-    group_identity: {
-      label: 'Identity',
-      sort: 1,
-      fields: ['slug', 'name', 'type', 'entity_status', 'founded_year', 'oneliner', 'cadence'],
-    },
-    group_story: {
-      label: 'Story & Members',
-      sort: 2,
-      fields: [
-        'summary', 'description', 'mandate_paragraphs', 'outputs', 'principles', 'stewards', 'steward_slugs',
-        'member_slugs', 'public_members', 'theme_slugs', 'featured_weight', 'projects',
-      ],
-    },
-    group_links_media: {
-      label: 'Links & Media',
-      sort: 3,
-      fields: ['links', 'connect_links', 'image', 'media', 'proof_signals', 'seo'],
-    },
-    group_workflow: {
-      label: 'Publishing & Workflow',
-      sort: 4,
-      fields: [
-        'publication_status', 'published_at', 'reviewed_at', 'reviewed_by', 'created_at', 'updated_at', 'data',
-        'editor_assignments',
-      ],
-    },
-  },
-});
 
 // Human labels where the auto-humanized snake_case name misleads stewards
 // (the guide says "Chapter image"; the raw field is image_file).
