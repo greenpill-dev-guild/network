@@ -456,12 +456,76 @@ test('public map-state generates person-first relationship edges', () => {
   )), false);
   assert.equal(JSON.stringify(payload).includes('West African Coast'), false);
 
-  const typeByNodeId = new Map(payload.nodes.map((node) => [node.id, node.type]));
-  assert.equal(payload.edges.some((edge) => (
-    edge.kind === 'shared-theme' &&
-    typeByNodeId.get(edge.from) === 'steward' &&
-    typeByNodeId.get(edge.to) === 'steward'
-  )), true);
+  // Two lines per person (Afo, 2026-11-07, PRD-1423). Asked which rule the
+  // map's connections should use after the live map measured 31 lines for 17
+  // people, 12 of them at the old cap of four, he picked "Cap 2 per person"
+  // over two shared themes or a stronger distance weight. Here the Accra
+  // steward and both members fill their two lines with the pairs that share
+  // two themes, so the Lagos steward's only candidates are all taken. Nobody
+  // is left without a line: the Lagos steward still gets their strongest one
+  // (the Lagos member, beside them), and that member goes one over the cap,
+  // never more.
+  const linesByPerson = new Map<string, number>();
+  payload.edges.forEach((edge) => {
+    linesByPerson.set(edge.from, (linesByPerson.get(edge.from) ?? 0) + 1);
+    linesByPerson.set(edge.to, (linesByPerson.get(edge.to) ?? 0) + 1);
+  });
+  assert.deepEqual(
+    payload.edges.map((edge) => [edge.from, edge.to].sort().join(' ')).sort(),
+    [
+      'submission:member-1 submission:member-2',
+      'submission:member-1 submission:steward-1',
+      'submission:member-1 submission:steward-2',
+      'submission:member-2 submission:steward-2',
+    ]
+  );
+  assert.equal(linesByPerson.get('submission:steward-1'), 1);
+  assert.equal(linesByPerson.get('submission:steward-2'), 2);
+  assert.equal(linesByPerson.get('submission:member-1'), 3);
+  assert.equal(linesByPerson.get('submission:member-2'), 2);
+
+  // Stewards connect to each other like anyone else who shares a theme.
+  const twoStewards = toPublicMapStatePayload({
+    generatedAt: '2026-11-07T12:00:00.000Z',
+    publicMapNodes: [
+      { id: 'steward-a', name: 'Steward A', place: 'Lagos', lat: 6.5244, long: 3.3792, role: 'steward', themes: ['water'], status: 'approved', source: 'approved-submission' },
+      { id: 'steward-b', name: 'Steward B', place: 'Accra', lat: 5.6037, long: -0.187, role: 'steward', themes: ['water', 'events'], status: 'approved', source: 'approved-submission' },
+    ],
+  });
+  assert.deepEqual(
+    twoStewards.edges.map((edge) => [edge.from, edge.to].sort().join(' ')),
+    ['submission:steward-a submission:steward-b']
+  );
+});
+
+test('public map-state keeps two lines per person, and nobody becomes a hub', () => {
+  const person = (id: string, lat: number, long: number, themes: string[]) => ({
+    id, name: id, place: id, lat, long, role: 'member', themes, status: 'approved', source: 'approved-submission',
+  });
+  // Eight people who share four themes fill their two lines among themselves.
+  const crowd = Array.from({ length: 8 }, (_, index) => (
+    person(`crowd-${index + 1}`, 40 + index, -74 + index * 2, ['water', 'events', 'food', 'trees'])
+  ));
+  // Four newcomers, each with one theme no other newcomer has, all standing
+  // beside crowd-1. Their only matches are the full crowd, so each is left
+  // alone until the last pass, and crowd-1 is everyone's strongest match.
+  const newcomers = ['water', 'events', 'food', 'trees'].map((theme, index) => (
+    person(`newcomer-${index + 1}`, 40.1 + index * 0.1, -74.1, [theme])
+  ));
+  const payload = toPublicMapStatePayload({ generatedAt: '2026-11-07T12:00:00.000Z', publicMapNodes: [...crowd, ...newcomers] });
+
+  const linesByPerson = new Map<string, number>();
+  payload.edges.forEach((edge) => {
+    linesByPerson.set(edge.from, (linesByPerson.get(edge.from) ?? 0) + 1);
+    linesByPerson.set(edge.to, (linesByPerson.get(edge.to) ?? 0) + 1);
+  });
+  const lines = (id: string) => linesByPerson.get(`submission:${id}`) ?? 0;
+  crowd.forEach((member) => assert.ok(lines(member.id) >= 2 && lines(member.id) <= 3, `${member.id}: ${lines(member.id)} lines`));
+  newcomers.forEach((member) => assert.equal(lines(member.id), 1, `${member.id} gets exactly one line`));
+  // Without the cap on that last pass, crowd-1 would take all four newcomers
+  // and connect to six people: the PRD-619 "one node connects to everyone".
+  assert.equal(lines('crowd-1'), 3);
+  assert.equal(payload.edges.length, 8 + newcomers.length);
 });
 
 test('public map-state includes real opt-in stewards without anonymous density', () => {
