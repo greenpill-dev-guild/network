@@ -773,6 +773,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   import {
     ATLANTIC_CENTER_X,
     PIN_HIT_RADIUS,
+    badgeFallbackCenter,
+    circleFitsInside,
     clampMapView,
     clampPinToDrawing,
     defaultMapView,
@@ -1862,14 +1864,22 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     // What hover shows for a pointer position: a pin (a fan satellite stands for
     // its pin, and a marker for one person stands for that person), a stack of
-    // several people, or nothing. The legend, the controls and the cards are
-    // not the map, so over those there is nothing.
-    const hoverTargetAtPointer = (event: PointerEvent | MouseEvent): { pin?: Element; stack?: OverlapStack } => {
+    // several people, or nothing. `mark` is what is drawn hovered: the
+    // satellite or the marker the pointer is on, not the hidden pin it stands
+    // for. The legend, the controls and the cards are not the map, so over
+    // those there is nothing.
+    const hoverTargetAtPointer = (
+      event: PointerEvent | MouseEvent
+    ): { pin?: Element; stack?: OverlapStack; mark?: Element } => {
       if (isGestureBlocked(event.target)) return {};
       const { satellite, pin, stack } = targetAtPointer(event);
-      if (satellite) return { pin: satellite.member.el };
-      if (stack) return stack.members.length === 1 ? { pin: stack.members[0].el } : { stack };
-      return pin ? { pin } : {};
+      if (satellite) return { pin: satellite.member.el, mark: satellite.el };
+      if (stack) {
+        return stack.members.length === 1
+          ? { pin: stack.members[0].el, mark: stack.marker }
+          : { stack, mark: stack.marker };
+      }
+      return pin ? { pin, mark: pin } : {};
     };
 
     const gesturePointers = new Map<number, PointerEvent>();
@@ -2035,16 +2045,18 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     root.addEventListener('pointermove', (event) => {
       if (isTouchMap() && event.pointerType !== 'mouse') return;
       if (gesturePointers.size > 0) return;
+      const { pin, stack, mark } = hoverTargetAtPointer(event);
+      // Hover follows the pointer while a card is open too, since a click
+      // there acts on what is drawn hovered; the selected node keeps the card
+      // and the focus state.
+      markPointerTarget(mark ?? null);
       if (selectedFocusTarget) return;
-      const { pin, stack } = hoverTargetAtPointer(event);
       if (stack) {
         pointerFocusTarget = null;
-        markPointerTarget(stack.marker);
         if (hoveredStackKey !== stackKeyOf(stack.members)) showStackFocus(stack);
         return;
       }
       if (!pin) {
-        markPointerTarget(null);
         if (pointerFocusTarget || hoveredStackKey) {
           pointerFocusTarget = null;
           hoveredStackKey = '';
@@ -2052,7 +2064,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         }
         return;
       }
-      markPointerTarget(pin);
       if (pin === pointerFocusTarget) return;
       hoveredStackKey = '';
       pointerFocusTarget = pin;
@@ -3565,8 +3576,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           if (title) title.textContent = `${next.name} · Your node${next.place ? ` · ${next.place}` : ''}`;
           if (!existing.querySelector('.gp-home-map-node-owner-ring')) {
             const halo = existing.querySelector('.gp-home-map-node-halo');
+            // The ring goes where the pin is drawn now, which the edge may
+            // have moved in further than the default inset.
+            const drawn = nodeCenter(existing) ?? { x, y };
             existing.insertBefore(
-              makeCircle('gp-home-map-node-owner-ring', x, y, next.type === 'steward' ? 3.5 : 3.35),
+              makeCircle('gp-home-map-node-owner-ring', drawn.x, drawn.y, next.type === 'steward' ? 3.5 : 3.35),
               halo
             );
           }
@@ -3677,6 +3691,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const badgeHitRadius = (markerRadius: number) => Math.max(markerRadius + pxToViewBox(3), minTargetRadius());
     // A map that is not laid out has no scale to read; it keeps what it has.
     const mapIsDrawn = () => Boolean(svgEl && svgEl.getBoundingClientRect().width > 0);
+    // The stage clips the drawing to rounded corners, inside its border; in
+    // map units, so a pin's or a badge's target near a corner can keep its
+    // whole circle inside that curve.
+    const stageCornerRadius = () => {
+      const stage = window.getComputedStyle(root);
+      const clipRadius = (Number.parseFloat(stage.borderTopLeftRadius) || 0) - (Number.parseFloat(stage.borderTopWidth) || 0);
+      return pxToViewBox(Math.max(0, clipRadius));
+    };
     const syncPinHitTargets = () => {
       if (!mapIsDrawn()) return;
       const radius = pinHitRadius().toFixed(2);
@@ -3691,11 +3713,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const placePinsInsideDrawing = () => {
       if (!mapIsDrawn()) return;
       const inset = pinHitRadius();
-      // The stage clips the drawing to rounded corners, inside its border: a
-      // pin there keeps its whole circle inside that curve too.
-      const stage = window.getComputedStyle(root);
-      const clipRadius = (Number.parseFloat(stage.borderTopLeftRadius) || 0) - (Number.parseFloat(stage.borderTopWidth) || 0);
-      const corner = pxToViewBox(Math.max(0, clipRadius));
+      const corner = stageCornerRadius();
       // The drawing as the stage shows it at its widest: all of its width
       // (a phone pans across it), and its height less what a wide stage crops
       // from the top and bottom, so the corners are the stage's own.
@@ -3707,14 +3725,17 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         const y = toFiniteNumber(pin.dataset.mapY);
         if (x === null || y === null) return;
         const drawn = clampPinToDrawing({ x, y }, inset, shownDrawing, corner);
-        const dot = pin.querySelector('.gp-home-map-node-dot');
-        const close = (attribute: string, value: number) => Math.abs(Number(dot?.getAttribute(attribute)) - value) < 0.005;
-        if (close('cx', drawn.x) && close('cy', drawn.y)) return;
+        // Each circle is checked, not just the dot, so one added later (the
+        // owner ring of a node just claimed) is brought to the pin too.
+        const close = (circle: Element, attribute: string, value: number) => (
+          Math.abs(Number(circle.getAttribute(attribute)) - value) < 0.005
+        );
         pin.querySelectorAll(PIN_CIRCLES).forEach((circle) => {
+          if (close(circle, 'cx', drawn.x) && close(circle, 'cy', drawn.y)) return;
           circle.setAttribute('cx', drawn.x.toFixed(2));
           circle.setAttribute('cy', drawn.y.toFixed(2));
+          moved = true;
         });
-        moved = true;
       });
       if (!moved) return;
       if (lastThreadInputs) renderDynamicThreads(lastThreadInputs.nodes, lastThreadInputs.edges);
@@ -3774,14 +3795,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     // with, or the places its people gave. Pins the drawing's edge moved
     // together are not "at" one another, so their true points decide.
     const stackWhere = (members: ClusterMember[], chapters: ClusterMember[]) => {
-      // Every person must truly share a chapter's spot for the stack to be
-      // "at" chapters; the chapters named are the ones they share.
+      // The stack is "at" the chapters whose spot every one of its people
+      // truly shares; people who each share a different chapter's spot are
+      // not all at any of them.
       const sharesSpot = (member: ClusterMember, chapter: ClusterMember) => (
         pointsWithin(member.truePoint, chapter.truePoint, OVERLAP_STACK_RADIUS)
       );
-      const sharedChapters = members.every((member) => chapters.some((chapter) => sharesSpot(member, chapter)))
-        ? chapters.filter((chapter) => members.some((member) => sharesSpot(member, chapter)))
-        : [];
+      const sharedChapters = chapters.filter((chapter) => members.every((member) => sharesSpot(member, chapter)));
       if (sharedChapters.length) {
         return `at ${listLabel(sharedChapters.map(pinName), 2, (n) => `${n} more ${n === 1 ? 'chapter' : 'chapters'}`)}`;
       }
@@ -4035,21 +4055,21 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const ring = pin.el.querySelector('.gp-home-map-node-ring') as SVGCircleElement | null;
       return { center: pin.center, radius: Number(ring?.getAttribute('r')) || 1.8 };
     };
-    const badgeCenterFor = (anchors: ClusterMember[], radius: number, taken: Footprint[]) => {
+    // `corner` is the stage's corner radius in map units (stageCornerRadius).
+    const badgeCenterFor = (anchors: ClusterMember[], radius: number, taken: Footprint[], corner: number) => {
       const anchor = centroidOf(anchors);
       const reach = Math.max(...anchors.map((pin) => (
         Math.hypot(pin.center.x - anchor.x, pin.center.y - anchor.y) + pinFootprint(pin).radius
       )));
       const distance = reach + pxToViewBox(STACK_BADGE_GAP_PX) + radius;
       const box = currentViewBox;
-      // The badge's whole 44px target must be in view, not just its disc.
+      // The badge's whole 44px target must be in view, not just its disc,
+      // and clear of the stage's rounded corners.
       const target = badgeHitRadius(radius);
       let best: { center: MapPoint; room: number } | null = null;
       for (const angle of BADGE_DIRECTIONS) {
         const center = { x: anchor.x + Math.cos(angle) * distance, y: anchor.y + Math.sin(angle) * distance };
-        const inView = center.x - target >= box.x && center.x + target <= box.x + box.width
-          && center.y - target >= box.y && center.y + target <= box.y + box.height;
-        if (!inView) continue;
+        if (!circleFitsInside(center, target, box, corner)) continue;
         const room = taken.reduce((min, other) => (
           Math.min(min, Math.hypot(center.x - other.center.x, center.y - other.center.y) - other.radius - radius)
         ), Number.POSITIVE_INFINITY);
@@ -4057,11 +4077,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         if (!best || room > best.room) best = { center, room };
       }
       if (best) return best.center;
-      // No side keeps the whole target in view: the first side, moved in.
-      return {
-        x: clampNumber(anchor.x + Math.cos(BADGE_DIRECTIONS[0]) * distance, box.x + target, box.x + box.width - target),
-        y: clampNumber(anchor.y + Math.sin(BADGE_DIRECTIONS[0]) * distance, box.y + target, box.y + box.height - target),
+      // No side keeps the whole target in view: the first side, moved in,
+      // unless the anchor itself is out of view.
+      const beside = {
+        x: anchor.x + Math.cos(BADGE_DIRECTIONS[0]) * distance,
+        y: anchor.y + Math.sin(BADGE_DIRECTIONS[0]) * distance,
       };
+      return badgeFallbackCenter(anchor, beside, target, box, corner);
     };
 
     // Draws one stack: a counted marker for several people, or one pin for one
@@ -4342,6 +4364,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const roomAt = (center: MapPoint, radius: number) => taken.reduce((min, other) => (
         Math.min(min, Math.hypot(center.x - other.center.x, center.y - other.center.y) - other.radius - radius)
       ), Number.POSITIVE_INFINITY);
+      const corner = stageCornerRadius();
       // Stacks of people alone sit where their people are, or just beside that
       // spot when a drawn pin is there. Badges for people on a chapter, or
       // beside a selected person, are placed after them.
@@ -4353,7 +4376,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         .forEach(({ people }) => {
           const radius = radiusFor(people.length);
           const spot = centroidOf(people);
-          const center = roomAt(spot, radius) >= 0 ? spot : badgeCenterFor(people, radius, taken);
+          const center = roomAt(spot, radius) >= 0 ? spot : badgeCenterFor(people, radius, taken, corner);
           renderOverlapStack(people, [], center, radius, spot);
           taken.push({ center, radius });
         });
@@ -4362,7 +4385,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         .forEach(({ people, chapters }) => {
           const radius = radiusFor(people.length);
           const anchors = anchorsOf(people, chapters);
-          const center = badgeCenterFor(anchors, radius, taken);
+          const center = badgeCenterFor(anchors, radius, taken, corner);
           renderOverlapStack(people, chapters, center, radius, centroidOf(anchors));
           taken.push({ center, radius });
         });
@@ -5313,6 +5336,9 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       results.forEach((result) => {
         const item = document.createElement('li');
         const button = document.createElement('button');
+        // Scoped like the markup, so the 48px result buttons get their style.
+        applyScope(item);
+        applyScope(button);
         button.type = 'button';
         button.textContent = result.label;
         button.addEventListener('click', () => {
@@ -6194,7 +6220,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     stroke-linejoin: round;
     user-select: none;
   }
-  .gp-home-map-cluster-sat:hover .gp-home-map-cluster-sat-label,
+  .gp-home-map-cluster-sat.is-pointer-target .gp-home-map-cluster-sat-label,
   .gp-home-map-cluster-sat:focus-visible .gp-home-map-cluster-sat-label {
     fill: var(--gp-primary);
   }
@@ -6220,7 +6246,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   .gp-home-map-canvas.is-focused .gp-home-map-chapter-label {
     opacity: 0.35;
   }
-  .gp-home-map-cluster-sat:hover .gp-home-map-cluster-sat-dot,
+  .gp-home-map-cluster-sat.is-pointer-target .gp-home-map-cluster-sat-dot,
   .gp-home-map-cluster-sat:focus-visible .gp-home-map-cluster-sat-dot {
     stroke: var(--gp-primary);
     stroke-width: 0.9;

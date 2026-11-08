@@ -22,6 +22,8 @@ import {
 import { toPublicOperationalLocations } from '@greenpill-network/shared/public-content';
 import {
   ATLANTIC_CENTER_X,
+  badgeFallbackCenter,
+  circleFitsInside,
   clampMapView,
   clampPinToDrawing,
   defaultMapView,
@@ -34,6 +36,7 @@ import {
   layoutFan,
   MAP_DRAWING,
   panMapView,
+  keepCircleInside,
   pickerPointToLocation,
   PIN_HIT_RADIUS,
   placeMapLabels,
@@ -2140,7 +2143,7 @@ test('home map stacks overlapping pins across node types, counts them, and fans 
   assert.match(recompute, /people\.length >= \(chapters\.length \? 1 : 2\)/);
   assert.match(recompute, /people\.forEach\(\(pin\) => setPinClustered\(pin\.el, true\)\)/);
   assert.doesNotMatch(recompute, /chapters\.forEach\(\(pin\) => setPinClustered/);
-  assert.match(recompute, /badgeCenterFor\(anchors, radius, taken\)/);
+  assert.match(recompute, /badgeCenterFor\(anchors, radius, taken, corner\)/);
   assert.match(component, /const BADGE_DIRECTIONS = \[-45, -135, 45, 135, 0, 180, -90, 90\]/);
 
   // A marker for several people shows how many, in their colour: members,
@@ -2857,9 +2860,17 @@ test('home map edge pins and labels at rest: the clamp and the placement rules',
   // A confirmed place on the 180th meridian, and the -180 that clipped Amio.
   assert.deepEqual(clampPinToDrawing({ x: lonToX(180), y: latToY(-17.7) }), { x: 200 - PIN_HIT_RADIUS, y: latToY(-17.7) });
   assert.deepEqual(clampPinToDrawing({ x: lonToX(-180), y: latToY(0) }), { x: PIN_HIT_RADIUS, y: latToY(0) });
-  // The far north, and a point south of the drawing's crop at about 68°S.
+  // The far north, and a point in the crop's bottom band (65°S), move in to
+  // the inset. A point south of the crop, which ends at about 68.4°S, is not
+  // on the map's edge (Codex on #60): it stays where it is, off the map, as
+  // it did before the clamp, rather than drawn near 60°S.
   assert.equal(clampPinToDrawing({ x: 100, y: latToY(90) }).y, PIN_HIT_RADIUS);
-  assert.equal(clampPinToDrawing({ x: 100, y: latToY(-75) }).y, MAP_DRAWING.height - PIN_HIT_RADIUS);
+  assert.equal(clampPinToDrawing({ x: 100, y: latToY(-65) }).y, MAP_DRAWING.height - PIN_HIT_RADIUS);
+  assert.deepEqual(clampPinToDrawing({ x: 100, y: latToY(-75) }), { x: 100, y: latToY(-75) });
+  assert.deepEqual(
+    clampPinToDrawing({ x: lonToX(180), y: latToY(-77.8) }, 8.5, MAP_DRAWING, 12),
+    { x: lonToX(180), y: latToY(-77.8) }
+  );
   // Only the drawing moves: the point passed in is left as it was.
   const truePoint = { x: 200, y: 0 };
   clampPinToDrawing(truePoint);
@@ -2884,6 +2895,28 @@ test('home map edge pins and labels at rest: the clamp and the placement rules',
     const arcCenter = { x: corner.x === 0 ? 12 : 188, y: corner.y === 0 ? 12 : 76 };
     assert.ok(Math.hypot(pin.x - arcCenter.x, pin.y - arcCenter.y) + 4.8 <= 12 + 1e-9, `circle inside the curve at ${corner.x},${corner.y}`);
   }
+  // The geometry under the clamp, which the badges share: a circle moved in
+  // just enough to lie inside a box with rounded corners.
+  const roundBox = { x: 10, y: 10, width: 100, height: 50 };
+  assert.deepEqual(keepCircleInside({ x: 50, y: 30 }, 4, roundBox, 8), { x: 50, y: 30 });
+  assert.deepEqual(keepCircleInside({ x: 5, y: 30 }, 4, roundBox, 8), { x: 14, y: 30 });
+  const inCorner = keepCircleInside({ x: 10, y: 10 }, 4, roundBox, 8);
+  assert.ok(Math.abs(Math.hypot(inCorner.x - 18, inCorner.y - 18) - 4) < 1e-9, 'a corner keeps the circle on its curve');
+  assert.equal(circleFitsInside({ x: 50, y: 30 }, 4, roundBox, 8), true);
+  assert.equal(circleFitsInside({ x: 13, y: 30 }, 4, roundBox, 8), false);
+  // Inside the rectangle, but its circle crosses the curve.
+  assert.equal(circleFitsInside({ x: 14.5, y: 14.5 }, 4, roundBox, 8), false);
+  assert.equal(circleFitsInside({ x: 14.5, y: 14.5 }, 4, roundBox, 0), true);
+  // A badge with no side that fits (CodeRabbit on #60): beside an anchor in
+  // view it moves in until its target is whole and clear of the corner's
+  // curve. Beside an anchor out of view (a zoomed map, or a spot south of the
+  // crop) it stays put, rather than drawn at the view's edge, far from its pin.
+  const badgeView = { x: 0, y: 0, width: 100, height: 50 };
+  const movedIn = badgeFallbackCenter({ x: 96, y: 4 }, { x: 99, y: 1 }, 3, badgeView, 6);
+  assert.ok(circleFitsInside(movedIn, 3, badgeView, 6), 'the moved badge keeps its target inside the curve');
+  assert.ok(movedIn.x > 90 && movedIn.y < 10, 'and stays in its corner');
+  assert.deepEqual(badgeFallbackCenter({ x: 120, y: 20 }, { x: 123, y: 17 }, 3, badgeView, 6), { x: 123, y: 17 });
+  assert.deepEqual(badgeFallbackCenter({ x: 50, y: 70 }, { x: 53, y: 67 }, 3, badgeView, 6), { x: 53, y: 67 });
 
   // § 5: "Each label tries right, left, above and below its dot, and hides
   // when it would touch another label, a pin, a badge, a bar or the dock."
@@ -2928,10 +2961,15 @@ test('home map edge pins and labels at rest: the clamp and the placement rules',
   // Every label placed anywhere on a grid of dots, edges and corners
   // included, lies wholly inside the bounds.
   const view = { x: 20, y: 10, width: 120, height: 60 };
+  // A view away from the origin still places labels (CodeRabbit on #60), so
+  // the grid below cannot pass by placing none.
+  assert.equal(placeMapLabels([request], none, view)[0]?.side, 'right');
+  let gridPlaced = 0;
   for (let x = view.x; x <= view.x + view.width; x += 6) {
     for (let y = view.y; y <= view.y + view.height; y += 5) {
       const placedLabel = placeMapLabels([{ anchor: { x, y }, gap: 2, width: 14, height: 3 }], none, view)[0];
       if (!placedLabel) continue;
+      gridPlaced += 1;
       const { box } = placedLabel;
       assert.ok(
         box.x >= view.x && box.y >= view.y && box.x + box.width <= view.x + view.width && box.y + box.height <= view.y + view.height,
@@ -2939,6 +2977,7 @@ test('home map edge pins and labels at rest: the clamp and the placement rules',
       );
     }
   }
+  assert.ok(gridPlaced > 0, 'labels are placed in an offset view');
 });
 
 test('home map labels and hit targets: chapter labels at rest, 44px pins and badges, 48px text buttons', async () => {
@@ -2960,10 +2999,15 @@ test('home map labels and hit targets: chapter labels at rest, 44px pins and bad
   assert.match(component, /data-map-x=\{c\.mapX\.toFixed\(3\)\}\s*data-map-y=\{c\.mapY\.toFixed\(3\)\}/);
   assert.match(component, /group\.dataset\.mapX = mapPoint\.x\.toFixed\(3\);\s*group\.dataset\.mapY = mapPoint\.y\.toFixed\(3\);/);
   const placePins = component.match(/const placePinsInsideDrawing = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
-  assert.match(placePins, /const inset = pinHitRadius\(\);/);
-  assert.match(placePins, /const clipRadius = \(Number\.parseFloat\(stage\.borderTopLeftRadius\) \|\| 0\) - \(Number\.parseFloat\(stage\.borderTopWidth\) \|\| 0\);\s*const corner = pxToViewBox\(Math\.max\(0, clipRadius\)\);/);
+  assert.match(placePins, /const inset = pinHitRadius\(\);\s*const corner = stageCornerRadius\(\);/);
+  const stageCorner = component.match(/const stageCornerRadius = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(stageCorner, /const clipRadius = \(Number\.parseFloat\(stage\.borderTopLeftRadius\) \|\| 0\) - \(Number\.parseFloat\(stage\.borderTopWidth\) \|\| 0\);\s*return pxToViewBox\(Math\.max\(0, clipRadius\)\);/);
   assert.match(placePins, /const widest = largestMapView\(stageAspect\(\), FULL_VIEW_BOX\);\s*const shownDrawing = \{ x: FULL_VIEW_BOX\.x, y: widest\.y, width: FULL_VIEW_BOX\.width, height: widest\.height \};/);
   assert.match(placePins, /const drawn = clampPinToDrawing\(\{ x, y \}, inset, shownDrawing, corner\);/);
+  // Every circle of a pin is brought to it, not just the dot, so an owner
+  // ring added after a claim follows a moved pin too (CodeRabbit on #60).
+  assert.match(placePins, /pin\.querySelectorAll\(PIN_CIRCLES\)\.forEach\(\(circle\) => \{\s*if \(close\(circle, 'cx', drawn\.x\) && close\(circle, 'cy', drawn\.y\)\) return;/);
+  assert.match(component, /const drawn = nodeCenter\(existing\) \?\? \{ x, y \};\s*existing\.insertBefore\(\s*makeCircle\('gp-home-map-node-owner-ring', drawn\.x, drawn\.y,/);
   assert.match(placePins, /if \(!moved\) return;\s*if \(lastThreadInputs\) renderDynamicThreads\(lastThreadInputs\.nodes, lastThreadInputs\.edges\);/);
   // What is drawn at a moved pin follows it: the selected web and card, and
   // the tooltip of the node it shows (Codex on #60).
@@ -2980,11 +3024,14 @@ test('home map labels and hit targets: chapter labels at rest, 44px pins and bad
   assert.match(component, /const badgeHitRadius = \(markerRadius: number\) => Math\.max\(markerRadius \+ pxToViewBox\(3\), minTargetRadius\(\)\);/);
   assert.match(component, /const hitRadius = badgeHitRadius\(markerRadius\);/);
   // A badge set beside its pins keeps its whole 44px target in view, not
-  // just its disc, and a badge with no such side moves in (Codex on #60).
+  // just its disc, and a badge with no such side moves in (Codex on #60),
+  // both clear of the stage's rounded corners; an anchor out of view keeps
+  // its badge beside it (CodeRabbit on #60).
   const badgeCenter = component.match(/const badgeCenterFor = \([\s\S]*?\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
   assert.match(badgeCenter, /const target = badgeHitRadius\(radius\);/);
-  assert.match(badgeCenter, /const inView = center\.x - target >= box\.x && center\.x \+ target <= box\.x \+ box\.width\s*&& center\.y - target >= box\.y && center\.y \+ target <= box\.y \+ box\.height;/);
-  assert.match(badgeCenter, /x: clampNumber\([^\n]*box\.x \+ target, box\.x \+ box\.width - target\),\s*y: clampNumber\([^\n]*box\.y \+ target, box\.y \+ box\.height - target\),/);
+  assert.match(badgeCenter, /if \(!circleFitsInside\(center, target, box, corner\)\) continue;/);
+  assert.match(badgeCenter, /return badgeFallbackCenter\(anchor, beside, target, box, corner\);/);
+  assert.doesNotMatch(badgeCenter, /clampNumber\(/);
   // The live pill and the error note are label blockers: a status render
   // lays the labels out again (Codex on #60).
   const statusRender = component.match(/const renderMapStateStatus = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
@@ -2992,6 +3039,7 @@ test('home map labels and hit targets: chapter labels at rest, 44px pins and bad
   const recomputeClusters = component.match(/const recomputeClustersNow = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
   assert.match(recomputeClusters, /^\s*if \(!clustersGroup \|\| !membersGroup\) return;\s*\/\/[^\n]*\n\s*placePinsInsideDrawing\(\);/);
   assert.match(recomputeClusters, /syncPinHitTargets\(\);\s*layoutChapterLabels\(\);/);
+  assert.match(recomputeClusters, /const corner = stageCornerRadius\(\);/);
 
   // § 5: "Chapter labels at rest: Manrope 600 at 12px in --gp-fg-muted with
   // a dark halo, without the leading 'Greenpill ' ... The highest
@@ -3020,15 +3068,22 @@ test('home map labels and hit targets: chapter labels at rest, 44px pins and bad
   // another (CodeRabbit on #60).
   assert.match(component, /type ClusterMember = \{ el: Element; key: string; center: MapPoint; truePoint: MapPoint \};/);
   assert.match(component, /out\.push\(\{ el, key, center, truePoint: mapX !== null && mapY !== null \? \{ x: mapX, y: mapY \} : center \}\);/);
-  // Every person in the stack must share a chapter's spot, not just one
-  // (Codex on #60).
-  assert.match(component, /const sharedChapters = members\.every\(\(member\) => chapters\.some\(\(chapter\) => sharesSpot\(member, chapter\)\)\)\s*\? chapters\.filter\(\(chapter\) => members\.some\(\(member\) => sharesSpot\(member, chapter\)\)\)\s*: \[\];/);
+  // The stack is "at" only the chapters every one of its people shares a
+  // spot with; people who each share a different chapter's spot are not
+  // "at" both (Codex on #60, twice).
+  assert.match(component, /const sharedChapters = chapters\.filter\(\(chapter\) => members\.every\(\(member\) => sharesSpot\(member, chapter\)\)\);/);
   // Hover is drawn from the pin or badge geometry picked, never from :hover,
   // which an overlapping 44px hit circle can give to a neighbour (Codex on #60).
+  // What is drawn hovered is the satellite or marker under the pointer, even
+  // for a marker that stands for one person, and it follows the pointer while
+  // a card is open (CodeRabbit on #60).
   assert.match(component, /const markPointerTarget = \(target: Element \| null\) => \{/);
-  assert.match(component, /markPointerTarget\(pin\);\s*if \(pin === pointerFocusTarget\) return;/);
-  assert.match(component, /pointerFocusTarget = null;\s*markPointerTarget\(stack\.marker\);/);
-  assert.doesNotMatch(component, /\.gp-home-map-node-link[^{]*:hover|\.gp-home-map-overlap-stack:hover/);
+  assert.match(component, /if \(satellite\) return \{ pin: satellite\.member\.el, mark: satellite\.el \};/);
+  assert.match(component, /\? \{ pin: stack\.members\[0\]\.el, mark: stack\.marker \}\s*: \{ stack, mark: stack\.marker \};/);
+  assert.match(component, /return pin \? \{ pin, mark: pin \} : \{\};/);
+  assert.match(component, /const \{ pin, stack, mark \} = hoverTargetAtPointer\(event\);\s*(?:\/\/[^\n]*\n\s*)*markPointerTarget\(mark \?\? null\);\s*if \(selectedFocusTarget\) return;/);
+  assert.doesNotMatch(component, /\.gp-home-map-node-link[^{]*:hover|\.gp-home-map-overlap-stack:hover|\.gp-home-map-cluster-sat:hover/);
+  assert.match(component, /\.gp-home-map-cluster-sat\.is-pointer-target \.gp-home-map-cluster-sat-label,/);
   assert.match(component, /\.gp-home-map-node-link\.is-chapter\.is-pointer-target \.gp-home-map-node-halo,/);
   assert.match(component, /\.gp-home-map-overlap-stack\.is-pointer-target \.gp-home-map-overlap-disc,/);
   assert.match(component, /return sameSpot \? 'at the same spot' : 'close together';/);
@@ -3054,6 +3109,10 @@ test('home map labels and hit targets: chapter labels at rest, 44px pins and bad
   // manage-link toggle and Send. Its theme toggles are chips.
   assert.match(component, /\.gp-home-map-location-search-row button,\s*\.gp-home-map-location-results button,\s*\.gp-home-map-location-coordinate-row button \{\s*min-height: var\(--gp-map-button\);/);
   assert.match(component, /\.gp-home-map-location-results button \{\s*width: 100%;\s*min-height: var\(--gp-map-button\);/);
+  // The result buttons are made by the script, so they take the component's
+  // scope, or the scoped 48px rule never reaches them (CodeRabbit on #60).
+  const searchResults = component.match(/const renderSearchResults = \([\s\S]*?\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(searchResults, /applyScope\(item\);\s*applyScope\(button\);/);
   assert.match(component, /\.gp-home-map-location-coordinate-row button \{\s*min-height: var\(--gp-map-button\);/);
   assert.match(component, /\.gp-home-map-addnode-location-head button,\s*\.gp-home-map-addnode-review button \{\s*display: inline-flex;\s*align-items: center;\s*min-height: var\(--gp-map-button\);/);
   assert.match(component, /\.gp-home-map-addnode-manage-toggle \{\s*min-height: var\(--gp-map-button\);/);

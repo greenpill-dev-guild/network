@@ -314,14 +314,46 @@ export function pointsBeyondView(view: MapBox, points: readonly MapPoint[]): Rec
 export const PIN_HIT_RADIUS = 4.8;
 
 /**
- * Where a pin is drawn: its point, kept `inset` map units inside the
- * drawing so the pin and its hit circle never cross the edge. Only the
- * drawing moves; the node keeps its true coordinate.
- *
- * The stage clips the drawing to rounded corners. With `cornerRadius` (in
- * map units) larger than the inset, a pin in a corner's square also keeps
- * its circle inside the curve: its centre stays within `cornerRadius -
- * inset` of the corner's arc centre.
+ * Moves a circle's centre in, if it must, so the whole circle lies inside
+ * `box`. The stage clips to rounded corners: with `cornerRadius` (in map
+ * units) larger than the circle's radius, a centre in a corner's square
+ * stays within `cornerRadius - radius` of the corner's arc centre, so the
+ * circle clears the curve too.
+ */
+export function keepCircleInside(center: MapPoint, radius: number, box: MapBox, cornerRadius = 0): MapPoint {
+  const x = Math.min(Math.max(center.x, box.x + radius), box.x + box.width - radius);
+  const y = Math.min(Math.max(center.y, box.y + radius), box.y + box.height - radius);
+  if (cornerRadius <= radius) return { x, y };
+  const left = box.x + cornerRadius;
+  const right = box.x + box.width - cornerRadius;
+  const top = box.y + cornerRadius;
+  const bottom = box.y + box.height - cornerRadius;
+  const arcX = x < left ? left : x > right ? right : null;
+  const arcY = y < top ? top : y > bottom ? bottom : null;
+  if (arcX === null || arcY === null) return { x, y };
+  const reach = cornerRadius - radius;
+  const distance = Math.hypot(x - arcX, y - arcY);
+  if (distance <= reach) return { x, y };
+  return { x: arcX + ((x - arcX) / distance) * reach, y: arcY + ((y - arcY) / distance) * reach };
+}
+
+/** Whether a circle already lies wholly inside a box with rounded corners. */
+export function circleFitsInside(center: MapPoint, radius: number, box: MapBox, cornerRadius = 0): boolean {
+  const kept = keepCircleInside(center, radius, box, cornerRadius);
+  return Math.abs(kept.x - center.x) < 1e-9 && Math.abs(kept.y - center.y) < 1e-9;
+}
+
+const pointInside = (point: MapPoint, box: MapBox) => (
+  point.x >= box.x && point.x <= box.x + box.width && point.y >= box.y && point.y <= box.y + box.height
+);
+
+/**
+ * Where a pin is drawn: its point, kept `inset` map units inside `drawing`
+ * (and clear of its rounded corners) so the pin and its hit circle never
+ * cross the edge. Only the drawing moves; the node keeps its true
+ * coordinate. A point beyond the drawing's crop (south of about 68°S) is
+ * not on its edge, so it stays where it is, off the map, rather than drawn
+ * somewhere false.
  */
 export function clampPinToDrawing(
   point: MapPoint,
@@ -329,20 +361,26 @@ export function clampPinToDrawing(
   drawing: MapBox = MAP_DRAWING,
   cornerRadius = 0
 ): MapPoint {
-  const x = Math.min(Math.max(point.x, drawing.x + inset), drawing.x + drawing.width - inset);
-  const y = Math.min(Math.max(point.y, drawing.y + inset), drawing.y + drawing.height - inset);
-  if (cornerRadius <= inset) return { x, y };
-  const left = drawing.x + cornerRadius;
-  const right = drawing.x + drawing.width - cornerRadius;
-  const top = drawing.y + cornerRadius;
-  const bottom = drawing.y + drawing.height - cornerRadius;
-  const arcX = x < left ? left : x > right ? right : null;
-  const arcY = y < top ? top : y > bottom ? bottom : null;
-  if (arcX === null || arcY === null) return { x, y };
-  const reach = cornerRadius - inset;
-  const distance = Math.hypot(x - arcX, y - arcY);
-  if (distance <= reach) return { x, y };
-  return { x: arcX + ((x - arcX) / distance) * reach, y: arcY + ((y - arcY) / distance) * reach };
+  if (!pointInside(point, MAP_DRAWING)) return { x: point.x, y: point.y };
+  return keepCircleInside(point, inset, drawing, cornerRadius);
+}
+
+/**
+ * Where a stack's badge goes when no side of its anchor has room for the
+ * badge's whole target (`targetRadius`) in `view`: `beside`, its first
+ * side, moved in until the target is whole and clear of the stage's rounded
+ * corners. An anchor outside the view keeps its badge beside it, out of view
+ * too, rather than drawn at the view's edge, far from its pin.
+ */
+export function badgeFallbackCenter(
+  anchor: MapPoint,
+  beside: MapPoint,
+  targetRadius: number,
+  view: MapBox,
+  cornerRadius = 0
+): MapPoint {
+  if (!pointInside(anchor, view)) return { x: beside.x, y: beside.y };
+  return keepCircleInside(beside, targetRadius, view, cornerRadius);
 }
 
 // ---- Labels at rest -------------------------------------------------------
