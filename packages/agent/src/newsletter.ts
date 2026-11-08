@@ -18,6 +18,10 @@ import {
  * a usable email or wallet; 401 for a bad key; 404 when the publication is
  * missing; 500 for its own errors. It does not duplicate an existing
  * subscriber, and its docs do not say what status that case gets.
+ *
+ * Rate limiting keys on `fly-client-ip`, like the map-node submission limit:
+ * Fly's proxy is the only way in, and it sets that header. Off Fly (local dev)
+ * requests carry no such header and share one `anonymous` window.
  */
 
 export { NEWSLETTER_SUBSCRIBE_ROUTE };
@@ -159,8 +163,11 @@ async function readJsonBody(response: Response): Promise<unknown> {
 /** Maps Paragraph's answer to a public result. Nothing from its body reaches the client. */
 function resultForParagraphResponse(status: number, payload: unknown): NewsletterSubscribeResult {
   if (status >= 200 && status < 300) {
-    const declinedInBody = Boolean(payload) && typeof payload === 'object' && (payload as { success?: unknown }).success === false;
-    return declinedInBody ? UNAVAILABLE : SUBSCRIBED;
+    // Only Paragraph's documented acknowledgment counts as a signup. A 2xx
+    // without `{"success": true}` is unconfirmed, so the form offers the
+    // Paragraph link rather than claim a subscription that may not exist.
+    const confirmed = Boolean(payload) && typeof payload === 'object' && (payload as { success?: unknown }).success === true;
+    return confirmed ? SUBSCRIBED : UNAVAILABLE;
   }
   // Paragraph's docs list no 409, but a conflict can only mean the address is
   // already on the list, which counts as success.

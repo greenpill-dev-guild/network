@@ -357,6 +357,15 @@ test('the newsletter form keeps addresses out of URLs and the honeypot out of re
   assert.match(markup, /<EmailInput[^>]*name=\{null\}/s);
   assert.doesNotMatch(markup, /<input[^>]*\sname=/s);
 
+  // EmailInput keeps that null: its 'email' default is a destructuring
+  // default, which applies only to undefined, and Astro drops a null
+  // attribute. A `name ?? 'email'` or `name || 'email'` would put the address
+  // back into the URL.
+  const emailInput = await readFile(join(rootDir, 'packages/website/src/components/ui/EmailInput.astro'), 'utf8');
+  assert.match(emailInput, /const \{[^}]*\bname = 'email',[^}]*\} = Astro\.props;/s);
+  assert.match(emailInput, /<input type="email" name=\{name\}/);
+  assert.doesNotMatch(emailInput, /name\s*(?:\?\?|\|\|)/);
+
   // The honeypot is hidden from assistive technology and the tab order.
   assert.match(markup, /class="gp-newsletter-trap" aria-hidden="true"/);
   assert.match(markup, /<input[^>]*tabindex="-1"[^>]*data-newsletter-trap/s);

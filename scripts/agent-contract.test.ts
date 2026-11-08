@@ -1699,11 +1699,17 @@ test('newsletter subscribe maps every Paragraph answer to a public result', asyn
   const providerBody = (status) => ({ success: false, msg: `Paragraph said ${status} for ${NEWSLETTER_RAW_EMAIL}` });
   const cases = [
     { status: 200, body: { success: true }, expected: NEWSLETTER_SUBSCRIBED, reported: false },
-    { status: 201, body: undefined, expected: NEWSLETTER_SUBSCRIBED, reported: false },
+    { status: 201, body: { success: true }, expected: NEWSLETTER_SUBSCRIBED, reported: false },
     { status: 409, body: providerBody(409), expected: { status: 200, body: { ok: true, status: 'already_subscribed' } }, reported: false },
     { status: 400, body: providerBody(400), expected: NEWSLETTER_INVALID, reported: true },
     { status: 422, body: providerBody(422), expected: NEWSLETTER_INVALID, reported: true },
+    // A 2xx counts only with Paragraph's `{"success": true}`: anything else is
+    // unconfirmed, and the form offers the Paragraph link instead.
     { status: 200, body: providerBody(200), expected: NEWSLETTER_UNAVAILABLE, reported: true },
+    { status: 200, body: {}, expected: NEWSLETTER_UNAVAILABLE, reported: true },
+    { status: 200, body: { success: 'true' }, expected: NEWSLETTER_UNAVAILABLE, reported: true },
+    { status: 201, body: undefined, expected: NEWSLETTER_UNAVAILABLE, reported: true },
+    { status: 204, body: undefined, expected: NEWSLETTER_UNAVAILABLE, reported: true },
     ...[401, 403, 404, 429, 500, 503].map((status) => ({
       status,
       body: providerBody(status),

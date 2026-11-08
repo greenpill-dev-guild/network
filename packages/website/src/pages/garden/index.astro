@@ -83,7 +83,7 @@ const seoDescription = garden.seo.description || summary;
                     <Text variant="body-sm">{step.body}</Text>
                     {signupFallback ? (
                       <NewsletterSignup
-                        id="garden-newsletter"
+                        id={`garden-newsletter-${index + 1}`}
                         fallbackHref={signupFallback.href}
                         fallbackLabel={signupFallback.label}
                       />

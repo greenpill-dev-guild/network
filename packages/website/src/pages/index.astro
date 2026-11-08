@@ -337,7 +337,7 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
                   <footer class="gp-home-garden-foot">
                     {signupFallback ? (
                       <NewsletterSignup
-                        id="home-newsletter"
+                        id={`home-newsletter-${index + 1}`}
                         fallbackHref={signupFallback.href}
                         fallbackLabel={signupFallback.label}
                       />
