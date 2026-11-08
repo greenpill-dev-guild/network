@@ -4,7 +4,14 @@ import { dirname, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { buildDirectusOperationalPermissionPlan } from './directus-operational-content-setup.ts';
-import { applyExtraGroupMembers, buildDirectusStudioBookmarkPlan, buildDirectusStudioMetadataPlan } from './directus-studio-setup.ts';
+import {
+  DIRECTUS_STUDIO_OPTIONAL_COLLECTIONS,
+  applyExtraGroupMembers,
+  buildDirectusStudioBookmarkPlan,
+  buildDirectusStudioMetadataPlan,
+  nonBlankValidation,
+  textFieldStorageProblems,
+} from './directus-studio-setup.ts';
 
 test('group assignment skips only a field Directus confirms missing, and stops on any other failure', async () => {
   const member = { collection: 'chapters', field: 'initiatives', meta: { group: 'group_story' } };
@@ -313,4 +320,204 @@ test('the quarantine bookmark lists records still missing from the site, through
   for (const field of [...filteredFields, ...(quarantined?.layout_query.tabular.fields ?? [])]) {
     assert.ok(publisherRead?.fields.includes(field), `publishers cannot read review_notifications.${field}`);
   }
+});
+
+// How Data Studio 11.17 decides that a required field is missing (validateItem
+// in the app). The form starts from the column default. On a new item it wants
+// the field present only when the column has no default, and it refuses only
+// null, so a blank string or spaces count as filled in.
+function dataStudioFindsMissing(
+  meta: { required?: boolean },
+  columnDefault: unknown,
+  edits: { value?: unknown },
+  isNew: boolean
+): boolean {
+  if (meta.required !== true) return false;
+  const item = { ...(columnDefault === null ? {} : { value: columnDefault }), ...edits };
+  if (isNew && columnDefault === null && item.value === undefined) return true;
+  return item.value === null;
+}
+
+test('Data Studio misses an untouched required field whenever its column defaults to blank', () => {
+  const required = { required: true };
+
+  // The defect: the column default fills the field, so the form lets it through.
+  assert.equal(dataStudioFindsMissing(required, '', {}, true), false);
+  assert.equal(dataStudioFindsMissing(required, '', { value: '   ' }, true), false);
+  // Without a default, an untouched or emptied field is caught before saving.
+  assert.equal(dataStudioFindsMissing(required, null, {}, true), true);
+  assert.equal(dataStudioFindsMissing(required, null, { value: null }, true), true);
+  assert.equal(dataStudioFindsMissing(required, null, { value: null }, false), true);
+  assert.equal(dataStudioFindsMissing(required, null, { value: 'Refresh links' }, true), false);
+  // Spaces still count as filled in, which is why required text also refuses them.
+  assert.equal(dataStudioFindsMissing(required, null, { value: '   ' }, true), false);
+});
+
+const studioField = (plan: ReturnType<typeof buildDirectusStudioMetadataPlan>, collection: string, field: string) => (
+  plan.fields.find((planned) => planned.collection === collection && planned.field === field)?.meta as
+    Record<string, any> | undefined
+);
+
+test('required text fields refuse a missing, emptied, or blank value', () => {
+  const plan = buildDirectusStudioMetadataPlan();
+  const required = [
+    // A blank default let these through untouched (migration 033 drops it).
+    ['chapter_update_requests', 'title'],
+    ['chapter_update_requests', 'summary'],
+    ['chapter_update_request_links', 'label'],
+    ['chapter_update_request_links', 'url'],
+    ['chapter_update_request_proof_signals', 'label'],
+    ['chapter_update_request_proof_signals', 'value'],
+    // NOT NULL with no default all along, now marked required in the form.
+    ['themes', 'slug'],
+    ['themes', 'name'],
+    ['people', 'slug'],
+    ['people', 'display_name'],
+    ['chapters', 'slug'],
+    ['chapters', 'name'],
+    ['chapter_initiatives', 'slug'],
+    ['chapter_initiatives', 'title'],
+    ['guilds', 'slug'],
+    ['guilds', 'name'],
+    ['guilds', 'type'],
+    ['projects', 'slug'],
+    ['projects', 'name'],
+  ];
+  for (const [collection, field] of required) {
+    const meta = studioField(plan, collection, field);
+    assert.equal(meta?.required, true, `${collection}.${field} is not required`);
+    assert.notEqual(meta?.options?.clear, true, `${collection}.${field} saves an emptied field as ''`);
+    assert.deepEqual(
+      { validation: meta?.validation, validation_message: meta?.validation_message },
+      nonBlankValidation(field),
+      `${collection}.${field} accepts spaces alone`
+    );
+  }
+
+  // Every required field a person types text into gets the same treatment.
+  for (const { collection, field, meta } of plan.fields) {
+    const typed = ['input', 'input-multiline'].includes(meta.interface as string) &&
+      (meta.options as Record<string, unknown> | null)?.type !== 'number' &&
+      meta.hidden !== true &&
+      meta.readonly !== true;
+    if (meta.required !== true || !typed) continue;
+    assert.ok(meta.validation, `${collection}.${field} is required but accepts spaces alone`);
+    assert.notEqual((meta.options as Record<string, unknown> | null)?.clear, true, `${collection}.${field}`);
+  }
+});
+
+test('the non-blank rule refuses spaces alone and accepts any visible text', () => {
+  const { validation } = nonBlankValidation('title');
+  // Data Studio applies a field's validation itself only through its `_and` parts.
+  assert.deepEqual(Object.keys(validation), ['_and']);
+  const pattern = new RegExp(validation._and[0].title._regex);
+  for (const blank of [' ', '   ', '\t', '\n \t']) assert.equal(pattern.test(blank), false, JSON.stringify(blank));
+  for (const text of ['Refresh links', ' x ', 'é', '1']) assert.equal(pattern.test(text), true, text);
+});
+
+test('a relation a record cannot exist without is required', () => {
+  const plan = buildDirectusStudioMetadataPlan();
+  for (const [collection, field] of [
+    ['chapter_initiatives', 'chapter_slug'],
+    ['projects', 'guild_slug'],
+    ['chapter_update_requests', 'chapter_slug'],
+    ['chapter_update_request_links', 'update_request_id'],
+    ['chapter_update_request_proof_signals', 'update_request_id'],
+    ['chapter_editor_assignments', 'chapter_slug'],
+    ['chapter_editor_assignments', 'directus_user_id'],
+    ['guild_editor_assignments', 'guild_slug'],
+    ['guild_editor_assignments', 'directus_user_id'],
+  ]) {
+    const meta = studioField(plan, collection, field);
+    assert.deepEqual(meta?.special, ['m2o'], `${collection}.${field}`);
+    assert.equal(meta?.required, true, `${collection}.${field} is not required`);
+  }
+});
+
+test("emptying an optional text field saves its column's empty value", () => {
+  const plan = buildDirectusStudioMetadataPlan(
+    undefined, undefined, undefined, undefined,
+    [...DIRECTUS_STUDIO_OPTIONAL_COLLECTIONS]
+  );
+  // `not null default ''` columns: without `clear` Data Studio sends null,
+  // which Directus refuses, so a saved value could never be removed.
+  const savesBlank = {
+    themes: ['summary'],
+    people: ['role', 'avatar', 'bio'],
+    chapters: ['city', 'country', 'region', 'summary', 'intro_quote', 'intro_quote_attribution', 'founded', 'primary_link'],
+    chapter_initiatives: ['summary', 'description'],
+    guilds: ['summary', 'description', 'oneliner', 'image'],
+    projects: ['summary', 'description', 'image', 'repo_url', 'live_url'],
+    chapter_update_requests: ['proposed_summary', 'proposed_primary_link', 'proposed_image', 'reviewer_notes', 'reviewed_by'],
+    chapter_update_request_links: ['kind', 'subtext', 'handle', 'action', 'icon'],
+    chapter_update_request_proof_signals: ['source', 'href'],
+  };
+  // Nullable columns: NULL is the empty value, so an emptied field sends it.
+  const savesNull = {
+    themes: ['reviewed_by'],
+    people: ['reviewed_by'],
+    chapters: ['image_alt', 'image_credit', 'reviewed_by'],
+    chapter_initiatives: ['reviewed_by'],
+    guilds: ['reviewed_by'],
+    projects: ['reviewed_by'],
+    chapter_update_requests: ['proposed_image_alt', 'proposed_image_credit'],
+    map_node_submissions: ['public_note'],
+  };
+  for (const [collection, fields] of Object.entries(savesBlank)) {
+    for (const field of fields) {
+      const meta = studioField(plan, collection, field);
+      assert.equal(meta?.options?.clear, true, `${collection}.${field} sends null when emptied`);
+      assert.notEqual(meta?.required, true, `${collection}.${field}`);
+    }
+  }
+  for (const [collection, fields] of Object.entries(savesNull)) {
+    for (const field of fields) {
+      const meta = studioField(plan, collection, field);
+      assert.ok(meta, `${collection}.${field} is not in the plan`);
+      assert.notEqual(meta?.options?.clear, true, `${collection}.${field} saves '' instead of NULL`);
+    }
+  }
+});
+
+test('the text field check names each way a field and its column disagree', () => {
+  const text = (is_nullable: boolean, default_value: unknown) => ({ data_type: 'text', is_nullable, default_value });
+  const problems = (meta: Record<string, unknown>, column: ReturnType<typeof text> | Record<string, unknown>) => (
+    textFieldStorageProblems(meta, column as Parameters<typeof textFieldStorageProblems>[1])
+  );
+  const required = { interface: 'input', required: true };
+  const sometimesRequired = {
+    interface: 'input-multiline',
+    conditions: [{ name: 'Alt text required with an image', rule: { image: { _nnull: true } }, required: true }],
+  };
+
+  // Required fields.
+  assert.match(problems(required, text(false, ''))[0], /defaults to ''/);
+  assert.deepEqual(problems(required, text(false, null)), []);
+  // A default that is a real value fills the field in.
+  assert.deepEqual(problems(required, text(false, 'guild')), []);
+  assert.match(problems({ ...required, options: { clear: true } }, text(false, null))[0], /Remove `clear`/);
+  assert.match(problems(required, text(true, null))[0], /accepts NULL/);
+
+  // Fields required only sometimes.
+  assert.deepEqual(problems(sometimesRequired, text(true, null)), []);
+  assert.equal(problems(sometimesRequired, text(false, '')).length, 2);
+  assert.match(problems({ ...sometimesRequired, options: { clear: true } }, text(true, null)).join(' '), /Remove `clear`/);
+
+  // Optional fields.
+  assert.match(problems({ interface: 'input-multiline' }, text(false, ''))[0], /Set `clear`/);
+  assert.deepEqual(problems({ interface: 'input-multiline', options: { clear: true } }, text(false, '')), []);
+  assert.deepEqual(problems({ interface: 'input', options: { clear: true } }, text(false, 'external')), []);
+  assert.deepEqual(problems({ interface: 'input' }, text(true, null)), []);
+  assert.match(problems({ interface: 'input', options: { clear: true } }, text(true, null))[0], /empty value is NULL/);
+  assert.match(problems({ interface: 'input' }, text(false, null))[0], /Mark it required/);
+  assert.match(problems({ interface: 'select-dropdown-m2o', special: ['m2o'] }, text(false, ''))[0], /optional relation/);
+  // A dropdown without an empty choice cannot be emptied.
+  assert.deepEqual(problems({ interface: 'select-dropdown' }, text(false, 'active')), []);
+
+  // Not editable text: nothing to check.
+  assert.deepEqual(problems({ interface: 'input', required: true, hidden: true, readonly: true }, text(false, '')), []);
+  assert.deepEqual(problems({ interface: 'input', readonly: true }, text(false, null)), []);
+  assert.deepEqual(problems({ interface: 'input' }, { data_type: 'jsonb', is_nullable: false, default_value: {} }), []);
+  assert.deepEqual(problems({ interface: 'input' }, { data_type: 'integer', is_nullable: false, default_value: 0 }), []);
+  assert.deepEqual(problems({ interface: 'input' }, null as unknown as Record<string, unknown>), []);
 });
