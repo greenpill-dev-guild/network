@@ -125,7 +125,9 @@ function runBuild(): Promise<{ exitCode: number; output: string }> {
 }
 
 function heroImage(html: string): string {
-  return /class="gp-chapter-hero-media"[\s\S]*?<img[^>]*?\ssrc="([^"]+)"/.exec(html)?.[1] ?? '';
+  // The hero figure is a Card, so its class attribute is a list that includes
+  // gp-chapter-hero-media rather than that one class alone.
+  return /class="(?:[^"]*\s)?gp-chapter-hero-media(?:\s[^"]*)?"[\s\S]*?<img[^>]*?\ssrc="([^"]+)"/.exec(html)?.[1] ?? '';
 }
 
 function metaContent(html: string, attribute: string): string {
