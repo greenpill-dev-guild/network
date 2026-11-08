@@ -2436,7 +2436,10 @@ test('home map keeps focus, hover and selection honest when stacks rebuild', asy
   assert.doesNotMatch(component, /const selectedId = selectedNode\?\.getAttribute/);
   // Closing a card rebuilds the stacks, so a person drawn while selected goes
   // back into their badge.
-  assert.match(component, /const closeSelected = \(\{ returnFocus = true \}: \{ returnFocus\?: boolean \} = \{\}\) => \{[\s\S]*?clusterDirty\(\);[\s\S]*?\n    \};/);
+  // The stacks are rebuilt before focus returns, so it lands on the marker
+  // that stands for a person, not on a pin about to be hidden (Codex on #63).
+  const closeCard = component.match(/const closeSelected = \(\{ returnFocus = true \}: \{ returnFocus\?: boolean \} = \{\}\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(closeCard, /recomputeClustersNow\(\);\s*if \(!restoreFocus \|\| !focusTarget\) return;/);
   // Rebuilding keeps keyboard focus on what stands for the same people, and a
   // hovered pin that is now hidden gives up the hover card.
   const recompute = component.match(/const recomputeClustersNow = \(\) => \{([\s\S]*?)\n    \};/)?.[1] ?? '';
@@ -2918,7 +2921,7 @@ test('home map list: a dock beside the map, a sheet inside the stage, a modal sh
   assert.match(openInspector, /if \(selectedBack\) selectedBack\.hidden = !listBehindInspector;/);
   // A pick from the list moves focus into the inspector, since its row goes
   // with the list: to Back first.
-  assert.match(openInspector, /if \(viaKeyboard \|\| fromList\) inspectorEntryControl\(\)\?\.focus\(\{ preventScroll: true \}\);/);
+  assert.match(openInspector, /if \(viaKeyboard \|\| fromList \|\| focusWasInInspector\) inspectorEntryControl\(\)\?\.focus\(\{ preventScroll: true \}\);/);
   assert.match(component, /const inspectorEntryControl = \(\) => \(selectedBack && !selectedBack\.hidden \? selectedBack : selectedClose\);/);
   // Back brings the list back as it was, with focus on the row just shown.
   const back = component.match(/selectedBack\?\.addEventListener\('click', \(\) => \{([\s\S]*?)\n    \}\);\n/)?.[1] ?? '';
@@ -3311,14 +3314,41 @@ test('home map inspector: the dock, the sheets and the compact tooltip (map-poli
   assert.match(component, /const coarsePointer = \(\) => window\.matchMedia\('\(pointer: coarse\)'\)\.matches;/);
   assert.doesNotMatch(component, /getBoundingClientRect\(\)\.width <= 520/);
   // The input matters it keeps: no hover tooltips from a finger, the tap's
-  // fallback, and "Tap" or "Click" in a stack's hint.
-  assert.match(component, /if \(coarsePointer\(\) && event\.pointerType !== 'mouse'\) return;/);
-  assert.match(component, /if \(!coarsePointer\(\) \|\| !isRecentTouchMapClick\(\)/);
+  // fallback, drag and pinch on touch, and "Tap" or "Click" in a stack's
+  // hint. Each event says what made it, so a hybrid laptop's touchscreen
+  // pans and pinches though its primary pointer is fine (Codex on #63); the
+  // primary pointer answers only where there is no event.
+  assert.match(component, /const isTouchEvent = \(event: Event\) => \(\s*'pointerType' in event \? \(event as PointerEvent\)\.pointerType === 'touch' : coarsePointer\(\)\s*\);/);
+  assert.match(component, /if \(event\.pointerType === 'touch' \|\| \(coarsePointer\(\) && event\.pointerType !== 'mouse'\)\) return;/);
+  assert.match(component, /\} else if \(event\.pointerType !== 'touch' && !coarsePointer\(\)\) \{\s*return;/);
+  assert.match(component, /if \(event\.pointerType !== 'mouse' && event\.pointerType !== 'touch' && !coarsePointer\(\)\) return;/);
+  assert.match(component, /if \(!isRecentTouchMapClick\(\) \|\| !eventTarget/);
+  assert.match(component, /if \(isRecentTouchMapClick\(\) && nodeAtPointer\(event as MouseEvent, 44\)\) return;/);
+  assert.match(component, /lastMapPointerWasTouch = event\.pointerType !== 'mouse';/);
   assert.match(component, /\$\{coarsePointer\(\) \? 'Tap' : 'Click'\} to choose one\./);
   // The layout matters read the container: the list's mode and the
   // inspector's dock or sheet.
   assert.match(component, /const modal = mapLayout\(\) === 'phone';/);
-  assert.match(component, /if \(layout !== lastMapLayout && selectedEl && !selectedEl\.hidden\) panSelectedIntoView\(\);/);
+  // A resize, and an inspector that grows (the Edit form) or moves to a
+  // sheet, brings the node out from under it again (Codex on #63).
+  assert.match(component, /if \(selectedEl && !selectedEl\.hidden\) \{\s*panSelectedIntoView\(\);\s*syncThemesScroller\(\);/);
+  assert.match(component, /new ResizeObserver\(\(\) => \{\s*if \(!selectedEl\.hidden\) panSelectedIntoView\(\);\s*\}\)\.observe\(selectedEl\);/);
+  // A move by hand since the inspector's last pan becomes the view to go
+  // back to: a later pan never erases it (Codex on #63).
+  assert.match(component, /const untouched = viewBeforeInspector && sameView\(currentViewBox, viewBeforeInspector\.moved\);\s*const before = untouched && viewBeforeInspector\s*\? viewBeforeInspector\s*: \{ view: \{ \.\.\.currentViewBox \}, wasDefault: viewIsDefault \};/);
+  // A tooltip names a point that can be seen: one under the dock or a sheet
+  // gets none, and the list as a sheet inside the stage counts as one, while
+  // a phone's full-page list does not (Codex on #63).
+  assert.match(component, /: layout !== 'phone' && listDrawer && !listDrawer\.hidden \? listDrawer : null;/);
+  assert.match(component, /anchorY >= covered\.rect\.minY && anchorY <= covered\.rect\.maxY\s*\) \{\s*focusEl\.setAttribute\('aria-hidden', 'true'\);\s*return;/);
+  // Opening a node clears the hover the click left behind, so a connection
+  // row's preview ends back on the selection (Codex on #63); and a pick from
+  // inside the inspector keeps focus in it, mouse or keyboard, since its row
+  // is replaced.
+  const openNode = component.match(/const openSelected = \(member: DynamicMapNode, link: Element, viaKeyboard = false\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(openNode, /const focusWasInInspector = !selectedEl\.hidden && selectedEl\.contains\(document\.activeElement\);/);
+  assert.match(openNode, /pointerFocusTarget = null;\s*hoveredStackKey = '';/);
+  assert.match(openNode, /if \(viaKeyboard \|\| fromList \|\| focusWasInInspector\) inspectorEntryControl\(\)\?\.focus\(\{ preventScroll: true \}\);/);
   // June's phone recovery reset the view on every close; the inspector puts
   // back the view it moved instead.
   assert.doesNotMatch(component, /shouldRecoverMobileView/);

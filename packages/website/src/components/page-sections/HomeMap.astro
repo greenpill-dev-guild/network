@@ -1285,11 +1285,17 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     };
 
     // § 5: "Layout follows the container's width only; the kind of pointer
-    // never picks it." mapLayout() picks the layout. A coarse pointer picks
-    // only how input works: a tap's 44px fallback, pinch and drag on touch,
-    // "Tap" in a stack's hint, and no hover tooltips from a finger. A 1024px
-    // iPad gets the dock, driven by taps.
+    // never picks it." mapLayout() picks the layout. The pointer picks only
+    // how input works: a tap's 44px fallback, pinch and drag on touch, "Tap"
+    // in a stack's hint, and no hover tooltips from a finger. Each event says
+    // what made it (event.pointerType), so a hybrid laptop's touchscreen
+    // pans and pinches though its primary pointer is fine; the primary
+    // pointer, `(pointer: coarse)`, answers only where there is no event.
+    // A 1024px iPad gets the dock, driven by taps.
     const coarsePointer = () => window.matchMedia('(pointer: coarse)').matches;
+    const isTouchEvent = (event: Event) => (
+      'pointerType' in event ? (event as PointerEvent).pointerType === 'touch' : coarsePointer()
+    );
 
     const nodeCenter = (node: Element) => {
       const dot = node.querySelector('.gp-home-map-node-dot') as SVGCircleElement | null;
@@ -1419,7 +1425,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     const showEdgeTooltip = (edgeId: string, event: PointerEvent | MouseEvent) => {
       const edge = edgeMetaById.get(edgeId);
-      if (!edge || !edgeTooltip || !edgeTooltipKicker || !edgeTooltipTitle || !edgeTooltipMeta || coarsePointer()) return;
+      if (!edge || !edgeTooltip || !edgeTooltipKicker || !edgeTooltipTitle || !edgeTooltipMeta || isTouchEvent(event)) return;
       edgeTooltipKicker.textContent = edgePairLabel(edge);
       edgeTooltipTitle.textContent = `${edge.from.name} → ${edge.to.name}`;
       edgeTooltipMeta.textContent = edge.themeLabel;
@@ -1579,10 +1585,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       return count;
     };
 
-    // What covers part of the stage: the inspector, or the list while it is
-    // docked. A dock covers one side; a sheet, the stage's bottom. The rect is
-    // in px from the stage's top left. A hidden panel, or the list as a sheet
-    // or a phone's full-page sheet, covers nothing here.
+    // What covers part of the stage: the inspector, or the list, docked or
+    // as a sheet inside the stage. A dock covers one side; a sheet, the
+    // stage's bottom. The rect is in px from the stage's top left. A hidden
+    // panel, or a phone's full-page list over the whole page, covers nothing
+    // here.
     type StagePanel = {
       el: HTMLElement;
       side: 'east' | 'west' | 'south';
@@ -1593,7 +1600,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const layout = mapLayout();
       const el = selectedEl && !selectedEl.hidden
         ? selectedEl
-        : layout === 'dock' && listDrawer && !listDrawer.hidden ? listDrawer : null;
+        : layout !== 'phone' && listDrawer && !listDrawer.hidden ? listDrawer : null;
       if (!el) return null;
       const stage = root.getBoundingClientRect();
       const box = el.getBoundingClientRect();
@@ -1605,8 +1612,10 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     // § 5: the tooltip "flips below the node when there is no room above".
     // It is centred on its point, and kept inside the open part of the stage,
-    // inset like the bars: never under the dock or the sheet. The tooltip
-    // must be showing, so it can be measured.
+    // inset like the bars: never under the dock or the sheet. A point under
+    // them gets none (Codex on #63): the row or the inspector that previews
+    // it already names it. The tooltip must be showing, so it can be
+    // measured.
     const placeFocusCard = (cx: number, cy: number) => {
       if (!focusEl) return;
       const xPct = ((cx - currentViewBox.x) / currentViewBox.width) * 100;
@@ -1623,6 +1632,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       const maxY = covered?.side === 'south' ? covered.rect.minY : stage.height;
       const anchorX = (xPct / 100) * stage.width;
       const anchorY = (yPct / 100) * stage.height;
+      if (
+        covered &&
+        anchorX >= covered.rect.minX && anchorX <= covered.rect.maxX &&
+        anchorY >= covered.rect.minY && anchorY <= covered.rect.maxY
+      ) {
+        focusEl.setAttribute('aria-hidden', 'true');
+        return;
+      }
       const shiftX = clampNumber(-tip.width / 2, minX + inset - anchorX, maxX - inset - tip.width - anchorX);
       const roomAbove = anchorY - offset - tip.height >= inset;
       const roomBelow = anchorY + offset + tip.height <= maxY - inset;
@@ -2015,7 +2032,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       // whole map are untouched.
       if (mouse) {
         if (!root.classList.contains('can-pan') || event.button !== 0) return;
-      } else if (!coarsePointer()) {
+      } else if (event.pointerType !== 'touch' && !coarsePointer()) {
         return;
       }
       if (!svgPointForEvent(event)) return;
@@ -2042,7 +2059,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       gesturePointers.set(event.pointerId, event);
       // Mouse drag-pan runs on desktop too; pinch stays touch-only (it needs two
       // pointers, which a mouse can't produce).
-      if (!coarsePointer() && event.pointerType !== 'mouse') return;
+      if (event.pointerType !== 'mouse' && event.pointerType !== 'touch' && !coarsePointer()) return;
 
       if (gesturePointers.size >= 2 && pinchStart) {
         const pointers = Array.from(gesturePointers.values());
@@ -2100,7 +2117,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     // Hover comes from geometry only, never from the element under the
     // pointer, so the card always names what a click would open.
     root.addEventListener('pointermove', (event) => {
-      if (coarsePointer() && event.pointerType !== 'mouse') return;
+      if (event.pointerType === 'touch' || (coarsePointer() && event.pointerType !== 'mouse')) return;
       if (gesturePointers.size > 0) return;
       const { pin, stack, mark } = hoverTargetAtPointer(event);
       // Hover follows the pointer while a card is open too, since a click
@@ -2185,8 +2202,10 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       };
     };
 
-    // The view before the inspector first moved it, to go back to on close
-    // unless the map was moved since.
+    // The view before the inspector moved the map, to go back to on close,
+    // and where the inspector last left it. The map moved by hand since then
+    // makes that the view to go back to: the next pan starts from it, and a
+    // close with no pan after it leaves the map where the hand put it.
     let viewBeforeInspector: { view: MapViewBox; wasDefault: boolean; moved: MapViewBox } | null = null;
     const panSelectedIntoView = () => {
       const covered = inspectorPanel();
@@ -2194,10 +2213,20 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       if (!covered || !point) return;
       const next = panPointIntoOpenArea(currentViewBox, point, covered.panel, covered.clearance, FULL_VIEW_BOX);
       if (sameView(next, currentViewBox)) return;
-      const before = viewBeforeInspector ?? { view: { ...currentViewBox }, wasDefault: viewIsDefault };
+      const untouched = viewBeforeInspector && sameView(currentViewBox, viewBeforeInspector.moved);
+      const before = untouched && viewBeforeInspector
+        ? viewBeforeInspector
+        : { view: { ...currentViewBox }, wasDefault: viewIsDefault };
       setMapViewBox(next);
-      viewBeforeInspector = { ...before, moved: { ...currentViewBox } };
+      viewBeforeInspector = { view: before.view, wasDefault: before.wasDefault, moved: { ...currentViewBox } };
     };
+    // A dock or a sheet that grows (the Edit form opening) or moves (the
+    // layout crossing 860px) can cover the node again.
+    if (selectedEl && typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(() => {
+        if (!selectedEl.hidden) panSelectedIntoView();
+      }).observe(selectedEl);
+    }
     // Once the inspector has closed: back where the map was, or, if it was
     // moved since, inside the drawing again.
     const settleViewAfterInspector = () => {
@@ -2363,8 +2392,10 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       settleViewAfterInspector();
       layoutThemeStrip();
       scheduleChapterLabels();
-      // A person drawn while selected goes back into their stack.
-      clusterDirty();
+      // A person drawn while selected goes back into their stack now, before
+      // focus returns, so focus lands on the marker that stands for them
+      // rather than on a pin about to be hidden (Codex on #63).
+      recomputeClustersNow();
       if (!restoreFocus || !focusTarget) return;
       // The node, or what stands for it when a stack or a filter hides it.
       if (
@@ -2389,9 +2420,17 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     const openSelected = (member: DynamicMapNode, link: Element, viaKeyboard = false) => {
       if (!selectedEl) return;
+      // A control in the inspector that opened this node (a connection row,
+      // a steward's chapter) is replaced below, so focus must not go with it.
+      const focusWasInInspector = !selectedEl.hidden && selectedEl.contains(document.activeElement);
       // One open surface at a time, however the node was reached: a keyboard
       // can move from the editor back to a pin.
       closeFilterPanels();
+      // The selection owns the map's focus state now; the pin the pointer
+      // was on (the one just clicked) no longer holds the hover, so a
+      // preview ending goes back to the selection (Codex on #63).
+      pointerFocusTarget = null;
+      hoveredStackKey = '';
       // The list gives the dock (or the sheet) to the node, and Back brings
       // it back as it was. A pin picked while the inspector already stands in
       // for the list keeps that way back.
@@ -2481,13 +2520,14 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       panSelectedIntoView();
       // A keyboard selection moves focus into the inspector, so its controls
       // are reachable without tabbing through every remaining pin; so does a
-      // pick from the list, whose row has gone. A pointer on the map leaves
-      // focus on the node, with no jump. Escape or Close returns focus to the
+      // pick from the list, whose row has gone, and a pick from inside the
+      // inspector, whose row or link was replaced, by mouse too (Codex on
+      // #63). A pointer on the map leaves focus on the node, with no jump. Escape or Close returns focus to the
       // node: closeSelected restores it whenever focus is inside. Blurring the
       // node here is safe: clearFocus re-applies setFocus(selectedFocusTarget),
       // which keeps the colour web (is-selected-adj is never touched by
       // setFocus).
-      if (viaKeyboard || fromList) inspectorEntryControl()?.focus({ preventScroll: true });
+      if (viaKeyboard || fromList || focusWasInInspector) inspectorEntryControl()?.focus({ preventScroll: true });
       clusterDirty();
     };
 
@@ -3108,7 +3148,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         node.matches('.gp-home-map-node-link, .gp-home-map-clusters, .gp-home-map-selected, .gp-home-map-controls, .gp-home-map-legend, .gp-home-map-state-error, .gp-home-map-edge-tooltip, .gp-home-map-list-drawer')
       ));
       if (insideMap) return;
-      if (coarsePointer() && isRecentTouchMapClick() && nodeAtPointer(event as MouseEvent, 44)) return;
+      if (isRecentTouchMapClick() && nodeAtPointer(event as MouseEvent, 44)) return;
       closeSelected();
     });
     // Escape closes the selected-node card/bar from anywhere (keyboard + a11y).
@@ -3651,7 +3691,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
         return;
       }
       if (!target || !root.contains(target)) {
-        if (!coarsePointer() || !isRecentTouchMapClick() || !eventTarget || !root.contains(eventTarget) || isGestureBlocked(eventTarget)) return;
+        if (!isRecentTouchMapClick() || !eventTarget || !root.contains(eventTarget) || isGestureBlocked(eventTarget)) return;
         const nearestNode = nodeAtPointer(event as MouseEvent, 44);
         if (!nearestNode) return;
         event.preventDefault();
@@ -5798,7 +5838,6 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     };
 
     let mapResizeTimer = 0;
-    let lastMapLayout = mapLayout();
     const scheduleMapResizeSync = () => {
       // Before the debounce: focus must not wait on a control that just hid.
       keepChromeFocus();
@@ -5818,12 +5857,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           setFocus(activeFocusTarget);
         }
         syncSelectedOverlay();
-        // A dock that became a sheet, or a sheet that became a dock, covers
-        // another part of the map: the selected node comes out from under it.
-        const layout = mapLayout();
-        if (layout !== lastMapLayout && selectedEl && !selectedEl.hidden) panSelectedIntoView();
-        lastMapLayout = layout;
-        if (selectedEl && !selectedEl.hidden) syncThemesScroller();
+        // The view kept its centre for the new stage, and a dock that became
+        // a sheet (or the other way) covers another part of the map: the
+        // selected node comes out from under the inspector again.
+        if (selectedEl && !selectedEl.hidden) {
+          panSelectedIntoView();
+          syncThemesScroller();
+        }
         clusterDirty();
       }, 80);
     };
