@@ -426,6 +426,25 @@ test('cards on every page come from the Card primitive and do not move on hover'
   assert.match(card, /const Tag = href \? 'a' : \(as \?\? 'div'\);/);
 });
 
+test('a focused primary button keeps the focus ring under its glow', async () => {
+  // DESIGN.md: the lime focus ring marks every interactive element. The ring is
+  // a box-shadow in gp-tokens.css, and the primary glow would replace it, so the
+  // primary button's focus-visible state keeps both.
+  const button = await readFile(join(rootDir, 'packages/website/src/components/ui/Button.astro'), 'utf8');
+  assert.match(
+    button,
+    /\.gp-button\.is-primary:focus-visible\s*\{[^}]*box-shadow:\s*var\(--gp-shadow-focus\),\s*var\(--gp-shadow-pill\)/
+  );
+});
+
+test('the standalone map pages reset the body margin that GpLayout resets elsewhere', async () => {
+  for (const [page, bodyClass] of [['map/edit.astro', 'map-edit-root'], ['map/moderate.astro', 'moderation-root']]) {
+    const source = await readFile(join(websitePagesDir, page), 'utf8');
+    assert.match(source, new RegExp(`<body class="gp-root ${bodyClass}">`), `${page} body classes`);
+    assert.match(source, new RegExp(`\\.${bodyClass}\\s*\\{[^}]*margin:\\s*0;`), `${page} resets the body margin`);
+  }
+});
+
 test('noindex chapters keep their own page while staying out of discovery', async () => {
   const [librarySource, chapterPage] = await Promise.all([
     readFile(operationalContentLibraryPath, 'utf8'),
