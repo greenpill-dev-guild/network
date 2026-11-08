@@ -105,3 +105,65 @@ Measured live at 820px canvas width: **35 node pairs within 18px of each other; 
 
 - Live measurements (1366×641): wrapper 820×361 in 1366px viewport; 25 nodes; 35 collision pairs <18px, four at 0px; uniform 39px hit circles; "Amio" clipped; "kitblake" at two locations; Stewards filter → blank canvas; 16/16 theme chips pressed; stuck `is-focused` hover card + persistent selection strands; list modal + hover card + legend rendered simultaneously; "Find your people" → add-node walkthrough; mobile overlay chrome ≈40% of card; MEMBERS pill clipped.
 - Code refs: sizing `index.astro:385-388`, `HomeMap.astro:41-45, 4118-4123, 6743-6747`; projection `44-45`; radii/hit `109, 234-237, 2740-2744`; density-shrink `990-1032`; overlap stacks `2767-2949` (`toFixed(2)` key at `2782`); theme exemption `2177-2182` (+ empty chapter themes `120, 231`); filter defaults `947-949`, exclusive isolate `2280-2283`; zero-state gap `4291-4293`; map-state lifecycle `3255-3325`; a11y wrappers `257, 334`; DESIGN.md contract `403, 422, 642`.
+
+---
+
+## 5. P1 decisions (2026-11-07)
+
+Afo chose to see the P1 layout designed before any P1 code was written (PRD-1424, a child of PRD-739). The prompt is [homemap-p1-prompt.md](homemap-p1-prompt.md). Its three variants were drawn from live public map data (`/map/state` of 2026-11-07 and the committed chapter snapshot) on a private Claude Design canvas in Afo's account: <https://claude.ai/artifact/5Q6JNPPZDp5PbjydrM8QYQ>. With screenshots of all three in front of him, he answered four questions and took the recommended option each time:
+
+| Question | Afo's answer | What it means |
+|---|---|---|
+| Which variant should the build follow? | "V1 Field Guide" | Today's stage, type legend and control row stay. Added: a theme strip, one right-hand dock that holds either the list or the selected node, chapter labels at rest. It is the closest to the rest of the live site. |
+| Where do a selected node's details open? | "Docked" | A dock inside the stage's right edge on desktop, a bottom sheet on phones (and, as proposed below, on containers up to 860px). June's floating card goes. |
+| Phone layout at 375 | "60svh map, one row" | A map stage of at least 60svh that opens on the Atlantic, with a pill that pans to the nodes off-screen, and every control in one scrolling row behind an edge fade (DESIGN.md:403). The intro and both hero buttons move below the first screen; Afo accepted that cost. |
+| How the type pills filter | "Narrow, then add" | The first press shows only that type, as today; pressing another type adds it; Show all resets. Theme chips follow the same rule. |
+
+V2 (a map plate beside a permanent, region-grouped index) and V3 (a full-bleed band with floating panels and a thread web) stay on the canvas for reference and are not part of the build.
+
+### What the build changes
+
+**Desktop, containers wider than 860px**
+
+1. **Hover and keyboard focus** show a compact tooltip: the name, then `TYPE · PLACE` in mono. No note and no theme chips. It flips below the node when there is no room above.
+2. **Selecting a node** opens it in a dock inside the stage: inset 12px, the stage's full height, about 340px wide. From the top: `TYPE · PLACE`, the name in Spectral, the public note, themes as tags, connections as rows of at least 44px (mark, name, place, shared-theme tag) that select that node, the node's public link (`Visit chapter →` for a chapter), and `Edit this node`. The map never resizes. When the node would sit under the dock, the map pans it into the open area. Closing returns focus to the node, and a closed dock leaves no focusable or pressed controls behind (the audit's ghost buttons).
+3. **The list** opens in the same dock: the kicker "Visible nodes", the heading "Map list" (an h2, as today), a count, and a search field labelled "Search the map" with the placeholder "Name or place". Search matches names and places, and one polite live region announces the count once typing pauses. Rows are about 40px (mark, name, place cut with an ellipsis), grouped by type with counts. Hovering or focusing a row rings its pin and shows its tooltip. Picking a row swaps the dock to that node, with a way back to the list. The list is non-modal on desktop: the map stays usable, and a click on empty map no longer closes it.
+4. **Bars inside the stage.** Top left: the theme strip (`role="toolbar"`) with "All" (pressed while no theme narrows the map), the most-used themes (picked ones first, as many as fit) and "+N", which opens the theme editor. Top right: the type legend as today, with "Show all" while any filter narrows the map. Bottom left: "List" with the visible count (`aria-expanded`). Bottom right: the live status, zoom and "Join the map". While the dock is open, both bars end at its edge.
+5. **The theme editor**, opened from "+N", is the only place that lists all 16 themes: toggles with counts in four columns, plus "Clear" and "Done". One open surface at a time: the dock, the editor and the join walkthrough each close the others and clear hover.
+6. **Chapter labels at rest**: Manrope 600 at 12px in `--gp-fg-muted` with a dark halo, without the leading "Greenpill " (the tooltip and the dock keep the full name). The highest `featuredWeight` goes first. Each label tries right, left, above and below its dot, and hides when it would touch another label, a pin, a badge, a bar or the dock. People never get labels at rest. Labels dim while a node is selected.
+
+**Containers from 521 to 860px:** the same bars, with fewer theme chips before "+N". The inspector and the list open as a bottom sheet inside the stage, because a 340px dock would cover most of the map.
+
+**Phones, containers of 520px and narrower**
+
+- The stage is at least 60svh. The default view frames the Atlantic, from the Great Lakes to Cape Town, at the stage's height; a pill on the edge ("5 more east" with today's data) pans to the nodes outside it, and the reset control returns to this view.
+- One row of controls along the bottom of the stage: the type counts as dots and numbers (the labels stay for assistive technology), Themes, List, Join the map. Each is 44px tall, and the row scrolls behind a `mask-image` edge fade.
+- A selected node opens a bottom sheet with a handle, close, `TYPE · PLACE`, the name, the note, a scrolling row of theme tags and the connections; the map pans the node above the sheet. The list opens as a full-height sheet, modal on touch as today. No labels at rest.
+
+**Everywhere**
+
+- Filters narrow, then add: the first press on a type or a theme shows only that one, more presses add to it (Stewards and Members together), pressing a pressed pill removes it, "All" resets the themes and "Show all" resets both.
+- Hit targets of at least 44px: pins and badges (their hit circles scale with the map so the rendered target never drops below 44px), chips, rows and buttons.
+- Node data: an exact duplicate (same name, same point; one member today) draws once, which takes the member count from 15 to 14. The other P1 data items are already covered: #35 refuses impossible points, and #41 stacks people who share a spot.
+- Unchanged since #41: "Join the map" opens the walkthrough, and "Find your people" opens the list.
+
+### Breakpoints
+
+DESIGN.md:403 wins. The map's compact layout starts at a 520px container instead of 720px, which also matches `isTouchMap()`. A second threshold at 860px moves the inspector and the list from the dock to a sheet; that number is this design pass's proposal rather than one of Afo's answers, so the build may tune it after checking 768 and 1024 in Brave. The 500, 640, 860 and 480px container queries in HomeMap.astro style the join walkthrough and do not change. When the build lands, the Home row of DESIGN.md's reflow matrix should add "map at least 60svh" at 375.
+
+### Contract tests the build reverses on purpose
+
+In `scripts/map-node-contract.test.ts` at `origin/main` 31b18cb. Line numbers will move once map-p2 (PRD-1423) lands; the test names hold.
+
+- `home map intake requires a valid email and stores local pending only after server accept`, line 903: `resetMapFilters` turning every theme back on (`activeThemes.add(theme)`). Under narrow-then-add, a reset empties the picked set.
+- `home map grows live: reconciles, polls visibly, and redraws after submit`, lines 1104 to 1110: one active type at a time (`let activeTypeFilter: '' | 'chapter' | ...`, `if (activeTypeFilter && type !== activeTypeFilter)`, `activeTypeFilter = activeTypeFilter === type ? '' : type`). The type filter becomes a set. The counts, `aria-pressed` and `is-type-filter-match` assertions stay.
+- `home map focus cards are anchored near nodes, not bottom-left panels`, line 1175: `data-focus-themes`. The tooltip carries no themes; its anchoring assertions stay.
+- `home map selected nodes stay on the map without scroll jumps` (the June floating card): `positionSelectedCard` (1206), the card clamping (`clampNumber` and `rootRect` minus `cardRect`, 1214 to 1216), `--gp-selected-transform` (1217 and 1227), `inset-inline-start: var(--gp-selected-x` (1225), the card width `min(var(--gp-map-card-width), calc(100% - 24px))` (1226) and the ban on `--gp-map-inspector-width` (1228). These stay: the dock lives inside the canvas with its region role (1203 and 1204), there is no `scrollIntoView`, focus moves without scrolling, and the map keeps its full width (1229 to 1231, no `--gp-map-pane-end`).
+- `home map mobile touch mode supports bounded zoom and compact connection rows`: the 720px compact query and the band under the drawing (`44cqw`, `--gp-map-lower`, the controls hidden while a node is selected; 1257 and 1263 to 1268), the theme panel's fixed position inside that query (1287), the "Themes" toggle in the control row (1282, replaced by the strip), the theme panel's clearance for a selected node (1288; the editor and a selection can no longer be open together), and the list rows' two theme chips with `+N` (1297 to 1304) and their wrapping rules (1306 to 1311), since compact rows show the name and place on one line. These stay: the 520px label rule (1272), the zoom bounds, the theme panel's four-column grid (1283 to 1286), the control row's `nowrap` (1290) and the one-surface helpers (1291 to 1296), except that the outside click (1294) keeps closing the theme editor but no longer closes the list.
+- `home map selected surface carries public links and no connection summary`: the shared floating footprint, `.gp-home-map-focus` and `.gp-home-map-selected` at the card width (1502 to 1504). The public links, the safe `rel` and the ban on connection-summary text stay.
+
+Coordinate with map-p2, which edits the same file: `home map chapters open an inspect card and carry one link` pins `themes: []` and the chapters' exemption from theme filters (1541 and 1542), which map-p2 changes when chapters get their Directus themes. P1 then shows a chapter's themes and its `TYPE · PLACE` kicker in the dock, reversing `selectedKicker.hidden = isChapter` and `selectedThemesEl.hidden = isChapter` (1545 and 1546).
+
+### Build order
+
+From the plan: the map-p1 session starts after map-p2 merges, and one writer lands P1 in this order: the chrome (bars, theme strip, the phone's one row), the list (dock, search, grouping, row highlight), labels and data (labels at rest, the duplicate merge, hit targets), then the inspector (dock, sheet, tooltip). The a11y roles on the overlay wrappers and the pressed-versus-focus pill styling come with the chrome. Each step updates the assertions above as it reverses them, quoting this section. The wording of the live status line belongs to map-p2.
