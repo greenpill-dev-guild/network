@@ -106,10 +106,14 @@ async function unusableReason(address: string, source: { fetch: typeof fetch }, 
 
 // Exercise the decoders covered by the sharp advisories through the actual
 // chapter copier, independently of Astro's passthrough image service.
+// The fixtures start from a 600px copy of the photo: encoding the full
+// 3000px photo as AVIF took 18 s in the dev machine, past the 5 s test limit,
+// and the abandoned encode kept the CPU busy for the tests after it.
+const decoderSource = () => sharp(photo).resize({ width: 600 });
 const decoderFixtures = {
-  avif: () => sharp(photo).avif().toBuffer(),
-  gif: () => sharp(photo).gif().toBuffer(),
-  tiff: () => sharp(photo).tiff().toBuffer(),
+  avif: () => decoderSource().avif().toBuffer(),
+  gif: () => decoderSource().gif().toBuffer(),
+  tiff: () => decoderSource().tiff().toBuffer(),
   svg: async () => Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="green"/></svg>'),
 };
 
