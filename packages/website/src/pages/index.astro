@@ -188,15 +188,9 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
             <div class="gp-home-book-grid">
               {featuredBooks.map((book, index) => {
                 const href = book.data.ebookLink || '/library';
-                const external = href.startsWith('http');
                 const eager = index < 4;
                 return (
-                  <a
-                    class="gp-home-book"
-                    href={href}
-                    target={external ? '_blank' : undefined}
-                    rel={external ? 'noopener' : undefined}
-                  >
+                  <a class="gp-home-book" href={href}>
                     {book.data.image && (
                       <img
                         src={book.data.image}
