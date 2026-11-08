@@ -2719,7 +2719,17 @@ test('home map list: a dock beside the map, a sheet inside the stage, a modal sh
   assert.match(component, /listQuery = '';\s*if \(listSearch\) listSearch\.value = '';\s*if \(listLive\) listLive\.textContent = '';/);
   // "Rows are at least 44px tall (mark, name, place cut with an ellipsis),
   // grouped by type with counts".
-  assert.match(component, /\.gp-home-map-list-row \{[\s\S]*?min-block-size: 44px;/);
+  // The list's sizes are set once as map properties (CodeRabbit on #59):
+  // a 44px target for rows, the search field and Close, a 16px icon and a
+  // 10px mark, with the shared pill radius and spacing tokens beside them.
+  assert.match(component, /--gp-map-target: 44px;\s*--gp-map-icon: 16px;\s*--gp-map-mark: 10px;/);
+  assert.match(component, /\.gp-home-map-list-row \{[\s\S]*?min-block-size: var\(--gp-map-target\);/);
+  assert.match(component, /\.gp-home-map-list-close \{\s*width: var\(--gp-map-target\);\s*height: var\(--gp-map-target\);/);
+  assert.match(component, /\.gp-home-map-list-search input \{[\s\S]*?min-height: var\(--gp-map-target\);/);
+  assert.match(component, /\.gp-home-map-list-mark \{\s*width: var\(--gp-map-mark\);\s*height: var\(--gp-map-mark\);\s*border-radius: var\(--gp-radius-pill\);/);
+  const listCss = component.match(/\n  \.gp-home-map-list-drawer \{[\s\S]*?\n  \.gp-home-map-list-mark\.is-chapter \{/)?.[0] ?? '';
+  assert.ok(listCss.length > 0, 'list CSS block found');
+  assert.doesNotMatch(listCss, /\b(?:44|16|10|2)px;|999px/);
   assert.match(component, /groupListEntries\(entries\)\.forEach\(\(group\) => \{[\s\S]*?makeListPart\('h3', 'gp-home-map-list-group-title'\)[\s\S]*?makeListPart\('span', 'gp-home-map-list-group-count', String\(group\.entries\.length\)\)[\s\S]*?makeListPart\('ul', 'gp-home-map-list-rows'\)/);
   // "Hovering or focusing a row rings its pin and shows its tooltip."
   assert.match(component, /row\.addEventListener\('pointerenter', \(\) => previewListNode\(node\)\);/);
