@@ -36,6 +36,8 @@ if (!LOCAL_HOSTS.has(serverUrl.hostname)) {
 const scratchName = `chapter_image_proof_${randomUUID().slice(0, 8)}`;
 const scratchUrl = new URL(serverUrl);
 scratchUrl.pathname = `/${scratchName}`;
+// postgres.js lets a `database` query parameter override the path.
+scratchUrl.searchParams.delete('database');
 const directusUrl = 'https://admin.example.test';
 
 type Row = Record<string, any>;
@@ -159,6 +161,9 @@ const originalWarn = console.warn;
 try {
   await server.unsafe(`create database ${scratchName}`);
   sql = connect(scratchUrl);
+  // Nothing is written until the connection is known to be the scratch database.
+  const [connected] = await sql`select current_database() as name`;
+  assert.equal(connected.name, scratchName, 'the proof is not connected to its scratch database');
   // Migrations announce every "does not exist, skipping"; keep the output to the result.
   await sql`set client_min_messages = warning`;
   // The snapshot builder logs every withheld image and quarantine; the proof asserts them instead.
