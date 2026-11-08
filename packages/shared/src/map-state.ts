@@ -388,9 +388,21 @@ const pickSharedTheme = (shared: string[]): string => firstSpecificTheme(shared)
 
 // D2 (2026-11-06): relationships are scored by shared themes and distance
 // only; no region bonus, and threads carry no region.
+//
+// Each person keeps their two strongest connections (Afo, 2026-11-07, PRD-1423).
+// Measured on the live map that day: with up to four per person, 12 of 17
+// people sat at the cap, 31 lines crossed the map (median 8,213 km), and 12
+// rested on a single shared theme. On that data, two per person halves the
+// lines, leaves nobody without one, and keeps the web connected. Requiring
+// two shared themes would have left 4 people with no line; a stronger
+// distance weight would not have reduced the count. A person whose
+// candidates are all taken by stronger pairs can still get a line in the
+// last pass, within a hard limit of three lines for anyone (see there).
+export const PUBLIC_MAP_EDGES_PER_PERSON = 2;
+
 export function generatePublicMapEdges(
   nodes: PublicMapStateNode[],
-  { limit = 160, perNodeLimit = 4 }: { limit?: number; perNodeLimit?: number } = {}
+  { limit = 160, perNodeLimit = PUBLIC_MAP_EDGES_PER_PERSON }: { limit?: number; perNodeLimit?: number } = {}
 ): PublicMapStateEdge[] {
   const people = nodes.filter((node) => node.type === 'member' || node.type === 'steward');
   const edges: PublicMapStateEdge[] = [];
@@ -404,6 +416,7 @@ export function generatePublicMapEdges(
     theme,
     weight = 1,
     source = 'generated-theme-match',
+    cap = perNodeLimit,
   }: {
     from: PublicMapStateNode;
     to: PublicMapStateNode;
@@ -411,12 +424,13 @@ export function generatePublicMapEdges(
     theme: string;
     weight?: number;
     source?: PublicMapStateEdge['source'];
+    cap?: number;
   }) => {
     if (from.id === to.id || edges.length >= limit) return;
     const key = `${kind}:${[from.id, to.id].sort().join(':')}`;
     if (edgeKeys.has(key)) return;
-    if ((nodeEdgeCounts.get(from.id) ?? 0) >= perNodeLimit) return;
-    if ((nodeEdgeCounts.get(to.id) ?? 0) >= perNodeLimit) return;
+    if ((nodeEdgeCounts.get(from.id) ?? 0) >= cap) return;
+    if ((nodeEdgeCounts.get(to.id) ?? 0) >= cap) return;
     edgeKeys.add(key);
     nodeEdgeCounts.set(from.id, (nodeEdgeCounts.get(from.id) ?? 0) + 1);
     nodeEdgeCounts.set(to.id, (nodeEdgeCounts.get(to.id) ?? 0) + 1);
@@ -457,20 +471,40 @@ export function generatePublicMapEdges(
     }
   }
 
-  for (const candidate of candidates.sort((a, b) => (
+  const ranked = candidates.sort((a, b) => (
     b.score - a.score ||
     b.shared.length - a.shared.length ||
     a.distance - b.distance ||
     a.a.name.localeCompare(b.a.name) ||
     a.b.name.localeCompare(b.b.name)
-  ))) {
-    addEdge({
-      from: candidate.a,
-      to: candidate.b,
-      kind: 'shared-theme',
-      theme: pickSharedTheme(candidate.shared),
-      weight: candidate.shared.length,
-    });
+  ));
+  const addCandidate = (candidate: (typeof candidates)[number], cap: number) => addEdge({
+    from: candidate.a,
+    to: candidate.b,
+    kind: 'shared-theme',
+    theme: pickSharedTheme(candidate.shared),
+    weight: candidate.shared.length,
+    cap,
+  });
+
+  for (const candidate of ranked) {
+    addCandidate(candidate, perNodeLimit);
+    if (edges.length >= limit) return edges;
+  }
+
+  // A person left without a line gets their strongest line to someone who has
+  // fewer than three; that person may go one over the cap, never more.
+  // Nobody becoming a hub that connects to everyone (PRD-619) wins over
+  // everyone having a line: when all of a person's matches already have three
+  // lines, that person stays without one. Codex's example on #50: one person
+  // themed a, b, c and d, and four people who each share just one of those
+  // themes. The first pass links two of them, this pass a third, and the
+  // fourth stays without a line. On the live map of 2026-11-07 this pass
+  // added nothing. A cap of zero means no lines, so it does not run.
+  if (perNodeLimit < 1) return edges;
+  for (const candidate of ranked) {
+    if (nodeEdgeCounts.has(candidate.a.id) && nodeEdgeCounts.has(candidate.b.id)) continue;
+    addCandidate(candidate, perNodeLimit + 1);
     if (edges.length >= limit) return edges;
   }
 

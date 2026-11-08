@@ -203,3 +203,14 @@ export function pickerPointToLocation(
     long: (point.x / map.width) * 360 - 180,
   };
 }
+
+/**
+ * A picker coordinate as the form shows and sends it: six decimals, as the
+ * database stores. toFixed keeps the minus sign of a value that rounds to
+ * zero, so a pin a hair west of the prime meridian (or south of the equator)
+ * would read "-0.000000"; zero is written without a sign.
+ */
+export function formatPickerCoordinate(value: number): string {
+  const fixed = value.toFixed(6);
+  return Number(fixed) === 0 ? (0).toFixed(6) : fixed;
+}
