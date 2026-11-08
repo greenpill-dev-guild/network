@@ -549,6 +549,12 @@ The component vocabulary is small and reused across all eight pages. The full vi
 
 Cards never use horizontal scroll-snap rails by default — use a real grid with `gap: spacing.xl`. Rails (book covers, podcast tiles) are the exception and use the `GP_RailArrows` control.
 
+### Calls to action
+
+- **`CtaStrip`** (`ui/CtaStrip.astro`) is the page-level call to action: an overline, a `headline-md` title and a muted `body-md` line, with one `button-primary` and at most one `button-ghost` beside them. Copy and buttons stack at ≤760px container width. Pages compose it; they do not build their own CTA panel.
+- **`lift`** (default) is the page CTA on `/chapters`, chapter pages and guild pages: a `surface` panel with a `border-soft` hairline and `rounded.xl`. Lime stays on the primary button. The panel carries no lime border, lime tint or glow. Decided by Afo on 2026-11-07 (PRD-1422).
+- **`soft`** drops the panel for a hairline rule above the copy. No page uses it yet.
+
 ### Chrome
 
 - **`header`** — Logo lockup left, primary nav right. Active item gets a lime underline. Mobile collapses to a hamburger with a slide-down nav overlay (max 320px tall). Nav items live in a single constant — never inline them in pages.

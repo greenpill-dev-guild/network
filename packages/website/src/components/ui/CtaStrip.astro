@@ -2,6 +2,16 @@
 import Overline from './Overline.astro';
 import Text from './Text.astro';
 
+/**
+ * CtaStrip: the page-level call to action (DESIGN.md > Components > Calls to
+ * action). Overline, headline and muted body on the left; the actions slot
+ * (one primary Button, at most one ghost Button) on the right. Copy and
+ * actions stack when the container is 760px wide or less.
+ *
+ * - `lift` (default): a `surface` panel with a soft border. Lime stays on the
+ *   primary button; the panel itself carries no lime border, tint or glow.
+ * - `soft`: no panel, only a hairline rule above.
+ */
 interface Props {
   overline?: string;
   title: string;
@@ -24,7 +34,7 @@ const classes = ['gp-cta-strip', `is-${tone}`, className].filter(Boolean).join('
   <div class="gp-cta-copy">
     {overline && <Overline text={overline} />}
     <Text variant="h2">{title}</Text>
-    {body && <Text variant="body-sm">{body}</Text>}
+    {body && <Text variant="body" class="gp-cta-body">{body}</Text>}
   </div>
   <div class="gp-cta-actions">
     <slot />
@@ -33,76 +43,61 @@ const classes = ['gp-cta-strip', `is-${tone}`, className].filter(Boolean).join('
 
 <style>
   .gp-cta-strip {
-    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--gp-space-xl);
-    overflow: hidden;
   }
 
   .gp-cta-strip.is-lift {
-    padding: var(--gp-space-3xl) var(--gp-space-2xl);
+    padding-block: var(--gp-space-3xl);
+    padding-inline: var(--gp-space-2xl);
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-xl);
-    background: var(--gp-green-800);
-  }
-
-  .gp-cta-strip.is-lift::before {
-    content: '';
-    position: absolute;
-    top: -120px;
-    right: -120px;
-    width: 320px;
-    height: 320px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(184, 232, 53, 0.16), transparent 65%);
-    pointer-events: none;
+    background: var(--gp-surface);
   }
 
   .gp-cta-strip.is-soft {
-    padding: var(--gp-space-2xl) 0;
-    border-top: 1px solid var(--gp-border-soft);
+    padding-block: var(--gp-space-2xl);
+    border-block-start: 1px solid var(--gp-border-soft);
     background: transparent;
   }
 
   .gp-cta-copy {
-    position: relative;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    width: 100%;
-    max-width: 620px;
-    min-width: 0;
+    gap: var(--gp-space-sm);
+    inline-size: 100%;
+    max-inline-size: 620px;
+    min-inline-size: 0;
+  }
+
+  /* Text's own rules set the body colour; naming .gp-text outranks them. */
+  .gp-cta-copy :global(.gp-text.gp-cta-body) {
+    color: var(--gp-fg-muted);
   }
 
   .gp-cta-actions {
-    position: relative;
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: var(--gp-space-sm);
     flex: none;
   }
 
   @container (max-width: 760px) {
-    .gp-cta-strip,
-    .gp-cta-strip.is-lift {
+    .gp-cta-strip {
       align-items: flex-start;
       flex-direction: column;
-      padding: var(--gp-space-2xl) var(--gp-space-lg);
     }
 
-    .gp-cta-strip.is-soft {
-      padding-inline: 0;
+    .gp-cta-strip.is-lift {
+      padding-block: var(--gp-space-2xl);
+      padding-inline: var(--gp-space-lg);
     }
 
     .gp-cta-actions {
-      width: 100%;
-      min-width: 0;
-    }
-
-    .gp-cta-strip :global(.gp-text.is-h2) {
-      font-size: 28px;
+      inline-size: 100%;
+      min-inline-size: 0;
     }
   }
 </style>
