@@ -2864,6 +2864,9 @@ test('home map edge pins and labels at rest: the clamp and the placement rules',
   const truePoint = { x: 200, y: 0 };
   clampPinToDrawing(truePoint);
   assert.deepEqual(truePoint, { x: 200, y: 0 });
+  // On a small map the 44px hit circle is wider than 4.8 map units, and the
+  // inset follows it (Codex on #60): at a 521px sheet, about 8.5 units.
+  assert.deepEqual(clampPinToDrawing({ x: lonToX(180), y: 40 }, 8.5), { x: 191.5, y: 40 });
 
   // § 5: "Each label tries right, left, above and below its dot, and hides
   // when it would touch another label, a pin, a badge, a bar or the dock."
@@ -2904,12 +2907,22 @@ test('home map labels and hit targets: chapter labels at rest, 44px pins and bad
   );
   // Edge pins: chapters and people are drawn through the clamp, and their
   // lines end where the pins are drawn; the data keeps its true coordinate.
-  assert.match(component, /const pin = clampPinToDrawing\(\{ x: lonToX\(c\.data\.long\), y: latToY\(c\.data\.lat\) \}\);/);
-  assert.match(component, /x: pin\.x,\s*y: pin\.y,/);
-  assert.match(component, /const \{ x, y \} = clampPinToDrawing\(\{ x: lonToX\(member\.long\), y: latToY\(member\.lat\) \}\);/);
+  assert.match(component, /const mapPoint = \{ x: lonToX\(c\.data\.long\), y: latToY\(c\.data\.lat\) \};\s*const pin = clampPinToDrawing\(mapPoint\);/);
+  assert.match(component, /x: pin\.x,\s*y: pin\.y,\s*mapX: mapPoint\.x,\s*mapY: mapPoint\.y,/);
+  assert.match(component, /const mapPoint = \{ x: lonToX\(member\.long\), y: latToY\(member\.lat\) \};\s*const \{ x, y \} = clampPinToDrawing\(mapPoint\);/);
   assert.match(component, /const drawn = clampPinToDrawing\(\{ x: lonToX\(long\), y: latToY\(lat\) \}\);\s*nodeById\.set\(id, \{\s*x: existing\?\.x \?\? drawn\.x,\s*y: existing\?\.y \?\? drawn\.y,/);
   assert.match(component, /<circle class="gp-home-map-node-hit" cx=\{c\.x\} cy=\{c\.y\} r=\{PIN_HIT_RADIUS\} \/>/);
   assert.match(component, /const NODE_HIT_RADIUS = PIN_HIT_RADIUS;/);
+  // The inset grows with the hit circle on a small map (Codex on #60): every
+  // pin carries its true point, each stacks rebuild first moves edge pins in
+  // by the scaled hit radius, and their lines are drawn again to meet them.
+  assert.match(component, /data-map-x=\{c\.mapX\.toFixed\(3\)\}\s*data-map-y=\{c\.mapY\.toFixed\(3\)\}/);
+  assert.match(component, /group\.dataset\.mapX = mapPoint\.x\.toFixed\(3\);\s*group\.dataset\.mapY = mapPoint\.y\.toFixed\(3\);/);
+  const placePins = component.match(/const placePinsInsideDrawing = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(placePins, /const inset = pinHitRadius\(\);/);
+  assert.match(placePins, /const drawn = clampPinToDrawing\(\{ x, y \}, inset\);/);
+  assert.match(placePins, /if \(moved && lastThreadInputs\) renderDynamicThreads\(lastThreadInputs\.nodes, lastThreadInputs\.edges\);/);
+  assert.match(component, /if \(!dynamicThreadsGroup\) return;\s*lastThreadInputs = \{ nodes: rawNodes, edges: rawEdges \};/);
 
   // § 5: "pins and badges stay at least 44px at every map size (their hit
   // circles scale with the map)".
@@ -2919,6 +2932,7 @@ test('home map labels and hit targets: chapter labels at rest, 44px pins and bad
   assert.match(component, /const hitRadius = Math\.max\(pinRadius, r \+ 3\.2, minViewRadius\);/);
   assert.match(component, /const hitRadius = Math\.max\(markerRadius \+ pxToViewBox\(3\), minTargetRadius\(\)\);/);
   const recomputeClusters = component.match(/const recomputeClustersNow = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(recomputeClusters, /^\s*if \(!clustersGroup \|\| !membersGroup\) return;\s*\/\/[^\n]*\n\s*placePinsInsideDrawing\(\);/);
   assert.match(recomputeClusters, /syncPinHitTargets\(\);\s*layoutChapterLabels\(\);/);
 
   // § 5: "Chapter labels at rest: Manrope 600 at 12px in --gp-fg-muted with
@@ -2938,6 +2952,16 @@ test('home map labels and hit targets: chapter labels at rest, 44px pins and bad
   assert.match(layoutLabels, /const fontSize = cssPx\('--gp-label-sm', 12\) \* px;/);
   assert.match(layoutLabels, /placeMapLabels\(/);
   assert.match(layoutLabels, /\.\.\.overlapStacks\.map\(/);
+  // The placement box takes in the halo, so the outline never paints over a
+  // bar, a pin or the dock (CodeRabbit on #60).
+  assert.match(layoutLabels, /const halo = 1\.5 \* px;[\s\S]*?width: measured\.width \+ halo \* 2,\s*height: measured\.height \+ halo \* 2,/);
+  // A stack says its people are "at" a chapter only when their true points
+  // share its spot; pins the drawing's edge moved together are not "at" one
+  // another (CodeRabbit on #60).
+  assert.match(component, /type ClusterMember = \{ el: Element; key: string; center: MapPoint; truePoint: MapPoint \};/);
+  assert.match(component, /out\.push\(\{ el, key, center, truePoint: mapX !== null && mapY !== null \? \{ x: mapX, y: mapY \} : center \}\);/);
+  assert.match(component, /const sharedChapters = chapters\.filter\(\(chapter\) => \(\s*members\.some\(\(member\) => pointsWithin\(member\.truePoint, chapter\.truePoint, OVERLAP_STACK_RADIUS\)\)\s*\)\);/);
+  assert.match(component, /return sameSpot \? 'at the same spot' : 'close together';/);
   assert.match(component, /const chapterLabelText = \(name: string\) => name\.replace\(\/\^Greenpill\\s\+\/i, ''\) \|\| name;/);
   assert.match(component, /'\.gp-home-map-theme-strip',[\s\S]*?'\.gp-home-map-legend',[\s\S]*?'\.gp-home-map-end-group',[\s\S]*?'\.gp-home-map-list-drawer',/);
   // The dock and the bars move without a stacks rebuild: one layout a frame.
@@ -2955,6 +2979,16 @@ test('home map labels and hit targets: chapter labels at rest, 44px pins and bad
   assert.match(component, /\.gp-home-map-update-trigger \{\s*min-height: var\(--gp-map-button\);/);
   assert.match(component, /\.gp-home-map-update-actions button \{\s*min-height: var\(--gp-map-button\);/);
   assert.doesNotMatch(component, /\.gp-home-map-update-trigger \{\s*min-height: (?:36|40)px;/);
+  // The join walkthrough's text buttons too (Codex on #60): Find place, the
+  // place results, Confirm coordinate, the review's Edit buttons, and the
+  // manage-link toggle and Send. Its theme toggles are chips.
+  assert.match(component, /\.gp-home-map-location-search-row button,\s*\.gp-home-map-location-results button,\s*\.gp-home-map-location-coordinate-row button \{\s*min-height: var\(--gp-map-button\);/);
+  assert.match(component, /\.gp-home-map-location-results button \{\s*width: 100%;\s*min-height: var\(--gp-map-button\);/);
+  assert.match(component, /\.gp-home-map-location-coordinate-row button \{\s*min-height: var\(--gp-map-button\);/);
+  assert.match(component, /\.gp-home-map-addnode-location-head button,\s*\.gp-home-map-addnode-review button \{\s*display: inline-flex;\s*align-items: center;\s*min-height: var\(--gp-map-button\);/);
+  assert.match(component, /\.gp-home-map-addnode-manage-toggle \{\s*min-height: var\(--gp-map-button\);/);
+  assert.match(component, /\.gp-home-map-addnode-manage-submit \{[\s\S]*?min-height: var\(--gp-map-button\);/);
+  assert.match(component, /\.gp-home-map-addnode-next,[\s\S]*?\.gp-home-map-addnode-submit\s*\{[\s\S]*?min-height:\s*48px;/);
   // "Icon-only controls (zoom, close, reset) are 44 by 44px".
   assert.match(component, /\.gp-home-map-selected-close \{\s*position: absolute;[\s\S]*?width: var\(--gp-map-target\);\s*height: var\(--gp-map-target\);/);
   assert.match(component, /\.gp-home-map-selected-edge-open \{[\s\S]*?width: var\(--gp-map-target\);\s*height: var\(--gp-map-target\);/);

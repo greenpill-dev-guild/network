@@ -95,6 +95,9 @@ type ChapterNode = {
   themes: string[];
   x: number;
   y: number;
+  // The true point in map units; x and y are where the pin is drawn.
+  mapX: number;
+  mapY: number;
   href: string;
   size: number;
   // Public, from the approved snapshot: which label is placed first.
@@ -116,8 +119,10 @@ const chapterNodes: ChapterNode[] = chapters
     const size = 1.38;
     const chapterNodeId = `chapter:${c.id}`;
     // Drawn inside the drawing's edge (§ 5, "Edge pins"); the chapter keeps
-    // its true coordinate.
-    const pin = clampPinToDrawing({ x: lonToX(c.data.long), y: latToY(c.data.lat) });
+    // its true coordinate, and the script moves the pin in further when its
+    // hit circle grows on a small map.
+    const mapPoint = { x: lonToX(c.data.long), y: latToY(c.data.lat) };
+    const pin = clampPinToDrawing(mapPoint);
     return {
       id: chapterNodeId,
       type: 'chapter' as const,
@@ -130,6 +135,8 @@ const chapterNodes: ChapterNode[] = chapters
       themes: normalizePublicMapThemeSlugs(c.data.themeSlugs),
       x: pin.x,
       y: pin.y,
+      mapX: mapPoint.x,
+      mapY: mapPoint.y,
       href: `/chapters/${c.id}`,
       size,
       featuredWeight: Number(c.data.featuredWeight ?? 0) || 0,
@@ -250,6 +257,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
             data-node-place={c.city || c.region}
             data-node-themes={c.themes.join(' ')}
             data-featured-weight={c.featuredWeight}
+            data-map-x={c.mapX.toFixed(3)}
+            data-map-y={c.mapY.toFixed(3)}
           >
             <title>{`${c.name}${c.city ? ` · ${c.city}` : ''}`}</title>
             <circle class="gp-home-map-node-hit" cx={c.x} cy={c.y} r={PIN_HIT_RADIUS} />
@@ -1785,7 +1794,9 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     // and a click opens what the hover card named.
     type MapPoint = { x: number; y: number };
     type MapBox = { x: number; y: number; width: number; height: number };
-    type ClusterMember = { el: Element; key: string; center: MapPoint };
+    // `center` is where the pin is drawn; `truePoint` is where the node is.
+    // They differ only for a pin the drawing's edge moved in.
+    type ClusterMember = { el: Element; key: string; center: MapPoint; truePoint: MapPoint };
     type OverlapStack = {
       members: ClusterMember[];
       // The chapter pins the stacked people sit on, if any.
@@ -2955,6 +2966,9 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const injectedKeys = new Set<string>();
     const memberByKey = new Map<string, DynamicMapNode>();
     let lastDynamicThreadSignature = '';
+    // The last nodes and lines drawn, so the lines can be drawn again when an
+    // edge pin moves in.
+    let lastThreadInputs: { nodes: Array<Record<string, any>>; edges: Array<Record<string, any>> } | null = null;
 
     const makeCircle = (cls: string, cx: number, cy: number, r: number) => {
       const circle = document.createElementNS(SVG_NS, 'circle');
@@ -3521,8 +3535,10 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const injectMember = (member: DynamicMapNode) => {
       if (!membersGroup) return;
       // Drawn inside the drawing's edge (§ 5, "Edge pins"); the member keeps
-      // its true coordinate.
-      const { x, y } = clampPinToDrawing({ x: lonToX(member.long), y: latToY(member.lat) });
+      // its true coordinate (data-map-x, data-map-y), and the stacks rebuild
+      // moves the pin in further when its hit circle grows on a small map.
+      const mapPoint = { x: lonToX(member.long), y: latToY(member.lat) };
+      const { x, y } = clampPinToDrawing(mapPoint);
       if (injectedKeys.has(member.key)) {
         const existing = membersGroup.querySelector(`[data-node-id="${CSS.escape(member.key)}"]`) as SVGGElement | null;
         const current = memberByKey.get(member.key);
@@ -3567,6 +3583,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       group.setAttribute('data-node-public-note', member.publicNote);
       group.setAttribute('data-node-themes', member.themes.join(' '));
       group.dataset.memberKey = member.key;
+      group.dataset.mapX = mapPoint.x.toFixed(3);
+      group.dataset.mapY = mapPoint.y.toFixed(3);
       const roleWord = member.pending ? `Pending ${member.type} node` : `${member.type} node`;
       group.setAttribute('aria-label', `${member.name}, ${member.owned ? 'your ' : ''}${roleWord}${member.place ? `, ${member.place}` : ''}`);
 
@@ -3641,9 +3659,38 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     // centre, so in map units it grows as the map draws smaller.
     const minTargetRadius = () => pxToViewBox(POINTER_TARGET_RADIUS_PX);
     const pinHitRadius = () => Math.max(NODE_HIT_RADIUS, minTargetRadius());
+    // A map that is not laid out has no scale to read; it keeps what it has.
+    const mapIsDrawn = () => Boolean(svgEl && svgEl.getBoundingClientRect().width > 0);
     const syncPinHitTargets = () => {
+      if (!mapIsDrawn()) return;
       const radius = pinHitRadius().toFixed(2);
       root.querySelectorAll('.gp-home-map-node-hit').forEach((circle) => circle.setAttribute('r', radius));
+    };
+    // § 5, "Edge pins": a pin and its hit circle stay inside the drawing.
+    // The hit circle grows as the map draws smaller, so the inset grows with
+    // it: a pin on the 180th meridian moves in until its 44px target is whole.
+    // The node keeps its true point (data-map-x, data-map-y); its lines are
+    // drawn again to meet the pin where it now stands.
+    const PIN_CIRCLES = '.gp-home-map-node-hit, .gp-home-map-node-owner-ring, .gp-home-map-node-halo, .gp-home-map-node-ring, .gp-home-map-node-dot';
+    const placePinsInsideDrawing = () => {
+      if (!mapIsDrawn()) return;
+      const inset = pinHitRadius();
+      let moved = false;
+      root.querySelectorAll<SVGElement>('.gp-home-map-node-link').forEach((pin) => {
+        const x = toFiniteNumber(pin.dataset.mapX);
+        const y = toFiniteNumber(pin.dataset.mapY);
+        if (x === null || y === null) return;
+        const drawn = clampPinToDrawing({ x, y }, inset);
+        const dot = pin.querySelector('.gp-home-map-node-dot');
+        const close = (attribute: string, value: number) => Math.abs(Number(dot?.getAttribute(attribute)) - value) < 0.005;
+        if (close('cx', drawn.x) && close('cy', drawn.y)) return;
+        pin.querySelectorAll(PIN_CIRCLES).forEach((circle) => {
+          circle.setAttribute('cx', drawn.x.toFixed(2));
+          circle.setAttribute('cy', drawn.y.toFixed(2));
+        });
+        moved = true;
+      });
+      if (moved && lastThreadInputs) renderDynamicThreads(lastThreadInputs.nodes, lastThreadInputs.edges);
     };
     const isChapterPin = (pin: ClusterMember) => pin.el.classList.contains('is-chapter');
     const isStewardPin = (pin: ClusterMember) => filterTypeFor(pin.el.getAttribute('data-node-type')) === 'steward';
@@ -3658,7 +3705,10 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       layer.querySelectorAll('.gp-home-map-node-link:not(.is-filtered-out)').forEach((el) => {
         const center = nodeCenter(el);
         const key = el.getAttribute('data-node-id') || '';
-        if (center && key) out.push({ el, key, center });
+        if (!center || !key) return;
+        const mapX = toFiniteNumber(el.getAttribute('data-map-x'));
+        const mapY = toFiniteNumber(el.getAttribute('data-map-y'));
+        out.push({ el, key, center, truePoint: mapX !== null && mapY !== null ? { x: mapX, y: mapY } : center });
       });
       return out;
     };
@@ -3684,16 +3734,20 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     const pinName = (pin: ClusterMember) => clean(pin.el.getAttribute('data-node-name')) || 'Map node';
     const peopleCount = (count: number) => `${count} ${count === 1 ? 'person' : 'people'}`;
 
-    // Where a stack is, in words: the chapters it sits on, or the places its
-    // people gave.
+    // Where a stack is, in words: the chapters its people truly share a spot
+    // with, or the places its people gave. Pins the drawing's edge moved
+    // together are not "at" one another, so their true points decide.
     const stackWhere = (members: ClusterMember[], chapters: ClusterMember[]) => {
-      if (chapters.length) {
-        return `at ${listLabel(chapters.map(pinName), 2, (n) => `${n} more ${n === 1 ? 'chapter' : 'chapters'}`)}`;
+      const sharedChapters = chapters.filter((chapter) => (
+        members.some((member) => pointsWithin(member.truePoint, chapter.truePoint, OVERLAP_STACK_RADIUS))
+      ));
+      if (sharedChapters.length) {
+        return `at ${listLabel(sharedChapters.map(pinName), 2, (n) => `${n} more ${n === 1 ? 'chapter' : 'chapters'}`)}`;
       }
       const places = [...new Set(members.map((m) => clean(m.el.getAttribute('data-node-place'))).filter(Boolean))];
-      return places.length
-        ? `near ${listLabel(places, 2, (n) => `${n} more ${n === 1 ? 'place' : 'places'}`)}`
-        : 'at the same spot';
+      if (places.length) return `near ${listLabel(places, 2, (n) => `${n} more ${n === 1 ? 'place' : 'places'}`)}`;
+      const sameSpot = members.every((member) => pointsWithin(member.truePoint, members[0].truePoint, OVERLAP_STACK_RADIUS));
+      return sameSpot ? 'at the same spot' : 'close together';
     };
 
     const setPinClustered = (el: Element, clustered: boolean) => {
@@ -4162,12 +4216,15 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
           // Measured where it was made, at 0,0.
           return { text, chapter, measured: text.getBBox() };
         });
+        // A label's box takes in its halo, half the outline's width each side,
+        // so the outline never paints over what the label keeps clear of.
+        const halo = 1.5 * px;
         const placements = placeMapLabels(
           labels.map(({ chapter, measured }) => ({
             anchor: chapter.center,
-            gap: ringRadius(chapter.pin) + 4 * px,
-            width: measured.width,
-            height: measured.height,
+            gap: ringRadius(chapter.pin) + 4 * px - halo,
+            width: measured.width + halo * 2,
+            height: measured.height + halo * 2,
           })),
           { circles, boxes },
           { x: view.x + 4 * px, y: view.y + 4 * px, width: view.width - 8 * px, height: view.height - 8 * px }
@@ -4179,8 +4236,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
             text.remove();
             return;
           }
-          text.setAttribute('x', (placement.box.x - measured.x).toFixed(2));
-          text.setAttribute('y', (placement.box.y - measured.y).toFixed(2));
+          text.setAttribute('x', (placement.box.x + halo - measured.x).toFixed(2));
+          text.setAttribute('y', (placement.box.y + halo - measured.y).toFixed(2));
           text.dataset.labelSide = placement.side;
         });
       } catch {
@@ -4201,6 +4258,8 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     const recomputeClustersNow = () => {
       if (!clustersGroup || !membersGroup) return;
+      // Edge pins first: the stacks and the labels work from where pins stand.
+      placePinsInsideDrawing();
       // Keyboard focus on a marker, a fan satellite or a pin about to be hidden
       // must not fall to the page when the markers are rebuilt.
       const active = document.activeElement instanceof Element && root.contains(document.activeElement)
@@ -4413,6 +4472,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       rawEdges: Array<Record<string, any>>
     ) => {
       if (!dynamicThreadsGroup) return;
+      lastThreadInputs = { nodes: rawNodes, edges: rawEdges };
       const existingThreads = new Map<string, SVGPathElement>();
       dynamicThreadsGroup.querySelectorAll<SVGPathElement>('.gp-home-map-thread').forEach((path) => {
         const id = clean(path.dataset.edgeId);
@@ -8225,10 +8285,13 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     gap: 8px;
   }
 
+  /* Text buttons in the walkthrough reach the 48px button minimum (§ 5,
+     "Every text button under 48px goes to 48px"); the theme toggles are
+     chips. Fields beside a button match its height. */
   .gp-home-map-location-search-row button,
   .gp-home-map-location-results button,
   .gp-home-map-location-coordinate-row button {
-    min-height: 44px;
+    min-height: var(--gp-map-button);
     border: 1px solid color-mix(in srgb, var(--gp-map-member) 42%, transparent);
     border-radius: var(--gp-radius-md);
     background: color-mix(in srgb, var(--gp-green-700) 88%, transparent);
@@ -8271,7 +8334,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
   .gp-home-map-location-results button {
     width: 100%;
-    min-height: 40px;
+    min-height: var(--gp-map-button);
     padding: 8px 10px;
     text-align: start;
   }
@@ -8325,11 +8388,11 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   }
 
   .gp-home-map-location-coordinate-row input {
-    min-height: 44px;
+    min-height: var(--gp-map-button);
   }
 
   .gp-home-map-location-coordinate-row button {
-    min-height: 44px;
+    min-height: var(--gp-map-button);
     padding-inline: 12px;
     white-space: nowrap;
   }
@@ -8347,8 +8410,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     gap: 12px;
   }
 
+  /* The review's Edit buttons read as links but are text buttons: 48px tall. */
   .gp-home-map-addnode-location-head button,
   .gp-home-map-addnode-review button {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--gp-map-button);
     border: 0;
     background: transparent;
     color: var(--gp-map-member);
@@ -8592,7 +8659,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     color: var(--gp-fg-muted);
   }
   .gp-home-map-addnode-manage-toggle {
-    min-height: 40px;
+    min-height: var(--gp-map-button);
     padding: 8px 14px;
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-pill);
@@ -8629,7 +8696,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     color: var(--gp-fg-muted);
   }
   .gp-home-map-addnode-manage-field input {
-    min-height: 44px;
+    min-height: var(--gp-map-button);
     padding: 10px 14px;
     border: 1px solid var(--gp-border-soft);
     border-radius: var(--gp-radius-md);
@@ -8640,7 +8707,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
   .gp-home-map-addnode-manage-submit {
     flex: 0 0 auto;
     align-self: flex-end;
-    min-height: 44px;
+    min-height: var(--gp-map-button);
     padding: 10px 18px;
     border: 0;
     border-radius: var(--gp-radius-pill);
