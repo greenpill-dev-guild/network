@@ -1,14 +1,12 @@
 ---
 import socialLinks from '../../content/social-links.json';
-import garden from '../../content/garden.json';
-import { gardenRampSteps, gardenStewardCallHref } from '../../lib/garden-ramp';
 
 // Footer links follow the July 16 call (Farcaster, LinkedIn, YouTube, Luma,
 // Code of Conduct, "Join the map"). Outside links, the GitHub one in the
-// bottom row included, come from content/social-links.json, so an editor
-// changes each in one place. The steward booking link comes from the Garden
-// ramp's steward-call step, as on /garden. A link left without a URL is not
-// shown (Keystatic also requires these fields).
+// bottom row and the steward booking link included, come from
+// content/social-links.json, so an editor changes each in one place; the
+// Garden ramp and its assessment read the same booking link. A link left
+// without a URL is not shown (Keystatic also requires these fields).
 const columns = [
   {
     heading: 'Network',
@@ -25,7 +23,7 @@ const columns = [
       { label: 'Start in the Garden', href: '/garden' },
       { label: 'Events calendar', href: socialLinks.events },
       { label: 'Join the map', href: '/#join-map' },
-      { label: 'Talk to a steward', href: gardenStewardCallHref(gardenRampSteps(garden.steps)) },
+      { label: 'Talk to a steward', href: socialLinks.stewardCall },
     ],
   },
   {

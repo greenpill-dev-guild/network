@@ -36,6 +36,8 @@ if (!LOCAL_HOSTS.has(serverUrl.hostname)) {
 const scratchName = `snapshot_alert_proof_${randomUUID().slice(0, 8)}`;
 const scratchUrl = new URL(serverUrl);
 scratchUrl.pathname = `/${scratchName}`;
+// postgres.js lets a `database` query parameter override the path.
+scratchUrl.searchParams.delete('database');
 const directusUrl = 'https://admin.example.test';
 
 type Row = Record<string, any>;
@@ -173,6 +175,11 @@ try {
   await server.unsafe(`create database ${scratchName}`);
   sql = connect(scratchUrl);
   pool = connect(scratchUrl, 8);
+  // Nothing is written until both clients are known to be on the scratch database.
+  for (const client of [sql, pool]) {
+    const [connected] = await client`select current_database() as name`;
+    assert.equal(connected.name, scratchName, 'the proof is not connected to its scratch database');
+  }
   // Migrations announce every "does not exist, skipping"; keep the output to the result.
   await sql`set client_min_messages = warning`;
   // The snapshot builder logs every quarantine and withheld image; the proof asserts them instead.

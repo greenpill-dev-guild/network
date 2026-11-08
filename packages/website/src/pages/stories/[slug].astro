@@ -139,7 +139,7 @@ const storyImageAlt = data.media?.imageAlt || `${data.title} story image`;
                       <li>
                         {linkifyText(item).map((piece) => (
                           piece.href
-                            ? <a href={piece.href} target="_blank" rel="noopener">{piece.text}</a>
+                            ? <a href={piece.href}>{piece.text}</a>
                             : piece.text
                         ))}
                       </li>

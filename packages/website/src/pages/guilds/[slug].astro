@@ -4,6 +4,7 @@ import Container from '../../components/ui/Container.astro';
 import Card from '../../components/ui/Card.astro';
 import Button from '../../components/ui/Button.astro';
 import Chip from '../../components/ui/Chip.astro';
+import CtaStrip from '../../components/ui/CtaStrip.astro';
 import ArrowLink from '../../components/ui/ArrowLink.astro';
 import Overline from '../../components/ui/Overline.astro';
 import Text from '../../components/ui/Text.astro';
@@ -424,20 +425,14 @@ const projects = (await getOperationalProjects())
 
     <section class="gp-guild-cta">
       <Container size="2xl">
-        <div class="gp-guild-cta-inner">
-          <div class="gp-guild-stack gp-guild-cta-copy">
-            <Overline text="Get involved" />
-            <Text variant="h2">Bring your craft into the guild.</Text>
-            <Text variant="body-lg">
-              The Garden is the public ramp into Greenpill guilds. Start small and build up to a steward conversation
-              when the project is right.
-            </Text>
-          </div>
-          <div class="gp-guild-cta-actions">
-            <Button href="/garden">Enter the Garden</Button>
-            <Button href="/library" variant="ghost">Open Library</Button>
-          </div>
-        </div>
+        <CtaStrip
+          overline="Get involved"
+          title="Bring your craft into the guild."
+          body="The Garden is the public ramp into Greenpill guilds. Start small and build up to a steward conversation when the project is right."
+        >
+          <Button href="/garden">Enter the Garden</Button>
+          <Button href="/library" variant="ghost">Open Library</Button>
+        </CtaStrip>
       </Container>
     </section>
   </main>
@@ -722,27 +717,6 @@ const projects = (await getOperationalProjects())
     border-block-start: 1px solid var(--gp-border-soft);
   }
 
-  .gp-guild-cta-inner {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--gp-space-2xl);
-    padding: clamp(var(--gp-space-xl), 4vw, var(--gp-space-3xl));
-    border: 1px solid color-mix(in srgb, var(--gp-primary) 32%, transparent);
-    border-radius: var(--gp-radius-xl);
-    background: color-mix(in srgb, var(--gp-primary) 5%, transparent);
-  }
-
-  .gp-guild-cta-copy {
-    max-inline-size: 34rem;
-  }
-
-  .gp-guild-cta-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--gp-space-sm);
-  }
-
   /* ── Reflow (DESIGN.md guild row: members 4 / 3 / 2) ──────────── */
   @container (max-width: 1100px) {
     .gp-guild-grid.is-three {
@@ -758,11 +732,6 @@ const projects = (await getOperationalProjects())
     .gp-guild-mandate-grid,
     .gp-guild-media.has-list {
       grid-template-columns: minmax(0, 1fr);
-    }
-
-    .gp-guild-cta-inner {
-      flex-direction: column;
-      align-items: flex-start;
     }
   }
 
@@ -781,10 +750,6 @@ const projects = (await getOperationalProjects())
     .gp-guild-members .gp-guild-person {
       flex-direction: column;
       align-items: flex-start;
-    }
-
-    .gp-guild-cta-actions {
-      inline-size: 100%;
     }
   }
 </style>

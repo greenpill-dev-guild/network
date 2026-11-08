@@ -19,11 +19,9 @@ import {
   buildDirectusOperationalPermissionPlan,
 } from './directus-operational-content-setup.ts';
 import {
-  DEFAULT_STEWARD_CALL_HREF,
   gardenHeroCta,
   gardenRampSteps,
   gardenStepHref,
-  gardenStewardCallHref,
 } from '../packages/website/src/lib/garden-ramp.ts';
 import {
   loadChapterEnrichment,
@@ -230,7 +228,6 @@ test('the Garden ramp is left out, not broken, when garden.json has no steps', (
   for (const configured of [undefined, [], null]) {
     const steps = gardenRampSteps(configured);
     assert.deepEqual(steps, []);
-    assert.equal(gardenStewardCallHref(steps), DEFAULT_STEWARD_CALL_HREF);
     // "Start with Step 1" would point at an anchor the page no longer has.
     assert.equal(gardenHeroCta({ label: 'Start with Step 1', href: '#step-1' }, steps.length), null);
     assert.equal(gardenHeroCta(undefined, steps.length), null);
@@ -242,21 +239,28 @@ test('the Garden ramp is left out, not broken, when garden.json has no steps', (
   });
 });
 
-test('the Garden ramp keeps configured steps and takes the Telegram invite from social links', () => {
-  const telegramInvite = 'https://t.me/+approvalGatedInvite';
+test('the Garden ramp keeps configured steps and takes the Telegram invite and booking link from social links', () => {
+  const links = {
+    telegram: 'https://t.me/+approvalGatedInvite',
+    stewardCall: 'https://calendar.example/steward',
+  };
   const configured = [
     { level: 1, surfaceType: 'email', cta: { label: 'Subscribe on Paragraph', href: 'https://paragraph.com/@greenpill/subscribe' } },
     { level: 2, surfaceType: 'telegram', cta: { label: 'Open Telegram', href: 'https://t.me/+staleInvite' } },
-    { level: 4, surfaceType: 'steward-call', cta: { label: 'Book a call', href: 'https://calendar.example/steward' } },
+    { level: 4, surfaceType: 'steward-call', cta: { label: 'Book a call', href: 'https://calendar.example/stale' } },
   ];
   const steps = gardenRampSteps(configured);
 
   assert.deepEqual(steps, configured);
+  // A URL left on the Telegram or steward call step is ignored.
   assert.deepEqual(
-    steps.map((step) => gardenStepHref(step, telegramInvite)),
-    ['https://paragraph.com/@greenpill/subscribe', telegramInvite, 'https://calendar.example/steward'],
+    steps.map((step) => gardenStepHref(step, links)),
+    ['https://paragraph.com/@greenpill/subscribe', links.telegram, links.stewardCall],
   );
-  assert.equal(gardenStewardCallHref(steps), 'https://calendar.example/steward');
+  // The steward call step takes the booking link wherever an editor moves it,
+  // and a step 4 of another kind keeps its own button.
+  assert.equal(gardenStepHref({ level: 2, surfaceType: 'steward-call', cta: { href: '' } }, links), links.stewardCall);
+  assert.equal(gardenStepHref({ level: 4, surfaceType: 'garden', cta: { href: '/garden' } }, links), '/garden');
   assert.deepEqual(gardenHeroCta({ label: 'Start with Step 1', href: '#step-1' }, steps.length), {
     label: 'Start with Step 1',
     href: '#step-1',
@@ -393,12 +397,11 @@ test('chapter initiative cards do not render dead links when no URL is present',
 test('cards on every page come from the Card primitive and do not move on hover', async () => {
   // Website QA, November 2026, finding 9: one card treatment. Pages place cards
   // and lay out what sits inside them; the surface (border, radius, card tone,
-  // hover) lives in components/ui/Card.astro. The map edit and moderation pages
-  // are standalone tools outside the site shell and keep their own styles.
-  const standalonePages = new Set(['map/edit.astro', 'map/moderate.astro']);
+  // hover) lives in components/ui/Card.astro. The standalone map edit and
+  // moderation pages use Card too (PRD-1422).
   const pageFiles = (await readdir(websitePagesDir, { recursive: true }))
     .map((file) => String(file).replaceAll('\\', '/'))
-    .filter((file) => file.endsWith('.astro') && !standalonePages.has(file));
+    .filter((file) => file.endsWith('.astro'));
   const sourcePaths = [
     ...pageFiles.map((file) => join(websitePagesDir, file)),
     join(rootDir, 'packages/website/src/components/page-sections/GardenAssessment.astro'),
@@ -425,6 +428,56 @@ test('cards on every page come from the Card primitive and do not move on hover'
   assert.doesNotMatch(cardStyles, /transform\s*:|box-shadow:\s*var\(--gp-shadow-card-lg\)/);
   assert.match(cardStyles, /\.gp-card\[hidden\]/, 'a filtered card must still hide');
   assert.match(card, /const Tag = href \? 'a' : \(as \?\? 'div'\);/);
+});
+
+test('a focused primary button keeps the focus ring under its glow', async () => {
+  // DESIGN.md: the lime focus ring marks every interactive element. The ring is
+  // a box-shadow in gp-tokens.css, and the primary glow would replace it, so the
+  // primary button's focus-visible state keeps both.
+  const button = await readFile(join(rootDir, 'packages/website/src/components/ui/Button.astro'), 'utf8');
+  assert.match(
+    button,
+    /\.gp-button\.is-primary:focus-visible\s*\{[^}]*box-shadow:\s*var\(--gp-shadow-focus\),\s*var\(--gp-shadow-pill\)/
+  );
+});
+
+// A stylesheet's top-level `selector { declarations }` rules, by selector.
+// Rules inside at-rule blocks (@container, @media and so on) are left out.
+function topLevelCssRules(css) {
+  const rules = new Map();
+  let depth = 0;
+  let start = 0;
+  let selector = '';
+  for (let index = 0; index < css.length; index += 1) {
+    if (css[index] === '{') {
+      if (depth === 0) {
+        selector = css.slice(start, index).trim();
+        start = index + 1;
+      }
+      depth += 1;
+    } else if (css[index] === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        if (!selector.startsWith('@')) rules.set(selector, css.slice(start, index));
+        start = index + 1;
+      }
+    }
+  }
+  return rules;
+}
+
+test('the standalone map pages reset the body margin that GpLayout resets elsewhere', async () => {
+  for (const [page, bodyClass] of [['map/edit.astro', 'map-edit-root'], ['map/moderate.astro', 'moderation-root']]) {
+    const source = await readFile(join(websitePagesDir, page), 'utf8');
+    assert.match(source, new RegExp(`<body class="gp-root ${bodyClass}">`), `${page} body classes`);
+    // Only a live top-level rule counts: not one in a comment or inside an
+    // @container or @media block that might not apply.
+    const css = [...source.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)]
+      .map((match) => match[1].replace(/\/\*[\s\S]*?\*\//g, ''))
+      .join('\n');
+    const bodyRule = topLevelCssRules(css).get(`.${bodyClass}`) ?? '';
+    assert.match(bodyRule, /(^|;)\s*margin:\s*0\s*(;|$)/, `${page} resets the body margin`);
+  }
 });
 
 test('noindex chapters keep their own page while staying out of discovery', async () => {
@@ -614,7 +667,7 @@ test('footer links come from social-links.json, with Keystatic fields to edit th
   // and leaves out a link whose URL an editor removed.
   assert.doesNotMatch(footer, /https?:\/\//);
   assert.match(footer, /\.filter\(\(item\) => item\.href\)/);
-  const footerKeys = ['twitter', 'farcaster', 'telegram', 'linkedin', 'youtube', 'hub', 'codeOfConduct', 'events', 'github'];
+  const footerKeys = ['twitter', 'farcaster', 'telegram', 'linkedin', 'youtube', 'hub', 'codeOfConduct', 'events', 'stewardCall', 'github'];
   for (const key of footerKeys) {
     assert.match(socialLinks[key], /^https:\/\//, `social-links.json ${key}`);
     assert.match(footer, new RegExp(`socialLinks\\.${key}\\b`), `footer reads ${key}`);
@@ -631,12 +684,45 @@ test('footer links come from social-links.json, with Keystatic fields to edit th
   }
 });
 
-test('the steward booking link follows the steward-call step, wherever it sits', () => {
-  const call = { surfaceType: 'steward-call', level: 2, cta: { href: 'https://example.org/book' } };
-  const community = { surfaceType: 'telegram', level: 4, cta: { href: 'https://example.org/community' } };
-  assert.equal(gardenStewardCallHref([community, call]), 'https://example.org/book');
-  assert.equal(gardenStewardCallHref([{ level: 4, cta: { href: 'https://example.org/level-4' } }]), 'https://example.org/level-4');
-  assert.equal(gardenStewardCallHref([]), DEFAULT_STEWARD_CALL_HREF);
+test('the steward booking link has one source: stewardCall in social-links.json', async () => {
+  const [socialLinks, garden] = await Promise.all([readJson('social-links.json'), readJson('garden.json')]);
+  assert.match(socialLinks.stewardCall, /^https:\/\//);
+
+  // Like the Telegram step, the steward call step keeps no URL of its own,
+  // and the unused preview card that carried another copy is gone.
+  const callSteps = garden.steps.filter((step) => step.surfaceType === 'steward-call');
+  assert.equal(callSteps.length, 1);
+  assert.equal(callSteps[0].cta.href, '');
+  assert.equal('stewardCallPreview' in garden, false);
+
+  // No page, component, library, content file or Keystatic default keeps a copy.
+  const websiteDir = join(rootDir, 'packages/website');
+  const sourceFiles = [
+    ...await readFilesWithExtensions(join(websiteDir, 'src'), ['.astro', '.ts', '.json', '.md']),
+    keystaticConfigPath,
+  ];
+  const copies = [];
+  for (const filePath of sourceFiles) {
+    if ((await readFile(filePath, 'utf8')).includes(socialLinks.stewardCall)) {
+      copies.push(filePath.slice(websiteDir.length + 1));
+    }
+  }
+  assert.deepEqual(copies, ['src/content/social-links.json']);
+});
+
+test('page calls to action share CtaStrip, which keeps lime on the button', async () => {
+  // DESIGN.md > Calls to action (PRD-1422): the lift panel steps the green
+  // scale and leaves lime to the primary button, with no lime border, tint or glow.
+  const strip = await readFile(join(rootDir, 'packages/website/src/components/ui/CtaStrip.astro'), 'utf8');
+  const stripStyles = strip.slice(strip.indexOf('<style>'));
+  assert.doesNotMatch(stripStyles, /--gp-primary|--gp-lime|184,\s*232,\s*53|::before/);
+  assert.match(stripStyles, /\.gp-cta-strip\.is-lift \{[^}]*background: var\(--gp-surface\)/);
+
+  for (const page of ['chapters/index.astro', 'chapters/[slug].astro', 'guilds/[slug].astro']) {
+    const source = await readFile(join(websitePagesDir, page), 'utf8');
+    assert.match(source, /<CtaStrip\b/, `${page} uses CtaStrip`);
+    assert.doesNotMatch(source, /cta-inner|cta-actions/, `${page} keeps no CTA panel of its own`);
+  }
 });
 
 test('library podcast section uses RSS snapshot and in-page audio', async () => {

@@ -460,6 +460,7 @@ export default config({
             levelLabel: fields.text({ label: 'Level Label' }),
             surfaceType: fields.select({
               label: 'Surface Type',
+              description: 'Telegram and Steward Call steps link to their Social Links entry, so their CTA URL stays empty.',
               options: [
                 { label: 'Email', value: 'email' },
                 { label: 'Telegram', value: 'telegram' },
@@ -493,7 +494,6 @@ export default config({
         emailPreview: previewCardField,
         telegramPreview: previewCardField,
         assessmentPreview: previewCardField,
-        stewardCallPreview: previewCardField,
         media: mediaField,
         seo: seoField,
       },
@@ -532,6 +532,13 @@ export default config({
         hub: fields.url({ label: 'Regen Coordination Hub', validation: { isRequired: true } }),
         codeOfConduct: fields.url({ label: 'Code of Conduct', validation: { isRequired: true } }),
         events: fields.url({ label: 'Events calendar (Luma)', validation: { isRequired: true } }),
+        // The one steward booking link: the Garden ramp's Steward Call step,
+        // the assessment's Steward result and the footer all read it.
+        stewardCall: fields.url({
+          label: 'Steward call booking',
+          description: 'Used by the Garden Steward Call step, the assessment and the footer.',
+          validation: { isRequired: true },
+        }),
         youtube: fields.url({ label: 'YouTube', validation: { isRequired: true } }),
         github: fields.url({ label: 'GitHub repository (footer)', validation: { isRequired: true } }),
       },

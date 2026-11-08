@@ -3,6 +3,7 @@ import GpLayout from '../../layouts/GpLayout.astro';
 import Container from '../../components/ui/Container.astro';
 import Button from '../../components/ui/Button.astro';
 import Card from '../../components/ui/Card.astro';
+import CtaStrip from '../../components/ui/CtaStrip.astro';
 import Overline from '../../components/ui/Overline.astro';
 import Text from '../../components/ui/Text.astro';
 import Meta from '../../components/ui/Meta.astro';
@@ -190,20 +191,14 @@ const hero = chaptersIndex.hero ?? {};
 
     <section class="gp-chapters-cta">
       <Container size="2xl">
-        <div class="gp-chapters-cta-inner">
-          <div>
-            <Overline>Start a chapter</Overline>
-            <Text variant="h2">Do not see your city?</Text>
-            <Text variant="body" class="gp-chapters-cta-body">
-              Chapters start with public goods, shared learning, and small in-person gatherings. The Garden is the
-              public ramp to find your people and connect with a steward.
-            </Text>
-          </div>
-          <div class="gp-chapters-cta-actions">
-            <Button href="/garden">Enter the Garden</Button>
-            <Button href="https://hub.regencoordination.xyz/c/updates/chapter-updates/14" variant="ghost">Read chapter updates</Button>
-          </div>
-        </div>
+        <CtaStrip
+          overline="Start a chapter"
+          title="Do not see your city?"
+          body="Chapters start with public goods, shared learning, and small in-person gatherings. The Garden is the public ramp to find your people and connect with a steward."
+        >
+          <Button href="/garden">Enter the Garden</Button>
+          <Button href="https://hub.regencoordination.xyz/c/updates/chapter-updates/14" variant="ghost">Read chapter updates</Button>
+        </CtaStrip>
       </Container>
     </section>
   </main>
@@ -474,42 +469,9 @@ const hero = chaptersIndex.hero ?? {};
     border-top: 1px solid var(--gp-border-soft);
   }
 
-  .gp-chapters-cta-inner {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--gp-space-2xl);
-    padding: clamp(var(--gp-space-xl), 4vw, var(--gp-space-3xl));
-    border: 1px solid rgba(184, 232, 53, 0.32);
-    border-radius: var(--gp-radius-xl);
-    background: linear-gradient(135deg, rgba(184, 232, 53, 0.06), rgba(15, 61, 46, 0.5));
-  }
-
-  .gp-chapters-cta-inner > div:first-child {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gp-space-sm);
-    max-width: 540px;
-  }
-
-  .gp-chapters-cta-body {
-    color: var(--gp-fg-muted);
-  }
-
-  .gp-chapters-cta-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-
   @container (max-width: 1100px) {
     .gp-chapters-grid.is-directory {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .gp-chapters-cta-inner {
-      flex-direction: column;
-      align-items: flex-start;
     }
   }
 

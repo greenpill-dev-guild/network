@@ -1,6 +1,15 @@
 ---
+import '../../styles/gp-tokens.css';
 import { PUBLIC_MAP_THEMES } from '@greenpill-network/shared/map-state';
+import Button from '../../components/ui/Button.astro';
+import Card from '../../components/ui/Card.astro';
+import Overline from '../../components/ui/Overline.astro';
 
+// The page behind a private edit link stays outside the site shell: no
+// GpLayout header or footer, no web fonts (gp-tokens.css declares only the
+// stacks, so system fonts render), no WebMCP, no share metadata and no links.
+// The inline script in <head> takes the token out of the address bar before
+// any stylesheet loads.
 const mapThemes = PUBLIC_MAP_THEMES;
 const pageTitle = 'Update your Greenpill Network map node';
 const pageDescription = 'Private magic-link surface for requesting edits to public Greenpill Network map-node fields.';
@@ -380,323 +389,11 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
     <title>{pageTitle}</title>
     <meta name="description" content={pageDescription} />
     <meta name="robots" content="noindex,nofollow" />
-    <style is:inline>
-      :root {
-        --gp-bg: #0f3d2e;
-        --gp-fg: #faf7ee;
-        --gp-primary: #b8e835;
-        --gp-primary-fg: #0f3d2e;
-        --gp-space-xs: 4px;
-        --gp-space-sm: 8px;
-        --gp-space-md: 16px;
-        --gp-space-lg: 24px;
-        --gp-space-2xl: 48px;
-        --gp-label-sm: 12px;
-        --gp-label-md: 14px;
-        --gp-body-md: 16px;
-        /* Mirrors gp-tokens.css so the standalone page reads as one system; its
-           absence was rendering the H1 at the UA default size. */
-        --gp-h1-size: clamp(36px, calc(27.7px + 2.21vw), 56px);
-        --gp-font-display: Georgia, "Times New Roman", serif;
-        --gp-font-body: "Helvetica Neue", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      html {
-        min-height: 100%;
-        background: #0a2d21;
-      }
-
-      body {
-        container-type: inline-size;
-        margin: 0;
-        min-height: 100vh;
-        background: var(--gp-bg);
-        color: var(--gp-fg);
-        font-family: var(--gp-font-body);
-      }
-
-      .map-edit-page {
-        min-height: 100vh;
-        display: grid;
-        place-items: center;
-        padding: var(--gp-space-2xl) var(--gp-space-md);
-        background:
-          radial-gradient(circle at top left, rgba(184, 232, 53, 0.14), transparent 20rem),
-          var(--gp-bg);
-      }
-
-      .map-edit-panel {
-        width: min(100%, 48rem);
-        border: 1px solid color-mix(in srgb, var(--gp-primary) 18%, transparent);
-        border-radius: 8px;
-        padding: clamp(var(--gp-space-lg), 4vw, var(--gp-space-2xl));
-        background: rgba(7, 24, 15, 0.76);
-        box-shadow: 0 20px 60px rgba(2, 12, 7, 0.32);
-      }
-
-      .map-edit-kicker {
-        margin: 0 0 var(--gp-space-sm);
-        color: var(--gp-primary);
-        font-size: var(--gp-label-sm);
-        font-weight: 800;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
-
-      .map-edit-panel h1 {
-        margin: 0;
-        font-family: var(--gp-font-display);
-        font-size: var(--gp-h1-size);
-        line-height: 1.05;
-        letter-spacing: 0;
-        overflow-wrap: break-word;
-      }
-
-      .map-edit-copy {
-        max-width: 40rem;
-        margin: var(--gp-space-md) 0 var(--gp-space-lg);
-        color: var(--gp-fg-muted);
-        font-size: var(--gp-body-md);
-        line-height: 1.6;
-      }
-
-      .map-edit-state {
-        border: 1px solid rgba(207, 247, 90, 0.18);
-        border-radius: 8px;
-        padding: var(--gp-space-md);
-        background: rgba(2, 12, 7, 0.48);
-        color: rgba(250, 247, 238, 0.86);
-        line-height: 1.5;
-      }
-
-      .map-edit-state.is-success {
-        border-color: rgba(184, 232, 53, 0.45);
-        color: var(--gp-primary);
-      }
-
-      .map-edit-state.is-error {
-        border-color: rgba(224, 120, 86, 0.5);
-        color: #ffd6ca;
-      }
-
-      .map-edit-form {
-        display: grid;
-        gap: var(--gp-space-md);
-      }
-
-      .map-edit-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: var(--gp-space-md);
-      }
-
-      .map-edit-form label,
-      .map-edit-themes {
-        display: grid;
-        gap: var(--gp-space-xs);
-      }
-
-      .map-edit-location {
-        display: grid;
-        gap: var(--gp-space-sm);
-        margin: 0;
-        border: 1px solid rgba(207, 247, 90, 0.18);
-        border-radius: 8px;
-        padding: var(--gp-space-md);
-      }
-
-      .map-edit-location legend {
-        padding-inline: var(--gp-space-xs);
-        color: rgba(250, 247, 238, 0.84);
-        font-size: var(--gp-label-sm);
-        font-weight: 800;
-      }
-
-      .map-edit-location p {
-        margin: 0;
-        color: rgba(250, 247, 238, 0.8);
-        line-height: 1.45;
-      }
-
-      .map-edit-location-search-row {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: var(--gp-space-sm);
-      }
-
-      .map-edit-location-search-row button,
-      #map-edit-location-results button {
-        min-height: 2.85rem;
-        border: 1px solid color-mix(in srgb, var(--gp-primary) 30%, transparent);
-        border-radius: 8px;
-        padding: 0.75rem;
-        background: var(--gp-card);
-        color: var(--gp-fg);
-        font: inherit;
-        font-weight: 800;
-        cursor: pointer;
-      }
-
-      .map-edit-location-search-row button:disabled {
-        cursor: wait;
-        opacity: 0.64;
-      }
-
-      #map-edit-location-results ul {
-        display: grid;
-        gap: var(--gp-space-xs);
-        margin: 0;
-        padding: 0;
-        list-style: none;
-      }
-
-      #map-edit-location-results button {
-        width: 100%;
-        text-align: start;
-      }
-
-      .map-edit-location-hint,
-      .map-edit-location-status {
-        font-size: var(--gp-label-sm);
-      }
-
-      .map-edit-location-status[data-tone="success"] { color: var(--gp-primary); }
-      .map-edit-location-status[data-tone="error"] { color: var(--gp-error); }
-
-      .map-edit-form label span,
-      .map-edit-themes legend {
-        color: var(--gp-fg-muted);
-        font-size: var(--gp-label-sm);
-        font-weight: 800;
-      }
-
-      .map-edit-form input,
-      .map-edit-form textarea {
-        width: 100%;
-        min-height: 2.85rem;
-        border: 1px solid rgba(207, 247, 90, 0.2);
-        border-radius: 8px;
-        padding: 0.75rem;
-        background: rgba(2, 12, 7, 0.72);
-        color: var(--gp-fg);
-        font: inherit;
-        outline: none;
-      }
-
-      .map-edit-form textarea {
-        min-height: 7rem;
-        resize: vertical;
-      }
-
-      .map-edit-form input:focus,
-      .map-edit-form textarea:focus {
-        border-color: rgba(212, 245, 100, 0.78);
-        box-shadow: 0 0 0 3px rgba(212, 245, 100, 0.12);
-      }
-
-      .map-edit-theme-options {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: var(--gp-space-sm);
-      }
-
-      .map-edit-theme-options label {
-        min-height: 2.75rem;
-        display: grid;
-        grid-template-columns: auto minmax(0, 1fr);
-        align-items: center;
-        border: 1px solid rgba(207, 247, 90, 0.16);
-        border-radius: 8px;
-        padding: 0.5rem 0.6rem;
-        background: rgba(2, 12, 7, 0.36);
-        cursor: pointer;
-      }
-
-      .map-edit-theme-options input {
-        width: 1rem;
-        min-height: 1rem;
-        padding: 0;
-        accent-color: var(--gp-primary);
-      }
-
-      .map-edit-theme-options span {
-        font-weight: 700;
-      }
-
-      .map-edit-actions {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--gp-space-md);
-      }
-
-      .map-edit-actions p {
-        margin: 0;
-        color: rgba(250, 247, 238, 0.68);
-        font-size: var(--gp-label-md);
-        line-height: 1.4;
-      }
-
-      .map-edit-actions button {
-        min-height: 3rem;
-        min-width: 9rem;
-        border: 0;
-        border-radius: 999px;
-        padding: 0.75rem 1.1rem;
-        background: var(--gp-primary);
-        color: var(--gp-primary-fg);
-        font: inherit;
-        font-weight: 900;
-        cursor: pointer;
-      }
-
-      .map-edit-actions button:disabled {
-        cursor: wait;
-        opacity: 0.64;
-      }
-
-      [hidden] {
-        display: none !important;
-      }
-
-      @container (max-width: 640px) {
-        .map-edit-page {
-          place-items: start stretch;
-          padding: var(--gp-space-md);
-        }
-
-        .map-edit-panel {
-          padding: var(--gp-space-lg);
-        }
-
-        .map-edit-grid,
-        .map-edit-theme-options,
-        .map-edit-actions {
-          grid-template-columns: 1fr;
-        }
-
-        .map-edit-location-search-row {
-          grid-template-columns: 1fr;
-        }
-
-        .map-edit-actions {
-          display: grid;
-        }
-
-        .map-edit-actions button {
-          width: 100%;
-        }
-      }
-    </style>
   </head>
-  <body>
+  <body class="gp-root map-edit-root">
     <main class="map-edit-page">
-      <section class="map-edit-panel" aria-labelledby="map-edit-title">
-        <p class="map-edit-kicker">Greenpill Network map</p>
+      <Card as="section" variant="elevated" stack="md" class="map-edit-panel" aria-labelledby="map-edit-title">
+        <Overline text="Greenpill Network map" />
         <h1 id="map-edit-title">Update your public map node</h1>
         <p class="map-edit-copy">
           Review the public fields below. Submitted changes wait for steward review before they appear on the map.
@@ -716,26 +413,26 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
 
         <form id="map-edit-form" class="map-edit-form" novalidate hidden>
           <div class="map-edit-grid">
-            <label>
+            <label class="map-edit-field">
               <span>Display name</span>
               <input name="display_name" autocomplete="name" required />
             </label>
           </div>
 
-          <fieldset class="map-edit-location">
+          <Card as="fieldset" padded="sm" stack="sm" class="map-edit-location">
             <legend>Location</legend>
-            <p id="map-edit-location-current"></p>
+            <p id="map-edit-location-current" class="map-edit-location-current"></p>
             <label for="map-edit-location-query">Find a new city, region, or country</label>
             <div class="map-edit-location-search-row">
               <input id="map-edit-location-query" type="search" autocomplete="off" minlength="3" maxlength="120" placeholder="e.g. Awka, Nigeria" />
-              <button id="map-edit-location-search" type="button">Find place</button>
+              <Button id="map-edit-location-search" variant="ghost">Find place</Button>
             </div>
             <p class="map-edit-location-hint">Use a public community location, not a home address.</p>
             <div id="map-edit-location-results" hidden>
-              <ul id="map-edit-location-results-list"></ul>
+              <ul id="map-edit-location-results-list" class="map-edit-location-results"></ul>
             </div>
             <p id="map-edit-location-status" class="map-edit-location-status" role="status" aria-live="polite"></p>
-          </fieldset>
+          </Card>
 
           <fieldset class="map-edit-themes">
             <legend>Themes</legend>
@@ -750,17 +447,272 @@ const pageDescription = 'Private magic-link surface for requesting edits to publ
             <div id="map-edit-extra-themes"></div>
           </fieldset>
 
-          <label>
+          <label class="map-edit-field">
             <span>Public profile intro</span>
             <textarea name="public_note" rows="4" maxlength="500"></textarea>
           </label>
 
           <div class="map-edit-actions">
             <p>Only public map profile and location fields are editable here.</p>
-            <button id="map-edit-submit" type="submit">Submit update</button>
+            <Button id="map-edit-submit" type="submit">Submit update</Button>
           </div>
         </form>
-      </section>
+      </Card>
     </main>
   </body>
 </html>
+
+<style>
+  /* Native controls (checkboxes, the search field) match the dark page. */
+  :global(:root) {
+    color-scheme: dark;
+  }
+
+  /* Outside GpLayout the body is the query container, for this page's
+     reflow and for Button's full-width rule at narrow widths. */
+  .map-edit-root {
+    container-type: inline-size;
+    min-block-size: 100dvh;
+    margin: 0;
+  }
+
+  /* Script-driven states toggle [hidden]; the layout rules below set display. */
+  :global([hidden]) {
+    display: none !important;
+  }
+
+  .map-edit-page {
+    display: grid;
+    place-items: center;
+    min-block-size: 100dvh;
+    padding-block: var(--gp-space-2xl);
+    padding-inline: var(--gp-space-md);
+  }
+
+  .map-edit-page :global(.map-edit-panel) {
+    inline-size: min(100%, 48rem);
+  }
+
+  .map-edit-page h1 {
+    overflow-wrap: break-word;
+  }
+
+  .map-edit-copy {
+    max-inline-size: 40rem;
+    color: var(--gp-fg-muted);
+  }
+
+  .map-edit-state {
+    padding: var(--gp-space-md);
+    border: 1px solid var(--gp-border-soft);
+    border-radius: var(--gp-radius-md);
+    background: var(--gp-bg);
+    color: var(--gp-fg);
+  }
+
+  .map-edit-state.is-success {
+    border-color: color-mix(in srgb, var(--gp-primary) 45%, transparent);
+    color: var(--gp-primary);
+  }
+
+  .map-edit-state.is-error {
+    border-color: var(--gp-error);
+  }
+
+  .map-edit-form {
+    display: grid;
+    gap: var(--gp-space-lg);
+  }
+
+  .map-edit-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--gp-space-md);
+  }
+
+  .map-edit-field {
+    display: grid;
+    gap: var(--gp-space-sm);
+  }
+
+  /* Legends float so they sit inside their fieldset like the other labels. */
+  .map-edit-form legend {
+    float: inline-start;
+    inline-size: 100%;
+    padding: 0;
+  }
+
+  .map-edit-field > span,
+  .map-edit-form legend,
+  .map-edit-form label[for] {
+    color: var(--gp-fg);
+    font-size: var(--gp-label-md);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+  }
+
+  .map-edit-form input:not([type='checkbox']),
+  .map-edit-form textarea {
+    inline-size: 100%;
+    min-block-size: 48px;
+    padding-block: var(--gp-space-sm);
+    padding-inline: var(--gp-space-md);
+    border: 1px solid var(--gp-border);
+    border-radius: var(--gp-radius-pill);
+    background: var(--gp-bg);
+    color: var(--gp-fg);
+    font: inherit;
+  }
+
+  .map-edit-form textarea {
+    min-block-size: 7rem;
+    border-radius: var(--gp-radius-md);
+    resize: vertical;
+  }
+
+  .map-edit-form input::placeholder {
+    color: var(--gp-fg-dim);
+  }
+
+  .map-edit-form input:not([type='checkbox']):focus,
+  .map-edit-form textarea:focus {
+    border-color: var(--gp-primary);
+  }
+
+  .map-edit-location-current {
+    color: var(--gp-fg);
+  }
+
+  .map-edit-location-hint,
+  .map-edit-location-status {
+    color: var(--gp-fg-muted);
+    font-size: var(--gp-body-sm);
+  }
+
+  .map-edit-location-status[data-tone='success'] {
+    color: var(--gp-primary);
+  }
+
+  /* Plain --gp-error is under 4.5:1 on the card tone; mixed with the body
+     colour it stays terracotta and readable. */
+  .map-edit-location-status[data-tone='error'] {
+    color: color-mix(in srgb, var(--gp-error) 60%, var(--gp-fg));
+  }
+
+  .map-edit-location-search-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--gp-space-sm);
+  }
+
+  .map-edit-location-results {
+    display: grid;
+    gap: var(--gp-space-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* The results are buttons the page script builds, so they sit outside this
+     page's style scope. */
+  .map-edit-location-results :global(button) {
+    inline-size: 100%;
+    min-block-size: 44px;
+    padding-block: var(--gp-space-sm);
+    padding-inline: var(--gp-space-md);
+    border: 1px solid var(--gp-border);
+    border-radius: var(--gp-radius-md);
+    background: var(--gp-bg);
+    color: var(--gp-fg);
+    font: inherit;
+    font-weight: 600;
+    text-align: start;
+    cursor: pointer;
+    transition: border-color 120ms cubic-bezier(0.4, 0, 0.2, 1), color 120ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .map-edit-location-results :global(button:hover) {
+    border-color: color-mix(in srgb, var(--gp-primary) 42%, transparent);
+    color: var(--gp-lime-400);
+  }
+
+  .map-edit-themes {
+    display: grid;
+    gap: var(--gp-space-sm);
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .map-edit-theme-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--gp-space-sm);
+  }
+
+  .map-edit-theme-options label {
+    display: flex;
+    align-items: center;
+    gap: var(--gp-space-sm);
+    min-block-size: 44px;
+    padding-block: var(--gp-space-xs);
+    padding-inline: var(--gp-space-md);
+    border: 1px solid var(--gp-border);
+    border-radius: var(--gp-radius-pill);
+    cursor: pointer;
+    transition: border-color 120ms cubic-bezier(0.4, 0, 0.2, 1), background 120ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .map-edit-theme-options label:has(input:checked) {
+    border-color: var(--gp-primary);
+    background: color-mix(in srgb, var(--gp-primary) 12%, transparent);
+  }
+
+  .map-edit-theme-options input {
+    flex: none;
+    inline-size: 1rem;
+    block-size: 1rem;
+    margin: 0;
+    accent-color: var(--gp-primary);
+  }
+
+  .map-edit-theme-options span {
+    font-size: var(--gp-label-md);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .map-edit-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gp-space-md);
+  }
+
+  .map-edit-actions p {
+    color: var(--gp-fg-muted);
+    font-size: var(--gp-body-sm);
+    line-height: 1.4;
+  }
+
+  @container (max-width: 640px) {
+    .map-edit-page {
+      place-items: start stretch;
+      padding: var(--gp-space-md);
+    }
+
+    .map-edit-grid,
+    .map-edit-theme-options,
+    .map-edit-location-search-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .map-edit-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+</style>

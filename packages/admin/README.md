@@ -538,7 +538,51 @@ emergency fallback when a magic link has expired or been missed. Directus can
 still set `status` to `approved`, `rejected`, or `archived`; the database sets
 `approved_at` on first approval.
 
-Release the flow in this order:
+**Approvals at a point the map can't show (PRD-1417).** Directus writes straight
+to Postgres, so the agent's coordinate checks never run for an approval made
+there. Migration `032_map_node_approval_guard.sql` adds a trigger on
+`intake.map_node_submissions` that refuses any write leaving a node `approved`
+with a missing point, a latitude beyond ±90, a longitude beyond ±180, or exactly
+0,0. This is the agent's rule (`getMapCoordinateProblem` in
+`packages/shared/src/map-locations.ts`), applied to the six-decimal value the
+database stores. The moderation link already refuses these approvals with its
+own message; the trigger covers Directus and any other writer.
+
+- Declining or archiving a node at a bad point still works.
+- An owner update request that would leave a node at a bad point can't be
+  approved. Migration 007 applies the request to the node in the same
+  statement, so the approval rolls back and the request stays pending; decline
+  it instead. This includes a rename of a node already saved at 0,0, because
+  applying any request writes the node's latitude and longitude again.
+- Edge points (latitude ±90 or longitude ±180) still approve. A confirmed place
+  can sit there, and the database can't tell one from a pin clamped to the edge
+  of the map, so check an edge point by hand before approving it.
+- Edits that name none of `status`, `latitude` and `longitude` still work on
+  rows saved before the guard.
+
+Directus shows a database error's text only to admins. A steward moderator, or
+anyone else without admin access, sees only "An unexpected error occurred."
+Directus 11.17.4 turns NOT NULL, foreign key, unique, length and numeric range
+errors into readable messages, but not a trigger's refusal, and Data Studio
+shows stewards no explanation for it yet. An admin sees the reason, for example
+"Map node `<id>` can't be approved: its saved point is latitude 0, longitude 0, a
+placeholder rather than a place, so the public map can't show it." When a
+steward reports that error on an approval, check the node's point: decline the
+node, or have an admin correct its location first.
+
+**PRD-1409 revert caveat.** The coordinate repair of 2026-11-07 (run
+`0f27b0a7-439b-494b-bbbb-201c5a01f930`) moved two approved nodes off 0,0:
+`21cb7662-1a87-4922-8373-4376f07a9c7c` (Port Harcourt) and
+`fc0cb8bd-7be9-4c48-a1d1-5ed013834e07` (Rotterdam). Reverting the run would put
+them back at 0,0 while approved, so with the guard in place the revert fails.
+Both revert paths (`--revert` in the archived
+`.plans/archive/website-qa-2026-11/artifacts/qa-map-data/repair-map-node-coordinates.cjs`
+and `bun run db:repair:map-node-locations -- --revert <run-id>`) restore a run
+in one statement, so nothing is restored. If the revert is ever needed, archive
+or decline those two nodes first; an approved node at 0,0 was hidden from the
+public map anyway.
+
+Release the magic-link flow in this order:
 
 1. Publish the static `/map/moderate` page and verify it is live.
 2. Apply agent migration `020_map_node_moderation_access_links.sql`.
