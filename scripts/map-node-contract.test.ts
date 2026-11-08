@@ -21,13 +21,33 @@ import {
 } from '@greenpill-network/shared/map-locations';
 import { toPublicOperationalLocations } from '@greenpill-network/shared/public-content';
 import {
+  ATLANTIC_CENTER_X,
+  clampMapView,
+  defaultMapView,
   fanHasRoomForTargets,
   formatPickerCoordinate,
   groupOverlappingPins,
+  largestMapView,
   layoutFan,
+  MAP_DRAWING,
+  panMapView,
   pickerPointToLocation,
+  pointsBeyondView,
   separateLabels,
 } from '../packages/website/src/lib/home-map-layout.ts';
+import {
+  ALL_THEMES_NAME,
+  chipsThatFit,
+  nodeThemesAreShown,
+  pickState,
+  stripThemeOrder,
+  themeChipName,
+  themeIsShown,
+  togglePick,
+  typeIsShown,
+  typePillName,
+  type MapNodeType,
+} from '../packages/website/src/lib/home-map-filters.ts';
 import {
   describeMapStateFeed,
   formatUpdatedAgo,
@@ -1076,8 +1096,13 @@ test('home map intake requires a valid email and stores local pending only after
   assert.doesNotMatch(component, /restoreListFocusOnClose\) listToggle\??\.focus/);
 
   // Filtering always offers a way back, and hover never outlives the pointer.
-  assert.match(component, /<button type="button" class="gp-home-map-legend-reset" data-home-map-filter-reset hidden>Show all<\/button>/);
-  assert.match(component, /const resetMapFilters = \(\) => \{[\s\S]*?activeTypeFilter = '';[\s\S]*?activeThemes\.add\(theme\)[\s\S]*?applyMapFilters\(\);/);
+  // The legend's Show all is the shared Chip (CodeRabbit on #50, carried into
+  // PRD-1438's chrome step), still hidden until a filter narrows the map.
+  assert.match(component, /<Chip as="button" class="gp-home-map-legend-reset" data-home-map-filter-reset hidden>Show all<\/Chip>/);
+  // Reversed on purpose (map-polish-audit.md § 5): "Under narrow-then-add, a
+  // reset empties the picked set." June's reset switched every theme back on.
+  assert.match(component, /const resetMapFilters = \(\) => \{[\s\S]*?pickedTypes = new Set\(\);[\s\S]*?pickedThemes = new Set\(\);[\s\S]*?applyMapFilters\(\);/);
+  assert.doesNotMatch(component, /activeThemes\.add\(theme\)/);
   assert.match(component, /syncFilterStatus\(visibleNodeIds\.size, nodeTypeById\.size\)/);
   assert.match(component, /filterNote\.dataset\.empty = visibleCount === 0 \? 'true' : 'false'/);
   assert.match(component, /const dropPointerFocus = \(\) => \{[\s\S]*?pointerFocusTarget = null;[\s\S]*?hoveredStackKey = '';[\s\S]*?if \(selectedFocusTarget\) return;/);
@@ -1318,13 +1343,18 @@ test('home map grows live: reconciles, polls visibly, and redraws after submit',
   assert.match(component, /new IntersectionObserver/);
   assert.match(component, /void loadMapState\(\{ replay: true \}\)/);
 
-  // Visible legend counts are also type filter buttons: one active type isolates
-  // that node class, clicking it again restores the combined view.
+  // Visible legend counts are also type filter buttons. Reversed on purpose
+  // (map-polish-audit.md § 5): "the first press on a type or a theme shows
+  // only that one, more presses add to it (Stewards and Members together),
+  // pressing a pressed pill removes it", so "The type filter becomes a set."
+  // June kept one active type at a time. The rule lives in
+  // lib/home-map-filters.ts, tested in "home map filters narrow, then add".
   assert.match(component, /data-legend-filter=\{type\.id\}/);
   assert.match(component, /aria-pressed="false"/);
-  assert.match(component, /let activeTypeFilter: '' \| 'chapter' \| 'steward' \| 'member' = ''/);
-  assert.match(component, /if \(activeTypeFilter && type !== activeTypeFilter\) return false/);
-  assert.match(component, /activeTypeFilter = activeTypeFilter === type \? '' : type/);
+  assert.match(component, /let pickedTypes = new Set<MapNodeType>\(\);/);
+  assert.match(component, /if \(!typeIsShown\(pickedTypes, type\)\) return false;/);
+  assert.match(component, /pickedTypes = togglePick\(pickedTypes, type\);/);
+  assert.doesNotMatch(component, /activeTypeFilter/);
   assert.match(component, /data-home-map-type-count=\{type\.id\}/);
   assert.match(component, /legendCounts: Record<string, number>/);
   assert.match(component, /nodeMatchesThemeFilters\(node\)/);
@@ -1440,7 +1470,9 @@ test('home map live feed: the Live pill tells freshness, failures show on the ma
   const pill = component.match(/<div class="gp-home-map-freshness"[^>]*>/)?.[0] ?? '';
   assert.ok(pill, 'the Live pill must exist');
   assert.doesNotMatch(pill, /aria-live|role="status"/);
-  assert.match(component, /<div class="gp-home-map-state-error" data-home-map-state-error hidden>\s*<span data-home-map-state-error-text><\/span>\s*<button type="button" data-home-map-state-retry>Try again<\/button>/);
+  // Try again is DESIGN.md's error action, the shared ghost Button
+  // (CodeRabbit on #50, carried into PRD-1438's chrome step).
+  assert.match(component, /<div class="gp-home-map-state-error" data-home-map-state-error hidden>\s*<span data-home-map-state-error-text><\/span>\s*<Button variant="ghost" class="gp-home-map-state-retry" data-home-map-state-retry>Try again<\/Button>/);
   assert.match(component, /<p class="gp-home-map-sr" data-home-map-state-live aria-live="polite"><\/p>/);
   assert.match(component, /mapStateRetry\?\.addEventListener\('click', \(\) => \{\s*void loadMapState\(\);/);
   // The people check runs before anything from the answer is used: intake
@@ -1453,8 +1485,17 @@ test('home map live feed: the Live pill tells freshness, failures show on the ma
     assert.ok(loadBlock.indexOf(later) > peopleCheck, `${later} must come after the people check`);
   }
   // Try again is a full touch target at every width, not only on the
-  // compact map (Codex on #50).
-  assert.match(component, /\n  \.gp-home-map-state-error button \{\n    min-height: 44px;\n  \}/);
+  // compact map (Codex on #50): the shared Button is 48px tall, and the map's
+  // rule for it sets its width and padding, never its height.
+  const buttonPrimitive = await readFile(
+    new URL('../packages/website/src/components/ui/Button.astro', import.meta.url),
+    'utf8'
+  );
+  assert.match(buttonPrimitive, /\.gp-button \{[^}]*min-height: 48px;/);
+  const retryRule = component.match(/\.gp-home-map-state-error \.gp-button \{([^}]*)\}/)?.[1] ?? '';
+  assert.ok(retryRule, 'the map styles Try again beside its message');
+  assert.doesNotMatch(retryRule, /height/);
+  assert.doesNotMatch(component, /\.gp-home-map-state-error button \{/);
   assert.match(component, /const status = describeMapStateFeed\(mapStateFeed, intakeMode, Date\.now\(\)\);/);
   assert.match(component, /root\.classList\.toggle\('has-map-state-problem', Boolean\(status\.problem\)\)/);
   // DESIGN.md (Error): a 1px error border, and the error stays on the map.
@@ -1628,28 +1669,28 @@ test('home map mobile touch mode supports bounded zoom and compact connection ro
   assert.doesNotMatch(component, /frameNodeNeighbourhood/);
   assert.doesNotMatch(component, /selectedBottomPaddingForView/);
   assert.doesNotMatch(component, /cursor:\s*help/);
-  assert.match(component, /@container \(max-width: 720px\)/);
-  assert.match(component, /\.gp-home-map-thread\.is-entering\s*{[\s\S]*?animation:\s*none/);
+  // Reversed on purpose (map-polish-audit.md § 5): "DESIGN.md:403 wins. The
+  // map's compact layout starts at a 520px container instead of 720px." June's
+  // 720px query and its band under a 44cqw drawing go: the canvas grew below
+  // the map for the legend row and the controls row, and grew again to fit
+  // the selected node's bar, which hid the controls. PRD-1423's error row
+  // lived in that band. A phone's stage is "at least 60svh" and frames the
+  // drawing's full height, "never a letterbox", with "One row of controls
+  // along the bottom of the stage"; the error note moves to the stage's top,
+  // over the far north, where it covers no pin.
+  assert.doesNotMatch(component, /@container \(max-width: 720px\)/);
+  assert.doesNotMatch(component, /44cqw|--gp-map-lower|--gp-map-alert/);
+  const phoneCss = component.match(/@container \(max-width: 520px\) \{([\s\S]*?)\n  \}\n/)?.[1] ?? '';
+  assert.match(phoneCss, /\.gp-home-map-canvas\s*{[\s\S]*?--gp-map-layout:\s*phone;[\s\S]*?aspect-ratio:\s*auto;\s*block-size:\s*60svh;/);
+  assert.doesNotMatch(phoneCss, /aspect-ratio:\s*4 \/ 3/);
+  assert.match(phoneCss, /\.gp-home-map-thread\.is-entering\s*{[\s\S]*?animation:\s*none/);
+  assert.match(phoneCss, /\.gp-home-map-state-error\s*{\s*inset-block-start:\s*var\(--gp-map-edge\);/);
   assert.match(component, /\.gp-home-map-selected-edge-list:not\(\[hidden\]\)\s*{[\s\S]*?display:\s*block/);
-  // Compact maps keep their chrome off the drawing: the canvas adds a band
-  // below the map for the legend row and the controls row, and the band grows
-  // to fit the selected node's bar, which takes the controls' place. A map
-  // whose people failed to load also gets a row for its error (PRD-1423), so
-  // the error covers no pins either.
-  const compactCss = component.match(/@container \(max-width: 720px\) \{([\s\S]*?)\n  \}\n/)?.[1] ?? '';
-  assert.match(compactCss, /\.gp-home-map-canvas\s*{[\s\S]*?--gp-map-alert:\s*0px;[\s\S]*?aspect-ratio:\s*auto;[\s\S]*?block-size:\s*calc\(44cqw \+ var\(--gp-map-edge\) \* 4 \+ var\(--gp-map-row\) \+ var\(--gp-map-lower\) \+ var\(--gp-map-alert\)\)/);
-  assert.match(compactCss, /\.gp-home-map-canvas\.has-map-state-problem\s*{\s*--gp-map-alert:\s*calc\(var\(--gp-map-row\) \+ var\(--gp-map-edge\)\);/);
-  assert.match(compactCss, /\.gp-home-map-state-error\s*{[\s\S]*?inset-block-end:\s*calc\(var\(--gp-map-edge\) \* 3 \+ var\(--gp-map-row\) \+ var\(--gp-map-lower\)\);/);
-  assert.match(compactCss, /\.gp-home-map-canvas\.has-selected-node\s*{[\s\S]*?--gp-map-lower:\s*max\(var\(--gp-map-row\), calc\(var\(--gp-map-selected-clearance, 186px\) - 18px\)\)/);
-  assert.match(compactCss, /\.gp-home-map-svg\s*{[\s\S]*?inset:\s*var\(--gp-map-edge\) 0 auto;[\s\S]*?aspect-ratio:\s*var\(--gp-map-aspect\)/);
-  assert.match(compactCss, /\.gp-home-map-legend,\s*\.gp-home-map-canvas\.has-selected-node \.gp-home-map-legend\s*{[\s\S]*?inset-block-end:\s*calc\(var\(--gp-map-edge\) \* 2 \+ var\(--gp-map-lower\)\)/);
-  assert.match(compactCss, /\.gp-home-map-canvas\.has-selected-node \.gp-home-map-controls\s*{\s*display:\s*none;/);
-  assert.doesNotMatch(compactCss, /aspect-ratio:\s*4 \/ 3/);
   // Narrow maps show legend dots and counts only (DESIGN.md), keeping the
-  // label for assistive technology, and the Show all chip ends the row.
+  // label for assistive technology, and the Show all chip ends the counts.
   assert.match(component, /@container \(max-width: 520px\) \{\s*\.gp-home-map-legend-label\s*{[\s\S]*?clip:\s*rect\(0 0 0 0\)/);
-  assert.match(compactCss, /\.gp-home-map-legend-reset\s*{\s*order:\s*1;/);
-  assert.match(compactCss, /\.gp-home-map-filter-note\[data-empty='true'\]:not\(\[hidden\]\)\s*{[\s\S]*?display:\s*flex/);
+  assert.match(phoneCss, /\.gp-home-map-legend-reset\s*{\s*order:\s*1;/);
+  assert.match(phoneCss, /\.gp-home-map-filter-note\[data-empty='true'\]:not\(\[hidden\]\)\s*{[\s\S]*?display:\s*flex/);
   assert.match(component, /\.gp-home-map-selected-edge-items\s*{[\s\S]*?overflow-x:\s*auto/);
   assert.match(component, /new ResizeObserver\(scheduleMapResizeSync\)\.observe\(root\)/);
   assert.doesNotMatch(component, /data-filter-toggle="type"/);
@@ -1657,13 +1698,27 @@ test('home map mobile touch mode supports bounded zoom and compact connection ro
   assert.doesNotMatch(component, /data-legend-all/);
   assert.doesNotMatch(component, /data-legend-filter="all"/);
   assert.doesNotMatch(component, /<span class="gp-home-map-legend-label">All<\/span>/);
-  assert.match(component, /<div class="gp-home-map-filter-tabs">[\s\S]*data-filter-toggle="theme"[\s\S]*data-home-map-list-toggle[\s\S]*<div class="gp-home-map-zoom-controls"/);
+  // The control row's order, updated on purpose (map-polish-audit.md § 5):
+  // "on desktop the strip's '+N' opens the theme editor, so the 'Themes'
+  // toggle leaves the desktop bars, but the phone row keeps a 'Themes' button
+  // that opens it". The phone's row, in § 5's order: "the type counts", "a
+  // 'Show all' chip", "Themes", "List", "a reset button (an icon with the
+  // accessible name 'Reset the map view')", "and Join the map".
+  assert.match(
+    component,
+    /<div class="gp-home-map-control-row">[\s\S]*?<div class="gp-home-map-legend"[\s\S]*?data-home-map-filter-reset hidden>Show all[\s\S]*?class="gp-home-map-themes-toggle" data-filter-toggle="theme"[\s\S]*?data-home-map-list-toggle[\s\S]*?<div class="gp-home-map-zoom-controls"[\s\S]*?data-home-map-zoom="reset" aria-label="Reset the map view"[\s\S]*?data-home-map-open/
+  );
   const mapThemePanelCss = component.match(/\.gp-home-map-filter-panel\.is-themes\s*{([\s\S]*?)\n  }/)?.[1] ?? '';
   assert.match(mapThemePanelCss, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
   assert.match(mapThemePanelCss, /max-height:\s*none/);
   assert.match(mapThemePanelCss, /overflow:\s*visible/);
-  assert.match(component, /@container \(max-width: 720px\) \{[\s\S]*?\.gp-home-map-filter-panel\.is-themes\s*{[\s\S]*?position:\s*fixed;[\s\S]*?inset-block-end:\s*calc\(var\(--gp-space-3xl\) \+ env\(safe-area-inset-bottom, 0px\)\);[\s\S]*?grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\);[\s\S]*?max-height:\s*none;[\s\S]*?overflow:\s*visible/);
-  assert.match(component, /\.gp-home-map-canvas\.has-selected-node \.gp-home-map-filter-panel\.is-themes\s*{[\s\S]*?--gp-map-selected-clearance/);
+  // Reversed on purpose (§ 5): "the theme panel's fixed position inside that
+  // query" and "the theme panel's clearance for a selected node (...the
+  // editor and a selection can no longer be open together)". On a phone the
+  // editor is a sheet inside the stage.
+  assert.doesNotMatch(component, /\.gp-home-map-filter-panel\.is-themes\s*{[^}]*position:\s*fixed/);
+  assert.doesNotMatch(component, /\.gp-home-map-canvas\.has-selected-node \.gp-home-map-filter-panel/);
+  assert.match(phoneCss, /\.gp-home-map-theme-editor\s*{\s*inset-block-start:\s*auto;\s*inset-block-end:\s*0;/);
   assert.match(component, /\.gp-home-map-filter-panel\.is-themes \.gp-home-map-filter-option\s*{[\s\S]*?font-size:\s*var\(--gp-caption\)/);
   assert.match(component, /\.gp-home-map-control-row\s*{[\s\S]*?flex-wrap:\s*nowrap/);
   assert.match(component, /const closeFilterPanels = \(\) => \{[\s\S]*?openFilterPanel = ''[\s\S]*?syncFilterPanels\(\)/);
@@ -1925,8 +1980,14 @@ test('home map chapters open an inspect card and carry one link (progressive enh
   assert.match(component, /themes: normalizePublicMapThemeSlugs\(c\.data\.themeSlugs\)/);
   assert.match(component, /data-node-themes=\{c\.themes\.join\(' '\)\}/);
   assert.doesNotMatch(component, /=== 'chapter'\) return true/);
-  const themeMatcher = component.match(/const nodeMatchesThemeFilters = \(node: Element\) => \{([\s\S]*?)\n    \};/)?.[1] ?? '';
-  assert.match(themeMatcher, /^\s*if \(!allThemeCount \|\| activeThemes\.size === allThemeCount\) return true;\s*return nodeThemes\(node\)\.some\(\(theme\) => activeThemes\.has\(theme\)\);\s*$/);
+  // The same rule for every node, now over the picked set (map-polish-audit.md
+  // § 5, narrow-then-add: "a reset empties the picked set"): nothing picked
+  // shows every node, and a node without themes shows only then.
+  assert.match(component, /const nodeMatchesThemeFilters = \(node: Element\) => nodeThemesAreShown\(pickedThemes, nodeThemes\(node\)\);/);
+  assert.equal(nodeThemesAreShown(new Set<string>(), []), true);
+  assert.equal(nodeThemesAreShown(new Set(['water']), []), false, 'a chapter without themes shows under all themes only');
+  assert.equal(nodeThemesAreShown(new Set(['water']), ['trees', 'water']), true);
+  assert.equal(nodeThemesAreShown(new Set(['water']), ['trees']), false);
   assert.deepEqual(normalizePublicMapThemeSlugs(['currency', 'public', 'events']), ['mutual', 'public', 'events'], 'Directus slugs read as map themes');
   // A chapter's card lists all its themes, since any of them can be why a
   // filter kept it; a person's card keeps its four.
@@ -1942,13 +2003,18 @@ test('home map chapters open an inspect card and carry one link (progressive enh
   assert.match(jump, /if \(!chapterEl\) return;\s*revealFilteredNode\(chapterEl\);\s*openChapterNode\(chapterEl, viaKeyboard\);/);
   const reveal = component.match(/const revealFilteredNode = \(node: Element\) => \{([\s\S]*?)\n    \};/)?.[1] ?? '';
   assert.match(reveal, /if \(!node\.classList\.contains\('is-filtered-out'\)\) return;/, 'a visible chapter leaves the filters alone');
-  assert.match(reveal, /if \(activeTypeFilter && activeTypeFilter !== type\) activeTypeFilter = '';/);
-  // Only themes that have a pill are switched on, so "all themes" still means
-  // every pill pressed; a chapter without themes brings every theme back.
-  assert.match(reveal, /const ownTheme = nodeThemes\(node\)\.find\(\(theme\) => filterThemes\.includes\(theme\)\);/);
-  assert.match(reveal, /\(ownTheme \? \[ownTheme\] : filterThemes\)\.forEach\(\(theme\) => activeThemes\.add\(theme\)\);/);
-  assert.match(reveal, /button\.setAttribute\('aria-pressed', activeThemes\.has\(clean\(button\.dataset\.themeFilter\)\) \? 'true' : 'false'\);/);
+  // Under narrow-then-add (§ 5: "The type filter becomes a set") widening
+  // adds: the chapter's type joins the picked types, so the steward whose card
+  // made the jump stays drawn, and one of the chapter's own themes (one with a
+  // toggle) joins the picked themes; a chapter without themes clears the theme
+  // picks, which shows every theme. applyMapFilters sets every pill's
+  // aria-pressed from the picked sets, so the pills stay in step.
+  assert.match(reveal, /if \(!typeIsShown\(pickedTypes, type\)\) pickedTypes = new Set\(\[\.\.\.pickedTypes, type\]\);/);
+  assert.match(reveal, /const ownTheme = nodeThemes\(node\)\.find\(\(theme\) => themeIds\.includes\(theme\)\);/);
+  assert.match(reveal, /pickedThemes = ownTheme \? new Set\(\[\.\.\.pickedThemes, ownTheme\]\) : new Set\(\);/);
   assert.match(reveal, /applyMapFilters\(\);\s*$/);
+  assert.match(component, /button\.setAttribute\('aria-pressed', pickedThemes\.has\(theme\) \? 'true' : 'false'\);/);
+  assert.match(component, /item\.setAttribute\('aria-pressed', selected \? 'true' : 'false'\);/);
 
   // Still no redundant "Chapter node" label and no relationship/edit rows.
   assert.match(component, /selectedEl\.dataset\.selectedType = member\.type/);
@@ -2320,6 +2386,235 @@ test('home map list heading follows the page h1', async () => {
   // The home page's h1 is the hero title; the map list is the next level.
   assert.match(component, /<h2 id="gp-home-map-list-title">Map list<\/h2>/);
   assert.doesNotMatch(component, /<h3 id="gp-home-map-list-title">/);
+});
+
+test('home map filters narrow, then add (map-polish-audit.md § 5)', () => {
+  // Afo picked "Narrow, then add": "the first press on a type or a theme
+  // shows only that one, more presses add to it (Stewards and Members
+  // together), pressing a pressed pill removes it, 'All' resets the themes
+  // and 'Show all' resets both."
+  const none = new Set<MapNodeType>();
+  const stewards = togglePick(none, 'steward');
+  assert.deepEqual([...stewards], ['steward'], 'the first press shows only that type');
+  const both = togglePick(stewards, 'member');
+  assert.deepEqual([...both].sort(), ['member', 'steward'], 'a second press adds a type');
+  assert.deepEqual([...togglePick(both, 'steward')], ['member'], 'pressing a picked type removes it');
+  assert.equal(togglePick(stewards, 'steward').size, 0, 'removing the last pick shows everything');
+  assert.equal(none.size, 0, 'a press returns a new set and leaves the old one alone');
+  assert.equal(typeIsShown(none, 'chapter'), true);
+  assert.equal(typeIsShown(both, 'chapter'), false);
+  assert.equal(typeIsShown(both, 'member'), true);
+  assert.equal(themeIsShown(new Set<string>(), 'water'), true, 'every theme draws its threads while none is picked');
+  assert.equal(themeIsShown(new Set(['water']), 'trees'), false);
+  assert.equal(pickState(new Set<string>(), 'water'), 'none-picked');
+  assert.equal(pickState(new Set(['trees']), 'water'), 'others-picked');
+  assert.equal(pickState(new Set(['trees', 'water']), 'water'), 'picked-with-others');
+  assert.equal(pickState(new Set(['water']), 'water'), 'only-picked');
+
+  // "Each pill's accessible name says what pressing it will do, with
+  // aria-pressed carrying the state" (§ 5), in § 5's words.
+  const stewardName = (picked: Set<MapNodeType>, themesNarrow = false) => typePillName({
+    label: 'Stewards',
+    count: 2,
+    type: 'steward',
+    picked,
+    themesNarrow,
+  });
+  assert.equal(stewardName(none), 'Show only Stewards; 2 match current filters');
+  assert.equal(stewardName(new Set<MapNodeType>(['member'])), 'Add Stewards; 2 match current filters');
+  assert.equal(stewardName(new Set<MapNodeType>(['member', 'steward'])), 'Remove Stewards');
+  assert.equal(stewardName(new Set<MapNodeType>(['steward'])), 'Show all map nodes');
+  // Pressing the only picked type clears the type filter. While a theme still
+  // narrows the map that is not every node, so the name says what it is.
+  assert.equal(stewardName(new Set<MapNodeType>(['steward']), true), 'Show every node type');
+  assert.equal(
+    typePillName({ label: 'Stewards', count: 1, type: 'steward', picked: none, themesNarrow: false }),
+    'Show only Stewards; 1 matches current filters'
+  );
+  // "Theme chips follow the same pattern ('Show only Water', 'Add Water',
+  // 'Remove Water', and 'All' named 'Show every theme')."
+  const waterName = (picked: Set<string>) => themeChipName({ label: 'Water', count: 7, theme: 'water', picked });
+  assert.equal(waterName(new Set<string>()), 'Show only Water; 7 match current filters');
+  assert.equal(waterName(new Set(['trees'])), 'Add Water; 7 match current filters');
+  assert.equal(waterName(new Set(['trees', 'water'])), 'Remove Water');
+  assert.equal(waterName(new Set(['water'])), 'Show every theme', 'pressing the only picked theme shows every theme');
+  assert.equal(ALL_THEMES_NAME, 'Show every theme');
+
+  // The strip: "the most-used themes (picked ones first, as many as fit)".
+  const tallies = [
+    { id: 'public', count: 16 },
+    { id: 'education', count: 15 },
+    { id: 'water', count: 7 },
+    { id: 'waste', count: 1 },
+    { id: 'desci', count: 2 },
+  ];
+  assert.deepEqual(stripThemeOrder(tallies, new Set<string>()), ['public', 'education', 'water', 'desci', 'waste']);
+  assert.deepEqual(stripThemeOrder(tallies, new Set(['waste'])), ['waste', 'public', 'education', 'water', 'desci']);
+  assert.deepEqual(stripThemeOrder([{ id: 'a', count: 2 }, { id: 'b', count: 2 }], new Set<string>()), ['a', 'b'], 'ties keep the canonical order');
+  assert.equal(chipsThatFit([100, 90, 80], 200, 4), 2, '100 + 4 + 90 fits in 200, and the third chip does not');
+  assert.equal(chipsThatFit([100, 90], 194, 4), 2, 'a chip that ends exactly at the edge fits');
+  assert.equal(chipsThatFit([120], 100, 4), 0);
+  assert.equal(chipsThatFit([], 100, 4), 0);
+});
+
+test('home map phone view: the full height, centred on the Atlantic, never letterboxed', () => {
+  // § 5: "The default view frames on height, as Afo's phone frame did: the
+  // map's full height (the desktop crop, 90°N to about 68°S) fills the stage,
+  // centred on the Atlantic, and the width shows whatever longitude that
+  // leaves. On a 375 by 812 phone that is about 88°W to 23°E, the Great Lakes
+  // to Cape Town; a 375 by 667 phone shows about 135° of longitude."
+  const longitudeAt = (x: number) => (x / 200) * 360 - 180;
+  const close = (a: number, b: number, tolerance = 1e-9) => Math.abs(a - b) <= tolerance;
+  const wide = defaultMapView(200 / 88, ATLANTIC_CENTER_X);
+  assert.deepEqual(wide, { x: 0, y: 0, width: 200, height: 88 }, "a stage in the drawing's shape shows the whole map");
+  assert.deepEqual(MAP_DRAWING, wide);
+  // Afo's phone frame: a 343 by 487 stage (60svh of 812).
+  const tall = defaultMapView(343 / 487, ATLANTIC_CENTER_X);
+  assert.equal(tall.height, 88, 'the full height');
+  assert.ok(close(tall.width, 88 * (343 / 487)), "in the stage's shape, so nothing is letterboxed");
+  assert.ok(Math.abs(longitudeAt(tall.x) + 88) < 1.5, `the west edge sits near 88°W: ${longitudeAt(tall.x)}`);
+  assert.ok(Math.abs(longitudeAt(tall.x + tall.width) - 23) < 1.5, `the east edge sits near 23°E: ${longitudeAt(tall.x + tall.width)}`);
+  // A 375 by 667 phone: 60svh is 400.2px.
+  const shorter = defaultMapView(343 / 400.2, ATLANTIC_CENTER_X);
+  assert.ok(Math.abs(shorter.width * 1.8 - 135) < 2, `about 135° of longitude: ${shorter.width * 1.8}`);
+  // A stage wider than the drawing shows all of its width and less of its
+  // height, centred: still no letterbox.
+  const short = largestMapView(4, MAP_DRAWING);
+  assert.deepEqual(short, { x: 0, y: 19, width: 200, height: 50 });
+  // Zoom bounds: the same factor on every stage, 46 units wide on a wide one.
+  assert.ok(close(clampMapView({ x: 50, y: 10, width: 10, height: 4.4 }, 200 / 88, 200 / 46).width, 46));
+  const phoneClosest = clampMapView({ x: 60, y: 10, width: 1, height: 1 }, 343 / 487, 200 / 46);
+  assert.ok(close(phoneClosest.width, tall.width * (46 / 200)));
+  assert.equal(clampMapView({ x: -40, y: -9, width: 300, height: 300 }, 343 / 487, 200 / 46).x, 0, 'a view never leaves the drawing');
+
+  // § 5: "A pill on each edge that has nodes beyond it pans that way ('5 more
+  // east' with today's data). After a pan, the pill on the other edge leads
+  // back, so the pills work in both directions."
+  const points = [
+    { x: 55, y: 25 },
+    { x: 120.4, y: 50.7 },
+    { x: 155.6, y: 44.6 },
+    { x: 167.2, y: 36.8 },
+    { x: 119.2, y: 32.4 },
+    { x: 120.5, y: 50 },
+  ];
+  assert.deepEqual(pointsBeyondView(tall, points), { west: 0, east: 5 });
+  const east = panMapView(tall, 'east');
+  assert.ok(east.x > tall.x && east.x < tall.x + tall.width, 'a pan keeps a sliver of what was on screen');
+  assert.equal(east.width, tall.width);
+  const eastAgain = panMapView(east, 'east');
+  assert.ok(close(eastAgain.x + eastAgain.width, 200), "a pan stops at the drawing's edge");
+  assert.ok(pointsBeyondView(eastAgain, points).west > 0, 'the west pill leads back');
+  assert.equal(panMapView({ ...tall, x: 0 }, 'west').x, 0);
+});
+
+test('home map chrome: bars in the stage, a theme strip toolbar, one phone row, and filled pressed chips', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  const webmcp = await readFile(new URL('../packages/website/src/scripts/webmcp.ts', import.meta.url), 'utf8');
+
+  // § 5: "Bars inside the stage. Top left: the theme strip (role="toolbar")
+  // with 'All' (pressed while no theme narrows the map), the most-used themes
+  // (picked ones first, as many as fit) and '+N', which opens the theme
+  // editor. Top right: the type legend as today, with 'Show all' while any
+  // filter narrows the map. Bottom left: 'List' with the visible count
+  // (aria-expanded). Bottom right: the live status, zoom and 'Join the map'."
+  const controlsCss = component.match(/\n  \.gp-home-map-controls \{([^}]*)\}/)?.[1] ?? '';
+  assert.match(controlsCss, /grid-template-areas:\s*'strip legend'\s*'\. \.'\s*'list end';/);
+  assert.match(controlsCss, /pointer-events: none;/, 'the map takes every press between the bars');
+  assert.match(component, /<div class="gp-home-map-theme-strip" role="toolbar" aria-label="Filter by theme" data-home-map-theme-strip>/);
+  assert.match(component, /<Chip as="button" class="gp-home-map-strip-chip is-all" data-home-map-theme-all aria-pressed="true" aria-label="Show every theme">All<\/Chip>/);
+  assert.match(component, /data-home-map-theme-more\s+aria-expanded="false"\s+aria-controls="gp-home-map-theme-editor"/);
+  // The overlay wrappers carry roles (the audit's § 2.5 a11y item, carried
+  // into the chrome step): bare labelled divs were dropped by assistive tech.
+  assert.match(component, /<div class="gp-home-map-legend" role="group" aria-label="Filter by node type">/);
+  assert.match(component, /<div class="gp-home-map-zoom-controls" data-home-map-zoom-controls role="group" aria-label="Map zoom">/);
+  for (const [tag] of component.matchAll(/<div class="gp-home-map-[^"]*"[^>]*\saria-label="[^"]*"[^>]*>/g)) {
+    assert.match(tag, /\srole="(?:group|toolbar|region)"/, `${tag} needs a role, or assistive tech drops its label`);
+  }
+  assert.match(component, /class="gp-home-map-list-toggle" data-home-map-list-toggle aria-expanded="false" aria-controls="gp-home-map-node-list">[\s\S]*?data-home-map-list-toggle-count/);
+  assert.match(component, /if \(listToggleCount\) listToggleCount\.textContent = String\(visibleCount\);/);
+  // The live status sits in the bottom end bar with zoom and Join the map.
+  assert.match(component, /<div class="gp-home-map-end-group">\s*[\s\S]*?<div class="gp-home-map-freshness"[\s\S]*?<div class="gp-home-map-zoom-controls"[\s\S]*?data-home-map-open/);
+
+  // "The theme editor, opened from '+N', is the only place that lists all 16
+  // themes: toggles with counts in four columns, plus 'Clear' and 'Done'."
+  const editor = component.match(/<section\s+class="gp-home-map-theme-editor"[\s\S]*?<\/section>/)?.[0] ?? '';
+  assert.match(editor, /data-filter-panel="theme"/);
+  assert.match(editor, /mapThemes\.map\(\(theme\) => \([\s\S]*?data-theme-filter=\{theme\.id\}[\s\S]*?data-theme-filter-count/);
+  assert.match(editor, /<Button variant="ghost" class="gp-home-map-theme-editor-action" data-theme-editor-clear>Clear<\/Button>/);
+  assert.match(editor, /<Button variant="ghost" class="gp-home-map-theme-editor-action" data-theme-editor-done>Done<\/Button>/);
+  // The strip is one tab stop; the arrow keys, Home and End move along it.
+  assert.match(component, /themeStrip\?\.addEventListener\('keydown'/);
+  assert.match(component, /button\.setAttribute\('tabindex', button === stripTabStop \? '0' : '-1'\)/);
+  // A press on the strip never moves the chip it pressed: the strip re-sorts
+  // only while nobody is on it, and the legend's room counts its Show all chip
+  // even while that is hidden.
+  assert.match(component, /const interacting = themeStrip\.matches\(':hover, :focus-within'\);/);
+  assert.match(component, /if \(legendResetChip\) legendResetChip\.hidden = false;\s*const width = legendEl\.offsetWidth;/);
+  // Where the legend's labels would leave the strip no theme at all, the
+  // legend shows dots and numbers only, DESIGN.md:403's compact rule.
+  assert.match(component, /if \(fit === 0 && chips\.length > 0\) \{\s*root\.classList\.add\('has-compact-legend'\);/);
+  assert.match(component, /\.gp-home-map-canvas\.has-compact-legend \.gp-home-map-legend-label \{[\s\S]*?clip: rect\(0 0 0 0\);/);
+  // Closing the editor from inside gives focus back to what opened it.
+  assert.match(component, /if \(!focusWasInside\) return;[\s\S]*?const opener = \[filterPanelOpener, \.\.\.filterToggleButtons\]/);
+  // A sort put off while the strip was in use happens once it is not.
+  assert.match(component, /\['pointerleave', 'focusout'\]\.forEach\(\(type\) => \{\s*themeStrip\?\.addEventListener\(type, \(\) => \{\s*if \(stripSortPending\)/);
+
+  // Pressed versus focus (the audit's § 2.4, carried into the chrome step): a
+  // pressed chip is filled, hover only tints its border, and focus keeps the
+  // site's focus ring, so neither looks pressed.
+  const pressed = component.match(/\.gp-home-map \.gp-chip\[aria-pressed='true'\] \{([^}]*)\}/)?.[1] ?? '';
+  assert.match(pressed, /background:/);
+  const hover = component.match(/\.gp-home-map \.gp-chip:hover \{([^}]*)\}/)?.[1] ?? '';
+  assert.match(hover, /border-color:/);
+  assert.doesNotMatch(hover, /background/);
+  assert.doesNotMatch(component, /\.gp-home-map-legend-item:focus-visible|\.gp-home-map-legend-item\.is-active/);
+  assert.doesNotMatch(component, /\.gp-home-map-zoom-controls button:focus-visible|\.gp-home-map-join:focus-visible/);
+  // The shared primitives (CodeRabbit on #50): both Show all chips are the
+  // Chip, Try again is the ghost Button, and the local chip rule is gone.
+  assert.match(component, /<Chip as="button" class="gp-home-map-filter-note-reset" data-home-map-filter-reset>Show all<\/Chip>/);
+  assert.doesNotMatch(component, /\.gp-home-map-legend-reset,\s*\.gp-home-map-filter-note button/);
+  assert.match(component, /import Button from '\.\.\/ui\/Button\.astro';/);
+  assert.match(component, /import Chip from '\.\.\/ui\/Chip\.astro';/);
+
+  // Hit targets (DESIGN.md:431 to 441, § 5): text buttons reach 48px, chips
+  // are 30px under a fine pointer and 44px under a coarse one and in the
+  // phone row, and icon-only controls are 44 by 44px.
+  assert.match(component, /\.gp-home-map-list-toggle,\s*\.gp-home-map-themes-toggle \{[\s\S]*?min-height: calc\(40px \+ var\(--gp-space-xs\) \* 2 \+ 2px\);/);
+  assert.match(component, /--gp-map-chip: 30px;/);
+  assert.match(component, /@media \(pointer: coarse\) \{\s*\.gp-home-map-canvas \{\s*--gp-map-chip: 44px;/);
+  assert.match(component, /\.gp-home-map \.gp-chip \{\s*min-height: var\(--gp-map-chip\);/);
+  assert.match(component, /\.gp-home-map-zoom-controls button \{\s*min-width: 44px;\s*min-height: 44px;/);
+  assert.match(component, /\.gp-home-map-theme-editor-close \{\s*width: 44px;\s*height: 44px;/);
+  const phoneCss = component.match(/@container \(max-width: 520px\) \{([\s\S]*?)\n  \}\n/)?.[1] ?? '';
+  assert.match(phoneCss, /\.gp-home-map-list-toggle,\s*\.gp-home-map-themes-toggle,\s*\.gp-home-map-join \{\s*min-height: var\(--gp-map-row\);/);
+  assert.match(phoneCss, /\.gp-home-map \.gp-chip\.gp-home-map-legend-item,\s*\.gp-home-map \.gp-chip\.gp-home-map-legend-reset \{\s*min-height: 44px;/);
+  // § 5: "the row scrolls behind a mask-image edge fade", on one line, and a
+  // phone opens the editor from Themes, not from the strip.
+  assert.match(phoneCss, /\.gp-home-map-control-row \{[\s\S]*?flex-wrap: nowrap;[\s\S]*?overflow-x: auto;[\s\S]*?mask-image: var\(--gp-map-edge-fade\);/);
+  assert.match(phoneCss, /\.gp-home-map-edge-pill\[hidden\],\s*\.gp-home-map-theme-strip \{\s*display: none;/);
+  assert.match(phoneCss, /\.gp-home-map-themes-toggle \{\s*display: inline-flex;/);
+  // "Layout follows the container's width only; the kind of pointer never
+  // picks it": the script reads the layout the CSS picked.
+  assert.match(component, /const mapLayout = \(\) => \(\s*window\.getComputedStyle\(root\)\.getPropertyValue\('--gp-map-layout'\)/);
+  // The phone's stage pans and resets without dragging: the edge pills, and
+  // "Reset the map view", which "returns to the default view and leaves the
+  // filters alone".
+  assert.match(component, /const resetMapView = \(\) => setMapViewBox\(defaultViewBox\(\), \{ isDefault: true \}\);/);
+  assert.match(component, /setMapViewBox\(panMapView\(currentViewBox, edgeOf\(pill\), FULL_VIEW_BOX\)\);/);
+  assert.match(component, /if \(label\) label\.textContent = `\$\{count\} more \$\{edgeOf\(pill\)\}`;/);
+  assert.match(component, /preserveAspectRatio="xMidYMid slice"/, 'before the script runs, a phone crops the map rather than letterboxing it');
+  // At the opening view an up or down swipe still scrolls the page.
+  assert.match(phoneCss, /\.gp-home-map-svg \{\s*touch-action: pan-y;/);
+  assert.match(phoneCss, /\.gp-home-map-canvas\.is-zoomed \.gp-home-map-svg \{\s*touch-action: none;/);
+
+  // WebMCP stays read-only and reads the new rule: no picked theme means
+  // every theme shows.
+  assert.match(webmcp, /activeThemes: \(pickedThemes\.length \? pickedThemes : themeFilters\)/);
+  assert.doesNotMatch(webmcp, /\.click\(|dispatchEvent|setAttribute/);
 });
 
 // ---------------------------------------------------------------------------
