@@ -2,6 +2,7 @@
 
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
+import { formGroupAliases, withFormGroups } from './directus-form-groups.ts';
 import {
   DIRECTUS_STEWARD_ACCESS_COLLECTIONS,
   DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS,
@@ -220,17 +221,26 @@ const SYSTEM_MANAGED_CHILD_FIELDS = ['id', 'created_at', 'updated_at'];
 const CHILD_CREATE_PRESET_FIELDS = ['chapter_slug'];
 const CHILD_IMMUTABLE_UPDATE_FIELDS = ['chapter_slug', 'update_request_id'];
 
-// Directus needs the inverse relation to expose the selector, and the identity
-// group alias to include slug/name in its picker. Neither grants nested writes;
-// the request collection's own row/field permissions still govern expansion.
-export function chapterSelectorReadFields(collection: string) {
-  return baseCollectionName(collection) === 'chapters' ? ['update_requests', 'group_identity'] : [];
+// Alias fields a reader needs for Data Studio to draw a form: every form group
+// (Data Studio leaves out a field whose group the viewer cannot read) and the
+// one-to-many lists stewards work with on these forms. `update_requests` lets
+// the request's chapter selector resolve. Alias fields hold no data; the
+// related rows stay under their own collection's permissions. The lists are
+// granted for reading only.
+const FORM_READ_LISTS: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  chapters: ['update_requests', 'initiatives'],
+  guilds: ['projects'],
+  chapter_update_requests: ['links', 'proof_signals'],
+});
+
+export function formReadAliases(collection: string): string[] {
+  return [...(FORM_READ_LISTS[baseCollectionName(collection)] ?? []), ...formGroupAliases(collection)];
 }
 
 function contentFields(collection: string, { read = false, update = false } = {}) {
   const fields = OPERATIONAL_COLLECTION_FIELDS[baseCollectionName(collection)] ?? [];
   const workflow = read ? WORKFLOW_READ_FIELDS : ['publication_status'];
-  const relations = read ? chapterSelectorReadFields(collection) : [];
+  const relations = read ? formReadAliases(collection) : [];
   const all = [...new Set([...fields, ...workflow, ...relations])];
   return update
     ? all.filter((field) => !SCOPED_EDITOR_IMMUTABLE_UPDATE_FIELDS.includes(field))
@@ -242,7 +252,9 @@ function contentCreateFields(collection: string, lockedFields: string[] = []) {
 }
 
 function chapterUpdateRequestFields({ read = false, update = false } = {}) {
-  const fields = read ? CHAPTER_UPDATE_REQUEST_READ_FIELDS : CHAPTER_UPDATE_REQUEST_WRITE_FIELDS;
+  const fields = read
+    ? [...CHAPTER_UPDATE_REQUEST_READ_FIELDS, ...formReadAliases('chapter_update_requests')]
+    : CHAPTER_UPDATE_REQUEST_WRITE_FIELDS;
   return update
     ? fields.filter((field) => field !== 'chapter_slug')
     : fields;
@@ -645,7 +657,7 @@ export function buildAssignedEditorPermissions(collections) {
       permissions: andFilter(statusFilter(EDITOR_STATUSES), assignedChapterScope),
       validation: statusFilter(EDITOR_STATUSES),
       presets: null,
-      fields: contentFields(collections.chapters, { update: true }),
+      fields: withFormGroups(collections.chapters, contentFields(collections.chapters, { update: true })),
     },
     {
       policy: ASSIGNED_EDITOR_POLICY_NAME,
@@ -762,7 +774,7 @@ export function buildAssignedEditorPermissions(collections) {
       permissions: andFilter(statusFilter(EDITOR_STATUSES), assignedGuildScope),
       validation: statusFilter(EDITOR_STATUSES),
       presets: null,
-      fields: contentFields(collections.guilds, { update: true }),
+      fields: withFormGroups(collections.guilds, contentFields(collections.guilds, { update: true })),
     },
     {
       policy: ASSIGNED_EDITOR_POLICY_NAME,

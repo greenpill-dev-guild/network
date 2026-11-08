@@ -455,11 +455,22 @@ The chapter selector also needs read access to the inverse
 `chapters.update_requests` relation and the `group_identity` form-group
 alias that contains the chapter's name and slug. Without the group alias,
 the picker sends `fields=` and cannot select a chapter.
-`directus:content:setup` includes both read-only aliases for stewards and
-publishers; request row filters still limit
-what can be read through it, and nested writes remain disabled. Re-run that
-setup when upgrading an existing instance. The steward smoke checks that
-Directus exposes the selector's relation to the scoped account.
+`directus:content:setup` grants the relation for reading only; request row
+filters still limit what can be read through it, and nested writes remain
+disabled. Re-run that setup when upgrading an existing instance. The steward
+smoke checks that Directus exposes the selector's relation to the scoped
+account.
+
+Data Studio leaves out every field whose form group the viewer cannot read,
+and disables every field whose group the viewer cannot write. A form group is
+an alias field that holds no data. `directus:content:setup` therefore grants
+stewards and publishers read on every chapter and guild form group, and adds
+a group to a create or update grant only when that grant already writes a
+field inside it, so no column gains write. The lists on these forms
+(`chapters.initiatives`, `guilds.projects`, and a change request's `links`
+and `proof_signals`) are granted for reading only, and their rows stay under
+their own collection's permissions. `scripts/directus-form-access.test.ts`
+holds these rules, and the steward smoke checks them on a live instance.
 
 Prove the copy step with `bun run test:chapter-image-copies`, and with a real
 website build through `bun run test:chapter-image-copies:build`.
