@@ -1,0 +1,157 @@
+// Database proof for migration 034 (PRD-1443): a decided change request takes
+// no new link or proof-signal rows.
+//
+// It builds a scratch database on the local Postgres server, applies every
+// migration to it, and drops it again. The dev database is never written to.
+//
+//   bun run db:local:up
+//   bun run test:update-request-children:db
+//
+// In the isolated dev machine there is no Docker: start Postgres on the Mac
+// and keep dm-ports running instead (README, "In The Isolated Dev Machine").
+//
+// Covered here because only a real database can show it:
+// - a link or proof signal on a draft, pending or needs-changes request is
+//   stored, and its chapter_slug still comes from the request (027), whatever
+//   the writer sent;
+// - one on an accepted, declined or archived request is refused with a
+//   readable reason, and nothing is stored;
+// - rows a request already holds stay when it is decided.
+//
+// Which chapters a steward may attach rows to is a Directus rule, proven by
+// `bun run directus:steward:smoke`, not here.
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { readdir, readFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createDatabaseClient } from '@greenpill-network/agent/db';
+
+const DEFAULT_DATABASE_URL = 'postgres://greenpill:greenpill@localhost:3304/greenpill_network';
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
+const GUARD_MIGRATION = '034_chapter_update_request_child_rows_decided_guard.sql';
+const OPEN_STATUSES = ['draft', 'pending_review', 'needs_changes'];
+const DECIDED_STATUSES = ['accepted', 'declined', 'archived'];
+
+const migrationsDir = resolve(dirname(fileURLToPath(import.meta.url)), '../packages/agent/migrations');
+const serverUrl = new URL(process.env.DATABASE_URL?.trim() || DEFAULT_DATABASE_URL);
+if (!LOCAL_HOSTS.has(serverUrl.hostname)) {
+  // The proof creates and drops a database.
+  throw new Error(`Refusing to run against ${serverUrl.hostname}: this proof only runs on a local Postgres server.`);
+}
+
+const scratchName = `update_request_children_proof_${randomUUID().slice(0, 8)}`;
+const scratchUrl = new URL(serverUrl);
+scratchUrl.pathname = `/${scratchName}`;
+// postgres.js lets a `database` query parameter override the path.
+scratchUrl.searchParams.delete('database');
+
+type Sql = NonNullable<ReturnType<typeof createDatabaseClient>>;
+
+function connect(url: URL): Sql {
+  const client = createDatabaseClient({ url: url.href, max: 1 });
+  if (!client) throw new Error('Could not create the update request children proof database client.');
+  return client;
+}
+
+let sql: Sql | null = null;
+const server = connect(serverUrl);
+
+async function insertRequest(chapter: string, status: string): Promise<string> {
+  const [request] = await sql!`
+    insert into content.chapter_update_requests ${sql!({
+      chapter_slug: chapter,
+      title: `Proof request (${status})`,
+      summary: 'Update request children proof.',
+      request_status: status,
+    })}
+    returning id::text
+  `;
+  return request.id;
+}
+
+// A link as Directus would write it, plus a chapter_slug the trigger must replace.
+const insertLink = (requestId: string) => sql!`
+  insert into content.chapter_update_request_links ${sql!({
+    update_request_id: requestId,
+    chapter_slug: 'proof-other',
+    label: 'Proof link',
+    url: 'https://example.test/proof',
+  })}
+`;
+const insertProofSignal = (requestId: string) => sql!`
+  insert into content.chapter_update_request_proof_signals ${sql!({
+    update_request_id: requestId,
+    label: 'Proof signal',
+    value: '1',
+  })}
+`;
+
+async function childRows(requestId: string) {
+  return sql!`
+    select 'link' as kind, chapter_slug from content.chapter_update_request_links where update_request_id = ${requestId}
+    union all
+    select 'proof_signal', chapter_slug from content.chapter_update_request_proof_signals where update_request_id = ${requestId}
+    order by kind
+  `;
+}
+
+const decidedRefusal = (status: string) => (error: any) => {
+  assert.equal(error?.code, '23514', `expected a check_violation, got ${error?.code}: ${error?.message}`);
+  assert.match(error.message, new RegExp(`^chapter_update_request_decided: change request [0-9a-f-]+ is ${status}, so it takes no new rows\\.$`));
+  return true;
+};
+
+try {
+  await server.unsafe(`create database ${scratchName}`);
+  sql = connect(scratchUrl);
+  // Nothing is written until the connection is known to be the scratch database.
+  const [connected] = await sql`select current_database() as name`;
+  assert.equal(connected.name, scratchName, 'the proof is not connected to its scratch database');
+  await sql`set client_min_messages = warning`;
+  // Production has Directus tables, and migration 022 ties image_file to them.
+  await sql`create table public.directus_files (id uuid primary key)`;
+
+  const migrations = (await readdir(migrationsDir)).filter((file) => file.endsWith('.sql')).sort((a, b) => a.localeCompare(b));
+  assert.ok(migrations.includes(GUARD_MIGRATION), `${GUARD_MIGRATION} is missing`);
+  for (const file of migrations) await sql.unsafe(await readFile(resolve(migrationsDir, file), 'utf8'));
+
+  for (const slug of ['proof-chapter', 'proof-other']) {
+    await sql`insert into content.chapters ${sql({ slug, name: `Proof ${slug}`, publication_status: 'published' })}`;
+  }
+
+  // Open requests take rows, pinned to the request's chapter.
+  for (const status of OPEN_STATUSES) {
+    const requestId = await insertRequest('proof-chapter', status);
+    await insertLink(requestId);
+    await insertProofSignal(requestId);
+    assert.deepEqual(
+      (await childRows(requestId)).map((row) => `${row.kind}:${row.chapter_slug}`),
+      ['link:proof-chapter', 'proof_signal:proof-chapter'],
+      `${status} request`
+    );
+  }
+
+  // Decided requests refuse them, and keep none.
+  for (const status of DECIDED_STATUSES) {
+    const requestId = await insertRequest('proof-chapter', status);
+    await assert.rejects(insertLink(requestId), decidedRefusal(status));
+    await assert.rejects(insertProofSignal(requestId), decidedRefusal(status));
+    assert.deepEqual(await childRows(requestId), [], `${status} request`);
+  }
+
+  // A request that is decided later keeps the rows it already has.
+  const decidedLater = await insertRequest('proof-chapter', 'draft');
+  await insertLink(decidedLater);
+  await sql`update content.chapter_update_requests set request_status = 'archived' where id = ${decidedLater}`;
+  await assert.rejects(insertProofSignal(decidedLater), decidedRefusal('archived'));
+  assert.deepEqual((await childRows(decidedLater)).map((row) => row.kind), ['link']);
+
+  console.log('Update request children database proof passed.');
+} finally {
+  await sql?.end({ timeout: 3 }).catch(() => {});
+  await server.unsafe(`drop database if exists ${scratchName}`).catch((error) => {
+    console.error(`Could not drop scratch database ${scratchName}: ${String(error).slice(0, 160)}`);
+  });
+  await server.end({ timeout: 3 }).catch(() => {});
+}

@@ -467,10 +467,26 @@ an alias field that holds no data. `directus:content:setup` therefore grants
 stewards and publishers read on every chapter and guild form group, and adds
 a group to a create or update grant only when that grant already writes a
 field inside it, so no column gains write. The lists on these forms
-(`chapters.initiatives`, `guilds.projects`, and a change request's `links`
-and `proof_signals`) are granted for reading only, and their rows stay under
-their own collection's permissions. `scripts/directus-form-access.test.ts`
-holds these rules, and the steward smoke checks them on a live instance.
+(`chapters.initiatives`, `guilds.projects`) are granted for reading only, and
+their rows stay under their own collection's permissions.
+`scripts/directus-form-access.test.ts` holds these rules, and the steward
+smoke checks them on a live instance.
+
+A steward edits the `links` and `proof_signals` lists of their own change
+request in place, once the request is saved. Two rules keep those rows on the
+steward's own chapters:
+
+- Directus ignores a row filter on a create, so the steward's create
+  validation for both child collections requires `update_request_id` to be
+  one of `$CURRENT_USER.chapter_editor_assignments.chapter_slug.update_requests.id`,
+  the change requests of their assigned chapters.
+- Migration 034 refuses a new row on an accepted, declined or archived
+  request, for every writer. Directus shows a non-admin that refusal as
+  "An unexpected error occurred"; stewards cannot edit a decided request in
+  Data Studio, so they only meet it through the API.
+
+Prove the database rule with `bun run test:update-request-children:db` and
+the Directus rules with `bun run directus:steward:smoke`.
 
 Prove the copy step with `bun run test:chapter-image-copies`, and with a real
 website build through `bun run test:chapter-image-copies:build`.

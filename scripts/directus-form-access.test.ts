@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { ASSIGNED_EDITOR_POLICY_NAME, formReadAliases } from './directus-content-access.ts';
+import {
+  ASSIGNED_CHAPTER_REQUEST_IDS,
+  ASSIGNED_EDITOR_POLICY_NAME,
+  STEWARD_WRITABLE_REQUEST_LISTS,
+  formReadAliases,
+} from './directus-content-access.ts';
 import { FIELD_GROUPS_BY_COLLECTION, formGroupAliases, withFormGroups } from './directus-form-groups.ts';
 import {
   DIRECTUS_CONTENT_OPS_COLLECTIONS,
@@ -95,6 +100,13 @@ function aliasFields(collection: string) {
 
 const writeGrants = () => permissions.filter((permission) => ['create', 'update'].includes(permission.action));
 
+// The only lists a write grant may hold: the links and proof signals of a
+// steward's own change request (PRD-1443). Every other list stays read-only.
+const WRITABLE_LISTS: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  [`${ASSIGNED_EDITOR_POLICY_NAME}|update|chapter_update_requests`]: STEWARD_WRITABLE_REQUEST_LISTS,
+});
+const writableLists = (permission) => WRITABLE_LISTS[`${permission.policy}|${permission.action}|${permission.collection}`] ?? [];
+
 test('the form grants are alias fields: every name they add is a form group or a list', () => {
   for (const collection of FORM_COLLECTIONS) {
     const aliases = aliasFields(collection);
@@ -113,8 +125,9 @@ test('a write grant holds no alias except the form groups of fields it already w
     const aliases = aliasFields(permission.collection);
     const groups = new Set(formGroupAliases(permission.collection));
     const fields = permission.fields ?? [];
-    for (const field of fields.filter((name) => aliases.has(name))) {
-      // Lists (initiatives, projects, links, proof signals) stay read-only.
+    for (const field of fields.filter((name) => aliases.has(name) && !writableLists(permission).includes(name))) {
+      // Lists (initiatives, projects, and links and proof signals outside a
+      // steward's own change request) stay read-only.
       assert.ok(groups.has(field), `${permission.policy} ${permission.action} ${permission.collection}.${field}: only form groups may be written`);
       // No new write reach: the group holds a field this grant already writes.
       const members = FIELD_GROUPS_BY_COLLECTION[permission.collection][field].fields;
@@ -128,6 +141,29 @@ test('a write grant holds no alias except the form groups of fields it already w
         assert.ok(fields.includes(group), `${permission.policy} ${permission.action} ${permission.collection} writes into ${group} without it`);
       }
     }
+  }
+});
+
+test('a steward writes the change request lists only while new rows are pinned to their own requests', () => {
+  const grant = (policy: string, collection: string, action: string) => permissions.filter(
+    (permission) => permission.policy === policy && permission.collection === collection && permission.action === action
+  );
+  const [update] = grant(ASSIGNED_EDITOR_POLICY_NAME, 'chapter_update_requests', 'update');
+  for (const list of STEWARD_WRITABLE_REQUEST_LISTS) assert.ok(update.fields.includes(list), `stewards cannot write ${list}`);
+  const [create] = grant(ASSIGNED_EDITOR_POLICY_NAME, 'chapter_update_requests', 'create');
+  assert.ok(!STEWARD_WRITABLE_REQUEST_LISTS.some((list) => create.fields.includes(list)), 'lists are written on an existing request only');
+
+  for (const child of ['chapter_update_request_links', 'chapter_update_request_proof_signals']) {
+    // Directus does not apply a row filter on create; the validation is the only check.
+    const creates = ROLES['Steward Editor'].flatMap((policy) => grant(policy, child, 'create'));
+    assert.equal(creates.length, 1, `${child}: one create grant for stewards`);
+    assert.deepEqual(creates[0].validation, {
+      _and: [
+        { update_request_id: { _nnull: true } },
+        { update_request_id: { _in: ASSIGNED_CHAPTER_REQUEST_IDS } },
+      ],
+    }, child);
+    assert.ok(!creates[0].fields.includes('chapter_slug'), `${child}: the trigger fills chapter_slug from the parent`);
   }
 });
 
@@ -145,7 +181,7 @@ test('adding the form groups to a write grant adds group aliases and nothing els
 test('the smoke refuses a steward who cannot read a form group, a list, or update a group they write into', async () => {
   const steward = (
     fieldsByCollection: Record<string, Array<{ field: string; meta?: { group: string | null } }>>,
-    updatable: Record<string, string[]> = { guilds: ['name', 'group_identity'] }
+    updatable: Record<string, string[]> = { guilds: ['name', 'group_identity'], chapter_update_requests: ['title', 'links', 'proof_signals'] }
   ) => ({
     request: async (path: string) => {
       if (path === '/permissions/me') {
@@ -170,7 +206,12 @@ test('the smoke refuses a steward who cannot read a form group, a list, or updat
   );
   // Updatable name without its group: Data Studio would show it disabled.
   await assert.rejects(
-    assertStewardFormsReadable(steward(complete, { guilds: ['name'] })),
+    assertStewardFormsReadable(steward(complete, { guilds: ['name'], chapter_update_requests: ['links', 'proof_signals'] })),
     /can update guilds fields in group_identity but not the group itself/
+  );
+  // A change request whose lists the steward cannot write shows them read-only.
+  await assert.rejects(
+    assertStewardFormsReadable(steward(complete, { guilds: ['name', 'group_identity'], chapter_update_requests: ['title', 'links'] })),
+    /cannot edit the chapter_update_requests list field\(s\) proof_signals/
   );
 });

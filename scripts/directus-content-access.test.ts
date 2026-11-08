@@ -372,10 +372,13 @@ test('assigned editor policy scopes every collection with dynamic $CURRENT_USER 
       },
     ],
   });
+  // Directus ignores the row filter above on a create, so the validation pins
+  // the parent to a request of the steward's own chapters (PRD-1443).
   assert.deepEqual(updateRequestLinkCreate?.validation, {
-    update_request_id: {
-      _nnull: true,
-    },
+    _and: [
+      { update_request_id: { _nnull: true } },
+      { update_request_id: { _in: '$CURRENT_USER.chapter_editor_assignments.chapter_slug.update_requests.id' } },
+    ],
   });
   // chapter_slug is filled by the migration-027 trigger, not a preset.
   assert.equal(updateRequestLinkCreate?.presets, null);

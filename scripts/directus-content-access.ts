@@ -226,12 +226,21 @@ const CHILD_IMMUTABLE_UPDATE_FIELDS = ['chapter_slug', 'update_request_id'];
 // one-to-many lists stewards work with on these forms. `update_requests` lets
 // the request's chapter selector resolve. Alias fields hold no data; the
 // related rows stay under their own collection's permissions. The lists are
-// granted for reading only.
+// granted for reading only, except the two below.
 const FORM_READ_LISTS: Readonly<Record<string, readonly string[]>> = Object.freeze({
   chapters: ['update_requests', 'initiatives'],
   guilds: ['projects'],
   chapter_update_requests: ['links', 'proof_signals'],
 });
+
+// The lists a steward edits on their own change request. Writing an o2m alias
+// lets Data Studio create, change and remove rows through the request form;
+// each row still goes through the child collection's own permissions, whose
+// create validation is pinned to the steward's requests below (PRD-1443).
+export const STEWARD_WRITABLE_REQUEST_LISTS = Object.freeze(['links', 'proof_signals']);
+
+// The ids of every change request on the steward's assigned chapters.
+export const ASSIGNED_CHAPTER_REQUEST_IDS = '$CURRENT_USER.chapter_editor_assignments.chapter_slug.update_requests.id';
 
 export function formReadAliases(collection: string): string[] {
   return [...(FORM_READ_LISTS[baseCollectionName(collection)] ?? []), ...formGroupAliases(collection)];
@@ -255,8 +264,10 @@ function chapterUpdateRequestFields({ read = false, update = false } = {}) {
   const fields = read
     ? [...CHAPTER_UPDATE_REQUEST_READ_FIELDS, ...formReadAliases('chapter_update_requests')]
     : CHAPTER_UPDATE_REQUEST_WRITE_FIELDS;
+  // The lists are written through an existing request only: a steward saves a
+  // new request first, then adds its links and proof signals.
   return update
-    ? fields.filter((field) => field !== 'chapter_slug')
+    ? [...fields.filter((field) => field !== 'chapter_slug'), ...STEWARD_WRITABLE_REQUEST_LISTS]
     : fields;
 }
 
@@ -629,15 +640,17 @@ export function buildAssignedEditorPermissions(collections) {
       },
     ],
   };
-  // Directus cannot evaluate relational filters as create validation (the FK
-  // arrives as a plain UUID), so validation only requires the parent id.
-  // The child chapter_slug is filled server-side by the migration-027 trigger
-  // from the parent request, so cross-chapter rows land outside the steward's
-  // dynamic scope and stay invisible/uneditable to them.
+  // A steward adds links and proof signals only to change requests of their
+  // own chapters. Directus cannot evaluate a relational filter on a create
+  // (the parent arrives as a plain UUID), but it resolves $CURRENT_USER paths
+  // before it validates, so the rule lists the steward's own requests by id.
+  // The migration-027 trigger still fills chapter_slug from the parent, and
+  // migration 034 refuses new rows on a decided request.
   const updateRequestChildCreateValidation = {
-    update_request_id: {
-      _nnull: true,
-    },
+    _and: [
+      { update_request_id: { _nnull: true } },
+      { update_request_id: { _in: ASSIGNED_CHAPTER_REQUEST_IDS } },
+    ],
   };
 
   const permissions = [

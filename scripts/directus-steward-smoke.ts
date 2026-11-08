@@ -213,10 +213,14 @@ export async function assertStewardLandingBookmarks(
 // and disables every field whose group the viewer cannot update. Without the
 // group aliases a steward opens their guild to an empty form and their chapter
 // to its first group only, read-only. The lists are the one-to-many fields the
-// steward guide sends them to; they are read-only.
+// steward guide sends them to. A steward edits the links and proof signals of
+// their own change request in place (PRD-1443); the other lists are read-only.
 const STEWARD_FORM_LISTS: Readonly<Record<string, readonly string[]>> = Object.freeze({
   chapters: ['initiatives'],
   guilds: ['projects'],
+  chapter_update_requests: ['links', 'proof_signals'],
+});
+const STEWARD_EDITABLE_FORM_LISTS: Readonly<Record<string, readonly string[]>> = Object.freeze({
   chapter_update_requests: ['links', 'proof_signals'],
 });
 
@@ -242,6 +246,12 @@ export async function assertStewardFormsReadable(steward) {
     }
     const writable = new Set<string>(own?.[collection]?.update?.fields ?? []);
     if (writable.has('*')) continue;
+    const readOnlyLists = (STEWARD_EDITABLE_FORM_LISTS[collection] ?? []).filter((field) => !writable.has(field));
+    if (readOnlyLists.length > 0) {
+      throw new Error(
+        `Stewards cannot edit the ${collection} list field(s) ${readOnlyLists.join(', ')}, so Data Studio shows them read-only. Re-run directus:content:setup.`
+      );
+    }
     const disabledGroups = [...new Set(fields
       .filter((field) => field.meta?.group && writable.has(field.field) && !writable.has(field.meta.group))
       .map((field) => field.meta?.group as string))];
@@ -273,6 +283,16 @@ async function expectRejected(label: string, action: () => Promise<unknown>, sta
     throw error;
   }
   throw new Error(`${label} unexpectedly succeeded.`);
+}
+
+// Links and proof signals on a change request, as an admin sees them.
+async function changeRequestChildRowCount(admin, requestId: string) {
+  let count = 0;
+  for (const collection of ['chapter_update_request_links', 'chapter_update_request_proof_signals']) {
+    const params = new URLSearchParams({ 'filter[update_request_id][_eq]': requestId, fields: 'id', limit: '-1' });
+    count += ((await admin.request(`/items/${collection}?${params.toString()}`))?.data ?? []).length;
+  }
+  return count;
 }
 
 async function deleteIfPresent(client, path: string) {
@@ -349,6 +369,7 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
   const projectSlug = `directus-smoke-project-${id}`;
   let updateRequestId: string | null = null;
   let unassignedUpdateRequestId: string | null = null;
+  let decidedUpdateRequestId: string | null = null;
   let uploadedFileId: string | null = null;
   let originalImageFile: string | null = null;
   let originalImageAlt: string | null = null;
@@ -411,6 +432,9 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
       }
       if (unassignedUpdateRequestId) {
         await deleteIfPresent(cleanupAdmin, `/items/chapter_update_requests/${encodePathSegment(unassignedUpdateRequestId)}`);
+      }
+      if (decidedUpdateRequestId) {
+        await deleteIfPresent(cleanupAdmin, `/items/chapter_update_requests/${encodePathSegment(decidedUpdateRequestId)}`);
       }
       if (updateRequestId) {
         await deleteIfPresent(cleanupAdmin, `/items/chapter_update_requests/${encodePathSegment(updateRequestId)}`);
@@ -685,6 +709,21 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
       },
     });
 
+    // The request form adds rows through the request itself (PRD-1443).
+    await steward.request(`/items/chapter_update_requests/${encodePathSegment(updateRequestId)}`, {
+      method: 'PATCH',
+      body: {
+        links: {
+          create: [{ label: 'Directus smoke form link', url: 'https://greenpill.network/form', kind: 'website' }],
+          update: [],
+          delete: [],
+        },
+      },
+    });
+    if (await changeRequestChildRowCount(admin, updateRequestId) !== 3) {
+      throw new Error('The steward could not add a link and a proof signal to their own change request, directly and through the form.');
+    }
+
     const unassignedUpdateRequest = await admin.request('/items/chapter_update_requests', {
       method: 'POST',
       body: {
@@ -710,30 +749,45 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
       throw new Error('The chapter relation exposed an unassigned update request.');
     }
 
-    // Cross-chapter child attach: Directus cannot check parent ownership at
-    // create time (relational create validation is unsupported), so the row
-    // inserts - but the migration-027 trigger pins it to the PARENT's chapter,
-    // which puts it outside the steward's dynamic scope: unreadable and
-    // uneditable to them, chapter integrity intact. Assert exactly that.
-    const strayLink = await steward.request('/items/chapter_update_request_links', {
+    // A steward attaches links and proof signals only to requests of their own
+    // chapters (PRD-1443). Directus checks that at create time against the
+    // steward's own request ids; nothing reaches the other chapter's request.
+    const strayRows = [
+      ['chapter_update_request_links', { label: 'Stray Directus smoke public link', url: 'https://greenpill.network', kind: 'website' }],
+      ['chapter_update_request_proof_signals', { label: 'Stray Directus smoke proof signal', value: '1 request' }],
+    ] as const;
+    for (const [collection, row] of strayRows) {
+      await expectRejected(`cross-chapter ${collection} create`, () => steward.request(`/items/${collection}`, {
+        method: 'POST',
+        body: { ...row, update_request_id: unassignedUpdateRequestId },
+      }));
+    }
+    if (await changeRequestChildRowCount(admin, unassignedUpdateRequestId) > 0) {
+      throw new Error('A steward attached a link or proof signal to another chapter\'s change request. Re-run directus:content:setup.');
+    }
+
+    // A decided request takes no new rows, even on the steward's own chapter
+    // (migration 034). Created as archived, it queues no review notification.
+    const decidedUpdateRequest = await admin.request('/items/chapter_update_requests', {
       method: 'POST',
       body: {
-        update_request_id: unassignedUpdateRequestId,
-        label: 'Stray Directus smoke public link',
-        url: 'https://greenpill.network',
-        kind: 'website',
+        chapter_slug: options.chapter,
+        title: 'Directus Smoke Decided Chapter Update',
+        summary: 'Temporary decided chapter update request smoke test.',
+        request_status: 'archived',
       },
     });
-    const strayLinkId = strayLink?.data?.id;
-    if (strayLinkId) {
-      const strayAsAdmin = await admin.request(`/items/chapter_update_request_links/${encodePathSegment(strayLinkId)}?fields=chapter_slug`);
-      if (strayAsAdmin?.data?.chapter_slug !== options.unassignedChapter) {
-        throw new Error('cross-chapter link attach did not inherit the parent request chapter.');
-      }
-      await expectForbidden('stray link read-back', () => steward.request(
-        `/items/chapter_update_request_links/${encodePathSegment(strayLinkId)}?fields=id`
-      ));
-      await deleteIfPresent(admin, `/items/chapter_update_request_links/${encodePathSegment(strayLinkId)}`);
+    decidedUpdateRequestId = decidedUpdateRequest?.data?.id;
+    if (!decidedUpdateRequestId) throw new Error('Directus did not return a decided chapter update request id.');
+    for (const [collection, row] of strayRows) {
+      // The database refuses the row; Directus reports that to a non-admin as a 500.
+      await expectRejected(`decided request ${collection} create`, () => steward.request(`/items/${collection}`, {
+        method: 'POST',
+        body: { ...row, update_request_id: decidedUpdateRequestId },
+      }), [400, 403, 500]);
+    }
+    if (await changeRequestChildRowCount(admin, decidedUpdateRequestId) > 0) {
+      throw new Error('A decided change request took a new link or proof signal. Apply migration 034.');
     }
 
     await steward.request(`/items/chapter_update_requests/${encodePathSegment(updateRequestId)}`, {
