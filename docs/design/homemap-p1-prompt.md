@@ -153,7 +153,7 @@ WHAT TO DESIGN (the P1 brief)
    action) opens in a docked side inspector on desktop and a bottom sheet on phones.
    Today's alternative is the card that floats beside the node; a variant may argue for it, but
    say so. Opening the inspector never resizes the map; if the node would sit under the
-   inspector, the map pans it into view.
+   inspector, the map pans it into view. Its head stays put while long content scrolls.
 3. Themes: a single-row chip strip: "All" (pressed by default), the most-used themes, and "+N"
    for the rest. The full panel (all 16 with counts, "Clear", "Done") is only for editing.
    One open surface at a time: opening the list, the theme panel, the inspector or the join
@@ -174,8 +174,10 @@ WHAT TO DESIGN (the P1 brief)
    Reconcile the breakpoint with DESIGN.md (520px, not 720px).
 6. Chapter labels at rest on desktop: the highest featured weight wins, a label that would
    collide hides, and people stay hover- or tap-only.
-7. Hit targets: pins and badges at least 44px at every map size, rows at least 44px tall, and
-   chips and buttons at least 44px on touch screens and in the phone row (DESIGN.md:431).
+7. Hit targets (DESIGN.md:431): pins and badges at least 44px at every map size, rows at least
+   44px tall, text buttons (List, Themes, Join the map) at least 48px, icon-only controls 44 by
+   44px, and chips 44px on touch screens and in the phone row. A pin
+   on the map's edge (a place on the 180th meridian) stays wholly inside the drawing.
 8. Unchanged since #41: "Join the map" opens the join walkthrough, and "Find your people" in the
    hero opens the list. Keep both labels and both behaviours.
 
