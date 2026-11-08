@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { pathToFileURL } from 'node:url';
+import { withLocaleLabelMeta, withLocaleLabels } from './directus-studio-labels.ts';
 import {
   DIRECTUS_OPERATIONAL_COLLECTIONS,
   DIRECTUS_CHAPTER_IMAGE_FOLDER_ID,
@@ -1062,7 +1063,7 @@ export function buildDirectusStudioMetadataPlan(
           sort: group.sort,
           width: 'full',
           hidden: false,
-          translations: [{ language: 'en-US', translation: group.label }],
+          translations: withLocaleLabels(base, field, [{ language: 'en-US', translation: group.label }]),
         },
       }));
     }),
@@ -1074,16 +1075,16 @@ export function buildDirectusStudioMetadataPlan(
       return Object.entries(fields as Record<string, Record<string, unknown>>).map(([field, meta]) => ({
         collection,
         field,
-        meta: {
+        meta: withLocaleLabelMeta(base, field, {
           collection,
           field,
           ...withStudioLayers(base, field, meta),
-        },
+        }),
       }));
     }),
     // Alias fields owned by content:setup (initiatives, editor_assignments,
     // update_requests, projects) still need their group assignment; they get a
-    // meta-merge patch that only sets the group.
+    // meta-merge patch that sets only the group and the locale labels.
     extraGroupMembers: collections.flatMap((collection) => {
       const base = cleanCollectionName(collection);
       const lookup = fieldGroupLookup(base);
@@ -1094,7 +1095,7 @@ export function buildDirectusStudioMetadataPlan(
         .map(([field, groupField]) => ({
           collection,
           field,
-          meta: { collection, field, group: groupField },
+          meta: withLocaleLabelMeta(base, field, { collection, field, group: groupField }),
         }));
     }),
   };

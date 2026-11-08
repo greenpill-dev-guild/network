@@ -172,8 +172,9 @@ test('chapter image alt text and credit sit under the upload and alt text is req
   }
   assert.equal(Number(imageFile?.meta.sort) < Number(imageAlt?.meta.sort), true);
   assert.equal(Number(imageAlt?.meta.sort) < Number(imageCredit?.meta.sort), true);
-  assert.deepEqual(imageAlt?.meta.translations, [{ language: 'en-US', translation: 'Image alt text' }]);
-  assert.deepEqual(imageCredit?.meta.translations, [{ language: 'en-US', translation: 'Image credit' }]);
+  const english = (field) => (field?.meta.translations ?? []).filter((entry) => entry.language === 'en-US');
+  assert.deepEqual(english(imageAlt), [{ language: 'en-US', translation: 'Image alt text' }]);
+  assert.deepEqual(english(imageCredit), [{ language: 'en-US', translation: 'Image credit' }]);
   assert.deepEqual(imageAlt?.meta.conditions, [
     {
       name: 'Alt text required with an uploaded image',

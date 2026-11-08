@@ -503,6 +503,26 @@ For local rehearsal, prefer `bun run directus:local:bootstrap` after
 run the individual local setup scripts with `bun --no-env-file` as documented
 above.
 
+### Field Labels In Portuguese And Spanish
+
+`bun run directus:studio:setup` also writes Brazilian Portuguese and Spanish
+labels for the fields and form groups of the steward-facing collections, from
+`scripts/directus-studio-labels.ts`. English labels do not change.
+
+- Data Studio picks a label by the viewer's exact locale: their own `Language`
+  setting, else the project default (`en-US` in production). It does not fall
+  back between Spanish variants, so the Spanish labels are written under
+  `es-419`, `es-ES`, `es-MX` and `es-CL`, and the Portuguese ones under `pt-BR`.
+- On 2026-11-08 no production user had a language set, so nobody sees these
+  labels until a steward picks Portuguese (Brazil) or a Spanish option in
+  their profile.
+- The labels are drafts until native speakers review them; `DRAFT_LABEL_REVIEW`
+  in the module records where the review stands. Field notes, dropdown
+  choices, repeater fields, collection names and bookmark names stay English.
+- A rerun replaces this module's locales on each field and keeps every other
+  language, so it adds no duplicates. It also overwrites a label edited by hand
+  in Data Studio for one of these locales, so change the module instead.
+
 ### Live Onboarding Mode
 
 Live Onboarding Mode is controlled by the singleton
