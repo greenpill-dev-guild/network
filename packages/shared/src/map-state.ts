@@ -392,11 +392,12 @@ const pickSharedTheme = (shared: string[]): string => firstSpecificTheme(shared)
 // Each person keeps their two strongest connections (Afo, 2026-11-07, PRD-1423).
 // Measured on the live map that day: with up to four per person, 12 of 17
 // people sat at the cap, 31 lines crossed the map (median 8,213 km), and 12
-// rested on a single shared theme. Two per person halves the lines, leaves
-// nobody without one, and keeps the web connected. Requiring two shared
-// themes would have left 4 people with no line; a stronger distance weight
-// would not have reduced the count. A person whose candidates are all taken
-// by stronger pairs still gets their strongest line (see the last pass).
+// rested on a single shared theme. On that data, two per person halves the
+// lines, leaves nobody without one, and keeps the web connected. Requiring
+// two shared themes would have left 4 people with no line; a stronger
+// distance weight would not have reduced the count. A person whose
+// candidates are all taken by stronger pairs can still get a line in the
+// last pass, within a hard limit of three lines for anyone (see there).
 export const PUBLIC_MAP_EDGES_PER_PERSON = 2;
 
 export function generatePublicMapEdges(
@@ -491,10 +492,15 @@ export function generatePublicMapEdges(
     if (edges.length >= limit) return edges;
   }
 
-  // Nobody who shares a theme with someone is left without a line. A person
-  // whose candidates were all taken by stronger pairs gets their strongest
-  // one; the other person may go one over the cap, never more, so nobody
-  // becomes a hub that connects to everyone (PRD-619).
+  // A person left without a line gets their strongest line to someone who has
+  // fewer than three; that person may go one over the cap, never more.
+  // Nobody becoming a hub that connects to everyone (PRD-619) wins over
+  // everyone having a line: when all of a person's matches already have three
+  // lines, that person stays without one. Codex's example on #50: one person
+  // themed a, b, c and d, and four people who each share just one of those
+  // themes. The first pass links two of them, this pass a third, and the
+  // fourth stays without a line. On the live map of 2026-11-07 this pass
+  // added nothing.
   for (const candidate of ranked) {
     if (nodeEdgeCounts.has(candidate.a.id) && nodeEdgeCounts.has(candidate.b.id)) continue;
     addCandidate(candidate, perNodeLimit + 1);

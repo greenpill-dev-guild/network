@@ -26,6 +26,27 @@ export const RETRY_JITTER = 0.2;
 /** One failed refresh after a load reads as a blip; this many in a row is an error. */
 export const STALE_AFTER_FAILURES = 2;
 
+/** The /map/state source that carries approved stewards and members. */
+const PEOPLE_SOURCE = 'approved-map-nodes';
+const FAILED_SOURCE_STATUSES = new Set(['unavailable', 'not_configured']);
+
+/**
+ * Whether a /map/state answer carries the people layer. The agent answers
+ * 200 even while its database is down: `counts.sources` then marks
+ * `approved-map-nodes` as unavailable (or not configured), there are no
+ * people, and intake falls back to moderated. Such an answer is a failed
+ * refresh, not an empty map, so the people already drawn stay and the error
+ * and backoff carry on. An answer that is not a map state at all fails too;
+ * one without source statuses is taken as it comes.
+ */
+export function mapStateHasPeopleLayer(state: unknown): boolean {
+  if (!state || typeof state !== 'object') return false;
+  const sources = (state as { counts?: { sources?: unknown } }).counts?.sources;
+  if (!Array.isArray(sources)) return true;
+  const people = sources.find((source) => source?.source === PEOPLE_SOURCE);
+  return !people || !FAILED_SOURCE_STATUSES.has(people.status);
+}
+
 export const startMapStateFeed = (): MapStateFeed => ({ lastSuccessAt: null, consecutiveFailures: 0 });
 
 export const recordMapStateSuccess = (at: number): MapStateFeed => ({ lastSuccessAt: at, consecutiveFailures: 0 });

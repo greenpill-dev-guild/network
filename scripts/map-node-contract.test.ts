@@ -35,6 +35,7 @@ import {
   MAP_STATE_STALE_MESSAGE,
   MAP_STATE_UNAVAILABLE_MESSAGE,
   mapStateAnnouncement,
+  mapStateHasPeopleLayer,
   MAX_RETRY_INTERVAL_MS,
   nextMapStatePollDelay,
   recordMapStateFailure,
@@ -43,11 +44,13 @@ import {
   WATCH_POLL_INTERVAL_MS,
 } from '../packages/website/src/lib/home-map-live.ts';
 import {
+  AgentDataError,
   createMapNodeSubmission,
   createMapNodeUpdateRequest,
   listPublicMapNodes,
   PublicInputError,
 } from '@greenpill-network/agent/map-nodes';
+import { getPublicMapState } from '@greenpill-network/agent/map-state';
 import {
   consumeMapLocationConfirmation,
   createMapLocationRepository,
@@ -476,10 +479,10 @@ test('public map-state generates person-first relationship edges', () => {
   // people, 12 of them at the old cap of four, he picked "Cap 2 per person"
   // over two shared themes or a stronger distance weight. Here the Accra
   // steward and both members fill their two lines with the pairs that share
-  // two themes, so the Lagos steward's only candidates are all taken. Nobody
-  // is left without a line: the Lagos steward still gets their strongest one
-  // (the Lagos member, beside them), and that member goes one over the cap,
-  // never more.
+  // two themes, so the Lagos steward's only candidates are all taken. A last
+  // pass gives a person left without a line their strongest one to someone
+  // with fewer than three: here the Lagos member, beside them, who goes one
+  // over the cap. Three is a hard limit (see the next two tests).
   const linesByPerson = new Map<string, number>();
   payload.edges.forEach((edge) => {
     linesByPerson.set(edge.from, (linesByPerson.get(edge.from) ?? 0) + 1);
@@ -541,6 +544,31 @@ test('public map-state keeps two lines per person, and nobody becomes a hub', ()
   // and connect to six people: the PRD-619 "one node connects to everyone".
   assert.equal(lines('crowd-1'), 3);
   assert.equal(payload.edges.length, 8 + newcomers.length);
+});
+
+test('public map-state: no hub wins over everyone having a line (Codex on #50)', () => {
+  // The last pass cannot promise everyone a line. One person themed a, b, c
+  // and d (here water, events, food and trees) and four people who each share
+  // just one of those themes and nothing else: the first pass links the hub
+  // to the two nearest, the last pass a third, and the fourth stays without a
+  // line, because the hub already has three. The limit of three is kept on
+  // purpose (PRD-619), and this pins that choice.
+  const person = (id: string, lat: number, long: number, themes: string[]) => ({
+    id, name: id, place: id, lat, long, role: 'member', themes, status: 'approved', source: 'approved-submission',
+  });
+  const hub = person('hub', 10, 10, ['water', 'events', 'food', 'trees']);
+  const leaves = ['water', 'events', 'food', 'trees'].map((theme, index) => person(`leaf-${index + 1}`, 10 + (index + 1) * 2, 10, [theme]));
+  const payload = toPublicMapStatePayload({ generatedAt: '2026-11-07T12:00:00.000Z', publicMapNodes: [hub, ...leaves] });
+
+  const linesByPerson = new Map<string, number>();
+  payload.edges.forEach((edge) => {
+    linesByPerson.set(edge.from, (linesByPerson.get(edge.from) ?? 0) + 1);
+    linesByPerson.set(edge.to, (linesByPerson.get(edge.to) ?? 0) + 1);
+  });
+  const lines = (id: string) => linesByPerson.get(`submission:${id}`) ?? 0;
+  assert.equal(lines('hub'), 3, 'the hub stops at three');
+  assert.deepEqual(leaves.map((leaf) => lines(leaf.id)), [1, 1, 1, 0], 'the farthest leaf stays without a line');
+  assert.equal(payload.edges.length, 3);
 });
 
 test('public map-state includes real opt-in stewards without anonymous density', () => {
@@ -1293,6 +1321,30 @@ test('home map live feed: the Live pill tells freshness, failures show on the ma
   assert.equal(nextMapStatePollDelay(afterFailures(12), 'moderated', () => 0.999999), MAX_RETRY_INTERVAL_MS);
   assert.equal(nextMapStatePollDelay(afterFailures(400), 'live', middle), MAX_RETRY_INTERVAL_MS, 'a long outage still retries once a minute');
 
+  // A 200 is not always a load (Codex on #50). While its database is down the
+  // agent still answers 200, with the people source marked unavailable (or
+  // not configured), no people, and moderated intake. The map counts that as
+  // a failed refresh: the people already drawn stay, and the error and the
+  // backoff carry on. A layer that is empty because nobody is approved yet is
+  // a load.
+  const chapterSource = async () => Response.json([{ id: 'kenya', name: 'Kenya', lat: -1.28639, long: 36.81722, status: 'active', themes: ['water'] }]);
+  const agentAnswer = (listPublic: () => Promise<unknown[]>) => getPublicMapState({
+    fetchImpl: chapterSource,
+    mapNodeRepository: { listPublic },
+    now: '2026-11-07T12:00:00.000Z',
+  });
+  const outage = await agentAnswer(async () => { throw new Error('connection refused'); });
+  const notConfigured = await agentAnswer(async () => { throw new AgentDataError('database_not_configured', 'missing database'); });
+  const nobodyYet = await agentAnswer(async () => []);
+  assert.equal(outage.counts.sources.find((source) => source.source === 'approved-map-nodes')?.status, 'unavailable');
+  assert.equal(outage.counts.chapterNodes, 1, 'the outage answer still carries chapters');
+  assert.equal(mapStateHasPeopleLayer(outage), false);
+  assert.equal(mapStateHasPeopleLayer(notConfigured), false);
+  assert.equal(mapStateHasPeopleLayer(nobodyYet), true);
+  assert.equal(mapStateHasPeopleLayer(null), false, 'an answer that is no map state fails too');
+  assert.equal(mapStateHasPeopleLayer('maintenance'), false);
+  assert.equal(mapStateHasPeopleLayer({ nodes: [] }), true, 'an answer without source statuses is taken as it comes');
+
   // A screen reader hears the changes that matter, once each; the age ticking
   // up is not one of them.
   const status = (feed: ReturnType<typeof startMapStateFeed>, mode: 'live' | 'moderated', now = at) => describeMapStateFeed(feed, mode, now);
@@ -1316,6 +1368,18 @@ test('home map live feed: the Live pill tells freshness, failures show on the ma
   assert.match(component, /<div class="gp-home-map-state-error" data-home-map-state-error hidden>\s*<span data-home-map-state-error-text><\/span>\s*<button type="button" data-home-map-state-retry>Try again<\/button>/);
   assert.match(component, /<p class="gp-home-map-sr" data-home-map-state-live aria-live="polite"><\/p>/);
   assert.match(component, /mapStateRetry\?\.addEventListener\('click', \(\) => \{\s*void loadMapState\(\);/);
+  // The people check runs before anything from the answer is used: intake
+  // mode, the success record, or the people and threads drawn.
+  const loadStart = component.indexOf('const loadMapState = async');
+  const loadBlock = component.slice(loadStart, component.indexOf('\n    };\n', loadStart));
+  const peopleCheck = loadBlock.indexOf('if (!mapStateHasPeopleLayer(state)) throw new Error(');
+  assert.ok(peopleCheck !== -1, 'loadMapState must check the people layer');
+  for (const later of ['responseLoaded = true;', 'intakeMode = state?.intakeMode', 'recordMapStateSuccess(', 'const approvedKeys', 'renderDynamicThreads(']) {
+    assert.ok(loadBlock.indexOf(later) > peopleCheck, `${later} must come after the people check`);
+  }
+  // Try again is a full touch target at every width, not only on the
+  // compact map (Codex on #50).
+  assert.match(component, /\n  \.gp-home-map-state-error button \{\n    min-height: 44px;\n  \}/);
   assert.match(component, /const status = describeMapStateFeed\(mapStateFeed, intakeMode, Date\.now\(\)\);/);
   assert.match(component, /root\.classList\.toggle\('has-map-state-problem', Boolean\(status\.problem\)\)/);
   // DESIGN.md (Error): a 1px error border, and the error stays on the map.
