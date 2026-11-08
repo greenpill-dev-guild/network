@@ -11,6 +11,9 @@
   "engines": {
     "node": ">=22.12.0"
   },
+  "overrides": {
+    "sharp": "0.35.5"
+  },
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:website": "bun --bun run --cwd packages/website dev",
@@ -58,6 +61,7 @@
     "test:chapter-images:db": "bun run build:packages && bun --no-env-file scripts/chapter-image-fields.integration.ts",
     "test:snapshot-alerts:db": "bun run build:packages && bun --no-env-file scripts/snapshot-alert-episodes.integration.ts",
     "test:map-node-approval-guard:db": "bun run build:packages && bun --no-env-file scripts/map-node-approval-guard.integration.ts",
+    "test:text-fields:db": "bun run build:packages && bun --no-env-file scripts/directus-text-fields.integration.ts",
     "test:update-request-children:db": "bun run build:packages && bun --no-env-file scripts/chapter-update-request-children.integration.ts",
     "test:chapter-image-copies": "bun run build:packages && bun test scripts/chapter-image-copies.test.ts",
     "test:chapter-image-copies:build": "bun run build:packages && bun --no-env-file scripts/chapter-image-build.integration.ts",

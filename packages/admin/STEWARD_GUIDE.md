@@ -52,6 +52,9 @@ asking for access.
    - `Chapters`
    - `Chapter Initiatives`
    - `Chapter Update Requests`
+6. Optional: for field labels in Portuguese or Spanish, open your profile (your
+   avatar at the bottom left), set `Language` to `Portuguese (Brazil)` or any
+   `Spanish` option, and save. Field notes and choices stay in English for now.
 
 If the assigned chapter or guild is missing, message the Telegram steward chat
 with your chapter name and the email address used for your invite.
@@ -90,6 +93,16 @@ collection open your own work:
 5. Edit the fields directly and save. Your chapter row is editable whether it is
    a draft or already published.
 6. Leave `publication_status` on `published` to keep the profile live.
+
+## Required And Optional Fields
+
+Fields marked with an asterisk (`*`) are required. If one is empty when you
+save, the form lists it at the top and nothing is saved. Fill it in and save
+again. A title, summary, name, or label made only of spaces is refused the same
+way.
+
+To remove an optional value, such as a region, an intro quote, or a proposed
+summary, empty the field and save.
 
 ## Uploading A Chapter Image
 
@@ -147,9 +160,9 @@ Two things to know:
 
 Create a request with:
 
-- `chapter_slug`: your chapter.
-- `title`: short internal title.
-- `summary`: what should change and why.
+- `chapter_slug`: your chapter. Required.
+- `title`: short internal title. Required.
+- `summary`: what should change and why. Required.
 - `proposed_summary`: optional replacement public summary.
 - `proposed_primary_link`: optional replacement primary public link.
 - `proposed_image`, `proposed_image_alt`, `proposed_image_credit`: optional
@@ -233,9 +246,11 @@ series, cleanups, impact efforts, and Water Cup-style work.
 
 Create a new initiative with:
 
-- `Chapter`: pick your own chapter. Directus only accepts chapters you are
-  assigned to.
-- `title`
+- `slug`: a short, stable identifier such as `nigeria-water-cup`. Required.
+  Set it once and avoid changing it later.
+- `Chapter`: pick your own chapter. Required. Directus only accepts chapters
+  you are assigned to.
+- `title`: required.
 - `entity_status`
 - `summary`
 - `description`

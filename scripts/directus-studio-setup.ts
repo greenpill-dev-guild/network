@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { pathToFileURL } from 'node:url';
+import { keepOtherTranslations, withLocaleLabelMeta, withLocaleLabels } from './directus-studio-labels.ts';
 import {
   DIRECTUS_OPERATIONAL_COLLECTIONS,
   DIRECTUS_CHAPTER_IMAGE_FOLDER_ID,
@@ -113,6 +114,12 @@ const MAP_NODE_MODERATION_COLLECTIONS = Object.freeze([
 const OPTIONAL_CONTENT_COLLECTIONS = Object.freeze(['review_notifications', 'publish_health']);
 const OPTIONAL_INTAKE_COLLECTIONS = Object.freeze(['map_node_intake_settings']);
 const OPTIONAL_IMPACT_COLLECTIONS = Object.freeze(['chapter_impact_snapshots']);
+// All of them, for checks that cover every field the setup can configure.
+export const DIRECTUS_STUDIO_OPTIONAL_COLLECTIONS = Object.freeze([
+  ...OPTIONAL_CONTENT_COLLECTIONS,
+  ...OPTIONAL_INTAKE_COLLECTIONS,
+  ...OPTIONAL_IMPACT_COLLECTIONS,
+]);
 
 const OPTIONAL_COLLECTION_META = Object.freeze({
   review_notifications: {
@@ -300,7 +307,35 @@ const fieldMeta = ({
   special,
 });
 
-const input = (sort, note = null, width = 'half', options = null) => fieldMeta({ sort, note, width, options });
+// Every editable text field stores "empty" the way Data Studio can handle.
+//
+// Data Studio counts a value as missing only when it is null or was never
+// sent, and it asks for a field nobody touched only when the column has no
+// default. An emptied input or textarea sends null unless its `clear` option
+// is set, and Directus refuses null for a NOT NULL column. So a text field is
+// one of three kinds:
+//
+// - Required: the column is NOT NULL with no '' default (migration 033), so
+//   the form refuses an untouched or emptied field and the API refuses a
+//   missing or null one with a readable message. `nonBlankValidation` refuses
+//   spaces alone, which the database's not-blank checks would otherwise turn
+//   into "An unexpected error occurred." for stewards.
+// - Required only sometimes (alt text with an image): the column is nullable
+//   and NULL is its one empty value (migrations 029 and 031), and a
+//   `conditions` rule makes it required.
+// - Optional: the column is `not null default ''`, and `clear` makes an
+//   emptied field save '' instead of the null the column refuses. An optional
+//   field on a nullable column saves null, its empty value, instead.
+//
+// textFieldStorageProblems() checks a field against its column: here each
+// time the setup runs, and in scripts/directus-text-fields.integration.ts.
+const input = (sort, note = null, width = 'half', options = null) => fieldMeta({
+  sort,
+  note,
+  width,
+  options: { ...(options ?? {}), clear: true },
+});
+const nullableInput = (sort, note = null, width = 'half', options = null) => fieldMeta({ sort, note, width, options });
 const requiredInput = (sort, note = null, width = 'half', options = null) => fieldMeta({
   sort,
   note,
@@ -308,7 +343,8 @@ const requiredInput = (sort, note = null, width = 'half', options = null) => fie
   options,
   required: true,
 });
-const textarea = (sort, note = null) => fieldMeta({ sort, note, interface: 'input-multiline' });
+const textarea = (sort, note = null) => fieldMeta({ sort, note, interface: 'input-multiline', options: { clear: true } });
+const nullableTextarea = (sort, note = null) => fieldMeta({ sort, note, interface: 'input-multiline' });
 const requiredTextarea = (sort, note = null) => fieldMeta({
   sort,
   note,
@@ -336,12 +372,13 @@ const number = (sort, note = null, width = 'half') => fieldMeta({
   interface: 'input',
   options: { type: 'number' },
 });
+// Optional, like input(): an emptied link saves ''.
 const url = (sort, note = null, width = 'half', options = null) => fieldMeta({
   sort,
   note,
   width,
   interface: 'input',
-  options: { iconRight: 'link', ...(options ?? {}) },
+  options: { iconRight: 'link', clear: true, ...(options ?? {}) },
 });
 const imageFile = (sort, note = null, width = 'half') => fieldMeta({
   sort,
@@ -384,7 +421,7 @@ const workflow = (sort = 900) => ({
     note: 'Set when a trusted publisher completes review.',
     interface: 'datetime',
   }),
-  reviewed_by: input(sort + 3, 'Reviewer or publisher identifier.', 'half'),
+  reviewed_by: nullableInput(sort + 3, 'Reviewer or publisher identifier.', 'half'),
   created_at: fieldMeta({ sort: sort + 4, width: 'half', interface: 'datetime', readonly: true, hidden: true }),
   updated_at: fieldMeta({ sort: sort + 5, width: 'half', interface: 'datetime', readonly: true, hidden: true }),
   data: fieldMeta({
@@ -399,15 +436,15 @@ const workflow = (sort = 900) => ({
 
 const FIELD_META_BY_COLLECTION = Object.freeze({
   themes: {
-    slug: input(1, 'Stable identifier used in URLs and snapshots. Set once, then avoid changing.', 'half'),
-    name: input(2, 'Public theme name.', 'half'),
+    slug: requiredInput(1, 'Stable identifier used in URLs and snapshots. Set once, then avoid changing.', 'half'),
+    name: requiredInput(2, 'Public theme name.', 'half'),
     summary: textarea(3, 'Short public description of this theme.'),
     sort_order: number(4, 'Lower numbers appear first.', 'half'),
     ...workflow(),
   },
   people: {
-    slug: input(1, 'Stable public profile identifier. Set once, then avoid changing.', 'half'),
-    display_name: input(2, 'Public display name.', 'half'),
+    slug: requiredInput(1, 'Stable public profile identifier. Set once, then avoid changing.', 'half'),
+    display_name: requiredInput(2, 'Public display name.', 'half'),
     role: input(3, 'Short public role or affiliation.', 'half'),
     avatar: url(4, 'Public avatar image URL.', 'half'),
     bio: textarea(5, 'Public bio. Keep it concise.'),
@@ -418,8 +455,8 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
     ...workflow(),
   },
   chapters: {
-    slug: input(1, 'Stable chapter identifier used in URLs and assignments. Set once, then avoid changing.', 'half'),
-    name: input(2, 'Public chapter name.', 'half'),
+    slug: requiredInput(1, 'Stable chapter identifier used in URLs and assignments. Set once, then avoid changing.', 'half'),
+    name: requiredInput(2, 'Public chapter name.', 'half'),
     city: input(3, 'Primary city or place.', 'half'),
     country: input(4, 'Country.', 'half'),
     region: input(5, 'Optional region, province, or state.', 'half'),
@@ -467,9 +504,9 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
     ...workflow(),
   },
   chapter_initiatives: {
-    slug: input(1, 'Stable initiative identifier. Set once, then avoid changing.', 'half'),
-    chapter_slug: relation(2, 'Owning chapter. Assigned stewards can create initiatives only under their chapter.'),
-    title: input(3, 'Public initiative title.', 'half'),
+    slug: requiredInput(1, 'Stable initiative identifier. Set once, then avoid changing.', 'half'),
+    chapter_slug: relation(2, 'Owning chapter. Assigned stewards can create initiatives only under their chapter.', '{{ name }}', true),
+    title: requiredInput(3, 'Public initiative title.', 'half'),
     entity_status: fieldMeta({ sort: 4, width: 'half', interface: 'select-dropdown', options: { choices: ENTITY_STATUS_CHOICES } }),
     summary: textarea(5, 'Short public summary for cards and chapter pages.'),
     description: textarea(6, 'Longer public description.'),
@@ -483,16 +520,18 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
     ...workflow(),
   },
   guilds: {
-    slug: input(1, 'Stable guild identifier used in URLs and assignments. Set once, then avoid changing.', 'half'),
-    name: input(2, 'Public guild name.', 'half'),
-    type: input(3, 'Guild type.', 'half'),
+    slug: requiredInput(1, 'Stable guild identifier used in URLs and assignments. Set once, then avoid changing.', 'half'),
+    name: requiredInput(2, 'Public guild name.', 'half'),
+    type: requiredInput(3, 'Guild type.', 'half'),
     entity_status: fieldMeta({ sort: 4, width: 'half', interface: 'select-dropdown', options: { choices: ENTITY_STATUS_CHOICES } }),
     summary: textarea(5, 'Short public summary for cards and listings.'),
     description: textarea(6, 'Longer public guild description.'),
     founded_year: number(7, 'Founding year.', 'half'),
     oneliner: input(8, 'One-line public description.', 'half'),
     image: url(9, 'Primary public image URL.', 'half'),
-    cadence: input(10, 'Public meeting or working cadence.', 'half'),
+    // A jsonb column behind a text input, so it is not one of the text fields
+    // above and keeps its earlier metadata.
+    cadence: fieldMeta({ sort: 10, note: 'Public meeting or working cadence.', width: 'half' }),
     stewards: json(11, 'Hats and roles on the guild page, one entry per hat: {"group": "Guild stewardship", "role": "Core steward", "name": "…"}. Use "holders": ["…", "…"] for several people, leave both out for an open hat, and add "href" to link the hat. Entries without "role" are not shown.'),
     steward_slugs: tags(12, 'Person slugs for public steward references.'),
     member_slugs: tags(13, 'Person slugs for public member references.'),
@@ -510,10 +549,10 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
     ...workflow(),
   },
   projects: {
-    slug: input(1, 'Stable project identifier. Set once, then avoid changing.', 'half'),
-    name: input(2, 'Public project name.', 'half'),
+    slug: requiredInput(1, 'Stable project identifier. Set once, then avoid changing.', 'half'),
+    name: requiredInput(2, 'Public project name.', 'half'),
     entity_status: fieldMeta({ sort: 3, width: 'half', interface: 'select-dropdown', options: { choices: ENTITY_STATUS_CHOICES } }),
-    guild_slug: relation(4, 'Owning guild. Assigned guild stewards can create projects only under their guild.'),
+    guild_slug: relation(4, 'Owning guild. Assigned guild stewards can create projects only under their guild.', '{{ name }}', true),
     summary: textarea(5, 'Short public summary for cards and listings.'),
     description: textarea(6, 'Longer public project description.'),
     image: url(7, 'Primary public image URL.', 'half'),
@@ -544,12 +583,9 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
     summary: requiredTextarea(5, 'Plain-language summary of what should change and why.'),
     proposed_summary: textarea(6, 'Optional replacement text for the public chapter summary. Leave blank if the current summary should stay.'),
     proposed_primary_link: url(7, 'Optional replacement main public link for the chapter.', 'half'),
-    // The column is `not null default ''`. Data Studio saves null for an
-    // emptied input unless told otherwise, and Directus refuses null here, so
-    // without `clear` a proposed image could never be taken off a request.
-    proposed_image: url(8, 'Optional replacement public image URL.', 'half', { clear: true }),
-    proposed_image_alt: textarea(9, 'Required if proposing a new image. Describe the image for screen readers.'),
-    proposed_image_credit: input(10, 'Optional public credit for the proposed image.', 'half'),
+    proposed_image: url(8, 'Optional replacement public image URL.', 'half'),
+    proposed_image_alt: nullableTextarea(9, 'Required if proposing a new image. Describe the image for screen readers.'),
+    proposed_image_credit: nullableInput(10, 'Optional public credit for the proposed image.', 'half'),
     links: fieldMeta({
       sort: 11,
       note: 'Add public links one row at a time. Prefer this over raw JSON for website, social, program, and contact links.',
@@ -584,6 +620,9 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
   chapter_update_request_links: {
     id: fieldMeta({ sort: 1, width: 'half', interface: 'input', readonly: true, hidden: true }),
     update_request_id: relation(2, 'Parent chapter update request.', '{{ title }}', true),
+    // Filled from the parent request by the database (migration 027). Its ''
+    // default must stay: Data Studio checks required hidden fields too, and
+    // without a default it would ask for a value nobody can enter.
     chapter_slug: fieldMeta({ sort: 3, width: 'half', interface: 'input', readonly: true, hidden: true, required: true }),
     sort_order: number(4, 'Lower numbers appear first.', 'half'),
     label: requiredInput(5, 'Public label, for example "Chapter website" or "Water Cup updates".', 'half'),
@@ -606,6 +645,7 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
   chapter_update_request_proof_signals: {
     id: fieldMeta({ sort: 1, width: 'half', interface: 'input', readonly: true, hidden: true }),
     update_request_id: relation(2, 'Parent chapter update request.', '{{ title }}', true),
+    // Filled by the database, like the links' chapter_slug above.
     chapter_slug: fieldMeta({ sort: 3, width: 'half', interface: 'input', readonly: true, hidden: true, required: true }),
     sort_order: number(4, 'Lower numbers appear first.', 'half'),
     label: requiredInput(5, 'Public label, for example "Education program" or "Active contributors".', 'half'),
@@ -617,8 +657,8 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
   },
   chapter_editor_assignments: {
     id: fieldMeta({ sort: 1, width: 'half', interface: 'input', readonly: true, hidden: true }),
-    chapter_slug: relation(2, 'Chapter this user can edit.'),
-    directus_user_id: relation(3, 'Directus user who receives chapter editing access.', '{{ email }}'),
+    chapter_slug: relation(2, 'Chapter this user can edit.', '{{ name }}', true),
+    directus_user_id: relation(3, 'Directus user who receives chapter editing access.', '{{ email }}', true),
     access_level: fieldMeta({
       sort: 4,
       width: 'half',
@@ -630,8 +670,8 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
   },
   guild_editor_assignments: {
     id: fieldMeta({ sort: 1, width: 'half', interface: 'input', readonly: true, hidden: true }),
-    guild_slug: relation(2, 'Guild this user can edit.'),
-    directus_user_id: relation(3, 'Directus user who receives guild editing access.', '{{ email }}'),
+    guild_slug: relation(2, 'Guild this user can edit.', '{{ name }}', true),
+    directus_user_id: relation(3, 'Directus user who receives guild editing access.', '{{ email }}', true),
     access_level: fieldMeta({
       sort: 4,
       width: 'half',
@@ -669,7 +709,7 @@ const FIELD_META_BY_COLLECTION = Object.freeze({
       display: 'labels',
       readonly: true,
     }),
-    public_note: textarea(13, 'Public tagline submitted for the map.'),
+    public_note: nullableTextarea(13, 'Public tagline submitted for the map.'),
     approved_at: fieldMeta({ sort: 14, width: 'half', interface: 'datetime', readonly: true }),
     created_at: fieldMeta({ sort: 15, width: 'half', interface: 'datetime', readonly: true }),
     updated_at: fieldMeta({ sort: 16, width: 'half', interface: 'datetime', readonly: true }),
@@ -989,16 +1029,97 @@ function fieldGroupLookup(base) {
   return byField;
 }
 
+const TEXT_INPUT_INTERFACES = new Set(['input', 'input-multiline']);
+const TEXT_COLUMN_TYPES = new Set(['text', 'character varying', 'varchar', 'character', 'char']);
+
+function isTextInput(meta: Record<string, any>) {
+  return TEXT_INPUT_INTERFACES.has(meta.interface) && meta.options?.type !== 'number';
+}
+
+// Refuses a value with no visible character, which the required check lets
+// through. The API applies a field's validation to every write. Data Studio
+// applies it itself only in drawers and only through its `_and` parts, so the
+// rule sits inside one.
+export function nonBlankValidation(field: string) {
+  return {
+    validation: { _and: [{ [field]: { _regex: '\\S' } }] },
+    validation_message: 'Enter some text. Spaces alone do not count.',
+  };
+}
+
 function withStudioLayers(base, field, meta) {
   const override = FIELD_META_OVERRIDES[base]?.[field];
   const groupField = fieldGroupLookup(base)?.get(field);
   const label = FIELD_LABELS_BY_COLLECTION[base]?.[field];
-  return {
+  const layered = {
     ...meta,
     ...(override ?? {}),
     ...(groupField ? { group: groupField } : {}),
     ...(label ? { translations: [{ language: 'en-US', translation: label }] } : {}),
   };
+  // Every required text field a person types into. A field with its own
+  // validation keeps it as it is. Fields required only sometimes (alt text)
+  // are left out: the API checks the rule as a string, which refuses null,
+  // and those fields must be able to stay empty.
+  const typedRequiredText = layered.required === true &&
+    isTextInput(layered) &&
+    layered.hidden !== true &&
+    layered.readonly !== true &&
+    !layered.validation;
+  return typedRequiredText ? { ...layered, ...nonBlankValidation(field) } : layered;
+}
+
+// The column as Directus reports it in a field's `schema`.
+export interface TextFieldColumn {
+  data_type: string;
+  is_nullable: boolean;
+  default_value: unknown;
+}
+
+// Why a field breaks the text field rule above, given its column. Empty when
+// it follows the rule or is not an editable text field.
+export function textFieldStorageProblems(
+  meta: Record<string, any>,
+  column: TextFieldColumn | null | undefined
+): string[] {
+  if (!column || !TEXT_COLUMN_TYPES.has(String(column.data_type).toLowerCase())) return [];
+  if (meta.hidden === true || meta.readonly === true) return [];
+
+  const required = meta.required === true;
+  const sometimesRequired = !required &&
+    Array.isArray(meta.conditions) &&
+    meta.conditions.some((condition) => condition?.required === true);
+  const savesBlank = meta.options?.clear === true;
+  const nullable = column.is_nullable === true;
+  const hasDefault = column.default_value !== null && column.default_value !== undefined;
+  const isRelation = Array.isArray(meta.special) && meta.special.includes('m2o');
+  const problems: string[] = [];
+
+  if ((required || sometimesRequired) && column.default_value === '') {
+    problems.push("is required, but its column defaults to '', so Data Studio cannot tell a field nobody touched from a filled one. Drop the default.");
+  }
+  if ((required || sometimesRequired) && savesBlank) {
+    problems.push("is required, but `clear` saves an emptied field as '', which the required check accepts. Remove `clear`.");
+  }
+  if (required && nullable) {
+    problems.push('is required, but its column accepts NULL, so the API and scripts can still save it empty. Make the column NOT NULL.');
+  }
+  if (sometimesRequired && !nullable) {
+    problems.push('is required only sometimes, so it must be able to stay empty. Make the column nullable, with NULL as its empty value.');
+  }
+  if (!required && !sometimesRequired && !nullable) {
+    if (!hasDefault) {
+      problems.push('has a NOT NULL column with no default, so a record cannot be saved without it. Mark it required.');
+    } else if (isRelation) {
+      problems.push('is an optional relation on a NOT NULL column, and clearing it sends null, which Directus refuses. Mark it required.');
+    } else if (isTextInput(meta) && !savesBlank) {
+      problems.push("is optional, but emptying it sends null, which its NOT NULL column refuses. Set `clear` so it saves ''.");
+    }
+  }
+  if (nullable && savesBlank) {
+    problems.push("saves an emptied field as '', but its column's empty value is NULL. Remove `clear`.");
+  }
+  return problems;
 }
 
 export function buildDirectusStudioMetadataPlan(
@@ -1058,7 +1179,7 @@ export function buildDirectusStudioMetadataPlan(
           sort: group.sort,
           width: 'full',
           hidden: false,
-          translations: [{ language: 'en-US', translation: group.label }],
+          translations: withLocaleLabels(base, field, [{ language: 'en-US', translation: group.label }]),
         },
       }));
     }),
@@ -1070,16 +1191,16 @@ export function buildDirectusStudioMetadataPlan(
       return Object.entries(fields as Record<string, Record<string, unknown>>).map(([field, meta]) => ({
         collection,
         field,
-        meta: {
+        meta: withLocaleLabelMeta(base, field, {
           collection,
           field,
           ...withStudioLayers(base, field, meta),
-        },
+        }),
       }));
     }),
     // Alias fields owned by content:setup (initiatives, editor_assignments,
     // update_requests, projects) still need their group assignment; they get a
-    // meta-merge patch that only sets the group.
+    // meta-merge patch that sets only the group and the locale labels.
     extraGroupMembers: collections.flatMap((collection) => {
       const base = cleanCollectionName(collection);
       const lookup = fieldGroupLookup(base);
@@ -1090,7 +1211,7 @@ export function buildDirectusStudioMetadataPlan(
         .map(([field, groupField]) => ({
           collection,
           field,
-          meta: { collection, field, group: groupField },
+          meta: withLocaleLabelMeta(base, field, { collection, field, group: groupField }),
         }));
     }),
   };
@@ -1332,19 +1453,21 @@ async function patchCollectionMeta(client, collectionPlan) {
   });
 }
 
-async function patchFieldMeta(client, fieldPlan, relationKeys) {
+// Returns how the field, as saved, breaks the text field rule.
+async function patchFieldMeta(client, fieldPlan, relationKeys): Promise<string[]> {
   const key = `${fieldPlan.collection}:${fieldPlan.field}`;
   const current = await client.request(`/fields/${encodePathSegment(fieldPlan.collection)}/${encodePathSegment(fieldPlan.field)}`);
   const plannedMeta = relationKeys.has(key) ? fieldPlan.meta : fallbackScalarRelationMeta(fieldPlan.meta);
   const meta = {
     ...(current?.data?.meta ?? {}),
-    ...plannedMeta,
+    ...keepOtherTranslations(current?.data?.meta, plannedMeta),
   };
 
   await client.request(`/fields/${encodePathSegment(fieldPlan.collection)}/${encodePathSegment(fieldPlan.field)}`, {
     method: 'PATCH',
     body: { meta },
   });
+  return textFieldStorageProblems(meta, current?.data?.schema);
 }
 
 async function getRoleIdsByName(client, roleNames) {
@@ -1443,6 +1566,41 @@ async function applyDirectusStudioBookmarks(client, collectionNames) {
   return applied;
 }
 
+// Directus 11.17.4 answers 403, not 404, when a field does not exist, even to
+// an administrator. A failed read counts as a missing field only when the
+// collection's field list confirms it; any other failure stops the setup.
+async function isMissingField(client, collection: string, field: string, error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (!/failed with (403|404)\b/.test(message)) return false;
+  const params = new URLSearchParams({ fields: 'field', limit: '-1' });
+  const response = await client.request(`/fields/${encodePathSegment(collection)}?${params.toString()}`);
+  return !(response?.data ?? []).some((item) => item.field === field);
+}
+
+// Puts the relation alias fields content:setup creates (such as
+// chapters.initiatives) into their form groups, with their labels.
+export async function applyExtraGroupMembers(client, members) {
+  for (const member of members) {
+    const path = `/fields/${encodePathSegment(member.collection)}/${encodePathSegment(member.field)}`;
+    let current;
+    try {
+      current = await client.request(path);
+    } catch (error) {
+      if (!(await isMissingField(client, member.collection, member.field, error))) throw error;
+      console.warn(
+        `Skipped group assignment for ${member.collection}.${member.field}: field not found. ` +
+        'Run directus:content:setup first so relation alias fields exist.'
+      );
+      continue;
+    }
+    await client.request(path, {
+      method: 'PATCH',
+      body: { meta: keepOtherTranslations(current?.data?.meta, member.meta) },
+    });
+    console.log(`Group assignment: ${member.collection}.${member.field}`);
+  }
+}
+
 async function ensureGroupField(client, groupPlan) {
   const params = new URLSearchParams();
   params.set('fields', 'field');
@@ -1451,9 +1609,11 @@ async function ensureGroupField(client, groupPlan) {
   const exists = (response?.data ?? []).some((item) => item.field === groupPlan.field);
 
   if (exists) {
-    await client.request(`/fields/${encodePathSegment(groupPlan.collection)}/${encodePathSegment(groupPlan.field)}`, {
+    const path = `/fields/${encodePathSegment(groupPlan.collection)}/${encodePathSegment(groupPlan.field)}`;
+    const current = await client.request(path);
+    await client.request(path, {
       method: 'PATCH',
-      body: { meta: groupPlan.meta },
+      body: { meta: keepOtherTranslations(current?.data?.meta, groupPlan.meta) },
     });
     return;
   }
@@ -1529,6 +1689,10 @@ export async function applyDirectusStudioMetadata(options: {
   [key: string]: any;
 } = {}) {
   const client = options.client ?? await createDirectusClient(options);
+  // Directus keeps serving the column shape it cached, so a migration that just
+  // ran (a dropped default, a column made nullable) stays invisible to Data
+  // Studio and to the text field check below until the cache is cleared.
+  await client.request('/utils/cache/clear?system', { method: 'POST' });
   const available = await getAvailableCollectionNames(client);
   const operationalCollections = resolveSchemaCollectionNames(available, 'content', DIRECTUS_OPERATIONAL_COLLECTIONS);
   const accessCollections = resolveSchemaCollectionNames(available, 'content', DIRECTUS_STEWARD_ACCESS_COLLECTIONS);
@@ -1554,9 +1718,11 @@ export async function applyDirectusStudioMetadata(options: {
     console.log(`Group field: ${group.collection}.${group.field}`);
   }
 
+  const textFieldProblems: string[] = [];
   for (const field of plan.fields) {
     try {
-      await patchFieldMeta(client, field, relationKeys);
+      const problems = await patchFieldMeta(client, field, relationKeys);
+      textFieldProblems.push(...problems.map((problem) => `${field.collection}.${field.field} ${problem}`));
       console.log(`Field metadata: ${field.collection}.${field.field}`);
     } catch (error) {
       // A missing field means its migration has not landed here yet; that must
@@ -1572,21 +1738,13 @@ export async function applyDirectusStudioMetadata(options: {
       throw error;
     }
   }
-
-  for (const member of plan.extraGroupMembers) {
-    try {
-      await client.request(`/fields/${encodePathSegment(member.collection)}/${encodePathSegment(member.field)}`, {
-        method: 'PATCH',
-        body: { meta: member.meta },
-      });
-      console.log(`Group assignment: ${member.collection}.${member.field}`);
-    } catch {
-      console.warn(
-        `Skipped group assignment for ${member.collection}.${member.field}: field not found. ` +
-        'Run directus:content:setup first so relation alias fields exist.'
-      );
-    }
+  // Warnings rather than a failure: the metadata is applied either way, and a
+  // pending migration is the usual cause.
+  for (const problem of textFieldProblems) {
+    console.warn(`Text field ${problem}`);
   }
+
+  await applyExtraGroupMembers(client, plan.extraGroupMembers);
 
   const hiddenTechnical = await hideTechnicalCollections(client, available);
 
@@ -1614,6 +1772,7 @@ export async function applyDirectusStudioMetadata(options: {
     hiddenTechnical,
     bookmarks,
     settings,
+    textFieldProblems: textFieldProblems.length,
   };
 }
 
@@ -1626,6 +1785,10 @@ async function main() {
   console.log(`Hidden technical collections: ${result.hiddenTechnical}`);
   console.log(`Bookmarks: ${result.bookmarks}`);
   console.log(`Settings applied: ${result.settings} (branding, collaborative editing, MCP)`);
+  console.log(
+    `Text fields that disagree with their columns: ${result.textFieldProblems}` +
+    (result.textFieldProblems > 0 ? ' (see the warnings above; apply pending migrations, then run this again)' : '')
+  );
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {

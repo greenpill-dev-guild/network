@@ -16,7 +16,13 @@ import podcastFeed from '../data/podcast-feed-snapshot.json';
 import socialLinks from '../content/social-links.json';
 import { getOperationalChapters, getOperationalGuilds } from '../lib/operational-content';
 import { publicGuildPath } from '../lib/public-routes';
-import { gardenRampSteps, gardenStepHref } from '../lib/garden-ramp';
+import NewsletterSignup from '../components/page-sections/NewsletterSignup.astro';
+import {
+  gardenRampSteps,
+  gardenSignupFallback,
+  gardenStepHref,
+  isGardenSignupStep,
+} from '../lib/garden-ramp';
 
 const chapters = await getOperationalChapters();
 const guilds = await getOperationalGuilds();
@@ -319,6 +325,7 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
           <div class="gp-home-garden-grid">
             {gardenSteps.map((step, index) => {
               const href = gardenStepHref(step, socialLinks);
+              const signupFallback = isGardenSignupStep(step) ? gardenSignupFallback(step) : null;
               return (
                 <Card as="article" stack="md" class="gp-home-garden-card">
                   <header class="gp-home-garden-head">
@@ -328,7 +335,13 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
                   <Text variant="h3" class="gp-home-garden-title">{step.title}</Text>
                   <Text variant="body-sm" class="gp-home-garden-body">{step.body}</Text>
                   <footer class="gp-home-garden-foot">
-                    {href && step.cta?.label && (
+                    {signupFallback ? (
+                      <NewsletterSignup
+                        id={`home-newsletter-${index + 1}`}
+                        fallbackHref={signupFallback.href}
+                        fallbackLabel={signupFallback.label}
+                      />
+                    ) : href && step.cta?.label && (
                       <Button href={href} variant="ghost">{step.cta.label}</Button>
                     )}
                   </footer>

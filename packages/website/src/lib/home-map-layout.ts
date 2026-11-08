@@ -292,6 +292,96 @@ export function panMapView(view: MapBox, edge: MapEdge, drawing: MapBox = MAP_DR
   return { ...view, x: Math.min(Math.max(drawing.x, x), drawing.x + drawing.width - view.width) };
 }
 
+// ---- The inspector over the map -------------------------------------------
+// docs/design/map-polish-audit.md § 5: "When the node would sit under the
+// dock, the map pans it into the open area", and on a phone "The map pans
+// the node above the sheet." The map never resizes, so the view moves: it may
+// slide past the drawing's edge on the panel's side, because the panel hides
+// what lies there.
+
+/**
+ * A panel over one side of the stage: the inspector's dock at the east or
+ * west, or its sheet at the bottom. `share` is how much of the stage it
+ * covers along that axis, from 0 to 1.
+ */
+export type MapPanel = { side: 'east' | 'west' | 'south'; share: number };
+
+// Where a view's corner may go with a panel open: inside the drawing, except
+// on the panel's side, by as much as the panel covers and `clearance` more.
+const viewBoundsBeside = (view: MapBox, drawing: MapBox, panel: MapPanel | null, clearance: number) => {
+  const share = panel && panel.share > 0 ? Math.min(panel.share, 1) : 0;
+  const reachX = share && panel?.side !== 'south' ? share * view.width + clearance : 0;
+  const reachY = share && panel?.side === 'south' ? share * view.height + clearance : 0;
+  return {
+    minX: drawing.x - (panel?.side === 'west' ? reachX : 0),
+    maxX: drawing.x + drawing.width - view.width + (panel?.side === 'east' ? reachX : 0),
+    minY: drawing.y,
+    maxY: drawing.y + drawing.height - view.height + reachY,
+  };
+};
+
+/**
+ * clampMapView with a panel open: the same size limits, and the view may
+ * slide past the drawing's edge under the panel, by as much as the panel
+ * covers plus `clearance` (map units), so a node there can be brought out.
+ */
+export function clampMapViewBeside(
+  box: MapBox,
+  aspect: number,
+  maxZoom: number,
+  panel: MapPanel | null,
+  clearance = 0,
+  drawing: MapBox = MAP_DRAWING
+): MapBox {
+  const sized = clampMapView(box, aspect, maxZoom, drawing);
+  if (!panel || !(panel.share > 0)) return sized;
+  const bounds = viewBoundsBeside(sized, drawing, panel, clearance);
+  return {
+    ...sized,
+    x: Math.min(Math.max(box.x, bounds.minX), bounds.maxX),
+    y: Math.min(Math.max(box.y, bounds.minY), bounds.maxY),
+  };
+}
+
+/**
+ * The view moved as little as it takes for `point` to sit in the open part
+ * of the stage, `clearance` map units inside it: clear of the panel, and of
+ * the stage's other edges. A point already there leaves the view as it is.
+ * The move stops where clampMapViewBeside would stop it.
+ */
+export function panPointIntoOpenArea(
+  view: MapBox,
+  point: MapPoint,
+  panel: MapPanel | null,
+  clearance: number,
+  drawing: MapBox = MAP_DRAWING
+): MapBox {
+  const share = panel && panel.share > 0 ? Math.min(panel.share, 1) : 0;
+  const coverX = share && panel?.side !== 'south' ? share * view.width : 0;
+  const coverY = share && panel?.side === 'south' ? share * view.height : 0;
+  const left = view.x + (panel?.side === 'west' ? coverX : 0) + clearance;
+  const right = view.x + view.width - (panel?.side === 'east' ? coverX : 0) - clearance;
+  const top = view.y + clearance;
+  const bottom = view.y + view.height - coverY - clearance;
+  // An open part narrower than the clearance on both sides takes the point
+  // to its middle.
+  const shift = (value: number, low: number, high: number) => {
+    if (high < low) return value - (low + high) / 2;
+    if (value < low) return value - low;
+    if (value > high) return value - high;
+    return 0;
+  };
+  const dx = shift(point.x, left, right);
+  const dy = shift(point.y, top, bottom);
+  if (dx === 0 && dy === 0) return view;
+  const bounds = viewBoundsBeside(view, drawing, panel, clearance);
+  return {
+    ...view,
+    x: Math.min(Math.max(view.x + dx, bounds.minX), bounds.maxX),
+    y: Math.min(Math.max(view.y + dy, bounds.minY), bounds.maxY),
+  };
+}
+
 /** How many points lie past a view's west and east edges. */
 export function pointsBeyondView(view: MapBox, points: readonly MapPoint[]): Record<MapEdge, number> {
   let west = 0;
@@ -301,4 +391,161 @@ export function pointsBeyondView(view: MapBox, points: readonly MapPoint[]): Rec
     else if (point.x > view.x + view.width) east += 1;
   }
   return { west, east };
+}
+
+// ---- Pins on the drawing's edge -------------------------------------------
+// docs/design/map-polish-audit.md § 5, "Edge pins": "A valid point on the
+// map's edge, such as a confirmed place on the 180th meridian, still draws
+// half outside the drawing. The build keeps the audit's clamp: the rendered
+// pin and its hover and focus target sit inside the drawable inset, and the
+// data keeps the true coordinate."
+
+/** A pin's hit circle at its smallest, in map units. */
+export const PIN_HIT_RADIUS = 4.8;
+
+/**
+ * Moves a circle's centre in, if it must, so the whole circle lies inside
+ * `box`. The stage clips to rounded corners: with `cornerRadius` (in map
+ * units) larger than the circle's radius, a centre in a corner's square
+ * stays within `cornerRadius - radius` of the corner's arc centre, so the
+ * circle clears the curve too.
+ */
+export function keepCircleInside(center: MapPoint, radius: number, box: MapBox, cornerRadius = 0): MapPoint {
+  const x = Math.min(Math.max(center.x, box.x + radius), box.x + box.width - radius);
+  const y = Math.min(Math.max(center.y, box.y + radius), box.y + box.height - radius);
+  if (cornerRadius <= radius) return { x, y };
+  const left = box.x + cornerRadius;
+  const right = box.x + box.width - cornerRadius;
+  const top = box.y + cornerRadius;
+  const bottom = box.y + box.height - cornerRadius;
+  const arcX = x < left ? left : x > right ? right : null;
+  const arcY = y < top ? top : y > bottom ? bottom : null;
+  if (arcX === null || arcY === null) return { x, y };
+  const reach = cornerRadius - radius;
+  const distance = Math.hypot(x - arcX, y - arcY);
+  if (distance <= reach) return { x, y };
+  return { x: arcX + ((x - arcX) / distance) * reach, y: arcY + ((y - arcY) / distance) * reach };
+}
+
+/** Whether a circle already lies wholly inside a box with rounded corners. */
+export function circleFitsInside(center: MapPoint, radius: number, box: MapBox, cornerRadius = 0): boolean {
+  const kept = keepCircleInside(center, radius, box, cornerRadius);
+  return Math.abs(kept.x - center.x) < 1e-9 && Math.abs(kept.y - center.y) < 1e-9;
+}
+
+const pointInside = (point: MapPoint, box: MapBox) => (
+  point.x >= box.x && point.x <= box.x + box.width && point.y >= box.y && point.y <= box.y + box.height
+);
+
+/**
+ * Where a pin is drawn: its point, kept `inset` map units inside `drawing`
+ * (and clear of its rounded corners) so the pin and its hit circle never
+ * cross the edge. Only the drawing moves; the node keeps its true
+ * coordinate. A point beyond the drawing's crop (south of about 68°S) is
+ * not on its edge, so it stays where it is, off the map, rather than drawn
+ * somewhere false.
+ */
+export function clampPinToDrawing(
+  point: MapPoint,
+  inset = PIN_HIT_RADIUS,
+  drawing: MapBox = MAP_DRAWING,
+  cornerRadius = 0
+): MapPoint {
+  if (!pointInside(point, MAP_DRAWING)) return { x: point.x, y: point.y };
+  return keepCircleInside(point, inset, drawing, cornerRadius);
+}
+
+/**
+ * Where a stack's badge goes when no side of its anchor has room for the
+ * badge's whole target (`targetRadius`) in `view`: `beside`, its first
+ * side, moved in until the target is whole and clear of the stage's rounded
+ * corners. An anchor outside the view keeps its badge beside it, out of view
+ * too, rather than drawn at the view's edge, far from its pin.
+ */
+export function badgeFallbackCenter(
+  anchor: MapPoint,
+  beside: MapPoint,
+  targetRadius: number,
+  view: MapBox,
+  cornerRadius = 0
+): MapPoint {
+  if (!pointInside(anchor, view)) return { x: beside.x, y: beside.y };
+  return keepCircleInside(beside, targetRadius, view, cornerRadius);
+}
+
+// ---- Labels at rest -------------------------------------------------------
+// § 5: "Chapter labels at rest ... The highest featuredWeight goes first.
+// Each label tries right, left, above and below its dot, and hides when it
+// would touch another label, a pin, a badge, a bar or the dock."
+
+export type LabelSide = 'right' | 'left' | 'above' | 'below';
+
+/** The order a label tries the sides of its dot. */
+export const LABEL_SIDES: readonly LabelSide[] = ['right', 'left', 'above', 'below'];
+
+export type MapCircle = { center: MapPoint; radius: number };
+
+/** A label to place: its dot, the gap it keeps from it, and its size. */
+export type LabelRequest = { anchor: MapPoint; gap: number; width: number; height: number };
+
+export type PlacedLabel = { side: LabelSide; box: MapBox } | null;
+
+/** The box a label takes on one side of its dot, centred on that side. */
+export function labelBoxOnSide(request: LabelRequest, side: LabelSide): MapBox {
+  const { anchor, gap, width, height } = request;
+  switch (side) {
+    case 'right':
+      return { x: anchor.x + gap, y: anchor.y - height / 2, width, height };
+    case 'left':
+      return { x: anchor.x - gap - width, y: anchor.y - height / 2, width, height };
+    case 'above':
+      return { x: anchor.x - width / 2, y: anchor.y - gap - height, width, height };
+    case 'below':
+      return { x: anchor.x - width / 2, y: anchor.y + gap, width, height };
+  }
+}
+
+// Touching counts: boxes that share an edge, or a circle that reaches a box.
+const boxesTouch = (a: MapBox, b: MapBox) => (
+  a.x <= b.x + b.width && b.x <= a.x + a.width && a.y <= b.y + b.height && b.y <= a.y + a.height
+);
+
+const boxTouchesCircle = (box: MapBox, circle: MapCircle) => {
+  const nearestX = Math.min(Math.max(circle.center.x, box.x), box.x + box.width);
+  const nearestY = Math.min(Math.max(circle.center.y, box.y), box.y + box.height);
+  return Math.hypot(circle.center.x - nearestX, circle.center.y - nearestY) <= circle.radius;
+};
+
+const boxInside = (box: MapBox, bounds: MapBox) => (
+  box.x >= bounds.x &&
+  box.y >= bounds.y &&
+  box.x + box.width <= bounds.x + bounds.width &&
+  box.y + box.height <= bounds.y + bounds.height
+);
+
+/**
+ * Places labels in the order given, the most important first. Each takes the
+ * first side of its dot where it lies inside `bounds` (the map in view) and
+ * touches no circle (pins, badges), no box (bars, the dock) and no label
+ * placed before it. A label with no such side hides (null). A label's own
+ * dot never blocks it, because its gap clears the dot's circle.
+ */
+export function placeMapLabels(
+  requests: readonly LabelRequest[],
+  obstacles: { circles: readonly MapCircle[]; boxes: readonly MapBox[] },
+  bounds: MapBox
+): PlacedLabel[] {
+  const placed: MapBox[] = [];
+  return requests.map((request) => {
+    for (const side of LABEL_SIDES) {
+      const box = labelBoxOnSide(request, side);
+      if (!boxInside(box, bounds)) continue;
+      if (obstacles.circles.some((circle) => boxTouchesCircle(box, circle))) continue;
+      if (obstacles.boxes.some((other) => boxesTouch(box, other))) continue;
+      if (placed.some((other) => boxesTouch(box, other))) continue;
+      placed.push(box);
+      return { side, box };
+    }
+    return null;
+  });
 }

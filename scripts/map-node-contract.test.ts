@@ -22,16 +22,26 @@ import {
 import { toPublicOperationalLocations } from '@greenpill-network/shared/public-content';
 import {
   ATLANTIC_CENTER_X,
+  badgeFallbackCenter,
+  circleFitsInside,
   clampMapView,
+  clampMapViewBeside,
+  clampPinToDrawing,
   defaultMapView,
   fanHasRoomForTargets,
   formatPickerCoordinate,
   groupOverlappingPins,
+  LABEL_SIDES,
+  labelBoxOnSide,
   largestMapView,
   layoutFan,
   MAP_DRAWING,
   panMapView,
+  panPointIntoOpenArea,
+  keepCircleInside,
   pickerPointToLocation,
+  PIN_HIT_RADIUS,
+  placeMapLabels,
   pointsBeyondView,
   separateLabels,
 } from '../packages/website/src/lib/home-map-layout.ts';
@@ -48,6 +58,13 @@ import {
   typePillName,
   type MapNodeType,
 } from '../packages/website/src/lib/home-map-filters.ts';
+import {
+  entryMatchesSearch,
+  groupListEntries,
+  listSearchAnnouncement,
+  rowToFocusAfterRebuild,
+  searchWords,
+} from '../packages/website/src/lib/home-map-list.ts';
 import {
   describeMapStateFeed,
   formatUpdatedAgo,
@@ -1587,14 +1604,27 @@ test('home map focus cards are anchored near nodes, not bottom-left panels', asy
     'utf8'
   );
 
-  assert.match(component, /data-focus-themes/);
+  // Reversed on purpose (map-polish-audit.md § 5): "Hover and keyboard focus
+  // show a compact tooltip: the name, then `TYPE · PLACE` in mono. No note
+  // and no theme chips." June's card listed the themes; the inspector does.
+  assert.doesNotMatch(component, /data-focus-themes|focusThemes/);
+  assert.match(component, /<span class="gp-home-map-focus-name" data-focus-name><\/span>\s*<span class="gp-home-map-focus-role" data-focus-role><\/span>/);
+  assert.match(component, /focusRole\.textContent = placeLabel \? `\$\{roleLabel\} · \$\{placeLabel\}` : roleLabel;\s*\/\/[^\n]*\n\s*focusMeta\.textContent = '';/);
   // The hover card is informational only — the connection summary was removed.
   // Relationship detail comes from hovering edges/nodes and the on-map web.
   assert.doesNotMatch(component, /data-focus-connections/);
   assert.doesNotMatch(component, /relationshipSummary/);
+  // Still anchored at its node: "It flips below the node when there is no
+  // room above", and it keeps inside the open part of the stage.
   assert.match(component, /focusEl\.style\.left = `\$\{xPct\}%`/);
   assert.match(component, /focusEl\.style\.top = `\$\{yPct\}%`/);
   assert.match(component, /focusEl\.style\.transform = `translate/);
+  const placeTip = component.match(/const placeFocusCard = \(cx: number, cy: number\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(placeTip, /const roomAbove = anchorY - offset - tip\.height >= inset;/);
+  assert.match(placeTip, /const roomBelow = anchorY \+ offset \+ tip\.height <= maxY - inset;/);
+  assert.match(placeTip, /const below = !roomAbove && roomBelow;/);
+  assert.match(placeTip, /const maxX = covered\?\.side === 'east' \? covered\.rect\.minX : stage\.width;/);
+  assert.match(component, /--gp-map-tip-offset: 14px;/);
   assert.match(component, /root\.addEventListener\('pointermove'/);
   assert.match(component, /nodeAtPointer/);
 
@@ -1618,7 +1648,6 @@ test('home map selected nodes stay on the map without scroll jumps', async () =>
   assert.ok(selectedStart > canvasStart && selectedStart < controlsStart, 'selected-node region must live inside the map canvas');
   assert.match(component, /role="region" aria-label="Selected map node"/);
   assert.doesNotMatch(component, /scrollIntoView/);
-  assert.match(component, /positionSelectedCard/);
   assert.match(component, /syncSelectedOverlay/);
   assert.match(component, /root\.classList\.add\('has-selected-node'\)/);
   assert.match(component, /root\.addEventListener\('click'/);
@@ -1627,20 +1656,63 @@ test('home map selected nodes stay on the map without scroll jumps', async () =>
   assert.match(component, /if \(!selectedFocusTarget \|\| selectedFocusTarget === link\) setFocus\(link\)/);
   assert.match(component, /clusterDirty\(\)/);
   assert.match(component, /const clampNumber = \(value: number, min: number, max: number\)/);
-  assert.match(component, /rootRect\.width - cardRect\.width - inset/);
-  assert.match(component, /rootRect\.height - cardRect\.height - inset/);
-  assert.match(component, /selectedEl\.style\.setProperty\('--gp-selected-transform', 'none'\)/);
+  // Reversed on purpose (map-polish-audit.md § 5): "Selecting a node opens
+  // it in a dock inside the stage: inset 12px, the stage's full height,
+  // about 340px wide ... June's floating card goes." The card's placement
+  // beside its node, its clamping inside the stage and its transform go
+  // with it.
+  assert.doesNotMatch(component, /positionSelectedCard/);
+  assert.doesNotMatch(component, /rootRect\.width - cardRect\.width - inset|rootRect\.height - cardRect\.height - inset/);
+  assert.doesNotMatch(component, /--gp-selected-x|--gp-selected-y|--gp-selected-transform/);
 
   const styleStart = component.indexOf('<style>');
-  const selectedCssStart = component.indexOf('/* Selected-node card', styleStart);
+  const selectedCssStart = component.indexOf('/* The inspector (§ 5).', styleStart);
   const addNodeCssStart = component.indexOf('/* Join-the-map walkthrough', selectedCssStart);
   const selectedCss = component.slice(selectedCssStart, addNodeCssStart);
-  assert.ok(selectedCssStart !== -1, 'selected-node floating-card CSS must be present');
+  assert.ok(selectedCssStart !== -1, 'the inspector CSS must be present');
   assert.match(selectedCss, /position:\s*absolute/);
-  assert.match(selectedCss, /inset-inline-start:\s*var\(--gp-selected-x/);
-  assert.match(selectedCss, /width:\s*min\(var\(--gp-map-card-width\), calc\(100% - 24px\)\)/);
-  assert.match(selectedCss, /transform:\s*var\(--gp-selected-transform/);
-  assert.doesNotMatch(component, /--gp-map-inspector-width/);
+  // The dock shares the list's place and size (§ 5: "one right-hand dock
+  // ... that holds either the list or the selected node"), so it needs no
+  // inspector width of its own; June's ban on one goes with the card.
+  const inspectorCss = selectedCss.match(/\n  \.gp-home-map-selected \{([^}]*)\}/)?.[1] ?? '';
+  assert.match(inspectorCss, /inset-block: var\(--gp-map-inset\);/);
+  assert.match(inspectorCss, /inset-inline-end: var\(--gp-map-inset\);/);
+  assert.match(inspectorCss, /width: min\(var\(--gp-map-dock-width\), calc\(100% - var\(--gp-map-inset\) \* 2\)\);/);
+  assert.doesNotMatch(selectedCss, /--gp-selected-x|--gp-map-card-width/);
+  // "While the dock is open, both bars end at its edge."
+  assert.match(selectedCss, /\.gp-home-map-canvas\.has-selected-node \{\s*--gp-map-end: calc\(var\(--gp-map-inset\) \* 2 \+ var\(--gp-map-dock-width\)\);/);
+  // "The dock's head (kicker, name and close) stays put while its body
+  // scrolls (`overflow-y: auto`)".
+  assert.match(component, /<header class="gp-home-map-selected-head">[\s\S]*?data-selected-kicker[\s\S]*?data-selected-name[\s\S]*?data-selected-close[\s\S]*?<\/header>\s*<div class="gp-home-map-selected-body" data-selected-body>/);
+  assert.match(selectedCss, /\.gp-home-map-selected-body \{[\s\S]*?min-height: 0;[\s\S]*?overflow-y: auto;/);
+  // "Containers from 521 to 860px: ... The inspector and the list open as a
+  // bottom sheet inside the stage", and on phones "A selected node opens a
+  // bottom sheet with a handle ... It rises to about half the screen".
+  assert.match(selectedCss, /@container \(max-width: 860px\) \{[\s\S]*?\.gp-home-map-selected \{\s*inset-block: auto var\(--gp-map-inset\);\s*inset-inline: var\(--gp-map-inset\);\s*width: auto;\s*max-block-size: 60%;/);
+  assert.match(selectedCss, /\.gp-home-map-selected-handle \{\s*display: block;/);
+  assert.match(component, /<span class="gp-home-map-selected-handle" aria-hidden="true"><\/span>/);
+  const phoneSheetCss = component.match(/@container \(max-width: 520px\) \{([\s\S]*?)\n  \}\n/)?.[1] ?? '';
+  assert.match(phoneSheetCss, /\.gp-home-map-selected \{\s*inset-inline: var\(--gp-space-sm\);\s*inset-block-end: var\(--gp-space-sm\);\s*max-block-size: 55%;/);
+  // A sheet rises over the bottom bars, so they step aside: nothing
+  // focusable is left beneath it.
+  assert.match(selectedCss, /\.gp-home-map-canvas\.has-selected-node \.gp-home-map-list-toggle,\s*\.gp-home-map-canvas\.has-selected-node \.gp-home-map-end-group,\s*\.gp-home-map-canvas\.has-selected-node \.gp-home-map-controls > \.gp-home-map-freshness \{\s*visibility: hidden;/);
+  // "When the node would sit under the dock, the map pans it into the open
+  // area", and "The map pans the node above the sheet": the view may slide
+  // under the inspector (lib/home-map-layout.ts), and goes back on close.
+  assert.match(component, /const clampViewBox = \(box: MapViewBox\): MapViewBox => \{\s*const covered = inspectorPanel\(\);\s*return clampMapViewBeside\(box, stageAspect\(\), MAX_VIEW_ZOOM, covered\?\.panel \?\? null, covered\?\.clearance \?\? 0, FULL_VIEW_BOX\);/);
+  assert.match(component, /const next = panPointIntoOpenArea\(currentViewBox, point, covered\.panel, covered\.clearance, FULL_VIEW_BOX\);/);
+  assert.match(component, /clearance: pxToViewBox\(POINTER_TARGET_RADIUS_PX \+ cssPx\('--gp-map-inset', 12\)\),/);
+  const openInspector = component.match(/const openSelected = \(member: DynamicMapNode, link: Element, viaKeyboard = false\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(openInspector, /layoutThemeStrip\(\);\s*scheduleChapterLabels\(\);\s*panSelectedIntoView\(\);/);
+  const closeInspector = component.match(/const closeSelected = \(\{ returnFocus = true \}: \{ returnFocus\?: boolean \} = \{\}\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(closeInspector, /settleViewAfterInspector\(\);\s*layoutThemeStrip\(\);\s*scheduleChapterLabels\(\);/);
+  assert.match(component, /if \(before && sameView\(currentViewBox, before\.moved\)\) setMapViewBox\(before\.view, \{ isDefault: before\.wasDefault \}\);\s*else setMapViewBox\(currentViewBox\);/);
+  // "Closing returns focus to the node, and a closed dock leaves no
+  // focusable or pressed controls behind": a hidden dock is display: none,
+  // and the way back to the list hides with it.
+  assert.match(closeInspector, /listBehindInspector = null;\s*if \(selectedBack\) selectedBack\.hidden = true;/);
+  assert.match(closeInspector, /\} else \{\s*focusControlFor\(\[focusTarget\.getAttribute\('data-node-id'\) \|\| ''\]\);/);
+  assert.match(selectedCss, /\.gp-home-map-selected\[hidden\] \{\s*display: none;/);
   assert.doesNotMatch(component, /--gp-map-pane-end/);
   assert.match(component, /\.gp-home-map-canvas\.has-selected-node \.gp-home-map-svg\s*{[^}]*width:\s*100%/);
   assert.doesNotMatch(component, /\.gp-home-map-canvas\.has-selected-node \.gp-home-map-svg\s*{[^}]*width:\s*calc\(100% - var\(--gp-map-pane-end\)\)/);
@@ -1685,13 +1757,21 @@ test('home map mobile touch mode supports bounded zoom and compact connection ro
   assert.doesNotMatch(phoneCss, /aspect-ratio:\s*4 \/ 3/);
   assert.match(phoneCss, /\.gp-home-map-thread\.is-entering\s*{[\s\S]*?animation:\s*none/);
   assert.match(phoneCss, /\.gp-home-map-state-error\s*{\s*inset-block-start:\s*var\(--gp-map-edge\);/);
-  assert.match(component, /\.gp-home-map-selected-edge-list:not\(\[hidden\]\)\s*{[\s\S]*?display:\s*block/);
+  // Reversed on purpose (map-polish-audit.md § 5): the phone's bar of
+  // connections in a sideways scroller goes. "A selected node opens a bottom
+  // sheet with a handle, close, `TYPE · PLACE`, the name, the note, a
+  // scrolling row of theme tags and the connections ... its handle, head and
+  // close stay put while its body scrolls, so a node with many connections
+  // never pushes the close out of reach." The rows stack in that body.
+  assert.doesNotMatch(component, /\.gp-home-map-selected-edge-list:not\(\[hidden\]\)\s*{[\s\S]*?display:\s*block/);
+  assert.match(component, /\.gp-home-map-selected-edge-items \{\s*display: grid;/);
+  assert.doesNotMatch(component, /\.gp-home-map-selected-edge-items\s*{[^}]*overflow-x:\s*auto/);
+  assert.match(phoneCss, /\.gp-home-map-selected-themes \{\s*flex-wrap: nowrap;\s*overflow-x: auto;/);
   // Narrow maps show legend dots and counts only (DESIGN.md), keeping the
   // label for assistive technology, and the Show all chip ends the counts.
   assert.match(component, /@container \(max-width: 520px\) \{\s*\.gp-home-map-legend-label\s*{[\s\S]*?clip:\s*rect\(0 0 0 0\)/);
   assert.match(phoneCss, /\.gp-home-map-legend-reset\s*{\s*order:\s*1;/);
   assert.match(phoneCss, /\.gp-home-map-filter-note\[data-empty='true'\]:not\(\[hidden\]\)\s*{[\s\S]*?display:\s*flex/);
-  assert.match(component, /\.gp-home-map-selected-edge-items\s*{[\s\S]*?overflow-x:\s*auto/);
   assert.match(component, /new ResizeObserver\(scheduleMapResizeSync\)\.observe\(root\)/);
   assert.doesNotMatch(component, /data-filter-toggle="type"/);
   assert.doesNotMatch(component, /data-type-filter/);
@@ -1724,24 +1804,23 @@ test('home map mobile touch mode supports bounded zoom and compact connection ro
   assert.match(component, /const closeFilterPanels = \(\) => \{[\s\S]*?openFilterPanel = ''[\s\S]*?syncFilterPanels\(\)/);
   assert.match(component, /const setFilterPanel = \(panelName: string\) => \{[\s\S]*?if \(openFilterPanel\) \{\s*closeNodeList\(\);[\s\S]*?syncFilterPanels\(\)/);
   assert.match(component, /const openNodeList = \(\s*opener: HTMLElement \| null = listToggle,\s*subset: [^)]*?\) => \{[\s\S]*?closeFilterPanels\(\);[\s\S]*?listDrawer\.hidden = false/);
-  assert.match(component, /document\.addEventListener\('pointerdown', \(event\) => \{[\s\S]*?target\.closest\('\.gp-home-map-controls'\)[\s\S]*?closeFilterPanels\(\)[\s\S]*?\.gp-home-map-list-drawer, \[data-home-map-list-toggle\][\s\S]*?closeNodeList\(\)/);
+  // Changed on purpose (map-polish-audit.md § 5): "the outside click (1294)
+  // keeps closing the theme editor but no longer closes the list". The list
+  // is non-modal on a wide map: "the map stays usable, and a click on empty
+  // map no longer closes it."
+  const outsidePress = component.match(/document\.addEventListener\('pointerdown', \(event\) => \{([\s\S]*?)\n    \}\);/)?.[1] ?? '';
+  assert.match(outsidePress, /if \(openFilterPanel && !target\.closest\('\.gp-home-map-controls'\)\) \{\s*closeFilterPanels\(\);/);
+  assert.doesNotMatch(outsidePress, /closeNodeList/);
   assert.match(component, /if \(event\.key !== 'Escape'\) return;[\s\S]*?closeFilterPanels\(\);[\s\S]*?closeNodeList\(\)/);
   assert.match(component, /const openAddDialog = \(trigger\?: HTMLElement\) => \{[\s\S]*?closeFilterPanels\(\);[\s\S]*?closeNodeList\(\)/);
-  assert.match(component, /const visibleThemeSlugs = themeSlugs\.slice\(0, 2\)/);
-  assert.match(component, /const themeCompactLabel = \(slug: string\)/);
-  assert.match(component, /chip\.textContent = themeCompactLabel\(slug\)/);
-  assert.match(component, /chip\.title = label/);
-  assert.match(component, /chip\.setAttribute\('aria-label', label\)/);
-  assert.match(component, /const hiddenThemeCount = themeSlugs\.length - visibleThemeSlugs\.length/);
-  assert.match(component, /more\.textContent = `\+\$\{hiddenThemeCount\}`/);
-  assert.match(component, /more\.setAttribute\('aria-label', `\$\{hiddenThemeCount\} more/);
+  // Reversed on purpose (§ 5): "the list rows' two theme chips with +N (1297
+  // to 1304) and their wrapping rules (1306 to 1311), since compact rows show
+  // the name and place on one line". A row is the mark, the name and the
+  // place, which gives way first with an ellipsis.
+  assert.doesNotMatch(component, /themeCompactLabel|visibleThemeSlugs|hiddenThemeCount|gp-home-map-list-themes|gp-home-map-list-meta/);
   assert.doesNotMatch(component, /gp-home-map-list-action['"]/);
-  assert.match(component, /\.gp-home-map-list-name\s*{[\s\S]*?overflow-wrap:\s*anywhere/);
-  assert.match(component, /\.gp-home-map-list-meta\s*{[\s\S]*?overflow-wrap:\s*anywhere/);
-  assert.match(component, /\.gp-home-map-list-themes\s*{[\s\S]*?flex-wrap:\s*nowrap/);
-  assert.doesNotMatch(component, /\.gp-home-map-list-themes\s*{[^}]*overflow:\s*hidden/);
-  assert.doesNotMatch(component, /\.gp-home-map-list-themes span\s*{[^}]*text-overflow:\s*ellipsis/);
-  assert.match(component, /\.gp-home-map-list-themes span\s*{[\s\S]*?white-space:\s*nowrap/);
+  assert.match(component, /row\.append\(mark, makeListPart\('span', 'gp-home-map-list-name', name\), makeListPart\('span', 'gp-home-map-list-place', place\)\);/);
+  assert.match(component, /\.gp-home-map-list-name,\s*\.gp-home-map-list-place \{[\s\S]*?text-overflow: ellipsis;\s*white-space: nowrap;/);
 });
 
 test('home map uses shared semantic theme colours and derived aliases', async () => {
@@ -1930,23 +2009,40 @@ test('home map selected surface carries public links and no connection summary',
   // External profile links open safely in a new tab.
   assert.match(component, /rel = 'noopener noreferrer'/);
 
-  // Hover and selected cards share a stable floating footprint instead of
-  // squeezing the map into a side inspector on desktop.
-  assert.match(component, /--gp-map-card-width/);
-  assert.match(component, /\.gp-home-map-focus\s*{[\s\S]*?width:\s*min\(var\(--gp-map-card-width\), calc\(100% - 24px\)\)/);
-  assert.match(component, /\.gp-home-map-selected\s*{[\s\S]*?width:\s*min\(var\(--gp-map-card-width\), calc\(100% - 24px\)\)/);
-  assert.match(component, /--gp-map-card-offset/);
-  assert.match(component, /var\(--gp-map-card-offset\)/);
+  // Replaced on purpose (map-polish-audit.md § 5): the hover card and the
+  // selected card no longer share a floating footprint. Instead "a compact
+  // tooltip offset from its node, and a dock of fixed width inside the
+  // stage", which never squeezes the map: it overlays the stage.
+  assert.doesNotMatch(component, /--gp-map-card-width|--gp-map-card-offset/);
+  const tipCss = component.match(/\n  \.gp-home-map-focus \{([^}]*)\}/)?.[1] ?? '';
+  assert.match(tipCss, /width: max-content;/);
+  assert.match(tipCss, /pointer-events: none;/);
+  assert.match(component, /`translate\(\$\{shiftX\.toFixed\(1\)\}px, \$\{below \? 'var\(--gp-map-tip-offset\)' : 'calc\(-100% - var\(--gp-map-tip-offset\)\)'\}\)`/);
+  assert.match(component, /\n  \.gp-home-map-selected \{[^}]*width: min\(var\(--gp-map-dock-width\), calc\(100% - var\(--gp-map-inset\) \* 2\)\);/);
   assert.doesNotMatch(component, /\.gp-home-map-canvas\.has-selected-node \.gp-home-map-svg\s*{[^}]*inset-inline-end/);
 
   // No connection-summary text on any surface (desktop discovers via hover).
   assert.doesNotMatch(component, /data-selected-connections/);
   assert.doesNotMatch(component, /No public connections yet/);
 
-  // Mobile connection rows gain an open-link control + non-wrapping theme carousel.
-  assert.match(component, /gp-home-map-selected-edge-open/);
-  assert.match(component, /gp-home-map-selected-edge-themes/);
-  assert.match(component, /peekCarousel/);
+  // Reversed on purpose (§ 5): "connections as rows of at least 44px (mark,
+  // name, place, shared-theme tag) that select that node". June's rows lit
+  // the line and carried an open-profile link and a sideways carousel of
+  // every shared theme; a row now selects its node, whose inspector carries
+  // its public link.
+  assert.doesNotMatch(component, /gp-home-map-selected-edge-open|gp-home-map-selected-edge-themes|peekCarousel/);
+  const edgeRows = component.match(/const renderSelectedEdgeList = \(nodeId: string\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(edgeRows, /mark\.className = 'gp-home-map-selected-edge-mark';/);
+  assert.match(edgeRows, /nameEl\.className = 'gp-home-map-selected-edge-name';/);
+  assert.match(edgeRows, /placeEl\.className = 'gp-home-map-selected-edge-place';/);
+  assert.match(edgeRows, /tag\.className = 'gp-home-map-selected-edge-theme';/);
+  assert.match(edgeRows, /`Select \$\{name\}\$\{place \? `, \$\{place\}` : ''\}/);
+  assert.match(edgeRows, /row\.addEventListener\('click', \(event\) => \{\s*activateMapNode\(connectedEl, event\.detail === 0 \|\| row\.matches\(':focus-visible'\)\);/);
+  // Hovering or focusing a row previews its node as a list row does.
+  assert.match(edgeRows, /const preview = \(\) => \{\s*previewListNode\(connectedEl\);\s*applyEdgeHighlight\(edge\.edgeId\);/);
+  assert.doesNotMatch(edgeRows, /aria-pressed/);
+  assert.match(component, /\.gp-home-map-selected-edge-row \{[\s\S]*?min-block-size: var\(--gp-map-target\);/);
+  assert.match(component, /<ul class="gp-home-map-selected-edge-items" data-selected-edge-items><\/ul>/);
 });
 
 test('home map chapters open an inspect card and carry one link (progressive enhancement)', async () => {
@@ -2019,10 +2115,15 @@ test('home map chapters open an inspect card and carry one link (progressive enh
   // Still no redundant "Chapter node" label and no relationship/edit rows.
   assert.match(component, /selectedEl\.dataset\.selectedType = member\.type/);
   assert.match(component, /data-selected-type='chapter'/);
-  assert.match(component, /selectedKicker\.hidden = isChapter/);
+  // Reversed on purpose (map-polish-audit.md § 5, after map-p2): "P1 then
+  // shows a chapter's themes and its `TYPE · PLACE` kicker in the dock,
+  // reversing `selectedKicker.hidden = isChapter`". Every kicker reads
+  // TYPE · PLACE, as in "Chapter · Nairobi".
+  assert.doesNotMatch(component, /selectedKicker\.hidden = isChapter/);
+  assert.match(component, /selectedKicker\.textContent = member\.place \? `\$\{role\} · \$\{member\.place\}` : role;/);
   assert.match(component, /if \(selectedEdgeList\) selectedEdgeList\.hidden = true/);
   assert.match(component, /if \(updateWrap\) updateWrap\.hidden = isChapter \|\| !member\.approved/);
-  assert.match(component, /selectedKicker\.textContent = member\.owned/);
+  assert.match(component, /const role = member\.owned/);
   assert.match(component, /\? \(member\.pending \? 'Your pending node' : 'Your node'\)/);
   assert.match(component, /: member\.pending \? `Pending \$\{member\.type\}` : typeLabel/);
   assert.doesNotMatch(component, /selectedKicker\.textContent\s*=\s*['"`]Chapter node/);
@@ -2129,7 +2230,7 @@ test('home map stacks overlapping pins across node types, counts them, and fans 
   assert.match(recompute, /people\.length >= \(chapters\.length \? 1 : 2\)/);
   assert.match(recompute, /people\.forEach\(\(pin\) => setPinClustered\(pin\.el, true\)\)/);
   assert.doesNotMatch(recompute, /chapters\.forEach\(\(pin\) => setPinClustered/);
-  assert.match(recompute, /badgeCenterFor\(anchors, radius, taken\)/);
+  assert.match(recompute, /badgeCenterFor\(anchors, radius, taken, corner\)/);
   assert.match(component, /const BADGE_DIRECTIONS = \[-45, -135, 45, 135, 0, 180, -90, 90\]/);
 
   // A marker for several people shows how many, in their colour: members,
@@ -2335,7 +2436,10 @@ test('home map keeps focus, hover and selection honest when stacks rebuild', asy
   assert.doesNotMatch(component, /const selectedId = selectedNode\?\.getAttribute/);
   // Closing a card rebuilds the stacks, so a person drawn while selected goes
   // back into their badge.
-  assert.match(component, /const closeSelected = \(\) => \{[\s\S]*?clusterDirty\(\);[\s\S]*?\n    \};/);
+  // The stacks are rebuilt before focus returns, so it lands on the marker
+  // that stands for a person, not on a pin about to be hidden (Codex on #63).
+  const closeCard = component.match(/const closeSelected = \(\{ returnFocus = true \}: \{ returnFocus\?: boolean \} = \{\}\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(closeCard, /recomputeClustersNow\(\);\s*if \(!restoreFocus \|\| !focusTarget\) return;/);
   // Rebuilding keeps keyboard focus on what stands for the same people, and a
   // hovered pin that is now hidden gives up the hover card.
   const recompute = component.match(/const recomputeClustersNow = \(\) => \{([\s\S]*?)\n    \};/)?.[1] ?? '';
@@ -2360,9 +2464,10 @@ test('home map keeps focus, hover and selection honest when stacks rebuild', asy
   // Scrolling keeps the preview of a marker or satellite that has keyboard focus.
   assert.match(component, /active\.matches\('\.gp-home-map-node-link:focus-visible, \[data-home-map-cluster\]:focus-visible, \.gp-home-map-cluster-sat:focus-visible'\)/);
   // New map controls and the compact band use spacing tokens; heights derive
-  // from the 44px touch target.
+  // from the 44px touch target, which step 3 names once as --gp-map-target
+  // (§ 5: "Icon-only controls (zoom, close, reset) are 44 by 44px").
   assert.match(component, /--gp-map-edge: var\(--gp-space-sm\);/);
-  assert.match(component, /--gp-map-row: calc\(44px \+ var\(--gp-space-xs\) \* 2 \+ 2px\);/);
+  assert.match(component, /--gp-map-row: calc\(var\(--gp-map-target\) \+ var\(--gp-space-xs\) \* 2 \+ 2px\);/);
   assert.match(component, /\.gp-home-map-join \{[\s\S]*?min-height: calc\(40px \+ var\(--gp-space-xs\) \* 2 \+ 2px\);\s*padding: 0 var\(--gp-space-md\);/);
 });
 
@@ -2591,16 +2696,17 @@ test('home map chrome: bars in the stage, a theme strip toolbar, one phone row, 
 
   // Hit targets (DESIGN.md:431 to 441, § 5): text buttons reach 48px, chips
   // are 30px under a fine pointer and 44px under a coarse one and in the
-  // phone row, and icon-only controls are 44 by 44px.
+  // phone row, and icon-only controls are 44 by 44px. Step 3 names the 44px
+  // target once as --gp-map-target; the sizes are unchanged.
   assert.match(component, /\.gp-home-map-list-toggle,\s*\.gp-home-map-themes-toggle \{[\s\S]*?min-height: calc\(40px \+ var\(--gp-space-xs\) \* 2 \+ 2px\);/);
   assert.match(component, /--gp-map-chip: 30px;/);
-  assert.match(component, /@media \(pointer: coarse\) \{\s*\.gp-home-map-canvas \{\s*--gp-map-chip: 44px;/);
+  assert.match(component, /@media \(pointer: coarse\) \{\s*\.gp-home-map-canvas \{\s*--gp-map-chip: var\(--gp-map-target\);/);
   assert.match(component, /\.gp-home-map \.gp-chip \{\s*min-height: var\(--gp-map-chip\);/);
-  assert.match(component, /\.gp-home-map-zoom-controls button \{\s*min-width: 44px;\s*min-height: 44px;/);
-  assert.match(component, /\.gp-home-map-theme-editor-close \{\s*width: 44px;\s*height: 44px;/);
+  assert.match(component, /\.gp-home-map-zoom-controls button \{\s*min-width: var\(--gp-map-target\);\s*min-height: var\(--gp-map-target\);/);
+  assert.match(component, /\.gp-home-map-theme-editor-close \{\s*width: var\(--gp-map-target\);\s*height: var\(--gp-map-target\);/);
   const phoneCss = component.match(/@container \(max-width: 520px\) \{([\s\S]*?)\n  \}\n/)?.[1] ?? '';
   assert.match(phoneCss, /\.gp-home-map-list-toggle,\s*\.gp-home-map-themes-toggle,\s*\.gp-home-map-join \{\s*min-height: var\(--gp-map-row\);/);
-  assert.match(phoneCss, /\.gp-home-map \.gp-chip\.gp-home-map-legend-item,\s*\.gp-home-map \.gp-chip\.gp-home-map-legend-reset \{\s*min-height: 44px;/);
+  assert.match(phoneCss, /\.gp-home-map \.gp-chip\.gp-home-map-legend-item,\s*\.gp-home-map \.gp-chip\.gp-home-map-legend-reset \{\s*min-height: var\(--gp-map-target\);/);
   // § 5: "the row scrolls behind a mask-image edge fade", on one line, and a
   // phone opens the editor from Themes, not from the strip.
   assert.match(phoneCss, /\.gp-home-map-control-row \{[\s\S]*?flex-wrap: nowrap;[\s\S]*?overflow-x: auto;[\s\S]*?mask-image: var\(--gp-map-edge-fade\);/);
@@ -2609,7 +2715,7 @@ test('home map chrome: bars in the stage, a theme strip toolbar, one phone row, 
   assert.match(phoneCss, /\.gp-home-map-themes-toggle \{\s*display: inline-flex;/);
   // "Layout follows the container's width only; the kind of pointer never
   // picks it": the script reads the layout the CSS picked.
-  assert.match(component, /const mapLayout = \(\) => \(\s*window\.getComputedStyle\(root\)\.getPropertyValue\('--gp-map-layout'\)/);
+  assert.match(component, /const mapLayout = \(\): 'phone' \| 'sheet' \| 'dock' => \{\s*const layout = window\.getComputedStyle\(root\)\.getPropertyValue\('--gp-map-layout'\)/);
   // The phone's stage pans and resets without dragging: the edge pills, and
   // "Reset the map view", which "returns to the default view and leaves the
   // filters alone".
@@ -2624,7 +2730,7 @@ test('home map chrome: bars in the stage, a theme strip toolbar, one phone row, 
 
   // Answers to the #56 reviews.
   // One open surface however a node is reached (Codex, CodeRabbit).
-  assert.match(component, /const openSelected = \(member: DynamicMapNode, link: Element, viaKeyboard = false\) => \{\s*if \(!selectedEl\) return;[\s\S]*?closeFilterPanels\(\);\s*resetUpdateState\(\);/);
+  assert.match(component, /const openSelected = \(member: DynamicMapNode, link: Element, viaKeyboard = false\) => \{\s*if \(!selectedEl\) return;[\s\S]*?closeFilterPanels\(\);[\s\S]*?resetUpdateState\(\);/);
   // A pick queues the strip's picked-first sort for when the strip is let go;
   // a mouse leaving or focus moving runs it, a lifted finger does not.
   assert.match(component, /pickedThemes = togglePick\(pickedThemes, theme\);\s*\/\/[^\n]*\n\s*stripSortPending = true;/);
@@ -2637,8 +2743,17 @@ test('home map chrome: bars in the stage, a theme strip toolbar, one phone row, 
   // and a zoom clamps its width before it centres (CodeRabbit).
   assert.match(component, /viewIsDefault = Boolean\(options\.isDefault\) \|\| sameView\(currentViewBox, defaultViewBox\(\)\);/);
   assert.match(component, /const \{ width: clampedWidth, height \} = clampViewBox\(\{ x: 0, y: 0, width, height: width \/ stageAspect\(\) \}\);/);
-  // The floating card is placed by layout, not by pointer (CodeRabbit).
-  assert.match(component, /if \(!selectedEl \|\| selectedEl\.hidden \|\| !target \|\| mapLayout\(\) === 'phone'\) return;/);
+  // The floating card was placed by layout, not by pointer (CodeRabbit). It
+  // went in step 4 (map-polish-audit.md § 5: "June's floating card goes"):
+  // the container's width picks the dock or the sheet in CSS, and nothing
+  // that opens, closes or pans the inspector reads the pointer.
+  assert.doesNotMatch(component, /if \(!selectedEl \|\| selectedEl\.hidden \|\| !target \|\| mapLayout\(\) === 'phone'\) return;/);
+  const inspectorScript = component.slice(
+    component.indexOf('    // ---- Selected-node panel + owner edit-link request'),
+    component.indexOf('    // Chapters keep their <a href> for no-JS navigation')
+  );
+  assert.ok(inspectorScript.length > 0, 'the inspector script must be present');
+  assert.doesNotMatch(inspectorScript, /coarsePointer|pointer: coarse/);
   // The editor's toggles and the edge pills are the shared Chip (CodeRabbit),
   // the toggles' labels stay on one line, and the pills keep the map's sides.
   assert.match(component, /<Chip\s+as="button"\s+class="gp-home-map-filter-option is-theme"\s+data-theme-filter=\{theme\.id\}/);
@@ -2665,6 +2780,578 @@ test('home map chrome: bars in the stage, a theme strip toolbar, one phone row, 
   // every theme shows.
   assert.match(webmcp, /activeThemes: \(pickedThemes\.length \? pickedThemes : themeFilters\)/);
   assert.doesNotMatch(webmcp, /\.click\(|dispatchEvent|setAttribute/);
+});
+
+test('home map list: search matches names and places, and groups follow the legend', () => {
+  // map-polish-audit.md § 5: "Search matches names and places, and one polite
+  // live region announces the count once typing pauses. Rows ... grouped by
+  // type with counts".
+  assert.deepEqual(searchWords("  Côte  D'IVOIRE "), ['cote', "d'ivoire"]);
+  assert.equal(entryMatchesSearch({ name: "Greenpill Côte d'Ivoire", place: 'Abidjan' }, searchWords('cote')), true, 'accents do not matter');
+  assert.equal(entryMatchesSearch({ name: 'Greenpill Nigeria', place: 'Awka' }, searchWords('awka')), true, 'places match');
+  assert.equal(entryMatchesSearch({ name: 'Greenpill Nigeria', place: 'Awka' }, searchWords('greenpill awka')), true, 'every word matches, in the name or the place');
+  assert.equal(entryMatchesSearch({ name: 'Greenpill Nigeria', place: 'Awka' }, searchWords('greenpill kenya')), false);
+  assert.equal(entryMatchesSearch({ name: 'Anyone', place: '' }, searchWords('   ')), true, 'an empty search keeps every row');
+  const groups = groupListEntries([
+    { type: 'member', name: 'zed', place: '' },
+    { type: 'chapter', name: 'Greenpill NYC', place: 'New York City' },
+    { type: 'member', name: 'Ash', place: 'Florida' },
+    { type: 'chapter', name: 'Greenpill Brasil', place: 'Rio de Janeiro' },
+  ]);
+  assert.deepEqual(
+    groups.map((group) => [group.type, group.entries.map((entry) => entry.name)]),
+    [['chapter', ['Greenpill Brasil', 'Greenpill NYC']], ['member', ['Ash', 'zed']]],
+    "the legend's order, names sorted, and no empty group"
+  );
+  assert.equal(listSearchAnnouncement(3, 29, 'awka '), '3 of 29 nodes match "awka".');
+  assert.equal(listSearchAnnouncement(1, 29, 'awka'), '1 of 29 nodes matches "awka".');
+  assert.equal(listSearchAnnouncement(0, 29, 'xyz'), 'No nodes match "xyz".');
+  assert.equal(listSearchAnnouncement(29, 29, ''), '29 nodes in the list.');
+  // A rebuild keeps focus on the same node's row; when an update removed it,
+  // on the next row that remains; with nothing after it, on no row, and the
+  // list's first control takes it (Codex on #59).
+  const before = ['chapter:a', 'chapter:b', 'steward:c', 'member:d', 'member:e'];
+  assert.equal(rowToFocusAfterRebuild(before, 'steward:c', before), 'steward:c');
+  assert.equal(rowToFocusAfterRebuild(before, 'steward:c', ['chapter:a', 'chapter:b', 'member:d', 'member:e']), 'member:d');
+  assert.equal(rowToFocusAfterRebuild(before, 'steward:c', ['chapter:a', 'chapter:b', 'member:e']), 'member:e');
+  assert.equal(rowToFocusAfterRebuild(before, 'member:e', ['chapter:a', 'chapter:b', 'steward:c', 'member:d']), null);
+  assert.equal(rowToFocusAfterRebuild(before, 'steward:c', ['chapter:a', 'chapter:b']), null);
+  assert.equal(rowToFocusAfterRebuild(before, '', before), null);
+  // A node that arrives with the update is never the "next" row.
+  assert.equal(rowToFocusAfterRebuild(before, 'member:d', ['chapter:a', 'member:new', 'member:e']), 'member:e');
+});
+
+test('home map list: a dock beside the map, a sheet inside the stage, a modal sheet on phones', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  // § 5: "The list opens in the same dock: the kicker 'Visible nodes', the
+  // heading 'Map list' (an h2, as today), a count, and a search field labelled
+  // 'Search the map' with the placeholder 'Name or place'."
+  assert.match(component, /<p class="gp-home-map-list-kicker" data-home-map-list-kicker>Visible nodes<\/p>\s*<h2 id="gp-home-map-list-title">Map list<\/h2>/);
+  assert.match(component, /<span class="gp-home-map-list-count" data-home-map-list-count>0<\/span>/);
+  assert.match(component, /<label class="gp-home-map-sr" for="gp-home-map-list-search">Search the map<\/label>/);
+  assert.match(component, /id="gp-home-map-list-search"\s+type="search"\s+data-home-map-list-search\s+placeholder="Name or place"/);
+  // "one polite live region announces the count once typing pauses"
+  assert.match(component, /<p class="gp-home-map-sr" data-home-map-list-live aria-live="polite"><\/p>/);
+  assert.match(component, /window\.clearTimeout\(listAnnounceTimer\);\s*listAnnounceTimer = window\.setTimeout\(\(\) => \{[\s\S]*?listSearchAnnouncement\(/);
+  // Each opening clears the last announcement along with the search, so a
+  // reopened list never reads out an old count (Codex on #59).
+  assert.match(component, /listQuery = '';\s*if \(listSearch\) listSearch\.value = '';\s*if \(listLive\) listLive\.textContent = '';/);
+  // "Rows are at least 44px tall (mark, name, place cut with an ellipsis),
+  // grouped by type with counts".
+  // The list's sizes are set once as map properties (CodeRabbit on #59):
+  // a 44px target for rows, the search field and Close, a 16px icon and a
+  // 10px mark, with the shared pill radius and spacing tokens beside them.
+  assert.match(component, /--gp-map-target: 44px;\s*--gp-map-icon: 16px;\s*--gp-map-mark: 10px;/);
+  assert.match(component, /\.gp-home-map-list-row \{[\s\S]*?min-block-size: var\(--gp-map-target\);/);
+  assert.match(component, /\.gp-home-map-list-close \{\s*width: var\(--gp-map-target\);\s*height: var\(--gp-map-target\);/);
+  assert.match(component, /\.gp-home-map-list-search input \{[\s\S]*?min-height: var\(--gp-map-target\);/);
+  assert.match(component, /\.gp-home-map-list-mark \{\s*width: var\(--gp-map-mark\);\s*height: var\(--gp-map-mark\);\s*border-radius: var\(--gp-radius-pill\);/);
+  const listCss = component.match(/\n  \.gp-home-map-list-drawer \{[\s\S]*?\n  \.gp-home-map-list-mark\.is-chapter \{/)?.[0] ?? '';
+  assert.ok(listCss.length > 0, 'list CSS block found');
+  assert.doesNotMatch(listCss, /\b(?:44|16|10|2)px;|999px/);
+  assert.match(component, /groupListEntries\(entries\)\.forEach\(\(group\) => \{[\s\S]*?makeListPart\('h3', 'gp-home-map-list-group-title'\)[\s\S]*?makeListPart\('span', 'gp-home-map-list-group-count', String\(group\.entries\.length\)\)[\s\S]*?makeListPart\('ul', 'gp-home-map-list-rows'\)/);
+  // "Hovering or focusing a row rings its pin and shows its tooltip." The
+  // hovered row and the keyboard-focused row are tracked apart, the latest
+  // in front: when the pointer leaves, a row that keeps focus previews
+  // again, and on blur a row still under the pointer does (Codex on #59).
+  // The focus a click leaves previews nothing, as on the map's pins.
+  assert.match(component, /row\.addEventListener\('pointerenter', \(\) => \{\s*hoveredListNode = node;\s*previewListNode\(node\);\s*\}\);/);
+  assert.match(component, /row\.addEventListener\('pointerleave', \(\) => \{\s*hoveredListNode = null;\s*restoreListPreview\(\);\s*\}\);/);
+  assert.match(component, /row\.addEventListener\('focus', \(\) => \{\s*if \(!row\.matches\(':focus-visible'\)\) return;\s*focusedListNode = node;\s*previewListNode\(node\);\s*\}\);/);
+  assert.match(component, /row\.addEventListener\('blur', \(\) => \{\s*if \(focusedListNode !== node\) return;\s*focusedListNode = null;\s*restoreListPreview\(\);\s*\}\);/);
+  assert.match(component, /const restoreListPreview = \(\) => \{\s*const node = hoveredListNode \?\? focusedListNode;\s*if \(node\) previewListNode\(node\);\s*else clearListTarget\(\);\s*\};/);
+  assert.doesNotMatch(component, /row\.addEventListener\('(?:pointerleave|blur)', clearListTarget\)/);
+  // A row previews beside a selected node too, and the selection's state
+  // comes back when the preview ends (Codex on #59). The selected node stays
+  // lit meanwhile, and a selected chapter's state is the map at rest.
+  assert.match(component, /const previewListNode = \(node: HTMLElement\) => \{[\s\S]*?ringListTarget\(node\);\s*setFocus\(node\);\s*\};/);
+  assert.doesNotMatch(component, /if \(!selectedFocusTarget\) setFocus\(node\);/);
+  assert.match(component, /const clearListTarget = \(\) => \{\s*if \(!listTargetNode\) return;\s*ringListTarget\(null\);\s*if \(pointerFocusTarget \|\| hoveredStackKey\) return;\s*clearFocus\(\);\s*\};/);
+  assert.match(component, /const selectedId = selectedFocusTarget\?\.getAttribute\('data-node-id'\);\s*if \(selectedId\) adjacentIds\.add\(selectedId\);/);
+  assert.match(component, /if \(target === selectedFocusTarget && target\.classList\.contains\('is-chapter'\)\) \{\s*clearFocusState\(\);\s*return;\s*\}/);
+  // Rebuilt stack markers take the ring over from the ones they replace,
+  // and a resize keeps the preview in front of the selection (Codex on #59).
+  const recomputeClusters = component.match(/const recomputeClustersNow = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(recomputeClusters, /if \(listTargetNode\) previewListNode\(listTargetNode\);/);
+  assert.match(component, /const activeFocusTarget = listTargetNode \?\? selectedFocusTarget \?\? pointerFocusTarget;/);
+  assert.match(component, /\.gp-home-map-node-link\.is-list-target \.gp-home-map-node-ring \{/);
+  assert.match(component, /\.gp-home-map-overlap-stack\.is-list-target \.gp-home-map-overlap-disc \{/);
+  // A live update rebuilding the rows keeps keyboard focus on the same node.
+  // When the update removed that node, focus moves to the next row that
+  // remains, else to the list's first control, also when no row is left:
+  // it never drops out of the list or a phone's modal sheet (Codex on #59).
+  const renderList = component.match(/\n    renderNodeList = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(renderList, /const focusId = active\s*\? rowToFocusAfterRebuild\(previousIds, clean\(active\.dataset\.listNodeId\), entries\.map\(\(entry\) => clean\(entry\.node\.dataset\.nodeId\)\)\)\s*: null;/);
+  assert.match(renderList, /if \(focusId && row\.dataset\.listNodeId === focusId\) focusRow = row;/);
+  assert.match(renderList, /if \(keepFocusOn\) keepFocusOn\.focus\(\{ preventScroll: true \}\);\s*else if \(active\) listEntryControl\(\)\?\.focus\(\{ preventScroll: true \}\);/);
+  assert.match(renderList, /'No visible nodes match these filters\.'\s*\)\);\s*if \(active\) listEntryControl\(\)\?\.focus\(\{ preventScroll: true \}\);\s*return;/);
+  assert.match(renderList, /hoveredListNode = null;\s*focusedListNode = null;\s*clearListTarget\(\);\s*listItems\.textContent = '';/);
+  // The first control is the search, or Close on a touch screen, as when
+  // the list opens.
+  assert.match(component, /const listEntryControl = \(\) => \{\s*const typing = !window\.matchMedia\('\(pointer: coarse\)'\)\.matches;\s*return \(typing \? listSearch : listClose\)/);
+  assert.match(component, /window\.requestAnimationFrame\(\(\) => listEntryControl\(\)\?\.focus\(\{ preventScroll: true \}\)\);/);
+  // "The list is non-modal on desktop: the map stays usable" and on phones
+  // "The list opens as a full-height sheet, modal on phones as today". Width
+  // picks the layout, never the pointer.
+  const showList = component.match(/const showNodeListForLayout = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(showList, /const modal = mapLayout\(\) === 'phone';/);
+  assert.match(showList, /if \(modal\) listDrawer\.showModal\(\);\s*else listDrawer\.show\(\);/);
+  assert.match(component, /renderNodeList\(\);\s*showNodeListForLayout\(\);/);
+  assert.doesNotMatch(component, /listDrawer\.setAttribute\('aria-modal', isTouchMap\(\)/);
+  // An open list that crosses 520px reopens in the new mode, keeping its
+  // search, scroll and focus, and the close event that follows changes
+  // nothing (Codex on #59).
+  assert.match(showList, /if \(listDrawer\.open && listShownModal === modal\) return;/);
+  assert.match(showList, /if \(listDrawer\.open\) listDrawer\.close\(\);/);
+  assert.match(showList, /if \(listItems\) listItems\.scrollTop = scrollTop;\s*focused\?\.focus\(\{ preventScroll: true \}\);/);
+  assert.match(component, /const scheduleMapResizeSync = \(\) => \{[\s\S]*?if \(listDrawer\?\.open && !listDrawer\.hidden\) showNodeListForLayout\(\);[\s\S]*?window\.clearTimeout\(mapResizeTimer\);/);
+  // Changed on purpose (map-polish-audit.md § 5): the list and a selected
+  // node no longer share the map: "one right-hand dock that holds either
+  // the list or the selected node", and "Picking a row swaps
+  // the dock to that node, with a way back to the list". So the list never
+  // has to give way to a card when the layout leaves the dock (Codex on
+  // #59): opening the inspector closes the list in every layout, keeping
+  // what it showed for Back.
+  assert.doesNotMatch(component, /yieldListToSelection/);
+  const openInspector = component.match(/const openSelected = \(member: DynamicMapNode, link: Element, viaKeyboard = false\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(openInspector, /const fromList = Boolean\(listDrawer && !listDrawer\.hidden\);\s*if \(fromList\) \{\s*listBehindInspector = \{\s*opener: listOpener,\s*subset: listSubset \? \{ keys: \[\.\.\.listSubset\.keys\], label: listSubset\.label \} : null,\s*query: listQuery,\s*scrollTop: listItems\?\.scrollTop \?\? 0,\s*\};\s*closeNodeList\(\);/);
+  assert.match(openInspector, /if \(selectedBack\) selectedBack\.hidden = !listBehindInspector;/);
+  // A pick from the list moves focus into the inspector, since its row goes
+  // with the list: to Back first.
+  assert.match(openInspector, /if \(viaKeyboard \|\| fromList \|\| focusWasInInspector\) inspectorEntryControl\(\)\?\.focus\(\{ preventScroll: true \}\);/);
+  assert.match(component, /const inspectorEntryControl = \(\) => \(selectedBack && !selectedBack\.hidden \? selectedBack : selectedClose\);/);
+  // Back brings the list back as it was, with focus on the row just shown.
+  const back = component.match(/selectedBack\?\.addEventListener\('click', \(\) => \{([\s\S]*?)\n    \}\);\n/)?.[1] ?? '';
+  assert.match(back, /closeSelected\(\{ returnFocus: false \}\);\s*openNodeList\(behind\.opener, behind\.subset\);/);
+  assert.match(back, /listSearch\.value = behind\.query;\s*listQuery = behind\.query;\s*renderNodeList\(\);/);
+  assert.match(back, /if \(listItems\) listItems\.scrollTop = behind\.scrollTop;/);
+  assert.match(back, /\(row \?\? listEntryControl\(\)\)\?\.focus\(\{ preventScroll: true \}\);/);
+  assert.match(component, /<button type="button" class="gp-home-map-selected-back" data-selected-back aria-label="Back to the map list" hidden>/);
+  assert.match(component, /listDrawer\?\.addEventListener\('close', \(\) => \{\s*if \(listDrawer\.open\) return;\s*syncNodeListClosed\(\);/);
+  // The dock: "inset 12px, the stage's full height, about 340px wide", and
+  // "While the dock is open, both bars end at its edge."
+  const drawerCss = component.match(/\n  \.gp-home-map-list-drawer \{([^}]*)\}/)?.[1] ?? '';
+  assert.match(drawerCss, /inset-block: var\(--gp-map-inset\);/);
+  assert.match(drawerCss, /inset-inline-end: var\(--gp-map-inset\);/);
+  assert.match(drawerCss, /width: min\(var\(--gp-map-dock-width\), calc\(100% - var\(--gp-map-inset\) \* 2\)\);/);
+  assert.match(component, /--gp-map-dock-width: 340px;/);
+  assert.match(component, /\.gp-home-map-canvas\.has-list-drawer \{\s*--gp-map-end: calc\(var\(--gp-map-inset\) \* 2 \+ var\(--gp-map-dock-width\)\);/);
+  assert.match(component, /\.gp-home-map-controls \{[\s\S]*?inset-inline-end: var\(--gp-map-end\);/);
+  // "Containers from 521 to 860px: ... the list open[s] as a bottom sheet
+  // inside the stage, because a 340px dock would cover most of the map."
+  assert.match(component, /@container \(max-width: 860px\) \{\s*\.gp-home-map-canvas \{\s*--gp-map-layout: sheet;/);
+  const phoneCss = component.match(/@container \(max-width: 520px\) \{([\s\S]*?)\n  \}\n/)?.[1] ?? '';
+  assert.match(phoneCss, /\.gp-home-map-list-drawer \{\s*position: fixed;[\s\S]*?height: calc\(100dvh - var\(--gp-space-2xl\)\);/);
+  // "The list scrolls the same way under its search field".
+  assert.match(component, /\.gp-home-map-list-items \{[\s\S]*?min-height: 0;[\s\S]*?overflow-y: auto;/);
+  // Picking a row selects its node, and the inspector takes the list's place
+  // in every layout (§ 5: "Picking a row swaps the dock to that node, with a
+  // way back to the list"); step 2's docked list stayed open beside it.
+  assert.match(component, /const activateListNode = \(node: HTMLElement, viaKeyboard: boolean\) => \{\s*clearListTarget\(\);\s*activateMapNode\(node, viaKeyboard\);\s*\};/);
+  assert.match(component, /row\.addEventListener\('click', \(event\) => activateListNode\(node, event\.detail === 0 \|\| row\.matches\(':focus-visible'\)\)\);/);
+  // Escape empties a search before it closes the list, wherever focus is in
+  // the list, a row included (CodeRabbit on #59).
+  assert.match(component, /listDrawer\?\.addEventListener\('keydown', \(event\) => \{\s*if \(event\.key !== 'Escape' \|\| !listSearch\?\.value\) return;\s*event\.preventDefault\(\);\s*event\.stopPropagation\(\);/);
+  assert.doesNotMatch(component, /listSearch\?\.addEventListener\('keydown'/);
+  // Step 2 kept a selected node's card to the map's side of a docked list
+  // until "step 4 moves the card into the dock itself" (CodeRabbit on #59).
+  // Reversed on purpose (§ 5): the inspector is that dock, so the card's
+  // placement beside the list goes.
+  assert.doesNotMatch(component, /const dockRect = mapLayout\(\) === 'dock' && listDrawer/);
+  assert.match(component, /const syncNodeListClosed = \(\) => \{[\s\S]*?layoutThemeStrip\(\);\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*syncSelectedOverlay\(\);\s*scheduleChapterLabels\(\);\s*\};/);
+  // A touch screen opens the list at Close, so no on-screen keyboard rises.
+  assert.match(component, /const typing = !window\.matchMedia\('\(pointer: coarse\)'\)\.matches;/);
+});
+
+test('home map edge pins and labels at rest: the clamp and the placement rules', () => {
+  // § 5, "Edge pins": "the rendered pin and its hover and focus target sit
+  // inside the drawable inset, and the data keeps the true coordinate."
+  assert.equal(PIN_HIT_RADIUS, 4.8);
+  assert.deepEqual(clampPinToDrawing({ x: 100, y: 40 }), { x: 100, y: 40 });
+  const lonToX = (lon: number) => ((lon + 180) / 360) * 200;
+  const latToY = (lat: number) => ((90 - lat) / 180) * 100;
+  // A confirmed place on the 180th meridian, and the -180 that clipped Amio.
+  assert.deepEqual(clampPinToDrawing({ x: lonToX(180), y: latToY(-17.7) }), { x: 200 - PIN_HIT_RADIUS, y: latToY(-17.7) });
+  assert.deepEqual(clampPinToDrawing({ x: lonToX(-180), y: latToY(0) }), { x: PIN_HIT_RADIUS, y: latToY(0) });
+  // The far north, and a point in the crop's bottom band (65°S), move in to
+  // the inset. A point south of the crop, which ends at about 68.4°S, is not
+  // on the map's edge (Codex on #60): it stays where it is, off the map, as
+  // it did before the clamp, rather than drawn near 60°S.
+  assert.equal(clampPinToDrawing({ x: 100, y: latToY(90) }).y, PIN_HIT_RADIUS);
+  assert.equal(clampPinToDrawing({ x: 100, y: latToY(-65) }).y, MAP_DRAWING.height - PIN_HIT_RADIUS);
+  assert.deepEqual(clampPinToDrawing({ x: 100, y: latToY(-75) }), { x: 100, y: latToY(-75) });
+  assert.deepEqual(
+    clampPinToDrawing({ x: lonToX(180), y: latToY(-77.8) }, 8.5, MAP_DRAWING, 12),
+    { x: lonToX(180), y: latToY(-77.8) }
+  );
+  // Only the drawing moves: the point passed in is left as it was.
+  const truePoint = { x: 200, y: 0 };
+  clampPinToDrawing(truePoint);
+  assert.deepEqual(truePoint, { x: 200, y: 0 });
+  // On a small map the 44px hit circle is wider than 4.8 map units, and the
+  // inset follows it (Codex on #60): at a 521px sheet, about 8.5 units.
+  assert.deepEqual(clampPinToDrawing({ x: lonToX(180), y: 40 }, 8.5), { x: 191.5, y: 40 });
+  // The stage clips to rounded corners (Codex on #60). In a corner's square
+  // the centre stays within `cornerRadius - inset` of the arc's centre, so
+  // the whole circle fits inside the curve; along an edge nothing changes,
+  // and a corner rounder than the inset changes nothing.
+  const cornered = clampPinToDrawing({ x: 200, y: 88 }, 4.8, MAP_DRAWING, 12);
+  const arc = { x: 200 - 12, y: 88 - 12 };
+  assert.ok(Math.abs(Math.hypot(cornered.x - arc.x, cornered.y - arc.y) - (12 - 4.8)) < 1e-9);
+  assert.ok(cornered.x > arc.x && cornered.y > arc.y, 'the pin stays toward its corner');
+  assert.ok(cornered.x <= 200 - 4.8 && cornered.y <= 88 - 4.8, 'and inside the rectangular inset');
+  assert.deepEqual(clampPinToDrawing({ x: 200, y: 40 }, 4.8, MAP_DRAWING, 12), { x: 195.2, y: 40 });
+  assert.deepEqual(clampPinToDrawing({ x: 200, y: 88 }, 4.8, MAP_DRAWING, 4), { x: 195.2, y: 83.2 });
+  // Every corner keeps the circle inside: no point of it lies beyond the curve.
+  for (const corner of [{ x: 0, y: 0 }, { x: 200, y: 0 }, { x: 0, y: 88 }, { x: 200, y: 88 }]) {
+    const pin = clampPinToDrawing(corner, 4.8, MAP_DRAWING, 12);
+    const arcCenter = { x: corner.x === 0 ? 12 : 188, y: corner.y === 0 ? 12 : 76 };
+    assert.ok(Math.hypot(pin.x - arcCenter.x, pin.y - arcCenter.y) + 4.8 <= 12 + 1e-9, `circle inside the curve at ${corner.x},${corner.y}`);
+  }
+  // The geometry under the clamp, which the badges share: a circle moved in
+  // just enough to lie inside a box with rounded corners.
+  const roundBox = { x: 10, y: 10, width: 100, height: 50 };
+  assert.deepEqual(keepCircleInside({ x: 50, y: 30 }, 4, roundBox, 8), { x: 50, y: 30 });
+  assert.deepEqual(keepCircleInside({ x: 5, y: 30 }, 4, roundBox, 8), { x: 14, y: 30 });
+  const inCorner = keepCircleInside({ x: 10, y: 10 }, 4, roundBox, 8);
+  assert.ok(Math.abs(Math.hypot(inCorner.x - 18, inCorner.y - 18) - 4) < 1e-9, 'a corner keeps the circle on its curve');
+  assert.equal(circleFitsInside({ x: 50, y: 30 }, 4, roundBox, 8), true);
+  assert.equal(circleFitsInside({ x: 13, y: 30 }, 4, roundBox, 8), false);
+  // Inside the rectangle, but its circle crosses the curve.
+  assert.equal(circleFitsInside({ x: 14.5, y: 14.5 }, 4, roundBox, 8), false);
+  assert.equal(circleFitsInside({ x: 14.5, y: 14.5 }, 4, roundBox, 0), true);
+  // A badge with no side that fits (CodeRabbit on #60): beside an anchor in
+  // view it moves in until its target is whole and clear of the corner's
+  // curve. Beside an anchor out of view (a zoomed map, or a spot south of the
+  // crop) it stays put, rather than drawn at the view's edge, far from its pin.
+  const badgeView = { x: 0, y: 0, width: 100, height: 50 };
+  const movedIn = badgeFallbackCenter({ x: 96, y: 4 }, { x: 99, y: 1 }, 3, badgeView, 6);
+  assert.ok(circleFitsInside(movedIn, 3, badgeView, 6), 'the moved badge keeps its target inside the curve');
+  assert.ok(movedIn.x > 90 && movedIn.y < 10, 'and stays in its corner');
+  assert.deepEqual(badgeFallbackCenter({ x: 120, y: 20 }, { x: 123, y: 17 }, 3, badgeView, 6), { x: 123, y: 17 });
+  assert.deepEqual(badgeFallbackCenter({ x: 50, y: 70 }, { x: 53, y: 67 }, 3, badgeView, 6), { x: 53, y: 67 });
+
+  // § 5: "Each label tries right, left, above and below its dot, and hides
+  // when it would touch another label, a pin, a badge, a bar or the dock."
+  assert.deepEqual([...LABEL_SIDES], ['right', 'left', 'above', 'below']);
+  const request = { anchor: { x: 50, y: 40 }, gap: 2, width: 10, height: 3 };
+  assert.deepEqual(labelBoxOnSide(request, 'right'), { x: 52, y: 38.5, width: 10, height: 3 });
+  assert.deepEqual(labelBoxOnSide(request, 'left'), { x: 38, y: 38.5, width: 10, height: 3 });
+  assert.deepEqual(labelBoxOnSide(request, 'above'), { x: 45, y: 35, width: 10, height: 3 });
+  assert.deepEqual(labelBoxOnSide(request, 'below'), { x: 45, y: 42, width: 10, height: 3 });
+  const bounds = { x: 0, y: 0, width: 200, height: 88 };
+  const none = { circles: [], boxes: [] };
+  assert.equal(placeMapLabels([request], none, bounds)[0]?.side, 'right');
+  // Off the map in view on the right: the left side.
+  assert.equal(placeMapLabels([request], none, { x: 0, y: 0, width: 60, height: 88 })[0]?.side, 'left');
+  // A pin on the right, then a bar on the left: above; all four blocked: hidden.
+  const pinRight = { center: { x: 56, y: 40 }, radius: 1 };
+  assert.equal(placeMapLabels([request], { circles: [pinRight], boxes: [] }, bounds)[0]?.side, 'left');
+  const barLeft = { x: 30, y: 30, width: 12, height: 20 };
+  assert.equal(placeMapLabels([request], { circles: [pinRight], boxes: [barLeft] }, bounds)[0]?.side, 'above');
+  const dockAboveAndBelow = { x: 40, y: 30, width: 20, height: 30 };
+  assert.equal(placeMapLabels([request], { circles: [], boxes: [dockAboveAndBelow] }, bounds)[0], null);
+  // Touching counts: a box that shares the right label's edge blocks it.
+  const touching = { x: 62, y: 38.5, width: 5, height: 3 };
+  assert.equal(placeMapLabels([request], { circles: [], boxes: [touching] }, bounds)[0]?.side, 'left');
+  // The first label is placed first; the next keeps clear of it.
+  const second = { anchor: { x: 50, y: 42 }, gap: 2, width: 10, height: 3 };
+  const placed = placeMapLabels([request, second], none, bounds);
+  assert.deepEqual(placed.map((label) => label?.side), ['right', 'left']);
+  // A label's own dot never blocks it: the gap clears the dot's circle.
+  const ownDot = { center: request.anchor, radius: 1.5 };
+  assert.equal(placeMapLabels([request], { circles: [ownDot], boxes: [] }, bounds)[0]?.side, 'right');
+
+  // Bounds (CodeRabbit on #60): a label never leaves the map in view. A dot
+  // on the top edge sends its label below; one in the bottom right corner,
+  // left; a name wider than the map in view hides.
+  const topEdge = { anchor: { x: 100, y: 1 }, gap: 2, width: 10, height: 3 };
+  assert.equal(placeMapLabels([topEdge], none, bounds)[0]?.side, 'below');
+  const bottomRight = { anchor: { x: 195, y: 87 }, gap: 2, width: 10, height: 3 };
+  assert.equal(placeMapLabels([bottomRight], none, bounds)[0]?.side, 'above');
+  const tooWide = { anchor: { x: 100, y: 40 }, gap: 2, width: 210, height: 3 };
+  assert.equal(placeMapLabels([tooWide], none, bounds)[0], null);
+  // Every label placed anywhere on a grid of dots, edges and corners
+  // included, lies wholly inside the bounds.
+  const view = { x: 20, y: 10, width: 120, height: 60 };
+  // A view away from the origin still places labels (CodeRabbit on #60), so
+  // the grid below cannot pass by placing none.
+  assert.equal(placeMapLabels([request], none, view)[0]?.side, 'right');
+  let gridPlaced = 0;
+  for (let x = view.x; x <= view.x + view.width; x += 6) {
+    for (let y = view.y; y <= view.y + view.height; y += 5) {
+      const placedLabel = placeMapLabels([{ anchor: { x, y }, gap: 2, width: 14, height: 3 }], none, view)[0];
+      if (!placedLabel) continue;
+      gridPlaced += 1;
+      const { box } = placedLabel;
+      assert.ok(
+        box.x >= view.x && box.y >= view.y && box.x + box.width <= view.x + view.width && box.y + box.height <= view.y + view.height,
+        `label at ${x},${y} placed ${placedLabel.side} outside the view`
+      );
+    }
+  }
+  assert.ok(gridPlaced > 0, 'labels are placed in an offset view');
+});
+
+test('home map labels and hit targets: chapter labels at rest, 44px pins and badges, 48px text buttons', async () => {
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  // Edge pins: chapters and people are drawn through the clamp, and their
+  // lines end where the pins are drawn; the data keeps its true coordinate.
+  assert.match(component, /const mapPoint = \{ x: lonToX\(c\.data\.long\), y: latToY\(c\.data\.lat\) \};\s*const pin = clampPinToDrawing\(mapPoint\);/);
+  assert.match(component, /x: pin\.x,\s*y: pin\.y,\s*mapX: mapPoint\.x,\s*mapY: mapPoint\.y,/);
+  assert.match(component, /const mapPoint = \{ x: lonToX\(member\.long\), y: latToY\(member\.lat\) \};\s*const \{ x, y \} = clampPinToDrawing\(mapPoint\);/);
+  assert.match(component, /const drawn = clampPinToDrawing\(\{ x: lonToX\(long\), y: latToY\(lat\) \}\);\s*nodeById\.set\(id, \{\s*x: existing\?\.x \?\? drawn\.x,\s*y: existing\?\.y \?\? drawn\.y,/);
+  assert.match(component, /<circle class="gp-home-map-node-hit" cx=\{c\.x\} cy=\{c\.y\} r=\{PIN_HIT_RADIUS\} \/>/);
+  assert.match(component, /const NODE_HIT_RADIUS = PIN_HIT_RADIUS;/);
+  // The inset grows with the hit circle on a small map (Codex on #60): every
+  // pin carries its true point, each stacks rebuild first moves edge pins in
+  // by the scaled hit radius, and their lines are drawn again to meet them.
+  assert.match(component, /data-map-x=\{c\.mapX\.toFixed\(3\)\}\s*data-map-y=\{c\.mapY\.toFixed\(3\)\}/);
+  assert.match(component, /group\.dataset\.mapX = mapPoint\.x\.toFixed\(3\);\s*group\.dataset\.mapY = mapPoint\.y\.toFixed\(3\);/);
+  const placePins = component.match(/const placePinsInsideDrawing = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(placePins, /const inset = pinHitRadius\(\);\s*const corner = stageCornerRadius\(\);/);
+  const stageCorner = component.match(/const stageCornerRadius = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(stageCorner, /const clipRadius = \(Number\.parseFloat\(stage\.borderTopLeftRadius\) \|\| 0\) - \(Number\.parseFloat\(stage\.borderTopWidth\) \|\| 0\);\s*return pxToViewBox\(Math\.max\(0, clipRadius\)\);/);
+  assert.match(placePins, /const widest = largestMapView\(stageAspect\(\), FULL_VIEW_BOX\);\s*const shownDrawing = \{ x: FULL_VIEW_BOX\.x, y: widest\.y, width: FULL_VIEW_BOX\.width, height: widest\.height \};/);
+  assert.match(placePins, /const drawn = clampPinToDrawing\(\{ x, y \}, inset, shownDrawing, corner\);/);
+  // Every circle of a pin is brought to it, not just the dot, so an owner
+  // ring added after a claim follows a moved pin too (CodeRabbit on #60).
+  assert.match(placePins, /pin\.querySelectorAll\(PIN_CIRCLES\)\.forEach\(\(circle\) => \{\s*if \(close\(circle, 'cx', drawn\.x\) && close\(circle, 'cy', drawn\.y\)\) return;/);
+  assert.match(component, /const drawn = nodeCenter\(existing\) \?\? \{ x, y \};\s*existing\.insertBefore\(\s*makeCircle\('gp-home-map-node-owner-ring', drawn\.x, drawn\.y,/);
+  assert.match(placePins, /if \(!moved\) return;\s*if \(lastThreadInputs\) renderDynamicThreads\(lastThreadInputs\.nodes, lastThreadInputs\.edges\);/);
+  // What is drawn at a moved pin follows it: the selected web and card, and
+  // the tooltip of the node it shows (Codex on #60).
+  assert.match(placePins, /if \(selectedId\) markSelectedThreads\(selectedId\);\s*syncSelectedOverlay\(\);/);
+  assert.match(placePins, /const shown = activeFocusNodeId\s*\? root\.querySelector\([^\n]*\)\s*: null;\s*if \(shown\) setFocus\(shown\);/);
+  assert.match(component, /if \(!dynamicThreadsGroup\) return;\s*lastThreadInputs = \{ nodes: rawNodes, edges: rawEdges \};/);
+
+  // § 5: "pins and badges stay at least 44px at every map size (their hit
+  // circles scale with the map)".
+  assert.match(component, /const POINTER_TARGET_RADIUS_PX = 22;/);
+  assert.match(component, /const minTargetRadius = \(\) => pxToViewBox\(POINTER_TARGET_RADIUS_PX\);/);
+  assert.match(component, /const pinHitRadius = \(\) => Math\.max\(NODE_HIT_RADIUS, minTargetRadius\(\)\);/);
+  assert.match(component, /const hitRadius = Math\.max\(pinRadius, r \+ 3\.2, minViewRadius\);/);
+  assert.match(component, /const badgeHitRadius = \(markerRadius: number\) => Math\.max\(markerRadius \+ pxToViewBox\(3\), minTargetRadius\(\)\);/);
+  assert.match(component, /const hitRadius = badgeHitRadius\(markerRadius\);/);
+  // A badge set beside its pins keeps its whole 44px target in view, not
+  // just its disc, and a badge with no such side moves in (Codex on #60),
+  // both clear of the stage's rounded corners; an anchor out of view keeps
+  // its badge beside it (CodeRabbit on #60).
+  const badgeCenter = component.match(/const badgeCenterFor = \([\s\S]*?\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(badgeCenter, /const target = badgeHitRadius\(radius\);/);
+  assert.match(badgeCenter, /if \(!circleFitsInside\(center, target, box, corner\)\) continue;/);
+  assert.match(badgeCenter, /return badgeFallbackCenter\(anchor, beside, target, box, corner\);/);
+  assert.doesNotMatch(badgeCenter, /clampNumber\(/);
+  // The live pill and the error note are label blockers: a status render
+  // lays the labels out again (Codex on #60).
+  const statusRender = component.match(/const renderMapStateStatus = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(statusRender, /syncAlertBlock\(\);\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*scheduleChapterLabels\(\);/);
+  const recomputeClusters = component.match(/const recomputeClustersNow = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(recomputeClusters, /^\s*if \(!clustersGroup \|\| !membersGroup\) return;\s*\/\/[^\n]*\n\s*placePinsInsideDrawing\(\);/);
+  assert.match(recomputeClusters, /syncPinHitTargets\(\);\s*layoutChapterLabels\(\);/);
+  assert.match(recomputeClusters, /const corner = stageCornerRadius\(\);/);
+
+  // § 5: "Chapter labels at rest: Manrope 600 at 12px in --gp-fg-muted with
+  // a dark halo, without the leading 'Greenpill ' ... The highest
+  // featuredWeight goes first ... People never get labels at rest. Labels dim
+  // while a node is selected." Phones: "No labels at rest."
+  assert.match(component, /data-featured-weight=\{c\.featuredWeight\}/);
+  assert.match(component, /<g class="gp-home-map-members" data-home-map-members><\/g>[\s\S]*?<g class="gp-home-map-chapter-labels" data-home-map-chapter-labels aria-hidden="true"><\/g>[\s\S]*?<g class="gp-home-map-clusters" data-home-map-clusters><\/g>/);
+  assert.match(component, /\.gp-home-map-chapter-label \{\s*fill: var\(--gp-fg-muted\);\s*font-family: var\(--gp-font-body\);\s*font-weight: 600;\s*paint-order: stroke;\s*stroke: var\(--gp-green-950\);/);
+  assert.match(component, /\.gp-home-map-canvas\.has-selected-node \.gp-home-map-chapter-label,\s*\.gp-home-map-canvas\.is-focused \.gp-home-map-chapter-label \{\s*opacity: 0\.35;/);
+  const phoneCss = component.match(/@container \(max-width: 520px\) \{([\s\S]*?)\n  \}\n/)?.[1] ?? '';
+  assert.match(phoneCss, /\.gp-home-map-chapter-labels \{\s*display: none;/);
+  const layoutLabels = component.match(/const layoutChapterLabels = \(\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(layoutLabels, /if \(mapLayout\(\) === 'phone'\) return;/);
+  assert.match(layoutLabels, /\.filter\(\(pin\) => pin\.classList\.contains\('is-chapter'\)\)/);
+  assert.match(layoutLabels, /\.sort\(\(a, b\) => b\.weight - a\.weight \|\| a\.name\.localeCompare\(b\.name, 'en'\)\);/);
+  assert.match(layoutLabels, /const fontSize = cssPx\('--gp-label-sm', 12\) \* px;/);
+  assert.match(layoutLabels, /placeMapLabels\(/);
+  assert.match(layoutLabels, /\.\.\.overlapStacks\.map\(/);
+  // The bounds are the map in view, 4px in from each edge.
+  assert.match(layoutLabels, /\{ x: view\.x \+ 4 \* px, y: view\.y \+ 4 \* px, width: view\.width - 8 \* px, height: view\.height - 8 \* px \}/);
+  // The placement box takes in the halo, so the outline never paints over a
+  // bar, a pin or the dock (CodeRabbit on #60).
+  assert.match(layoutLabels, /const halo = 1\.5 \* px;[\s\S]*?width: measured\.width \+ halo \* 2,\s*height: measured\.height \+ halo \* 2,/);
+  // A stack says its people are "at" a chapter only when their true points
+  // share its spot; pins the drawing's edge moved together are not "at" one
+  // another (CodeRabbit on #60).
+  assert.match(component, /type ClusterMember = \{ el: Element; key: string; center: MapPoint; truePoint: MapPoint \};/);
+  assert.match(component, /out\.push\(\{ el, key, center, truePoint: mapX !== null && mapY !== null \? \{ x: mapX, y: mapY \} : center \}\);/);
+  // The stack is "at" only the chapters every one of its people shares a
+  // spot with; people who each share a different chapter's spot are not
+  // "at" both (Codex on #60, twice).
+  assert.match(component, /const sharedChapters = chapters\.filter\(\(chapter\) => members\.every\(\(member\) => sharesSpot\(member, chapter\)\)\);/);
+  // Hover is drawn from the pin or badge geometry picked, never from :hover,
+  // which an overlapping 44px hit circle can give to a neighbour (Codex on #60).
+  // What is drawn hovered is the satellite or marker under the pointer, even
+  // for a marker that stands for one person, and it follows the pointer while
+  // a card is open (CodeRabbit on #60).
+  assert.match(component, /const markPointerTarget = \(target: Element \| null\) => \{/);
+  assert.match(component, /if \(satellite\) return \{ pin: satellite\.member\.el, mark: satellite\.el \};/);
+  assert.match(component, /\? \{ pin: stack\.members\[0\]\.el, mark: stack\.marker \}\s*: \{ stack, mark: stack\.marker \};/);
+  assert.match(component, /return pin \? \{ pin, mark: pin \} : \{\};/);
+  assert.match(component, /const \{ pin, stack, mark \} = hoverTargetAtPointer\(event\);\s*(?:\/\/[^\n]*\n\s*)*markPointerTarget\(mark \?\? null\);\s*if \(selectedFocusTarget\) return;/);
+  assert.doesNotMatch(component, /\.gp-home-map-node-link[^{]*:hover|\.gp-home-map-overlap-stack:hover|\.gp-home-map-cluster-sat:hover/);
+  assert.match(component, /\.gp-home-map-cluster-sat\.is-pointer-target \.gp-home-map-cluster-sat-label,/);
+  assert.match(component, /\.gp-home-map-node-link\.is-chapter\.is-pointer-target \.gp-home-map-node-halo,/);
+  assert.match(component, /\.gp-home-map-overlap-stack\.is-pointer-target \.gp-home-map-overlap-disc,/);
+  assert.match(component, /return sameSpot \? 'at the same spot' : 'close together';/);
+  assert.match(component, /const chapterLabelText = \(name: string\) => name\.replace\(\/\^Greenpill\\s\+\/i, ''\) \|\| name;/);
+  assert.match(component, /'\.gp-home-map-theme-strip',[\s\S]*?'\.gp-home-map-legend',[\s\S]*?'\.gp-home-map-end-group',[\s\S]*?'\.gp-home-map-list-drawer',/);
+  // The dock and the bars move without a stacks rebuild: one layout a frame.
+  assert.match(component, /scheduleChapterLabels = \(\) => \{\s*window\.cancelAnimationFrame\(chapterLabelFrame\);\s*chapterLabelFrame = window\.requestAnimationFrame\(layoutChapterLabels\);/);
+
+  // Sizes, set once on the map's figure so the join walkthrough shares them.
+  const mapRule = component.match(/\n  \.gp-home-map \{([\s\S]*?)\n  \}\n/)?.[1] ?? '';
+  assert.match(mapRule, /--gp-map-target: 44px;\s*--gp-map-icon: 16px;\s*--gp-map-mark: 10px;\s*--gp-map-button: 48px;/);
+  // § 5: "Every text button under 48px goes to 48px, and the contract test
+  // asserts that minimum." List, Themes and Join the map are 50px; the edge
+  // pills 48px; Try again, Clear and Done are the 48px Button; the card's
+  // Edit this node and its form's buttons now reach 48px too.
+  assert.match(component, /\.gp-home-map-join \{[\s\S]*?min-height: calc\(40px \+ var\(--gp-space-xs\) \* 2 \+ 2px\);/);
+  assert.match(component, /\.gp-home-map \.gp-chip\.gp-home-map-edge-pill \{[\s\S]*?min-height: 48px;/);
+  assert.match(component, /\.gp-home-map-update-trigger \{\s*min-height: var\(--gp-map-button\);/);
+  assert.match(component, /\.gp-home-map-update-actions button \{\s*min-height: var\(--gp-map-button\);/);
+  assert.doesNotMatch(component, /\.gp-home-map-update-trigger \{\s*min-height: (?:36|40)px;/);
+  // The join walkthrough's text buttons too (Codex on #60): Find place, the
+  // place results, Confirm coordinate, the review's Edit buttons, and the
+  // manage-link toggle and Send. Its theme toggles are chips.
+  assert.match(component, /\.gp-home-map-location-search-row button,\s*\.gp-home-map-location-results button,\s*\.gp-home-map-location-coordinate-row button \{\s*min-height: var\(--gp-map-button\);/);
+  assert.match(component, /\.gp-home-map-location-results button \{\s*width: 100%;\s*min-height: var\(--gp-map-button\);/);
+  // The result buttons are made by the script, so they take the component's
+  // scope, or the scoped 48px rule never reaches them (CodeRabbit on #60).
+  const searchResults = component.match(/const renderSearchResults = \([\s\S]*?\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(searchResults, /applyScope\(item\);\s*applyScope\(button\);/);
+  assert.match(component, /\.gp-home-map-location-coordinate-row button \{\s*min-height: var\(--gp-map-button\);/);
+  assert.match(component, /\.gp-home-map-addnode-location-head button,\s*\.gp-home-map-addnode-review button \{\s*display: inline-flex;\s*align-items: center;\s*min-height: var\(--gp-map-button\);/);
+  assert.match(component, /\.gp-home-map-addnode-manage-toggle \{\s*min-height: var\(--gp-map-button\);/);
+  assert.match(component, /\.gp-home-map-addnode-manage-submit \{[\s\S]*?min-height: var\(--gp-map-button\);/);
+  assert.match(component, /\.gp-home-map-addnode-next,[\s\S]*?\.gp-home-map-addnode-submit\s*\{[\s\S]*?min-height:\s*48px;/);
+  // "Icon-only controls (zoom, close, reset) are 44 by 44px".
+  // The inspector's Back and Close sit in its head (step 4), at 44 by 44;
+  // the connection rows' open-profile icons went with June's rows.
+  assert.match(component, /\.gp-home-map-selected-back,\s*\.gp-home-map-selected-close \{\s*width: var\(--gp-map-target\);\s*height: var\(--gp-map-target\);/);
+  assert.doesNotMatch(component, /gp-home-map-selected-edge-open/);
+  assert.match(component, /\.gp-home-map-addnode-close \{[\s\S]*?width: var\(--gp-map-target\);\s*height: var\(--gp-map-target\);/);
+  assert.match(component, /\.gp-home-map-addnode-back \{[\s\S]*?width: var\(--gp-map-target\);\s*height: var\(--gp-map-target\);/);
+  assert.doesNotMatch(component, /width: (?:34|38)px;\s*height: (?:34|38)px;/);
+  // Pill links follow the chip rule: 30px under a fine pointer, 44px under a
+  // coarse one and on a phone.
+  assert.match(component, /\.gp-home-map-selected-link \{\s*appearance: none;\s*display: inline-flex;\s*align-items: center;\s*min-height: var\(--gp-map-chip\);/);
+  assert.match(phoneCss, /\.gp-home-map-selected-link \{\s*min-height: var\(--gp-map-target\);/);
+});
+
+test('home map inspector: the dock, the sheets and the compact tooltip (map-polish-audit.md § 5)', async () => {
+  // § 5: "When the node would sit under the dock, the map pans it into the
+  // open area", and "The map pans the node above the sheet." The map never
+  // resizes, so the view may slide under the panel, past the drawing's edge
+  // there, by as much as the panel covers and the clearance more.
+  const rest = { x: 0, y: 0, width: 200, height: 88 };
+  const aspect = 200 / 88;
+  const asked = { x: 70, y: 0, width: 200, height: 88 };
+  assert.deepEqual(clampMapViewBeside(asked, aspect, 4, null), clampMapView(asked, aspect, 4));
+  assert.deepEqual(clampMapViewBeside(asked, aspect, 4, { side: 'east', share: 0.3 }, 5), { x: 65, y: 0, width: 200, height: 88 });
+  assert.deepEqual(clampMapViewBeside({ ...asked, x: -70 }, aspect, 4, { side: 'west', share: 0.3 }, 5), { x: -65, y: 0, width: 200, height: 88 });
+  assert.deepEqual(clampMapViewBeside({ ...asked, x: 0, y: 50 }, aspect, 4, { side: 'south', share: 0.5 }, 4), { x: 0, y: 48, width: 200, height: 88 });
+  // Away from the panel the drawing still ends the view.
+  assert.equal(clampMapViewBeside({ ...asked, x: -10 }, aspect, 4, { side: 'east', share: 0.3 }, 5).x, 0);
+  assert.equal(clampMapViewBeside({ ...asked, y: -10 }, aspect, 4, { side: 'south', share: 0.5 }, 4).y, 0);
+
+  // A node under a dock covering a quarter of the stage moves to the open
+  // part's edge, its clearance inside; one already in the open stays put.
+  const panned = panPointIntoOpenArea(rest, { x: 170, y: 40 }, { side: 'east', share: 0.25 }, 5);
+  assert.deepEqual(panned, { x: 25, y: 0, width: 200, height: 88 });
+  assert.equal(panPointIntoOpenArea(rest, { x: 100, y: 40 }, { side: 'east', share: 0.25 }, 5), rest);
+  // A phone's sheet over half the stage: the node goes above it.
+  const phoneView = { x: 52, y: 0, width: 59, height: 88 };
+  assert.deepEqual(panPointIntoOpenArea(phoneView, { x: 80, y: 70 }, { side: 'south', share: 0.5 }, 4), { x: 52, y: 30, width: 59, height: 88 });
+  // A zoomed view brings a node from beyond its other side, inside the
+  // drawing; the far north stops at the drawing's top.
+  const zoomed = { x: 100, y: 20, width: 80, height: 35.2 };
+  assert.equal(panPointIntoOpenArea(zoomed, { x: 60, y: 40 }, { side: 'east', share: 0.3 }, 3).x, 57);
+  assert.equal(panPointIntoOpenArea({ x: 0, y: 20, width: 100, height: 44 }, { x: 50, y: 1 }, { side: 'south', share: 0.5 }, 2).y, 0);
+  // Every pan leaves the node clear of the panel where the bounds allow.
+  for (let x = 0; x <= 200; x += 10) {
+    const view = panPointIntoOpenArea(rest, { x, y: 44 }, { side: 'east', share: 0.3 }, 5);
+    assert.ok(x <= view.x + view.width * 0.7 - 5 + 1e-9, `a node at ${x} stays under the dock`);
+  }
+
+  const component = await readFile(
+    new URL('../packages/website/src/components/page-sections/HomeMap.astro', import.meta.url),
+    'utf8'
+  );
+  // § 5, the dock from the top: "TYPE · PLACE, the name in Spectral, the
+  // public note, themes as tags, connections as rows ... the node's public
+  // link (`Visit chapter →` for a chapter), and, for an approved steward or
+  // member submission only, `Edit this node`".
+  assert.match(
+    component,
+    /data-selected-kicker>Network node<\/p>\s*<h2 class="gp-home-map-selected-name" data-selected-name><\/h2>[\s\S]*?data-selected-note[\s\S]*?data-selected-themes[\s\S]*?data-selected-edge-list[\s\S]*?data-selected-links[\s\S]*?data-home-map-update hidden>\s*<button type="button" class="gp-home-map-update-trigger" data-update-trigger>Edit this node<\/button>/
+  );
+  assert.match(component, /\.gp-home-map-selected-name \{\s*margin: 0;\s*color: var\(--gp-secondary\);\s*font-family: var\(--gp-font-display\);/);
+  // The body is a column whose parts keep their height, so a phone's row
+  // of themes cannot shrink to nothing under a long body, and a row that
+  // scrolls takes keyboard focus (axe's scrollable-region-focusable).
+  assert.match(component, /\.gp-home-map-selected-body > \* \{\s*flex: none;/);
+  assert.match(component, /data-selected-themes role="group" aria-label="Themes"/);
+  assert.match(component, /const scrolls = !selectedThemesEl\.hidden && selectedThemesEl\.scrollWidth > selectedThemesEl\.clientWidth \+ 1;\s*if \(scrolls\) selectedThemesEl\.tabIndex = 0;\s*else selectedThemesEl\.removeAttribute\('tabindex'\);/);
+  // The selected node's tooltip would repeat the inspector, so it hides.
+  assert.match(component, /const shown = target !== selectedFocusTarget;\s*focusEl\.setAttribute\('aria-hidden', shown \? 'false' : 'true'\);/);
+  // Labels give way to the inspector as they do to the list.
+  assert.match(component, /'\.gp-home-map-list-drawer',\s*'\.gp-home-map-selected',\s*\]\.join\(', '\);/);
+
+  // § 5: "Layout follows the container's width only; the kind of pointer
+  // never picks it ... The build splits it: a width check picks the layout
+  // ... and `(pointer: coarse)` keeps choosing only the input behaviour."
+  assert.doesNotMatch(component, /isTouchMap/);
+  assert.match(component, /const coarsePointer = \(\) => window\.matchMedia\('\(pointer: coarse\)'\)\.matches;/);
+  assert.doesNotMatch(component, /getBoundingClientRect\(\)\.width <= 520/);
+  // The input matters it keeps: no hover tooltips from a finger, the tap's
+  // fallback, drag and pinch on touch, and "Tap" or "Click" in a stack's
+  // hint. Each event says what made it, so a hybrid laptop's touchscreen
+  // pans and pinches though its primary pointer is fine (Codex on #63); the
+  // primary pointer answers only where there is no event.
+  assert.match(component, /const isTouchEvent = \(event: Event\) => \(\s*'pointerType' in event \? \(event as PointerEvent\)\.pointerType === 'touch' : coarsePointer\(\)\s*\);/);
+  assert.match(component, /if \(event\.pointerType === 'touch' \|\| \(coarsePointer\(\) && event\.pointerType !== 'mouse'\)\) return;/);
+  assert.match(component, /\} else if \(event\.pointerType !== 'touch' && !coarsePointer\(\)\) \{\s*return;/);
+  assert.match(component, /if \(event\.pointerType !== 'mouse' && event\.pointerType !== 'touch' && !coarsePointer\(\)\) return;/);
+  assert.match(component, /if \(!isRecentTouchMapClick\(\) \|\| !eventTarget/);
+  assert.match(component, /if \(isRecentTouchMapClick\(\) && nodeAtPointer\(event as MouseEvent, 44\)\) return;/);
+  assert.match(component, /lastMapPointerWasTouch = event\.pointerType !== 'mouse';/);
+  assert.match(component, /\$\{coarsePointer\(\) \? 'Tap' : 'Click'\} to choose one\./);
+  // The layout matters read the container: the list's mode and the
+  // inspector's dock or sheet.
+  assert.match(component, /const modal = mapLayout\(\) === 'phone';/);
+  // A resize, and an inspector that grows (the Edit form) or moves to a
+  // sheet, brings the node out from under it again (Codex on #63).
+  assert.match(component, /if \(selectedEl && !selectedEl\.hidden\) \{\s*panSelectedIntoView\(\);\s*syncThemesScroller\(\);/);
+  assert.match(component, /new ResizeObserver\(\(\) => \{\s*if \(!selectedEl\.hidden\) panSelectedIntoView\(\);\s*\}\)\.observe\(selectedEl\);/);
+  // A move by hand since the inspector's last pan becomes the view to go
+  // back to: a later pan never erases it (Codex on #63).
+  assert.match(component, /const untouched = viewBeforeInspector && sameView\(currentViewBox, viewBeforeInspector\.moved\);\s*const before = untouched && viewBeforeInspector\s*\? viewBeforeInspector\s*: \{ view: \{ \.\.\.currentViewBox \}, wasDefault: viewIsDefault \};/);
+  // A tooltip names a point that can be seen: one under the dock or a sheet
+  // gets none, and the list as a sheet inside the stage counts as one, while
+  // a phone's full-page list does not (Codex on #63).
+  assert.match(component, /: layout !== 'phone' && listDrawer && !listDrawer\.hidden \? listDrawer : null;/);
+  assert.match(component, /anchorY >= covered\.rect\.minY && anchorY <= covered\.rect\.maxY\s*\) \{\s*focusEl\.setAttribute\('aria-hidden', 'true'\);\s*return;/);
+  // Opening a node clears the hover the click left behind, so a connection
+  // row's preview ends back on the selection (Codex on #63); and a pick from
+  // inside the inspector keeps focus in it, mouse or keyboard, since its row
+  // is replaced.
+  const openNode = component.match(/const openSelected = \(member: DynamicMapNode, link: Element, viaKeyboard = false\) => \{([\s\S]*?)\n    \};\n/)?.[1] ?? '';
+  assert.match(openNode, /const focusWasInInspector = !selectedEl\.hidden && selectedEl\.contains\(document\.activeElement\);/);
+  assert.match(openNode, /pointerFocusTarget = null;\s*hoveredStackKey = '';/);
+  assert.match(openNode, /if \(viaKeyboard \|\| fromList \|\| focusWasInInspector\) inspectorEntryControl\(\)\?\.focus\(\{ preventScroll: true \}\);/);
+  // June's phone recovery reset the view on every close; the inspector puts
+  // back the view it moved instead.
+  assert.doesNotMatch(component, /shouldRecoverMobileView/);
 });
 
 // ---------------------------------------------------------------------------

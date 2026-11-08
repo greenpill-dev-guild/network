@@ -1,0 +1,359 @@
+---
+/**
+ * The newsletter signup in step 1 of the Garden ramp, on home and /garden.
+ *
+ * The form posts to the agent's POST /newsletter/subscribe, which adds the
+ * address to the Greenpill publication on Paragraph. Answers appear in one
+ * polite live region. When this page cannot finish a signup (no JavaScript,
+ * the agent unreachable, rate limited or not configured yet), the form offers
+ * Paragraph's own signup page instead. Without JavaScript a submit also goes
+ * there: the form's action is that page, and no field has a name, so no
+ * address lands in a URL.
+ */
+import ArrowLink from '../ui/ArrowLink.astro';
+import Button from '../ui/Button.astro';
+import EmailInput from '../ui/EmailInput.astro';
+import { NEWSLETTER_EMAIL_MAX_LENGTH } from '@greenpill-network/shared/newsletter';
+
+interface Props {
+  /** Prefix for this instance's ids; unique on its page. */
+  id: string;
+  /** Paragraph's signup page, offered when this form cannot finish a signup. */
+  fallbackHref: string;
+  fallbackLabel: string;
+  class?: string;
+}
+
+const { id, fallbackHref, fallbackLabel, class: className } = Astro.props;
+const emailId = `${id}-email`;
+const noteId = `${id}-note`;
+const statusId = `${id}-status`;
+---
+
+<div class:list={['gp-newsletter', className]} data-newsletter>
+  <form
+    class="gp-newsletter-form"
+    action={fallbackHref}
+    method="get"
+    novalidate
+    aria-label="Newsletter signup"
+    data-newsletter-form
+  >
+    <div class="gp-newsletter-row">
+      <EmailInput
+        id={emailId}
+        name={null}
+        label="Email address"
+        placeholder="you@example.org"
+        autocomplete="email"
+        maxlength={NEWSLETTER_EMAIL_MAX_LENGTH}
+        spellcheck="false"
+        required
+        aria-describedby={`${noteId} ${statusId}`}
+        data-newsletter-email
+      />
+      <Button type="submit" data-newsletter-submit>Subscribe</Button>
+    </div>
+    <div class="gp-newsletter-trap" aria-hidden="true">
+      <label>
+        Leave this field empty
+        <input
+          type="text"
+          tabindex="-1"
+          autocomplete="off"
+          data-1p-ignore
+          data-lpignore="true"
+          data-bwignore
+          data-newsletter-trap
+        />
+      </label>
+    </div>
+    <p class="gp-newsletter-note" id={noteId}>Your address goes to Paragraph, which runs the Greenpill newsletter.</p>
+  </form>
+
+  <div class="gp-newsletter-status" id={statusId} role="status" aria-atomic="true" tabindex="-1" data-newsletter-status>
+    <svg class="gp-newsletter-check" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="10.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <path d="m7.5 12.5 3 3 6-6.5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+    <p class="gp-newsletter-status-title" data-newsletter-status-title></p>
+    <p class="gp-newsletter-status-body" data-newsletter-status-body></p>
+    <p class="gp-newsletter-fallback" data-newsletter-fallback hidden>
+      <ArrowLink href={fallbackHref}>{fallbackLabel}</ArrowLink>
+    </p>
+  </div>
+
+  <noscript>
+    <p class="gp-newsletter-noscript">
+      Signing up on this page needs JavaScript.
+      <ArrowLink href={fallbackHref}>{fallbackLabel}</ArrowLink>
+    </p>
+  </noscript>
+</div>
+
+<script>
+  import {
+    NEWSLETTER_TRAP_FIELD,
+    isValidNewsletterEmail,
+    normalizeNewsletterEmail,
+    readNewsletterSubscribeResponse,
+  } from '@greenpill-network/shared/newsletter';
+  import {
+    NEWSLETTER_CLIENT_TIMEOUT_MS,
+    newsletterSignupView,
+    newsletterSubscribeUrl,
+    type NewsletterSignupView,
+  } from '../../lib/newsletter-signup';
+
+  function setUpNewsletterSignup(root: HTMLElement): void {
+    const form = root.querySelector('[data-newsletter-form]');
+    const email = root.querySelector('[data-newsletter-email]');
+    const trap = root.querySelector('[data-newsletter-trap]');
+    const submit = root.querySelector('[data-newsletter-submit]');
+    const status = root.querySelector('[data-newsletter-status]');
+    const title = root.querySelector('[data-newsletter-status-title]');
+    const body = root.querySelector('[data-newsletter-status-body]');
+    const fallback = root.querySelector('[data-newsletter-fallback]');
+    if (
+      !(form instanceof HTMLFormElement) ||
+      !(email instanceof HTMLInputElement) ||
+      !(trap instanceof HTMLInputElement) ||
+      !(submit instanceof HTMLButtonElement) ||
+      !(status instanceof HTMLElement) ||
+      !(title instanceof HTMLElement) ||
+      !(body instanceof HTMLElement) ||
+      !(fallback instanceof HTMLElement)
+    ) return;
+
+    const submitLabel = submit.textContent ?? 'Subscribe';
+    let submitting = false;
+
+    const clearStatus = () => {
+      delete status.dataset.state;
+      title.textContent = '';
+      body.textContent = '';
+      fallback.hidden = true;
+    };
+
+    // A live region announces changes only, so the same message twice in a
+    // row is cleared for a frame first and announced again.
+    const setStatusText = (titleText: string, bodyText: string) => {
+      const repeated = title.textContent === titleText && body.textContent === bodyText;
+      if (!repeated) {
+        title.textContent = titleText;
+        body.textContent = bodyText;
+        return;
+      }
+      title.textContent = '';
+      body.textContent = '';
+      requestAnimationFrame(() => {
+        title.textContent = titleText;
+        body.textContent = bodyText;
+      });
+    };
+
+    const show = (view: NewsletterSignupView) => {
+      if (view.state === 'done') {
+        const focusWasInForm = form.contains(document.activeElement);
+        email.value = '';
+        email.removeAttribute('aria-invalid');
+        form.hidden = true;
+        fallback.hidden = true;
+        status.dataset.state = 'done';
+        setStatusText(view.title, view.body);
+        // The form is gone, so keep focus at the answer that replaced it.
+        if (focusWasInForm) status.focus();
+        return;
+      }
+
+      if (view.fieldError) email.setAttribute('aria-invalid', 'true');
+      else email.removeAttribute('aria-invalid');
+      status.dataset.state = 'error';
+      fallback.hidden = !view.offerParagraph;
+      setStatusText('', view.message);
+    };
+
+    // Validate when the field is left, never while typing; clear the error
+    // as soon as the address becomes valid.
+    email.addEventListener('blur', () => {
+      const value = normalizeNewsletterEmail(email.value);
+      if (value && !isValidNewsletterEmail(value)) show(newsletterSignupView({ ok: false, error: 'invalid_email' }));
+    });
+    email.addEventListener('input', () => {
+      if (email.getAttribute('aria-invalid') === 'true' && isValidNewsletterEmail(email.value)) {
+        email.removeAttribute('aria-invalid');
+        clearStatus();
+      }
+    });
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (submitting) return;
+
+      const value = normalizeNewsletterEmail(email.value);
+      if (!value || !isValidNewsletterEmail(value)) {
+        show(newsletterSignupView(value ? { ok: false, error: 'invalid_email' } : 'empty_email'));
+        email.focus();
+        return;
+      }
+
+      submitting = true;
+      email.readOnly = true;
+      submit.setAttribute('aria-disabled', 'true');
+      submit.textContent = 'Subscribing…';
+
+      let view: NewsletterSignupView;
+      try {
+        const response = await fetch(newsletterSubscribeUrl(window.location.hostname), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: value, [NEWSLETTER_TRAP_FIELD]: trap.value }),
+          signal: AbortSignal.timeout(NEWSLETTER_CLIENT_TIMEOUT_MS),
+        });
+        const payload = await response.json().catch(() => null);
+        view = newsletterSignupView(readNewsletterSubscribeResponse(payload));
+      } catch {
+        view = newsletterSignupView('network_error');
+      } finally {
+        submitting = false;
+        email.readOnly = false;
+        submit.removeAttribute('aria-disabled');
+        submit.textContent = submitLabel;
+      }
+
+      show(view);
+      if (view.state === 'error' && view.fieldError) email.focus();
+    });
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-newsletter]').forEach(setUpNewsletterSignup);
+</script>
+
+<style>
+  /* Reflows on its own width: a narrow home card stacks the button under the
+     field (Button goes full width below 520px), the wide /garden row keeps
+     them side by side. */
+  .gp-newsletter {
+    position: relative;
+    container-type: inline-size;
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+    inline-size: 100%;
+    max-inline-size: 620px;
+  }
+
+  .gp-newsletter-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-sm);
+  }
+
+  .gp-newsletter-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--gp-space-md);
+  }
+
+  .gp-newsletter-note {
+    margin: 0;
+    color: var(--gp-fg-muted);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-caption);
+    line-height: 1.5;
+  }
+
+  /* The honeypot: out of sight and out of the accessibility tree, but not
+     display: none, which simple bots skip. */
+  .gp-newsletter-trap {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .gp-newsletter-status {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+  }
+
+  .gp-newsletter-status[data-state='error'] {
+    gap: var(--gp-space-xs);
+    margin-block-start: var(--gp-space-md);
+    padding-block-start: var(--gp-space-sm);
+    border-block-start: 2px solid var(--gp-error);
+  }
+
+  .gp-newsletter-status[data-state='done'] {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: var(--gp-space-sm);
+    row-gap: var(--gp-space-xs);
+    align-items: start;
+    border-radius: var(--gp-radius-sm);
+  }
+
+  .gp-newsletter-check {
+    display: none;
+    inline-size: 24px;
+    block-size: 24px;
+    color: var(--gp-primary);
+  }
+
+  .gp-newsletter-status[data-state='done'] .gp-newsletter-check {
+    display: block;
+    grid-row: 1 / span 2;
+  }
+
+  .gp-newsletter-status-title,
+  .gp-newsletter-status-body,
+  .gp-newsletter-fallback,
+  .gp-newsletter-noscript {
+    margin: 0;
+    font-family: var(--gp-font-body);
+  }
+
+  .gp-newsletter-status-title {
+    color: var(--gp-fg);
+    font-size: var(--gp-title-md);
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .gp-newsletter-status[data-state='error'] .gp-newsletter-status-title {
+    display: none;
+  }
+
+  /* Error copy stays in the body color: terracotta text is below 4.5:1 on
+     the card and page greens, so the rule above carries the error color. */
+  .gp-newsletter-status-body {
+    color: var(--gp-fg);
+    font-size: var(--gp-body-sm);
+    line-height: 1.5;
+  }
+
+  .gp-newsletter-status[data-state='done'] .gp-newsletter-status-body {
+    grid-column: 2;
+    color: var(--gp-fg-muted);
+  }
+
+  .gp-newsletter-form[hidden],
+  .gp-newsletter-fallback[hidden] {
+    display: none;
+  }
+
+  .gp-newsletter-noscript {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--gp-space-sm);
+    margin-block-start: var(--gp-space-sm);
+    color: var(--gp-fg-muted);
+    font-size: var(--gp-body-sm);
+    line-height: 1.5;
+  }
+</style>
