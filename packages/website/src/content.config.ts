@@ -4,19 +4,22 @@ import { z } from 'astro/zod';
 
 const slugListSchema = z.array(z.string()).optional().default([]);
 
+// An entry without one of these objects gets every inner default. Zod 4's
+// `.default({})` would return the bare `{}` without parsing it, so these use
+// `.prefault({})`, which parses it the way Zod 3's `.default({})` did.
 const seoSchema = z.object({
   title: z.string().optional().default(''),
   description: z.string().optional().default(''),
   ogImage: z.string().optional().default(''),
   canonicalPath: z.string().optional().default(''),
   noindex: z.boolean().optional().default(false),
-}).optional().default({});
+}).optional().prefault({});
 
 const mediaSchema = z.object({
   image: z.string().optional().default(''),
   imageAlt: z.string().optional().default(''),
   ogImage: z.string().optional().default(''),
-}).optional().default({});
+}).optional().prefault({});
 
 const proofSignalSchema = z.object({
   label: z.string().default(''),
@@ -41,7 +44,7 @@ const libraryCardSchema = z.object({
   image: z.string().optional().default(''),
   imageAlt: z.string().optional().default(''),
   href: z.string().optional().default(''),
-}).optional().default({});
+}).optional().prefault({});
 
 const stories = defineCollection({
   loader: glob({ pattern: '**/[^_]*.json', base: './src/content/stories' }),
