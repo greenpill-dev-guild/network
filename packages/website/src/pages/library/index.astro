@@ -330,7 +330,9 @@ function guildFootLabel(guild: typeof guilds[number]) {
 
   .gp-library-hero {
     position: relative;
-    overflow: hidden;
+    /* Clip sideways only, so the primary button's glow fades out instead of
+       stopping at a hard edge. */
+    overflow-x: clip;
     padding: clamp(var(--gp-space-3xl), 7vw, var(--gp-space-5xl)) 0 var(--gp-space-2xl);
   }
 
@@ -758,7 +760,16 @@ function guildFootLabel(guild: typeof guilds[number]) {
       margin-inline-end: calc(var(--gp-space-lg) * -1);
       overflow-x: auto;
       padding-bottom: var(--gp-space-md);
-      padding-inline-end: var(--gp-space-lg);
+      /* 32px covers the 28px end fade plus the 4px focus ring, so the last
+         book at full scroll is whole. */
+      padding-inline-end: calc(var(--gp-space-lg) + var(--gp-space-sm));
+      /* A scroll rail clips both axes. These 4px, offset by the negative
+         margins, keep a focused book's ring whole at the top and first edge. */
+      margin-block-start: calc(var(--gp-space-xs) * -1);
+      margin-inline-start: calc(var(--gp-space-xs) * -1);
+      padding-block-start: var(--gp-space-xs);
+      padding-inline-start: var(--gp-space-xs);
+      scroll-padding-inline-start: var(--gp-space-xs);
       scroll-snap-type: x mandatory;
       scrollbar-width: none;
       /* Edge-fade affordance for the horizontal book rail (DESIGN.md). */

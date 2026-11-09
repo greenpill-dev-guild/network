@@ -510,12 +510,24 @@ function primaryInitiativeHref(initiative: any) {
     margin-top: var(--gp-space-md);
   }
 
-  /* The hero photo sits in a Card figure (components/ui/Card.astro); the clip
-     keeps the photo inside the rounded corners. */
+  /* The hero photo sits in a Card figure (components/ui/Card.astro). The
+     photo and its link round their own corners instead of the card clipping
+     them, so a focused photo link shows its whole ring. */
   .gp-chapter-hero-inner :global(.gp-chapter-hero-media) {
     width: min(100%, 920px);
     margin-block-start: var(--gp-space-lg);
-    overflow: hidden;
+  }
+
+  .gp-chapter-hero-inner :global(.gp-chapter-hero-media > :is(a, img)),
+  .gp-chapter-hero-inner :global(.gp-chapter-hero-media > a > img) {
+    border-start-start-radius: calc(var(--gp-radius-lg) - 1px);
+    border-start-end-radius: calc(var(--gp-radius-lg) - 1px);
+  }
+
+  .gp-chapter-hero-inner :global(.gp-chapter-hero-media > :is(a, img):last-child),
+  .gp-chapter-hero-inner :global(.gp-chapter-hero-media > a:last-child > img) {
+    border-end-start-radius: calc(var(--gp-radius-lg) - 1px);
+    border-end-end-radius: calc(var(--gp-radius-lg) - 1px);
   }
 
   .gp-chapter-hero-inner :global(.gp-chapter-hero-media) a,
@@ -537,6 +549,8 @@ function primaryInitiativeHref(initiative: any) {
     font-size: var(--gp-caption);
     line-height: 1.4;
     text-transform: uppercase;
+    /* The card no longer clips, so a long unbroken credit wraps instead. */
+    overflow-wrap: anywhere;
   }
 
   .gp-chapter-section {

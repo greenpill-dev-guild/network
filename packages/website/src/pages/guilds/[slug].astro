@@ -623,10 +623,17 @@ const projects = (await getOperationalProjects())
     align-items: start;
   }
 
-  /* A Card list: rows share its border, and the clip keeps a row's hover
-     tone inside the rounded corners. */
-  .gp-guild-media :global(.gp-guild-media-list) {
-    overflow: hidden;
+  /* A Card list: rows share its border. The first and last rows round their
+     own corners to keep a row's hover tone inside the card, so the card needs
+     no clip and a focused row shows its whole ring. */
+  .gp-guild-media :global(.gp-guild-media-list > li:first-child > .gp-guild-media-row) {
+    border-start-start-radius: calc(var(--gp-radius-lg) - 1px);
+    border-start-end-radius: calc(var(--gp-radius-lg) - 1px);
+  }
+
+  .gp-guild-media :global(.gp-guild-media-list > li:last-child > .gp-guild-media-row) {
+    border-end-start-radius: calc(var(--gp-radius-lg) - 1px);
+    border-end-end-radius: calc(var(--gp-radius-lg) - 1px);
   }
 
   .gp-guild-media :global(.gp-guild-media-list > li + li) {
