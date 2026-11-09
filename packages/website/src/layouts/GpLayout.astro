@@ -113,21 +113,42 @@ const ogImageUrl = new URL(ogImage, site).href;
     inset-inline: 0;
     z-index: 0;
     pointer-events: none;
-    background-image:
-      radial-gradient(circle 27vmax at 16% 18%, color-mix(in srgb, var(--gp-lime-500) 10%, transparent), transparent),
-      radial-gradient(circle 26vmax at 82% 74%, color-mix(in srgb, var(--gp-gold-500) 8%, transparent), transparent),
-      url('/images/greenpill-bg.png');
-    background-position:
-      center,
-      center,
-      top center;
-    background-repeat: no-repeat, no-repeat, repeat-y;
-    background-size:
-      100% 100%,
-      100% 100%,
-      max(1400px, 100vw) auto;
+    background-image: url('/images/greenpill-bg.png');
+    background-position: top center;
+    background-repeat: repeat-y;
+    background-size: max(1400px, 100vw) auto;
     opacity: 0.94;
     transform: translate3d(0, 0, 0);
+  }
+
+  /* Reading treatment ("quiet lines", PRD-1446, Afo's pick on 2026-11-08).
+     Full-strength strokes crossed small text and dropped it below AA, so a
+     green-950 scrim at 60% sits between the line art and the glows: the
+     strokes read at about 40% strength and the glows keep their colour.
+     The scrim is this pseudo-element's background colour, so it paints
+     over the layer's line art and under the pseudo-element's own glows.
+     Worst case, the brightest stroke under the lime glow, is #265029;
+     DESIGN.md "Reading contrast" lists every text style against it. */
+  body.gp-root .gp-background-parallax::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-color: color-mix(in srgb, var(--gp-green-950) 60%, transparent);
+    background-image:
+      radial-gradient(circle 27vmax at 16% 18%, color-mix(in srgb, var(--gp-lime-500) 10%, transparent), transparent),
+      radial-gradient(circle 26vmax at 82% 74%, color-mix(in srgb, var(--gp-gold-500) 8%, transparent), transparent);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+  }
+
+  /* Visitors who ask their system for more contrast, and Windows contrast
+     themes, read on the plain canvas: no line art and no glows. The token
+     file lifts the muted and dim text tones for the same query. */
+  @media (prefers-contrast: more), (forced-colors: active) {
+    body.gp-root .gp-background-parallax {
+      display: none;
+    }
   }
 
   /* Main content and footer are their own stacking layer, so positioned

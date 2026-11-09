@@ -768,6 +768,21 @@ test('site shell keeps the graphic page background visible', async () => {
   assert.doesNotMatch(footer, /background:\s*var\(--gp-green-950\)/);
 });
 
+test('illustrated background keeps small text readable (PRD-1446)', async () => {
+  const [layout, tokens] = await Promise.all([
+    readFile(join(rootDir, 'packages/website/src/layouts/GpLayout.astro'), 'utf8'),
+    readFile(join(rootDir, 'packages/website/src/styles/gp-tokens.css'), 'utf8'),
+  ]);
+
+  // Afo's "quiet lines" pick: a 60% green-950 scrim between the line art and
+  // the glows. Without it, lime labels fall to 4.48:1 and lime chips to 3.62:1.
+  assert.match(layout, /\.gp-background-parallax::after\s*\{[^}]*background-color:\s*color-mix\(in srgb, var\(--gp-green-950\) 60%, transparent\);/);
+  // Visitors who ask for more contrast read on the plain canvas.
+  assert.match(layout, /@media \(prefers-contrast: more\), \(forced-colors: active\)\s*\{\s*body\.gp-root \.gp-background-parallax\s*\{\s*display:\s*none;/);
+  // The focus ring stays opaque; the old 40% lime ring read at 2:1.
+  assert.match(tokens, /--gp-shadow-focus:\s*0 0 0 2px var\(--gp-green-950\), 0 0 0 4px var\(--gp-ring\);/);
+});
+
 test('footer links come from social-links.json, with Keystatic fields to edit them', async () => {
   const [footer, socialLinksSource, keystaticConfig] = await Promise.all([
     readFile(join(websiteShellDir, 'SiteFooter.astro'), 'utf8'),
