@@ -11,7 +11,11 @@
 -- It also refuses any new row on an accepted, declined or archived request.
 -- Those record a decision, and an accepted one has already been applied to its
 -- chapter. Stewards cannot edit them in Data Studio, but a direct API call
--- could still attach rows. Rows a request already holds stay.
+-- could still attach rows. Rows a request already holds stay. The trigger
+-- reads the request FOR SHARE, which conflicts with the row lock a status
+-- change takes (the foreign key's KEY SHARE lock does not), so an insert and a
+-- decision on the same request run one after the other: an acceptance applies
+-- every row inserted before it, and an insert that waited on a decision sees it.
 --
 -- Which requests a steward may attach rows to (their own chapters') is checked
 -- by Directus, in the create validation that scripts/directus-content-access.ts
@@ -28,7 +32,8 @@ begin
   select chapter_slug, request_status
   into parent_chapter, parent_status
   from content.chapter_update_requests
-  where id = new.update_request_id;
+  where id = new.update_request_id
+  for share;
 
   if parent_status in ('accepted', 'declined', 'archived') then
     raise exception 'chapter_update_request_decided: change request % is %, so it takes no new rows.',

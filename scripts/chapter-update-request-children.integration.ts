@@ -19,7 +19,9 @@
 //   being moved onto the request's chapter, and nothing is stored;
 // - one on an accepted, declined or archived request is refused with a
 //   readable reason, and nothing is stored;
-// - rows a request already holds stay when it is decided.
+// - rows a request already holds stay when it is decided;
+// - an insert and a decision on the same request wait for each other, so an
+//   acceptance cannot miss a row inserted alongside it.
 //
 // Which chapters a steward may attach rows to is a Directus rule, proven by
 // `bun run directus:steward:smoke`, not here.
@@ -58,6 +60,11 @@ function connect(url: URL): Sql {
 }
 
 let sql: Sql | null = null;
+// A second session on the scratch database, for the race between an insert
+// and a decision.
+let other: Sql | null = null;
+// Set once this run has created the scratch database; nothing else is dropped.
+let created = false;
 const server = connect(serverUrl);
 
 async function insertRequest(chapter: string, status: string): Promise<string> {
@@ -108,6 +115,7 @@ const decidedRefusal = (status: string) => (error: any) => {
 
 try {
   await server.unsafe(`create database ${scratchName}`);
+  created = true;
   sql = connect(scratchUrl);
   // Nothing is written until the connection is known to be the scratch database.
   const [connected] = await sql`select current_database() as name`;
@@ -163,11 +171,45 @@ try {
   await assert.rejects(insertProofSignal(decidedLater), decidedRefusal('archived'));
   assert.deepEqual((await childRows(decidedLater)).map((row) => row.kind), ['link']);
 
+  // An insert and a decision on the same request run one after the other.
+  // lock_timeout turns "would wait" into an error the proof can assert.
+  other = connect(scratchUrl);
+  const lockWait = (error: any) => {
+    assert.equal(error?.code, '55P03', `expected a lock_not_available wait, got ${error?.code}: ${error?.message}`);
+    return true;
+  };
+  // An open insert holds the request, so an acceptance waits for it and then
+  // applies the row with the rest.
+  const insertFirst = await insertRequest('proof-chapter', 'pending_review');
+  await sql.begin(async (tx) => {
+    await tx`insert into content.chapter_update_request_links ${tx({ update_request_id: insertFirst, label: 'Late link', url: 'https://example.test/late' })}`;
+    await assert.rejects(other!.begin(async (otx) => {
+      await otx`set local lock_timeout = '500ms'`;
+      await otx`update content.chapter_update_requests set request_status = 'accepted' where id = ${insertFirst}`;
+    }), lockWait);
+  });
+  await other`update content.chapter_update_requests set request_status = 'accepted' where id = ${insertFirst}`;
+  assert.deepEqual((await childRows(insertFirst)).map((row) => row.kind), ['link'], 'the late link is on the accepted request');
+  // An open decision holds the request, so an insert waits for it and is then refused.
+  const decisionFirst = await insertRequest('proof-chapter', 'pending_review');
+  await other.begin(async (otx) => {
+    await otx`update content.chapter_update_requests set request_status = 'declined' where id = ${decisionFirst}`;
+    await assert.rejects(sql!.begin(async (tx) => {
+      await tx`set local lock_timeout = '500ms'`;
+      await tx`insert into content.chapter_update_request_links ${tx({ update_request_id: decisionFirst, label: 'Late link', url: 'https://example.test/late' })}`;
+    }), lockWait);
+  });
+  await assert.rejects(insertLink(decisionFirst), decidedRefusal('declined'));
+  assert.deepEqual(await childRows(decisionFirst), [], 'nothing reached the declined request');
+
   console.log('Update request children database proof passed.');
 } finally {
+  await other?.end({ timeout: 3 }).catch(() => {});
   await sql?.end({ timeout: 3 }).catch(() => {});
-  await server.unsafe(`drop database if exists ${scratchName}`).catch((error) => {
-    console.error(`Could not drop scratch database ${scratchName}: ${String(error).slice(0, 160)}`);
-  });
+  if (created) {
+    await server.unsafe(`drop database if exists ${scratchName}`).catch((error) => {
+      console.error(`Could not drop scratch database ${scratchName}: ${String(error).slice(0, 160)}`);
+    });
+  }
   await server.end({ timeout: 3 }).catch(() => {});
 }
