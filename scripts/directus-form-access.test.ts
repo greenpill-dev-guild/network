@@ -15,6 +15,7 @@ import {
   DIRECTUS_STEWARD_ACCESS_COLLECTIONS,
   DIRECTUS_STEWARD_WORKFLOW_COLLECTIONS,
   buildDirectusOperationalPermissionPlan,
+  ensureRelation,
 } from './directus-operational-content-setup.ts';
 import { assertStewardFormsReadable } from './directus-steward-smoke.ts';
 import { buildDirectusStudioMetadataPlan } from './directus-studio-setup.ts';
@@ -165,6 +166,58 @@ test('a steward writes the change request lists only while new rows are pinned t
     }, child);
     assert.ok(!creates[0].fields.includes('chapter_slug'), `${child}: the trigger fills chapter_slug from the parent`);
   }
+});
+
+test('the setup creates or corrects the request list relations so a removed row is deleted', async () => {
+  const relation = {
+    collection_many: 'chapter_update_request_links',
+    field_many: 'update_request_id',
+    collection_one: 'chapter_update_requests',
+    field_one: 'links',
+    one_deselect_action: 'delete',
+  };
+  const directus = (relations: object[]) => {
+    const writes: Array<{ method: string; path: string; body: any }> = [];
+    return {
+      writes,
+      request: async (path: string, init: { method?: string; body?: any } = {}) => {
+        if (!init.method) return { data: relations };
+        writes.push({ method: init.method, path, body: init.body });
+        return { data: init.body };
+      },
+    };
+  };
+  const stored = (deselect: string) => [{
+    collection: 'chapter_update_request_links',
+    field: 'update_request_id',
+    related_collection: 'chapter_update_requests',
+    meta: { one_collection: 'chapter_update_requests', one_field: 'links', junction_field: null, one_deselect_action: deselect },
+  }];
+
+  // Missing: created in the shape Directus 11 takes, as metadata only.
+  const missing = directus([]);
+  await ensureRelation(missing, relation);
+  assert.equal(missing.writes.length, 1);
+  const { meta, ...created } = missing.writes[0].body;
+  assert.equal(missing.writes[0].method, 'POST');
+  assert.deepEqual(created, {
+    collection: 'chapter_update_request_links',
+    field: 'update_request_id',
+    related_collection: 'chapter_update_requests',
+    schema: null,
+  });
+  assert.equal(meta.one_field, 'links');
+  assert.equal(meta.one_deselect_action, 'delete');
+
+  // Right except that a removed row would only lose its link: corrected.
+  const nullify = directus(stored('nullify'));
+  await ensureRelation(nullify, relation);
+  assert.deepEqual(nullify.writes.map((write) => [write.method, write.body.meta.one_deselect_action]), [['PATCH', 'delete']]);
+
+  // Already right: left alone.
+  const right = directus(stored('delete'));
+  await ensureRelation(right, relation);
+  assert.deepEqual(right.writes, []);
 });
 
 test('adding the form groups to a write grant adds group aliases and nothing else', () => {

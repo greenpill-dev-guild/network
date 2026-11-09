@@ -1883,19 +1883,29 @@ async function getAvailableCollectionNames(client) {
   return (response?.data ?? []).map((collection) => collection.collection).filter(Boolean);
 }
 
-async function ensureRelation(client, relation) {
+// The relation's Directus metadata. A caller that needs a removed list row
+// deleted (not its link cleared) passes one_deselect_action; 'delete' is the
+// default this setup has always written.
+function relationMeta(relation) {
+  return {
+    many_collection: relation.collection_many,
+    many_field: relation.field_many,
+    one_collection: relation.collection_one,
+    one_field: relation.field_one ?? null,
+    one_allowed_collections: null,
+    one_collection_field: null,
+    one_deselect_action: relation.one_deselect_action ?? 'delete',
+    junction_field: relation.junction_field ?? null,
+    sort_field: null,
+  };
+}
+
+export async function ensureRelation(client, relation) {
   const existing = await client.request('/relations?limit=-1');
   const item = (existing?.data ?? []).find((candidate) => (
     candidate?.collection === relation.collection_many &&
     candidate?.field === relation.field_many
   ));
-  const payload = {
-    collection_many: relation.collection_many,
-    field_many: relation.field_many,
-    collection_one: relation.collection_one,
-    field_one: relation.field_one,
-    junction_field: relation.junction_field ?? null,
-  };
 
   if (item) {
     const currentMeta = item.meta ?? {};
@@ -1921,17 +1931,7 @@ async function ensureRelation(client, relation) {
           collection: relation.collection_many,
           field: relation.field_many,
           related_collection: relation.collection_one,
-          meta: {
-            many_collection: relation.collection_many,
-            many_field: relation.field_many,
-            one_collection: relation.collection_one,
-            one_field: relation.field_one,
-            one_allowed_collections: null,
-            one_collection_field: null,
-            one_deselect_action: relation.one_deselect_action ?? 'delete',
-            junction_field: relation.junction_field ?? null,
-            sort_field: null,
-          },
+          meta: relationMeta(relation),
         },
       });
       return updated?.data ?? item;
@@ -1939,9 +1939,18 @@ async function ensureRelation(client, relation) {
     return item;
   }
 
+  // Directus 11 takes collection/field/related_collection. schema: null adds
+  // only the metadata: the database keys belong to packages/agent/migrations
+  // (the change-request child rows use a composite key Directus does not list).
   const created = await client.request('/relations', {
     method: 'POST',
-    body: payload,
+    body: {
+      collection: relation.collection_many,
+      field: relation.field_many,
+      related_collection: relation.collection_one,
+      schema: null,
+      meta: relationMeta(relation),
+    },
   });
   return created?.data;
 }
