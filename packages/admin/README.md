@@ -468,10 +468,38 @@ an alias field that holds no data. `directus:content:setup` therefore grants
 stewards and publishers read on every chapter and guild form group, and adds
 a group to a create or update grant only when that grant already writes a
 field inside it, so no column gains write. The lists on these forms
-(`chapters.initiatives`, `guilds.projects`, and a change request's `links`
-and `proof_signals`) are granted for reading only, and their rows stay under
-their own collection's permissions. `scripts/directus-form-access.test.ts`
-holds these rules, and the steward smoke checks them on a live instance.
+(`chapters.initiatives`, `guilds.projects`) are granted for reading only, and
+their rows stay under their own collection's permissions.
+`scripts/directus-form-access.test.ts` holds these rules, and the steward
+smoke checks them on a live instance.
+
+A steward edits the `links` and `proof_signals` lists of their own change
+request in place, once the request is saved. These rules keep those rows on
+the right chapter and request:
+
+- Directus ignores a row filter on a create, so the steward's create
+  validation for both child collections requires `update_request_id` to be
+  one of `$CURRENT_USER.chapter_editor_assignments.chapter_slug.update_requests.id`,
+  the change requests of their assigned chapters.
+- Migration 034 fills a row's `chapter_slug` from its request only when the
+  writer left it empty, as the request form does. A row that names another
+  chapter is refused by the `(update_request_id, chapter_slug)` foreign key
+  (a readable 400) instead of being moved onto the request's chapter.
+- Migration 034 also fixes the rows of an accepted, declined or archived
+  request, for every writer: no row is inserted on it, moved onto or off it,
+  edited or deleted. Deleting the whole request still removes its rows.
+  Directus shows a non-admin that refusal as "An unexpected error occurred";
+  stewards cannot edit a decided request in Data Studio, so they only meet it
+  through the API. An administrator who adds rows and accepts the request in
+  one save gets this error too, because Directus saves the status before the
+  new rows: save the rows first, then accept. Every row change locks the
+  request FOR SHARE, so a change and a decision on the same request run one
+  after the other and an acceptance applies the rows as they finally stand.
+- Removing a row from either list deletes it. The setup keeps both relations'
+  deselect action at `delete`, because `update_request_id` cannot be cleared.
+
+Prove the database rules with `bun run test:update-request-children:db` and
+the Directus rules with `bun run directus:steward:smoke`.
 
 Prove the copy step with `bun run test:chapter-image-copies`, and with a real
 website build through `bun run test:chapter-image-copies:build`.

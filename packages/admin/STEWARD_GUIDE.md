@@ -168,7 +168,8 @@ Create a request with:
 - `proposed_image`, `proposed_image_alt`, `proposed_image_credit`: optional
   replacement public image details.
 - `links`: public links to add or update.
-- `proof_signals`: public proof signals to add or update.
+- `proof_signals`: public proof signals to add or update. Save a new request
+  first: its Links and Proof Signals lists open for editing once it exists.
 - `request_status`: use `draft` while editing, then `pending_review`.
 
 Fill in `proposed_image` only when you want a different image. Once the
