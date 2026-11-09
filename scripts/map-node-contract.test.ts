@@ -1107,7 +1107,7 @@ test('home map intake requires a valid email and stores local pending only after
   assert.match(component, /querySelectorAll\('\[data-home-map-browse\]'\)[\s\S]*?addEventListener\('click', \(\) => openNodeList\(trigger\)\)/);
   // Closing the list gives focus back to whatever opened it (the hero link or
   // the List toggle), not always to the toggle.
-  assert.match(component, /const openNodeList = \(\s*opener: HTMLElement \| null = listToggle,\s*subset: [^)]*?\) => \{[\s\S]*?listOpener = opener \?\? listToggle;/);
+  assert.match(component, /const openNodeList = \(\s*opener: ListOpener \| null = listToggle,\s*subset: [^)]*?\) => \{[\s\S]*?listOpener = opener \?\? listToggle;/);
   assert.equal(component.match(/if \(restoreListFocusOnClose\) restoreListFocus\(\);/g)?.length, 2);
   assert.match(component, /const restoreListFocus = \(\) => \{\s*if \(listOpener\?\.isConnected\) \{\s*listOpener\.focus\(\{ preventScroll: true \}\);/);
   assert.doesNotMatch(component, /restoreListFocusOnClose\) listToggle\??\.focus/);
@@ -1134,7 +1134,7 @@ test('home map intake requires a valid email and stores local pending only after
   // open fan and hover, so no stale card or coloured web stays under them.
   assert.match(component, /const clearMapSurfaces = \(\) => \{[\s\S]*?closeSelected\(\);[\s\S]*?closeFanNow\(\);[\s\S]*?dropPointerFocus\(\);/);
   assert.match(component, /const setFilterPanel = [\s\S]*?if \(openFilterPanel\) \{[\s\S]*?clearMapSurfaces\(\);/);
-  assert.match(component, /const openNodeList = \(\s*opener: HTMLElement \| null = listToggle,\s*subset: [^)]*?\) => \{[\s\S]*?clearMapSurfaces\(\);/);
+  assert.match(component, /const openNodeList = \(\s*opener: ListOpener \| null = listToggle,\s*subset: [^)]*?\) => \{[\s\S]*?clearMapSurfaces\(\);/);
   assert.match(component, /const openAddDialog = \(trigger\?: HTMLElement\) => \{[\s\S]*?clearMapSurfaces\(\);/);
   assert.match(homepage, /min-block-size: calc\(100dvh - var\(--gp-header-height\)\)/);
   assert.match(homepage, /<Text variant="display" class="gp-home-hero-title">/);
@@ -1803,7 +1803,7 @@ test('home map mobile touch mode supports bounded zoom and compact connection ro
   assert.match(component, /\.gp-home-map-control-row\s*{[\s\S]*?flex-wrap:\s*nowrap/);
   assert.match(component, /const closeFilterPanels = \(\) => \{[\s\S]*?openFilterPanel = ''[\s\S]*?syncFilterPanels\(\)/);
   assert.match(component, /const setFilterPanel = \(panelName: string\) => \{[\s\S]*?if \(openFilterPanel\) \{\s*closeNodeList\(\);[\s\S]*?syncFilterPanels\(\)/);
-  assert.match(component, /const openNodeList = \(\s*opener: HTMLElement \| null = listToggle,\s*subset: [^)]*?\) => \{[\s\S]*?closeFilterPanels\(\);[\s\S]*?listDrawer\.hidden = false/);
+  assert.match(component, /const openNodeList = \(\s*opener: ListOpener \| null = listToggle,\s*subset: [^)]*?\) => \{[\s\S]*?closeFilterPanels\(\);[\s\S]*?listDrawer\.hidden = false/);
   // Changed on purpose (map-polish-audit.md § 5): "the outside click (1294)
   // keeps closing the theme editor but no longer closes the list". The list
   // is non-modal on a wide map: "the map stays usable, and a click on empty

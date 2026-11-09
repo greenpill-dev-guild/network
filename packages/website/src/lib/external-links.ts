@@ -117,14 +117,34 @@ function applyLinkRule(link: RewriterElement, siteHosts: ReadonlySet<string>): b
   return true;
 }
 
+function isHtml(response: Response): boolean {
+  return (response.headers.get('content-type') ?? '').toLowerCase().includes('text/html');
+}
+
+/**
+ * The same HTML response with its body read into a string; other responses
+ * as they are. Bun's HTMLRewriter (1.3.10) rewrites only a body it already
+ * holds: given a streamed body, which Astro 7's dev server sends, it fails
+ * with "Failed to pipe stream". Pages here are static, so nothing is lost by
+ * not streaming them.
+ */
+export async function withBufferedHtml(response: Response): Promise<Response> {
+  if (!isHtml(response) || !response.body) return response;
+  return new Response(await response.text(), {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
+
 /**
  * Applies the link rule to an HTML response and adds the hidden description
  * element once, at the end of `<body>`, when any link opens in a new tab.
- * Other responses pass through untouched.
+ * Other responses pass through untouched. A streamed body must go through
+ * withBufferedHtml first.
  */
 export function markExternalLinks(response: Response, siteHosts: ReadonlySet<string>): Response {
-  const contentType = response.headers.get('content-type') ?? '';
-  if (!contentType.toLowerCase().includes('text/html')) return response;
+  if (!isHtml(response)) return response;
 
   let opensNewTab = false;
   let hintPresent = false;

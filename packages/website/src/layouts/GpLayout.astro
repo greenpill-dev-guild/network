@@ -119,6 +119,9 @@ const ogImageUrl = new URL(ogImage, site).href;
     background-size: max(1400px, 100vw) auto;
     opacity: 0.94;
     transform: translate3d(0, 0, 0);
+    /* Keeps the layer on its own compositing layer. The CSS minifier folds
+       the 3D no-op above into a 2D translate, which drops that hint. */
+    will-change: transform;
   }
 
   /* Reading treatment ("quiet lines", PRD-1446, Afo's pick on 2026-11-08).

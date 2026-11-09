@@ -1,5 +1,9 @@
 ---
-interface Props {
+import type { HTMLAttributes } from 'astro/types';
+
+// Other attributes (hidden, tabindex, style, aria-*, data-*) pass through to
+// the chip's element, which is a span, a button or a link.
+interface Props extends Omit<HTMLAttributes<'span'>, 'class'> {
   tone?: 'outline' | 'soft-lime' | 'soft-gold' | 'fill-lime';
   size?: 'sm' | 'md' | 'lg';
   mono?: boolean;

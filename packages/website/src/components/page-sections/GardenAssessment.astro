@@ -723,7 +723,9 @@ const questionCount = QUESTIONS.length;
     border-radius: var(--gp-radius-sm);
   }
 
-  .gp-ga-result :global(.gp-ga-result-body) {
+  /* .gp-text in the selector outweighs Text's own color rule; with equal
+     weight the winner depended on stylesheet order. */
+  .gp-ga-result :global(.gp-text.gp-ga-result-body) {
     color: var(--gp-fg-muted);
     max-width: 56ch;
   }

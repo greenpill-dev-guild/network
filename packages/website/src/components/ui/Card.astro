@@ -25,7 +25,9 @@ import type { HTMLAttributes } from 'astro/types';
  */
 type CardTag = 'div' | 'article' | 'section' | 'aside' | 'figure' | 'li' | 'ul' | 'ol' | 'fieldset';
 
-type Props = Omit<HTMLAttributes<'a'>, 'class'> & {
+// `type` is left out: on a link it is a MIME hint, on an `ol` the list marker,
+// and this element can be either.
+type Props = Omit<HTMLAttributes<'a'>, 'class' | 'type'> & {
   variant?: 'default' | 'elevated';
   padded?: 'none' | 'sm' | 'md' | 'lg';
   stack?: 'sm' | 'md';
