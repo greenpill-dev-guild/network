@@ -760,7 +760,9 @@ function guildFootLabel(guild: typeof guilds[number]) {
       margin-inline-end: calc(var(--gp-space-lg) * -1);
       overflow-x: auto;
       padding-bottom: var(--gp-space-md);
-      padding-inline-end: var(--gp-space-lg);
+      /* 32px covers the 28px end fade plus the 4px focus ring, so the last
+         book at full scroll is whole. */
+      padding-inline-end: calc(var(--gp-space-lg) + var(--gp-space-sm));
       /* A scroll rail clips both axes. These 4px, offset by the negative
          margins, keep a focused book's ring whole at the top and first edge. */
       margin-block-start: calc(var(--gp-space-xs) * -1);

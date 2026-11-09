@@ -9253,16 +9253,21 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
        the type counts, Show all, Themes, List, Reset the map view, Join the
        map. Text buttons are 54px, chips and the reset icon 44px. */
     .gp-home-map-control-row {
-      /* This row's own fade, 8px at the start and 24px at the end, matched
-         by padding: a resting first pill keeps its whole edge, and the next
-         pill fades out instead of showing a hard sliver. The negative margin
-         spends the controls' inset, so the pills stay where they were. */
-      --gp-map-edge-fade: linear-gradient(to right, transparent 0, var(--gp-green-950) var(--gp-space-sm), var(--gp-green-950) calc(100% - var(--gp-space-lg)), transparent 100%);
+      /* This row's own fade: 4px at the start and 20px at the end. Each
+         padding is its fade plus the 4px focus ring, so the first control at
+         rest, the last at full scroll and both their rings stay whole, and
+         the next pill fades out instead of showing a hard sliver. The block
+         padding keeps rings whole above and below. The negative margins
+         spend the controls' inset, so the pills stay where they were. */
+      --gp-map-fade-direction: to right;
+      --gp-map-edge-fade: linear-gradient(var(--gp-map-fade-direction), transparent 0, var(--gp-green-950) var(--gp-space-xs), var(--gp-green-950) calc(100% - var(--gp-space-lg) + var(--gp-space-xs)), transparent 100%);
       display: flex;
       flex-wrap: nowrap;
       align-items: center;
       gap: var(--gp-space-sm);
+      margin-block: calc(var(--gp-space-xs) * -1);
       margin-inline: calc(var(--gp-space-sm) * -1);
+      padding-block: var(--gp-space-xs);
       padding-inline: var(--gp-space-sm) var(--gp-space-lg);
       scroll-padding-inline: var(--gp-space-sm) var(--gp-space-lg);
       overflow-x: auto;
@@ -9270,6 +9275,12 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       scrollbar-width: none;
       mask-image: var(--gp-map-edge-fade);
       -webkit-mask-image: var(--gp-map-edge-fade);
+    }
+
+    /* A right-to-left page starts the row on the right, so the short fade
+       goes there too. */
+    .gp-home-map-control-row:dir(rtl) {
+      --gp-map-fade-direction: to left;
     }
 
     .gp-home-map-control-row::-webkit-scrollbar {

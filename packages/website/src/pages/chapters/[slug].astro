@@ -549,6 +549,8 @@ function primaryInitiativeHref(initiative: any) {
     font-size: var(--gp-caption);
     line-height: 1.4;
     text-transform: uppercase;
+    /* The card no longer clips, so a long unbroken credit wraps instead. */
+    overflow-wrap: anywhere;
   }
 
   .gp-chapter-section {
