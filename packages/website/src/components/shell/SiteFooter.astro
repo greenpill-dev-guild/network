@@ -1,8 +1,9 @@
 ---
 import socialLinks from '../../content/social-links.json';
 
-// Footer links follow the July 16 call (Farcaster, LinkedIn, YouTube, Luma,
-// Code of Conduct, "Join the map"). Outside links, the GitHub one in the
+// Each column holds at most four links (Afo, November 2026): Connect keeps
+// X / Twitter, Telegram, LinkedIn and YouTube, Farcaster is gone, and the
+// Regen Hub sits under Resources. Outside links, the GitHub one in the
 // bottom row and the steward booking link included, come from
 // content/social-links.json, so an editor changes each in one place; the
 // Garden ramp and its assessment read the same booking link. A link left
@@ -32,17 +33,16 @@ const columns = [
       { label: 'Library', href: '/library' },
       { label: 'Stories', href: '/stories' },
       { label: 'Podcast', href: '/library#podcast' },
+      { label: 'Regen Hub', href: socialLinks.hub },
     ],
   },
   {
     heading: 'Connect',
     items: [
       { label: 'X / Twitter', href: socialLinks.twitter },
-      { label: 'Farcaster', href: socialLinks.farcaster },
       { label: 'Telegram', href: socialLinks.telegram },
       { label: 'LinkedIn', href: socialLinks.linkedin },
       { label: 'YouTube', href: socialLinks.youtube },
-      { label: 'Regen Hub', href: socialLinks.hub },
     ],
   },
 ];

@@ -527,7 +527,6 @@ export default config({
         twitter: fields.url({ label: 'Twitter/X', validation: { isRequired: true } }),
         twitterList: fields.url({ label: 'Twitter Chapter List' }),
         telegram: fields.url({ label: 'Telegram', validation: { isRequired: true } }),
-        farcaster: fields.url({ label: 'Farcaster', validation: { isRequired: true } }),
         linkedin: fields.url({ label: 'LinkedIn', validation: { isRequired: true } }),
         hub: fields.url({ label: 'Regen Coordination Hub', validation: { isRequired: true } }),
         codeOfConduct: fields.url({ label: 'Code of Conduct', validation: { isRequired: true } }),

@@ -807,7 +807,7 @@ test('footer links come from social-links.json, with Keystatic fields to edit th
   // and leaves out a link whose URL an editor removed.
   assert.doesNotMatch(footer, /https?:\/\//);
   assert.match(footer, /\.filter\(\(item\) => item\.href\)/);
-  const footerKeys = ['twitter', 'farcaster', 'telegram', 'linkedin', 'youtube', 'hub', 'codeOfConduct', 'events', 'stewardCall', 'github'];
+  const footerKeys = ['twitter', 'telegram', 'linkedin', 'youtube', 'hub', 'codeOfConduct', 'events', 'stewardCall', 'github'];
   for (const key of footerKeys) {
     assert.match(socialLinks[key], /^https:\/\//, `social-links.json ${key}`);
     assert.match(footer, new RegExp(`socialLinks\\.${key}\\b`), `footer reads ${key}`);
@@ -822,6 +822,26 @@ test('footer links come from social-links.json, with Keystatic fields to edit th
   for (const key of footerKeys) {
     assert.match(schemaBlock, new RegExp(`\\b${key}: fields\\.url\\(\\{[^}]*validation: \\{ isRequired: true \\}`), `Keystatic requires ${key}`);
   }
+});
+
+test('each footer column holds at most four links, with no Farcaster and the Regen Hub under Resources', async () => {
+  // Afo's rule (November 2026): at most four links per footer column. Connect
+  // dropped Farcaster, and the Regen Hub moved to Resources.
+  const footer = await readFile(join(websiteShellDir, 'SiteFooter.astro'), 'utf8');
+  const columns = new Map(
+    [...footer.matchAll(/heading: '([^']+)',\s*items: \[([\s\S]*?)\n\s*\],/g)].map(([, heading, items]) => [
+      heading,
+      [...items.matchAll(/label: '([^']+)'/g)].map(([, label]) => label),
+    ]),
+  );
+
+  assert.deepEqual([...columns.keys()], ['Network', 'Get involved', 'Resources', 'Connect']);
+  for (const [heading, labels] of columns) {
+    assert.ok(labels.length <= 4, `footer ${heading} has ${labels.length} links: ${labels.join(', ')}`);
+  }
+  assert.deepEqual(columns.get('Connect'), ['X / Twitter', 'Telegram', 'LinkedIn', 'YouTube']);
+  assert.deepEqual(columns.get('Resources'), ['Library', 'Stories', 'Podcast', 'Regen Hub']);
+  assert.doesNotMatch(footer, /socialLinks\.farcaster|label: 'Farcaster'/);
 });
 
 test('the steward booking link has one source: stewardCall in social-links.json', async () => {

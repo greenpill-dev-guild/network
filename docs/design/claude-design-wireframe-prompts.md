@@ -86,8 +86,8 @@ SITE CHROME (include on the frame)
 - Footer, 4 columns:
   NETWORK — Chapters · Guilds & Working Groups · Garden · Code of Conduct
   GET INVOLVED — Start in the Garden · Events calendar (Luma) · Join the map · Talk to a steward
-  RESOURCES — Library · Stories · Podcast
-  CONNECT — X / Twitter · Farcaster · Telegram · LinkedIn · YouTube · Regen Hub
+  RESOURCES — Library · Stories · Podcast · Regen Hub
+  CONNECT — X / Twitter · Telegram · LinkedIn · YouTube
   Bottom mono row: greenpill.network · 2026 Greenpill Network · Ecoregion boundaries: RESOLVE
   Ecoregions 2017, CC-BY 4.0.
 
@@ -265,8 +265,8 @@ SITE CHROME (include on the frame)
 - Footer, 4 columns:
   NETWORK — Chapters · Guilds & Working Groups · Garden · Code of Conduct
   GET INVOLVED — Start in the Garden · Events calendar (Luma) · Join the map · Talk to a steward
-  RESOURCES — Library · Stories · Podcast
-  CONNECT — X / Twitter · Farcaster · Telegram · LinkedIn · YouTube · Regen Hub
+  RESOURCES — Library · Stories · Podcast · Regen Hub
+  CONNECT — X / Twitter · Telegram · LinkedIn · YouTube
   Bottom mono row: greenpill.network · 2026 Greenpill Network · Ecoregion boundaries: RESOLVE
   Ecoregions 2017, CC-BY 4.0.
 
@@ -414,8 +414,8 @@ SITE CHROME (include on the frames)
 - Footer, 4 columns:
   NETWORK — Chapters · Guilds & Working Groups · Garden · Code of Conduct
   GET INVOLVED — Start in the Garden · Events calendar (Luma) · Join the map · Talk to a steward
-  RESOURCES — Library · Stories · Podcast
-  CONNECT — X / Twitter · Farcaster · Telegram · LinkedIn · YouTube · Regen Hub
+  RESOURCES — Library · Stories · Podcast · Regen Hub
+  CONNECT — X / Twitter · Telegram · LinkedIn · YouTube
   Bottom mono row: greenpill.network · 2026 Greenpill Network · Ecoregion boundaries: RESOLVE
   Ecoregions 2017, CC-BY 4.0.
 
@@ -588,8 +588,8 @@ SITE CHROME (include on the frame)
 - Footer, 4 columns:
   NETWORK — Chapters · Guilds & Working Groups · Garden · Code of Conduct
   GET INVOLVED — Start in the Garden · Events calendar (Luma) · Join the map · Talk to a steward
-  RESOURCES — Library · Stories · Podcast
-  CONNECT — X / Twitter · Farcaster · Telegram · LinkedIn · YouTube · Regen Hub
+  RESOURCES — Library · Stories · Podcast · Regen Hub
+  CONNECT — X / Twitter · Telegram · LinkedIn · YouTube
   Bottom mono row: greenpill.network · 2026 Greenpill Network · Ecoregion boundaries: RESOLVE
   Ecoregions 2017, CC-BY 4.0.
 
@@ -742,8 +742,8 @@ SITE CHROME (include on the frame)
 - Footer, 4 columns:
   NETWORK — Chapters · Guilds & Working Groups · Garden · Code of Conduct
   GET INVOLVED — Start in the Garden · Events calendar (Luma) · Join the map · Talk to a steward
-  RESOURCES — Library · Stories · Podcast
-  CONNECT — X / Twitter · Farcaster · Telegram · LinkedIn · YouTube · Regen Hub
+  RESOURCES — Library · Stories · Podcast · Regen Hub
+  CONNECT — X / Twitter · Telegram · LinkedIn · YouTube
   Bottom mono row: greenpill.network · 2026 Greenpill Network · Ecoregion boundaries: RESOLVE
   Ecoregions 2017, CC-BY 4.0.
 

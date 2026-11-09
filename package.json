@@ -62,6 +62,7 @@
     "test:snapshot-alerts:db": "bun run build:packages && bun --no-env-file scripts/snapshot-alert-episodes.integration.ts",
     "test:map-node-approval-guard:db": "bun run build:packages && bun --no-env-file scripts/map-node-approval-guard.integration.ts",
     "test:text-fields:db": "bun run build:packages && bun --no-env-file scripts/directus-text-fields.integration.ts",
+    "test:update-request-children:db": "bun run build:packages && bun --no-env-file scripts/chapter-update-request-children.integration.ts",
     "test:chapter-image-copies": "bun run build:packages && bun test scripts/chapter-image-copies.test.ts",
     "test:chapter-image-copies:build": "bun run build:packages && bun --no-env-file scripts/chapter-image-build.integration.ts",
     "test:map-edit": "bun run build:website && bun test scripts/map-edit-route.test.ts",
