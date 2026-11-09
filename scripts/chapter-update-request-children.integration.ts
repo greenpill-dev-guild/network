@@ -19,7 +19,9 @@
 //   being moved onto the request's chapter, and nothing is stored;
 // - one on an accepted, declined or archived request is refused with a
 //   readable reason, and nothing is stored;
-// - rows a request already holds stay when it is decided;
+// - rows a request already holds stay when it is decided, and can still be
+//   edited in place;
+// - a row moved to another request is checked the same way;
 // - an insert and a decision on the same request wait for each other, so an
 //   acceptance cannot miss a row inserted alongside it.
 //
@@ -170,6 +172,21 @@ try {
   await sql`update content.chapter_update_requests set request_status = 'archived' where id = ${decidedLater}`;
   await assert.rejects(insertProofSignal(decidedLater), decidedRefusal('archived'));
   assert.deepEqual((await childRows(decidedLater)).map((row) => row.kind), ['link']);
+  // Editing it in place is not a move, even when the writer resends its request.
+  await sql`update content.chapter_update_request_links set label = 'Edited proof link', update_request_id = ${decidedLater} where update_request_id = ${decidedLater}`;
+
+  // A row moved to another request goes through the same checks.
+  const moveFrom = await insertRequest('proof-chapter', 'draft');
+  const decidedTarget = await insertRequest('proof-chapter', 'archived');
+  const otherChapterTarget = await insertRequest('proof-other', 'draft');
+  const openTarget = await insertRequest('proof-chapter', 'needs_changes');
+  await insertLink(moveFrom);
+  const move = (target: string) => sql!`update content.chapter_update_request_links set update_request_id = ${target} where update_request_id = ${moveFrom}`;
+  await assert.rejects(move(decidedTarget), decidedRefusal('archived'));
+  await assert.rejects(move(otherChapterTarget), foreignKeyRefusal);
+  await move(openTarget);
+  assert.deepEqual((await childRows(openTarget)).map((row) => `${row.kind}:${row.chapter_slug}`), ['link:proof-chapter'], 'moved between open requests');
+  assert.deepEqual(await childRows(decidedTarget), [], 'nothing moved onto the decided request');
 
   // An insert and a decision on the same request run one after the other.
   // lock_timeout turns "would wait" into an error the proof can assert.

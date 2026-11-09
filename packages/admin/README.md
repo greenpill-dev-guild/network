@@ -486,9 +486,14 @@ the right chapter and request:
   chapter is refused by the `(update_request_id, chapter_slug)` foreign key
   (a readable 400) instead of being moved onto the request's chapter.
 - Migration 034 also refuses a new row on an accepted, declined or archived
-  request, for every writer. Directus shows a non-admin that refusal as
-  "An unexpected error occurred"; stewards cannot edit a decided request in
-  Data Studio, so they only meet it through the API.
+  request, for every writer, whether inserted or moved there from another
+  request. Directus shows a non-admin that refusal as "An unexpected error
+  occurred"; stewards cannot edit a decided request in Data Studio, so they
+  only meet it through the API. An administrator who adds rows and accepts
+  the request in one save gets this error too, because Directus saves the
+  status before the new rows: save the rows first, then accept.
+- Removing a row from either list deletes it. The setup keeps both relations'
+  deselect action at `delete`, because `update_request_id` cannot be cleared.
 
 Prove the database rules with `bun run test:update-request-children:db` and
 the Directus rules with `bun run directus:steward:smoke`.

@@ -728,6 +728,23 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
     if (await changeRequestChildRowCount(admin, updateRequestId) !== 3) {
       throw new Error('The steward could not add a link and a proof signal to their own change request, directly and through the form.');
     }
+    // Removing a row in the form deletes it: the relation's deselect action
+    // must be delete, since clearing the NOT NULL link to the request fails.
+    const formLinks = await admin.request(`/items/chapter_update_request_links?${new URLSearchParams({
+      'filter[update_request_id][_eq]': updateRequestId,
+      'filter[label][_eq]': 'Directus smoke form link',
+      fields: 'id',
+      limit: '-1',
+    }).toString()}`);
+    const formLinkId = formLinks?.data?.[0]?.id;
+    if (!formLinkId) throw new Error('The link added through the request form is missing.');
+    await steward.request(`/items/chapter_update_requests/${encodePathSegment(updateRequestId)}`, {
+      method: 'PATCH',
+      body: { links: { create: [], update: [], delete: [formLinkId] } },
+    });
+    if (await changeRequestChildRowCount(admin, updateRequestId) !== 2) {
+      throw new Error('Removing a link in the request form did not delete it. Re-run directus:content:setup.');
+    }
 
     const unassignedUpdateRequest = await admin.request('/items/chapter_update_requests', {
       method: 'POST',

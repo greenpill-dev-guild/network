@@ -1910,7 +1910,10 @@ async function ensureRelation(client, relation) {
     if (
       currentMeta.one_collection !== relation.collection_one ||
       currentMeta.one_field !== relation.field_one ||
-      currentMeta.junction_field !== (relation.junction_field ?? null)
+      currentMeta.junction_field !== (relation.junction_field ?? null) ||
+      // A caller that needs a removed list row deleted (not its link cleared)
+      // gets that enforced, even on a relation that is otherwise right.
+      (relation.one_deselect_action && currentMeta.one_deselect_action !== relation.one_deselect_action)
     ) {
       const updated = await client.request(`/relations/${encodeURIComponent(relation.collection_many)}/${encodeURIComponent(relation.field_many)}`, {
         method: 'PATCH',
@@ -1925,7 +1928,7 @@ async function ensureRelation(client, relation) {
             one_field: relation.field_one,
             one_allowed_collections: null,
             one_collection_field: null,
-            one_deselect_action: 'delete',
+            one_deselect_action: relation.one_deselect_action ?? 'delete',
             junction_field: relation.junction_field ?? null,
             sort_field: null,
           },
@@ -2051,11 +2054,14 @@ async function ensureStewardAccessRelations(client, collectionNames) {
   }
 
   if (chapterUpdateRequests && chapterUpdateRequestLinks) {
+    // Stewards remove rows from the request form (PRD-1443), and
+    // update_request_id is NOT NULL, so a removed row is deleted.
     await ensureRelation(client, {
       collection_many: chapterUpdateRequestLinks,
       field_many: 'update_request_id',
       collection_one: chapterUpdateRequests,
       field_one: 'links',
+      one_deselect_action: 'delete',
     });
     await ensureAliasField(client, chapterUpdateRequests, 'links', {
       hidden: false,
@@ -2073,6 +2079,7 @@ async function ensureStewardAccessRelations(client, collectionNames) {
       field_many: 'update_request_id',
       collection_one: chapterUpdateRequests,
       field_one: 'proof_signals',
+      one_deselect_action: 'delete',
     });
     await ensureAliasField(client, chapterUpdateRequests, 'proof_signals', {
       hidden: false,
