@@ -128,6 +128,9 @@ const ogImageUrl = new URL(ogImage, site).href;
       max(1400px, 100vw) auto;
     opacity: 0.94;
     transform: translate3d(0, 0, 0);
+    /* Keeps the layer on its own compositing layer. The CSS minifier folds
+       the 3D no-op above into a 2D translate, which drops that hint. */
+    will-change: transform;
   }
 
   /* Main content and footer are their own stacking layer, so positioned
