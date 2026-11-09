@@ -558,7 +558,7 @@ Cards never use horizontal scroll-snap rails by default — use a real grid with
 ### Chrome
 
 - **`header`** — Logo lockup left, primary nav right. Active item gets a lime underline. Mobile collapses to a hamburger with a slide-down nav overlay (max 320px tall). Nav items live in a single constant — never inline them in pages.
-- **`footer`** — Four-column layout (Network / Get involved / Resources / Connect) with a right-rail wordmark + tagline. Set `showWordmark` for the editorial direction that centers the wordmark above the columns.
+- **`footer`** — Four-column layout (Network / Get involved / Resources / Connect) with a right-rail wordmark + tagline. Set `showWordmark` for the editorial direction that centers the wordmark above the columns. Each column holds at most four links. Connect is X / Twitter, Telegram, LinkedIn and YouTube, and the Regen Hub sits under Resources. A test in `scripts/public-content-contract.test.ts` enforces the four-link limit.
 - **Breadcrumb** — Back-link + slash-separated trail. Used on Chapter / Story / Guild detail pages. Last crumb is the current page and is not linked.
 
 ### Avatars
