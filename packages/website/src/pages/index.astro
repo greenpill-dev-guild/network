@@ -364,7 +364,9 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
   /* Hero composition: stacked centered — H1 → map → dek → CTAs */
   .gp-home-hero {
     position: relative;
-    overflow: hidden;
+    /* Clip sideways only. A full clip cut the primary button's glow into a
+       hard-edged box at the bottom of the hero. */
+    overflow-x: clip;
     min-block-size: calc(100dvh - var(--gp-header-height));
     display: flex;
     align-items: center;

@@ -113,7 +113,9 @@ const seoDescription = garden.seo.description || summary;
 
   .gp-garden-hero {
     position: relative;
-    overflow: hidden;
+    /* Clip sideways only, so the primary button's glow fades out instead of
+       stopping at a hard edge. */
+    overflow-x: clip;
     padding: clamp(var(--gp-space-3xl), 8vw, var(--gp-space-5xl)) 0 var(--gp-space-4xl);
   }
 
