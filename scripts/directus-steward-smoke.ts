@@ -745,6 +745,46 @@ export async function runDirectusStewardSmoke(options: SmokeOptions) {
     if (await changeRequestChildRowCount(admin, updateRequestId) !== 2) {
       throw new Error('Removing a link in the request form did not delete it. Re-run directus:content:setup.');
     }
+    // The proof signal list works the same way, and both lists edit rows in
+    // place: add a proof signal, then in one form save edit the link and the
+    // first proof signal and remove the added one.
+    await steward.request(`/items/chapter_update_requests/${encodePathSegment(updateRequestId)}`, {
+      method: 'PATCH',
+      body: {
+        proof_signals: {
+          create: [{ label: 'Directus smoke form proof signal', value: '2 requests' }],
+          update: [],
+          delete: [],
+        },
+      },
+    });
+    const childRows = async (collection: string) => (await admin.request(`/items/${collection}?${new URLSearchParams({
+      'filter[update_request_id][_eq]': updateRequestId,
+      fields: 'id,label',
+      sort: 'label',
+      limit: '-1',
+    }).toString()}`))?.data ?? [];
+    const proofsBefore = await childRows('chapter_update_request_proof_signals');
+    const formProof = proofsBefore.find((row) => row.label === 'Directus smoke form proof signal');
+    const firstProof = proofsBefore.find((row) => row.label === 'Directus smoke proof signal');
+    const [firstLink] = await childRows('chapter_update_request_links');
+    if (!formProof || !firstProof || !firstLink) {
+      throw new Error('The steward could not add a proof signal through the request form.');
+    }
+    await steward.request(`/items/chapter_update_requests/${encodePathSegment(updateRequestId)}`, {
+      method: 'PATCH',
+      body: {
+        links: { create: [], update: [{ id: firstLink.id, label: 'Directus smoke public link (edited)' }], delete: [] },
+        proof_signals: { create: [], update: [{ id: firstProof.id, label: 'Directus smoke proof signal (edited)' }], delete: [formProof.id] },
+      },
+    });
+    const edited = [
+      ...(await childRows('chapter_update_request_links')).map((row) => `link:${row.label}`),
+      ...(await childRows('chapter_update_request_proof_signals')).map((row) => `proof:${row.label}`),
+    ];
+    if (edited.join('|') !== 'link:Directus smoke public link (edited)|proof:Directus smoke proof signal (edited)') {
+      throw new Error(`Editing and removing rows in the request form did not stick: ${edited.join(', ')}`);
+    }
 
     const unassignedUpdateRequest = await admin.request('/items/chapter_update_requests', {
       method: 'POST',
