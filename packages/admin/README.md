@@ -485,13 +485,16 @@ the right chapter and request:
   writer left it empty, as the request form does. A row that names another
   chapter is refused by the `(update_request_id, chapter_slug)` foreign key
   (a readable 400) instead of being moved onto the request's chapter.
-- Migration 034 also refuses a new row on an accepted, declined or archived
-  request, for every writer, whether inserted or moved there from another
-  request. Directus shows a non-admin that refusal as "An unexpected error
-  occurred"; stewards cannot edit a decided request in Data Studio, so they
-  only meet it through the API. An administrator who adds rows and accepts
-  the request in one save gets this error too, because Directus saves the
-  status before the new rows: save the rows first, then accept.
+- Migration 034 also fixes the rows of an accepted, declined or archived
+  request, for every writer: no row is inserted on it, moved onto or off it,
+  edited or deleted. Deleting the whole request still removes its rows.
+  Directus shows a non-admin that refusal as "An unexpected error occurred";
+  stewards cannot edit a decided request in Data Studio, so they only meet it
+  through the API. An administrator who adds rows and accepts the request in
+  one save gets this error too, because Directus saves the status before the
+  new rows: save the rows first, then accept. Every row change locks the
+  request FOR SHARE, so a change and a decision on the same request run one
+  after the other and an acceptance applies the rows as they finally stand.
 - Removing a row from either list deletes it. The setup keeps both relations'
   deselect action at `delete`, because `update_request_id` cannot be cleared.
 

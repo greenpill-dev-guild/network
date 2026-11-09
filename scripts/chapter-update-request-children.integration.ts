@@ -19,11 +19,13 @@
 //   being moved onto the request's chapter, and nothing is stored;
 // - one on an accepted, declined or archived request is refused with a
 //   readable reason, and nothing is stored;
-// - rows a request already holds stay when it is decided, and can still be
-//   edited in place;
-// - a row moved to another request is checked the same way;
-// - an insert and a decision on the same request wait for each other, so an
-//   acceptance cannot miss a row inserted alongside it.
+// - rows a request already holds stay when it is decided, and can then no
+//   longer be edited or deleted, while deleting the whole request still
+//   removes them;
+// - a row moved to another request is checked the same way, and an edit that
+//   resends the row's own request is not a move;
+// - an insert, edit or delete and a decision on the same request wait for each
+//   other, so an acceptance applies the rows as they finally stand.
 //
 // Which chapters a steward may attach rows to is a Directus rule, proven by
 // `bun run directus:steward:smoke`, not here.
@@ -114,6 +116,11 @@ const decidedRefusal = (status: string) => (error: any) => {
   assert.match(error.message, new RegExp(`^chapter_update_request_decided: change request [0-9a-f-]+ is ${status}, so it takes no new rows\\.$`));
   return true;
 };
+const changeRefusal = (status: string) => (error: any) => {
+  assert.equal(error?.code, '23514', `expected a check_violation, got ${error?.code}: ${error?.message}`);
+  assert.match(error.message, new RegExp(`^chapter_update_request_decided: change request [0-9a-f-]+ is ${status}, so its rows can no longer change\\.$`));
+  return true;
+};
 
 try {
   await server.unsafe(`create database ${scratchName}`);
@@ -172,8 +179,13 @@ try {
   await sql`update content.chapter_update_requests set request_status = 'archived' where id = ${decidedLater}`;
   await assert.rejects(insertProofSignal(decidedLater), decidedRefusal('archived'));
   assert.deepEqual((await childRows(decidedLater)).map((row) => row.kind), ['link']);
-  // Editing it in place is not a move, even when the writer resends its request.
-  await sql`update content.chapter_update_request_links set label = 'Edited proof link', update_request_id = ${decidedLater} where update_request_id = ${decidedLater}`;
+  // Its rows are fixed now: neither edited nor deleted.
+  await assert.rejects(sql`update content.chapter_update_request_links set label = 'Edited proof link' where update_request_id = ${decidedLater}`, changeRefusal('archived'));
+  await assert.rejects(sql`delete from content.chapter_update_request_links where update_request_id = ${decidedLater}`, changeRefusal('archived'));
+  assert.deepEqual((await childRows(decidedLater)).map((row) => row.kind), ['link'], 'the archived request kept its row');
+  // Deleting the whole request still takes its rows with it.
+  await sql`delete from content.chapter_update_requests where id = ${decidedLater}`;
+  assert.deepEqual(await childRows(decidedLater), [], 'the deleted request took its rows');
 
   // A row moved to another request goes through the same checks.
   const moveFrom = await insertRequest('proof-chapter', 'draft');
@@ -187,6 +199,8 @@ try {
   await move(openTarget);
   assert.deepEqual((await childRows(openTarget)).map((row) => `${row.kind}:${row.chapter_slug}`), ['link:proof-chapter'], 'moved between open requests');
   assert.deepEqual(await childRows(decidedTarget), [], 'nothing moved onto the decided request');
+  // On an open request, an edit that resends the row's request is not a move.
+  await sql`update content.chapter_update_request_links set label = 'Edited proof link', update_request_id = ${openTarget} where update_request_id = ${openTarget}`;
 
   // An insert and a decision on the same request run one after the other.
   // lock_timeout turns "would wait" into an error the proof can assert.
@@ -218,6 +232,29 @@ try {
   });
   await assert.rejects(insertLink(decisionFirst), decidedRefusal('declined'));
   assert.deepEqual(await childRows(decisionFirst), [], 'nothing reached the declined request');
+  // Edits and deletes hold the request the same way: an acceptance waits for an
+  // open edit, and a delete waits for an open acceptance and is then refused.
+  const editFirst = await insertRequest('proof-chapter', 'pending_review');
+  await insertLink(editFirst);
+  await sql.begin(async (tx) => {
+    await tx`update content.chapter_update_request_links set label = 'Edited before acceptance' where update_request_id = ${editFirst}`;
+    await assert.rejects(other!.begin(async (otx) => {
+      await otx`set local lock_timeout = '500ms'`;
+      await otx`update content.chapter_update_requests set request_status = 'accepted' where id = ${editFirst}`;
+    }), lockWait);
+  });
+  await other`update content.chapter_update_requests set request_status = 'accepted' where id = ${editFirst}`;
+  const deleteAfter = await insertRequest('proof-chapter', 'pending_review');
+  await insertLink(deleteAfter);
+  await other.begin(async (otx) => {
+    await otx`update content.chapter_update_requests set request_status = 'accepted' where id = ${deleteAfter}`;
+    await assert.rejects(sql!.begin(async (tx) => {
+      await tx`set local lock_timeout = '500ms'`;
+      await tx`delete from content.chapter_update_request_links where update_request_id = ${deleteAfter}`;
+    }), lockWait);
+  });
+  await assert.rejects(sql`delete from content.chapter_update_request_links where update_request_id = ${deleteAfter}`, changeRefusal('accepted'));
+  assert.deepEqual((await childRows(deleteAfter)).map((row) => row.kind), ['link'], 'the accepted request kept its row');
 
   console.log('Update request children database proof passed.');
 } finally {
