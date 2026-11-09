@@ -222,7 +222,7 @@ const projects = (await getOperationalProjects())
                       <span class="gp-guild-principle-num" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
                       <div class="gp-guild-stack is-tight">
                         <Text variant="title-md" as="h3">{principle.title}</Text>
-                        {principle.body && <Text variant="body-lg">{principle.body}</Text>}
+                        {principle.body && <Text variant="body-lg" class="gp-guild-principle-body">{principle.body}</Text>}
                       </div>
                     </Card>
                   ))}
@@ -465,11 +465,11 @@ const projects = (await getOperationalProjects())
   }
 
   /* Reading text on this template runs at the body-lg token (18px). Setting the
-     wrapper to the same size makes the 54ch reading measure (DESIGN.md,
-     Typography) match the prose inside it. */
+     wrapper to the same size makes the reading measure (DESIGN.md, Typography)
+     match the prose inside it. */
   .gp-guild-prose {
     font-size: var(--gp-body-lg);
-    max-inline-size: 54ch;
+    max-inline-size: var(--gp-measure-reading);
   }
 
   .gp-guild-row {
@@ -542,6 +542,17 @@ const projects = (await getOperationalProjects())
     font-size: var(--gp-h3-size);
     font-weight: 500;
     line-height: 1;
+  }
+
+  /* When the mandate grid drops to one column a principle card spans the
+     row, so its body keeps the reading measure. The text column fills the
+     card, so the cap narrows the body only, not the heading. */
+  .gp-guild-principles .gp-guild-stack {
+    flex: 1;
+  }
+
+  .gp-guild-principles :global(.gp-text.gp-guild-principle-body) {
+    max-inline-size: var(--gp-measure-reading);
   }
 
   /* Card grids: each list item is a grid cell so the card stretches to the row

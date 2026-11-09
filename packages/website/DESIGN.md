@@ -392,7 +392,7 @@ No text is set below 12px (`label-sm`, `caption`, `overline`). Mono metadata row
 
 ### Line length
 
-Long-form reading text stops at **54ch**, about 65 to 75 characters per line: story paragraphs, list items and deks, chapter summaries and card copy, and guild prose. Put `max-inline-size: 54ch` on the text element itself, or on a wrapper set to the same font size, because `ch` is the width of the zero in that element's font. Manrope's zero is wider than its average letter, so the count runs above the `ch` number: on the published stories 54ch measured a median of 68 characters and a maximum of 75 (November 2026), and 65ch sets about 80. The cap only binds in wide columns, so 375 layouts do not change. Headings, quotes, images and full-bleed sections keep their own widths.
+Long-form reading text stops at the reading measure, `--gp-measure-reading` (**54ch**), about 65 to 75 characters per line: story paragraphs, list items and deks, chapter summaries and card copy, and guild prose and principle bodies. Put `max-inline-size: var(--gp-measure-reading)` on the text element itself, or on a wrapper set to the same font size, because `ch` is the width of the zero in the font of the element that uses it. Manrope's zero is wider than its average letter, so the count runs above the `ch` number: on the published stories 54ch measured a median of 68 characters and a maximum of 75 (November 2026), and 65ch sets about 80. The cap only binds in wide columns, so 375 layouts do not change. Headings, quotes, images and full-bleed sections keep their own widths.
 
 ## Layout
 

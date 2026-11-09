@@ -494,7 +494,7 @@ function primaryInitiativeHref(initiative: any) {
   .gp-chapter-hero-inner :global(.gp-text.gp-chapter-place),
   .gp-chapter-hero-inner :global(.gp-text.gp-chapter-summary) {
     color: var(--gp-fg-muted);
-    max-inline-size: 54ch;
+    max-inline-size: var(--gp-measure-reading);
   }
 
   .gp-chapter-chips {
@@ -670,7 +670,7 @@ function primaryInitiativeHref(initiative: any) {
   /* A grid with one or two cards stretches them across the row, so their
      copy keeps the reading measure (DESIGN.md, Typography). */
   .gp-chapter-section :global(.gp-text.gp-chapter-card-copy) {
-    max-inline-size: 54ch;
+    max-inline-size: var(--gp-measure-reading);
   }
 
   .gp-chapter-cta {
