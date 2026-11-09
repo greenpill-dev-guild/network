@@ -390,6 +390,10 @@ No text is set below 12px (`label-sm`, `caption`, `overline`). Mono metadata row
 
 **Note for implementation:** `GpLayout.astro` loads Spectral, Manrope, and JetBrains Mono with one Google Fonts stylesheet. `gp-tokens.css` defines only the font stacks so standalone credential-bearing pages can reuse the tokens without making external requests; those pages intentionally render with the system fallbacks.
 
+### Line length
+
+Long-form reading text stops at the reading measure, `--gp-measure-reading` (**54ch**), about 65 to 75 characters per line: story paragraphs, list items and deks, chapter summaries and card copy, and guild prose and principle bodies. Put `max-inline-size: var(--gp-measure-reading)` on the text element itself, or on a wrapper set to the same font size, because `ch` is the width of the zero in the font of the element that uses it. Manrope's zero is wider than its average letter, so the count runs above the `ch` number: on the published stories 54ch measured a median of 68 characters and a maximum of 75 (November 2026), and 65ch sets about 80. The cap only binds in wide columns, so 375 layouts do not change. Headings, quotes, images and full-bleed sections keep their own widths.
+
 ## Layout
 
 The site uses a **container-query-based responsive system** rather than viewport media queries. Every page root carries `container-type: inline-size`; child layouts reflow based on the container's width, not the viewport. This makes pages composable into any column or sidebar without breakage.

@@ -129,6 +129,11 @@
     --gp-container-xl: 1280px;
     --gp-container-2xl: 1440px;
 
+    /* Reading measure: long-form text stops here, about 65 to 75 Manrope
+       characters per line (DESIGN.md, Typography, Line length). ch resolves
+       in the element that uses the token, so set it on the text itself. */
+    --gp-measure-reading: 54ch;
+
     --gp-header-height: 72px;
   }
 

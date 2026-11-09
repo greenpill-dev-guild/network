@@ -256,9 +256,9 @@ const storyImageAlt = data.media?.imageAlt || `${data.title} story image`;
     letter-spacing: 0;
   }
 
-  .gp-story-hero-inner :global(.gp-story-dek) {
+  .gp-story-hero-inner :global(.gp-text.gp-story-dek) {
     color: var(--gp-fg-muted);
-    max-width: 60ch;
+    max-inline-size: var(--gp-measure-reading);
   }
 
   .gp-story-byline {
@@ -308,6 +308,13 @@ const storyImageAlt = data.media?.imageAlt || `${data.title} story image`;
 
   .gp-story-prose p {
     margin: 0;
+  }
+
+  /* The reading measure (DESIGN.md, Typography). Paragraphs and list items
+     stop there; headings and quotes keep the full column. */
+  .gp-story-prose > p,
+  .gp-story-prose li {
+    max-inline-size: var(--gp-measure-reading);
   }
 
   .gp-story-prose ul,

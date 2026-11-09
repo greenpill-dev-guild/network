@@ -158,7 +158,7 @@ function primaryInitiativeHref(initiative: any) {
               <Card href={signal.href || undefined} stack="sm">
                 <Text variant="mono">{signal.source || 'Public source'}</Text>
                 <Text variant="title-md">{signal.value}</Text>
-                <Text variant="body-sm">{signal.label}</Text>
+                <Text variant="body-sm" class="gp-chapter-card-copy">{signal.label}</Text>
               </Card>
             ))}
           </div>
@@ -182,7 +182,7 @@ function primaryInitiativeHref(initiative: any) {
                 <>
                   <Meta items={['Initiative', initiative.data.status || 'active']} accentIndex={1} />
                   <Text variant="title-lg">{initiative.data.title}</Text>
-                  {initiative.data.summary && <Text variant="body-sm">{initiative.data.summary}</Text>}
+                  {initiative.data.summary && <Text variant="body-sm" class="gp-chapter-card-copy">{initiative.data.summary}</Text>}
                   {initiativeThemes.length > 0 && (
                     <div class="gp-chapter-initiative-themes">
                       {initiativeThemes.map((theme: string) => (
@@ -347,7 +347,7 @@ function primaryInitiativeHref(initiative: any) {
                 {c.data.city && (
                   <Text variant="caption">{c.data.city}{c.data.country && `, ${c.data.country}`}</Text>
                 )}
-                <Text variant="body-sm">{c.data.summary}</Text>
+                <Text variant="body-sm" class="gp-chapter-card-copy">{c.data.summary}</Text>
               </Card>
             ))}
           </div>
@@ -491,10 +491,10 @@ function primaryInitiativeHref(initiative: any) {
     letter-spacing: 0;
   }
 
-  .gp-chapter-hero-inner :global(.gp-chapter-place),
-  .gp-chapter-hero-inner :global(.gp-chapter-summary) {
+  .gp-chapter-hero-inner :global(.gp-text.gp-chapter-place),
+  .gp-chapter-hero-inner :global(.gp-text.gp-chapter-summary) {
     color: var(--gp-fg-muted);
-    max-width: 70ch;
+    max-inline-size: var(--gp-measure-reading);
   }
 
   .gp-chapter-chips {
@@ -665,6 +665,12 @@ function primaryInitiativeHref(initiative: any) {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: var(--gp-space-md);
+  }
+
+  /* A grid with one or two cards stretches them across the row, so their
+     copy keeps the reading measure (DESIGN.md, Typography). */
+  .gp-chapter-section :global(.gp-text.gp-chapter-card-copy) {
+    max-inline-size: var(--gp-measure-reading);
   }
 
   .gp-chapter-cta {
