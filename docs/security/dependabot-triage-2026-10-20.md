@@ -17,8 +17,8 @@ Read on 2026-11-08 with
 
 This triage covers the 13 alerts that were open on 2026-10-20 (#25 to #37).
 Alert #38 (Astro XSS through unescaped `<script>` and `<style>` content in
-JSX/MDX rendering, patched in 7.3.2) opened on 2026-10-28 and is not triaged
-here.
+JSX/MDX rendering, patched in 7.3.2) opened on 2026-10-28; its call was added
+with the Astro 7 migration on 2026-11-08.
 
 The first pass read `main` at `2546a58` on 2026-10-20. This refresh re-checked
 every evidence line below against `main` at `367824a` (2026-11-08). Astro is
@@ -44,6 +44,7 @@ patched. The calls below concern the website and its build process.
 | [#30 Astro View Transition animation XSS](https://github.com/withastro/astro/security/advisories/GHSA-4g3v-8h47-v7g6) · medium · 7.1.0 | Does not apply | E5: no `transition:animate`, no `astro:transitions` import and no CMS-driven animation properties. Literal CSS `transition:` declarations and `@view-transition` are separate browser features. | No template patch needed; resolve the package alert through the planned migration. |
 | [#29 Astro spread attribute-name XSS](https://github.com/withastro/astro/security/advisories/GHSA-jrpj-wcv7-9fh9) · medium · 6.4.6 | Does not apply in current callers | E3 and E4: CMS fields fill values and children at fixed attribute names. None of the four rest-prop components (Button, Card, Chip, EmailInput) receives a spread object from a caller, and HomeMap's remaining spread is the literal `{ hidden: true }`. Static output alone would not protect this sink. | Keep explicit prop mapping. The static-build regression adds hostile CMS text and object keys; the framework patch remains migration work. |
 | [#25 Astro `define:vars` script escape XSS](https://github.com/withastro/astro/security/advisories/GHSA-j687-52p2-xcff) · medium · 6.1.6 | Does not apply in current callers | E5: the one `define:vars` (`pages/chapters/[slug].astro:374`, added since the first pass) passes `NEW_TAB_HINT_ID` and `NEW_TAB_HINT_TEXT`, string constants from `lib/external-links.ts:18-19`, never CMS text. HomeMap's one `set:html` serializes code-owned map theme constants. | Keep `define:vars` inputs code-owned; resolve the package alert through the planned migration. |
+| [#38 Astro JSX/MDX `<script>`/`<style>` child XSS](https://github.com/withastro/astro/security/advisories/GHSA-98hj-9722-w3j8) · medium · 7.3.2 | Does not apply | The sink is a dynamic child of `<script>` or `<style>`, such as `<script>{value}</script>`, rendered through the `astro:jsx` runtime or MDX. The site has no `.mdx`, `.jsx` or `.tsx` files, no `@astrojs/mdx` and no `astro:jsx` import; `.astro` templates go through the Astro compiler, and none gives a `<script>` or `<style>` a dynamic child. HomeMap's JSON script uses `set:html` with code-owned constants (E5). React renders only the Keystatic editor, in `astro dev`. | Retired by the Astro 7.3.8 migration. |
 | [#31 Astro `transition:*` hydrated island XSS](https://github.com/withastro/astro/security/advisories/GHSA-7pw4-f3q4-r2p2) · low · 7.0.4 | Does not apply | E5: no `transition:persist`, `transition:scope`, `transition:persist-props` or `client:*` components. | No template patch needed; resolve the package alert through the planned migration. |
 | [#26 Astro server-island parameter replay](https://github.com/withastro/astro/security/advisories/GHSA-xr5h-phrj-8vxv) · low · 6.1.10 | Does not apply | E1 and E5: static output, no server islands, no `server:defer`, no encrypted runtime island endpoint. | Resolve the package alert through the planned migration. |
 
@@ -186,6 +187,13 @@ migration in an isolated branch with checkpoints after Astro 6 and Astro 7. Do
 not couple the framework migration to HomeMap work. Keep the sharp override
 until the chosen Astro dependency graph itself requires a patched sharp and a
 clean install proves no older copy remains.
+
+Status, 2026-11-08: the migration ran as proposed, through Astro 6.4.8 to
+Astro 7.3.8, the last 7.3 release. It keeps the repo's Node floor of 22.12.0;
+7.4.0 raised Astro's to 22.22.0, and 7.4.3 to 22.23.4, above the dev
+machine's 22.23.3. The migration's pull request records the evidence. The sharp override
+stays: Astro 7.3.8's optional `^0.35.4` range still admits 0.35.4, which
+alert #37 affects.
 
 ## Validation
 
