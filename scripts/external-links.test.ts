@@ -7,6 +7,7 @@ import {
   NEW_TAB_HINT_TEXT,
   opensNewContext,
   siteHostsFor,
+  withBufferedHtml,
   withToken,
 } from '../packages/website/src/lib/external-links.ts';
 
@@ -167,5 +168,36 @@ describe('markExternalLinks', () => {
   test('passes non-HTML responses through untouched', async () => {
     const json = '{"href":"<a href=\\"https://example.org\\">x</a>"}';
     assert.equal(await render(json, 'application/json'), json);
+  });
+});
+
+describe('withBufferedHtml', () => {
+  // Astro 7's dev server streams pages, and Bun's HTMLRewriter cannot pipe a
+  // streamed body, so the middleware buffers the page before the link rule.
+  const streamed = (body: string, contentType: string) =>
+    new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(body));
+          controller.close();
+        },
+      }),
+      { status: 404, statusText: 'Not Found', headers: { 'content-type': contentType, 'x-page': 'kept' } },
+    );
+
+  test('lets the link rule rewrite a streamed page, keeping status and headers', async () => {
+    const buffered = await withBufferedHtml(streamed(page('<a href="https://x.com/greenpillnet">X</a>'), 'text/html'));
+    assert.equal(buffered.status, 404);
+    assert.equal(buffered.statusText, 'Not Found');
+    assert.equal(buffered.headers.get('x-page'), 'kept');
+    const html = await markExternalLinks(buffered, SITE_HOSTS).text();
+    assert.match(html, /<a href="https:\/\/x\.com\/greenpillnet" target="_blank" rel="noopener"/);
+    assert.ok(html.includes(HINT), html);
+  });
+
+  test('returns other responses as they are, without reading them', async () => {
+    const json = streamed('{"ok":true}', 'application/json');
+    assert.equal(await withBufferedHtml(json), json);
+    assert.equal(json.bodyUsed, false);
   });
 });
