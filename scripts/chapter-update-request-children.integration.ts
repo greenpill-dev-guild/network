@@ -1,5 +1,6 @@
-// Database proof for migration 034 (PRD-1443): a decided change request takes
-// no new link or proof-signal rows.
+// Database proof for migration 034 (PRD-1443): change-request links and proof
+// signals stay on their request's chapter, and a decided request takes no new
+// ones.
 //
 // It builds a scratch database on the local Postgres server, applies every
 // migration to it, and drops it again. The dev database is never written to.
@@ -12,8 +13,10 @@
 //
 // Covered here because only a real database can show it:
 // - a link or proof signal on a draft, pending or needs-changes request is
-//   stored, and its chapter_slug still comes from the request (027), whatever
-//   the writer sent;
+//   stored, with chapter_slug filled from the request when the writer sent
+//   none (as Data Studio's request form does) and kept when it matches;
+// - one that names another chapter is refused by the foreign key instead of
+//   being moved onto the request's chapter, and nothing is stored;
 // - one on an accepted, declined or archived request is refused with a
 //   readable reason, and nothing is stored;
 // - rows a request already holds stay when it is decided.
@@ -29,7 +32,7 @@ import { createDatabaseClient } from '@greenpill-network/agent/db';
 
 const DEFAULT_DATABASE_URL = 'postgres://greenpill:greenpill@localhost:3304/greenpill_network';
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
-const GUARD_MIGRATION = '034_chapter_update_request_child_rows_decided_guard.sql';
+const GUARD_MIGRATION = '034_chapter_update_request_child_rows_guard.sql';
 const OPEN_STATUSES = ['draft', 'pending_review', 'needs_changes'];
 const DECIDED_STATUSES = ['accepted', 'declined', 'archived'];
 
@@ -70,18 +73,19 @@ async function insertRequest(chapter: string, status: string): Promise<string> {
   return request.id;
 }
 
-// A link as Directus would write it, plus a chapter_slug the trigger must replace.
-const insertLink = (requestId: string) => sql!`
+// A link as the request form writes it (no chapter_slug), or naming a chapter.
+const insertLink = (requestId: string, chapter?: string) => sql!`
   insert into content.chapter_update_request_links ${sql!({
     update_request_id: requestId,
-    chapter_slug: 'proof-other',
+    ...(chapter === undefined ? {} : { chapter_slug: chapter }),
     label: 'Proof link',
     url: 'https://example.test/proof',
   })}
 `;
-const insertProofSignal = (requestId: string) => sql!`
+const insertProofSignal = (requestId: string, chapter?: string) => sql!`
   insert into content.chapter_update_request_proof_signals ${sql!({
     update_request_id: requestId,
+    ...(chapter === undefined ? {} : { chapter_slug: chapter }),
     label: 'Proof signal',
     value: '1',
   })}
@@ -120,17 +124,29 @@ try {
     await sql`insert into content.chapters ${sql({ slug, name: `Proof ${slug}`, publication_status: 'published' })}`;
   }
 
-  // Open requests take rows, pinned to the request's chapter.
+  // Open requests take rows on the request's chapter: filled when the writer
+  // sent none or an empty one, kept when it names the same chapter.
   for (const status of OPEN_STATUSES) {
     const requestId = await insertRequest('proof-chapter', status);
     await insertLink(requestId);
-    await insertProofSignal(requestId);
+    await insertProofSignal(requestId, '');
+    await insertLink(requestId, 'proof-chapter');
     assert.deepEqual(
       (await childRows(requestId)).map((row) => `${row.kind}:${row.chapter_slug}`),
-      ['link:proof-chapter', 'proof_signal:proof-chapter'],
+      ['link:proof-chapter', 'link:proof-chapter', 'proof_signal:proof-chapter'],
       `${status} request`
     );
   }
+
+  // A row naming another chapter is refused, not moved onto the request's.
+  const foreignKeyRefusal = (error: any) => {
+    assert.equal(error?.code, '23503', `expected a foreign_key_violation, got ${error?.code}: ${error?.message}`);
+    return true;
+  };
+  const mismatched = await insertRequest('proof-chapter', 'draft');
+  await assert.rejects(insertLink(mismatched, 'proof-other'), foreignKeyRefusal);
+  await assert.rejects(insertProofSignal(mismatched, 'proof-other'), foreignKeyRefusal);
+  assert.deepEqual(await childRows(mismatched), [], 'mismatched chapter');
 
   // Decided requests refuse them, and keep none.
   for (const status of DECIDED_STATUSES) {
