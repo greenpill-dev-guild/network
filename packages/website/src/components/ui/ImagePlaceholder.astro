@@ -53,14 +53,14 @@ const classes = ['gp-image-placeholder', className].filter(Boolean).join(' ');
     position: relative;
     z-index: 1;
     max-width: 100%;
-    overflow: hidden;
-    color: rgba(250, 247, 238, 0.55);
+    color: var(--gp-fg-muted);
     font-family: var(--gp-font-mono);
-    font-size: 9px;
+    font-size: var(--gp-caption);
     letter-spacing: 0.08em;
     line-height: 1.2;
-    text-overflow: ellipsis;
+    /* At 12px a long label wraps rather than truncating, so the whole
+       message stays readable in narrow placeholders. */
+    overflow-wrap: anywhere;
     text-transform: uppercase;
-    white-space: nowrap;
   }
 </style>

@@ -411,7 +411,10 @@ function isAllowedMediaQuery(absPath: string, query: string): boolean {
     rel === 'packages/website/src/components/shell/SiteHeader.astro' ||
     rel === 'packages/website/src/components/shell/SiteFooter.astro'
   ) return true;
-  return /pointer\s*:\s*coarse/i.test(query) || /prefers-reduced-motion/i.test(query);
+  // Input modality and user preferences are not viewport reflow, but a query
+  // that also tests the viewport's size still is.
+  if (/\b(?:min-|max-)?(?:device-)?(?:width|height|aspect-ratio)\b|\borientation\b/i.test(query)) return false;
+  return /pointer\s*:\s*coarse/i.test(query) || /prefers-reduced-motion|prefers-contrast|forced-colors/i.test(query);
 }
 
 interface SourceFinding extends Violation { file: string; line: number; text: string; }

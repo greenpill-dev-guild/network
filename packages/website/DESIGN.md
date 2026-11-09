@@ -201,7 +201,7 @@ components:
     rounded: "{rounded.full}"
     padding: 0 18px
     height: 48px
-    borderColor: "{colors.border}"
+    borderColor: "{colors.green-300}"
   input-pill-focus:
     borderColor: "{colors.primary}"
 
@@ -289,7 +289,7 @@ Visual character:
 - **Dark by default.** The canvas is deep forest green, not black, not white. Lighter surfaces step up the green scale rather than introducing grey.
 - **Editorial typography.** Display headlines in Spectral (serif) carry the warmth; UI text in Manrope (sans) carries the function. Mono is reserved for technical / metadata moments.
 - **One accent does the work.** Lime green is the primary action color and appears sparingly — overuse kills its meaning. Gold is reserved for display headlines and "steward" emphasis.
-- **Topographic texture.** Pages can carry a subtle topo-line background wash (12% opacity, overlay blend) to evoke terrain and place without becoming wallpaper.
+- **Topographic texture.** Every page except home carries the illustrated background: topographic line art under a reading scrim, with two soft glows, to evoke terrain and place without becoming wallpaper. Home stays plain. See [Reading contrast](#reading-contrast).
 
 ## Modern CSS Standard (2026)
 
@@ -299,7 +299,7 @@ This is the enshrined, enforceable house standard for all UI in `packages/websit
 - Component and section roots that reflow set `container-type: inline-size` (or a named container) and reflow via **`@container`**, never viewport `@media`. A component placed in a sidebar, modal, or narrow column then reflows exactly as it would at the matching viewport width. The width thresholds in the per-page reflow matrix below are expressed as `@container` queries.
 - **Viewport `@media` is not the reflow mechanism.** `ui:check` flags viewport `@media` in `packages/website/src`; introduce one only as a documented, reviewed exception.
 - **Everything inside `#main-content` reflows via `@container`.** `#main-content` (in `GpLayout`) is the page-level query container, so page sections, primitives, and in-content components (incl. `Breadcrumb`) reflow against it without setting their own `container-type`. A component that needs to reflow on its *own* width (e.g. a card reused across columns) sets `container-type` on its root.
-- **Sanctioned non-`@container` responsive cases (do not flag these):** (1) the global type scale — fluid `clamp()`; (2) touch-target / input-modality sizing — `@media (pointer: coarse)`, since tap size depends on the device, not container width; (3) top-level full-viewport chrome — the **site header and footer** are siblings of `#main-content` and always span the viewport (the header is `position: sticky`), so they use viewport `@media` rather than forcing `container-type` onto a sticky element. Everything else reflows with `@container`.
+- **Sanctioned non-`@container` responsive cases (do not flag these):** (1) the global type scale — fluid `clamp()`; (2) touch-target / input-modality sizing — `@media (pointer: coarse)`, since tap size depends on the device, not container width; (3) top-level full-viewport chrome — the **site header and footer** are siblings of `#main-content` and always span the viewport (the header is `position: sticky`), so they use viewport `@media` rather than forcing `container-type` onto a sticky element; (4) user preferences, `@media (prefers-reduced-motion)`, `(prefers-contrast)` and `(forced-colors)`, which answer the visitor's settings, not a width. Everything else reflows with `@container`.
 
 ### Fluid typography — `clamp()`
 - Display and headline sizes are **`clamp(min, preferred, max)`**, derived from the established mobile→desktop values (e.g. display `42px → 72px`). Type scales smoothly with the viewport — no breakpoint jumps, no per-breakpoint type tokens.
@@ -347,6 +347,33 @@ Semantic statuses map onto the palette intentionally: `success` reuses primary l
 
 The full 100–950 green scale, 100–700 lime scale, and 200–600 gold scale are tokenized so any chart, illustration, or one-off surface can pull from a coherent ramp without inventing new values.
 
+## Reading contrast
+
+The floor is WCAG 2.2 AA: 4.5:1 for normal text, 3:1 for large text (24px, or 18.66px bold), and 3:1 for the boundaries that identify a control and for focus indicators (1.4.11). Measure text against the worst background it can sit on, not the average one.
+
+### The illustrated background
+
+Every page except home (decision D4) draws a fixed layer in `GpLayout`: the topographic line art (`public/images/greenpill-bg.png`, strokes up to `rgb(45, 96, 50)`), a `green-950` scrim at 60% over it, and two glows over that (lime at 10%, gold at 8%), all at 0.94 opacity on `green-950`. The scrim keeps the strokes at about 40% strength, so they read as terrain and stop cutting through small text. Afo chose this "quiet lines" treatment on 2026-11-08 (PRD-1446) over fading the lines behind the content column only.
+
+Text scrolls over every part of the fixed layer, so its worst case is the brightest stroke under the lime glow's centre: **`#265029`**. axe marks text over background images "needs review" rather than failing it, so an axe pass proves nothing here; check new text against `#265029`. A translucent fill (any `color-mix(..., transparent)` chip or panel) composites over `#265029`, not over `green-950`.
+
+Visitors whose system asks for more contrast (`prefers-contrast: more`) or uses a forced-colors theme get the plain `green-950` canvas with no line art or glows, and `prefers-contrast: more` also lifts `fg-muted` to `off-white` and `fg-dim` to `off-white-muted`.
+
+### Floors by text style
+
+| Style | Token | Need | On `#265029` | Rule |
+|---|---|---|---|---|
+| Body, titles, labels | `fg` | 4.5 | 8.68 | Default for running text |
+| Supporting text: ledes, `body-sm`, captions, nav, metadata, helper text | `fg-muted` | 4.5 | 7.20 | The dimmest tone allowed on the illustrated background |
+| Dim tone | `fg-dim` | 4.5 | 4.32 (fails) | Only on opaque fills from `green-950` to `card` (4.50 on `card`), placeholders inside input fills (5.6 or better) and decorative separators. Never on the illustrated background, `card-elev` (3.63) or a card that steps to `card-elev` on hover |
+| Lime overlines, meta accents, arrow links | `primary` | 4.5 | 6.48 | |
+| Lime text on soft-lime chips and status chips (12% lime tint) | `primary` | 4.5 | 4.96 | Keep the tint at 12% or less |
+| Display and headline text | `secondary` | 3.0 | 6.84 | Large text only |
+| Focus ring | `shadow-focus` | 3.0 | 6.48 | 5.44 or better on every surface |
+| Input outline | `green-300` | 3.0 | 3.27 | 4.29 against the field's `green-900` fill |
+
+No text is smaller than 12px (see Typography). Inactive controls, such as a disabled submit button, are exempt from the text floor.
+
 ## Typography
 
 The type system pairs three families with strict role assignments:
@@ -357,7 +384,9 @@ The type system pairs three families with strict role assignments:
 
 Headlines never use Manrope. Body never uses Spectral. Overlines never use anything but mono. This three-way split is what gives the site its editorial character — breaking it produces a generic landing-page voice.
 
-Headline color is `secondary` (Steward Gold), body color is `fg` (Off-white). Mono overlines are colored `primary` (Lime) when used as section labels, `fg-dim` when used as inline metadata.
+Headline color is `secondary` (Steward Gold), body color is `fg` (Off-white). Mono overlines are colored `primary` (Lime) when used as section labels, `fg-muted` when used as inline metadata.
+
+No text is set below 12px (`label-sm`, `caption`, `overline`). Mono metadata rows, stat labels, small chips and status chips use those tokens rather than 10 or 11px literals. The only exception is avatar initials, which scale with the avatar and repeat a name given elsewhere.
 
 **Note for implementation:** `GpLayout.astro` loads Spectral, Manrope, and JetBrains Mono with one Google Fonts stylesheet. `gp-tokens.css` defines only the font stacks so standalone credential-bearing pages can reuse the tokens without making external requests; those pages intentionally render with the system fallbacks.
 
@@ -461,7 +490,7 @@ Shadows are reserved for three specific moments:
 - **`shadow-card-lg`** — 16px shadow + brighter inset, for elevated / hover states on cards.
 - **`shadow-pill`** — The signature lime glow on primary buttons: `0 0 32px rgba(184, 232, 53, 0.35), 0 0 80px rgba(184, 232, 53, 0.15)`. This is the *only* place glow effects are used; it's what makes a primary action read as alive.
 - **`shadow-deep`** — A directional shadow (`-7px 7px 28px`) for the map hero and similar "stage" treatments. Use sparingly.
-- **`shadow-focus`** — 3px lime ring at 40% opacity. Applied to every `:focus-visible` interactive element. Do not override.
+- **`shadow-focus`** — A solid 2px lime ring outside a 2px `green-950` gap. Applied to every `:focus-visible` interactive element. The gap keeps the ring visible on lime buttons; the ring reads 5.44:1 or better on every surface (it was a 40% lime ring at 2.0 to 2.9:1 until PRD-1446). Forced-colors themes drop box-shadow, so there a 2px system-colour outline (`CanvasText`) replaces the ring. Do not override.
 
 Cards should not stack shadows on hover. State changes are conveyed by stepping `card` → `card-elev`, not by deepening the shadow.
 
@@ -539,7 +568,7 @@ The component vocabulary is small and reused across all eight pages. The full vi
 
 ### Inputs
 
-- **`input-pill`** — The single input atom. Pill-shaped, transparent `green-900` fill, hairline border. Focus ring is `shadow-focus` (3px lime at 40%). Used for newsletter signup and the Garden contributor email capture.
+- **`input-pill`** — The single input atom. Pill-shaped, `green-900` fill, `green-300` hairline (the outline shows where the field is, so it holds 3:1). Focus ring is `shadow-focus`. Used for newsletter signup and the Garden contributor email capture.
 - **Select pill** — Visual-only "Label: Value ▾" affordance for inline filters in the Stories feed. Not a real `<select>`.
 
 ### Cards
@@ -581,7 +610,7 @@ A form field is a vertical stack:
 
 1. **Label** — `label-md` (Manrope 14px / weight 600 / letter-spacing 0.01em), color `fg`. Required fields append a single asterisk in `error` color, no other decoration.
 2. **Input** — the `input-pill` component (or appropriate variant). 8px gap below the label.
-3. **Helper text** *(optional)* — `caption` (12px), color `fg-dim`. 4px gap below the input. Replaced by error or success text when those states apply.
+3. **Helper text** *(optional)* — `caption` (12px), color `fg-muted`. 4px gap below the input. Replaced by error or success text when those states apply.
 
 Labels are always above the input. Floating / placeholder-as-label patterns are forbidden — they fail accessibility and read as cheap.
 
@@ -589,7 +618,7 @@ Labels are always above the input. Floating / placeholder-as-label patterns are 
 
 | State | Treatment |
 |---|---|
-| **Default** | `border` color, `green-900` fill, `fg` text |
+| **Default** | `green-300` border, `green-900` fill, `fg` text, `fg-dim` placeholder |
 | **Focus** | Border shifts to `primary` (lime), `shadow-focus` ring applied |
 | **Filled** | Same as default — no visual distinction |
 | **Error** | Border shifts to `error` (terracotta), helper text replaced with error message in `error` color |
@@ -678,7 +707,7 @@ When a true icon is required (e.g., an arrow, a checkbox tick), it should be a s
 
 Background imagery, logo treatment, and photography are **not authored in the design system** — they are lifted from the live greenpill.network site. The HiFi mockups define the slot; the live site provides the content. Specifically:
 
-- **Topographic background textures** — Download from the live site into `public/backgrounds/`. Apply via the `.gp-topo` utility class (12% opacity, overlay blend mode).
+- **Topographic background textures** — The line art lives at `public/images/greenpill-bg.png` and is drawn once, by `GpLayout`'s fixed background layer, under the reading scrim described in [Reading contrast](#reading-contrast). Do not paint it again inside sections.
 - **Logo mark** — The HiFi header is wordmark-only as shipped; the live site uses a logo mark to the left of the wordmark. Default behavior on implementation is to restore the mark from the live site.
 - **Photography** — Real chapter and story photos lifted from the live site, placed against the topographic backdrop, capped at 32px radius (`rounded.xl`).
 - **Brand iconography** — Any branded glyphs from the live site that don't have HiFi equivalents are pulled in and replace generic substitutes.
@@ -690,6 +719,7 @@ Background imagery, logo treatment, and photography are **not authored in the de
 - **Do** convey hierarchy by stepping the green scale (`bg` → `surface` → `card` → `card-elev`) before reaching for shadows.
 - **Do** use container queries (`container-type: inline-size`) at every page root.
 - **Do** apply the `shadow-focus` lime ring on every interactive element — do not override or remove it.
+- **Do** check any text that can sit on the illustrated background against its worst case, `#265029`, and keep it at `fg-muted` or brighter.
 - **Do** match all radii to the `rounded` scale; pill (`rounded.full`) for all buttons, chips, inputs, and avatars.
 - **Don't** introduce greys. The neutral surface is warm off-white; everything else steps the green scale.
 - **Don't** use saturated red, blue, or purple. The only chromatic colors in the system are forest green, lime, gold, and earthy terracotta (for `error`).

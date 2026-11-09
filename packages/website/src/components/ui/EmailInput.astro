@@ -51,7 +51,11 @@ const classes = ['gp-email-field', className].filter(Boolean).join(' ');
     width: 100%;
     min-height: 48px;
     padding: 0 18px;
-    border: 1px solid var(--gp-border);
+    /* The outline is what shows where the field is, so it needs 3:1
+       (WCAG 1.4.11): green-300 reads 3.3:1 on the illustrated background
+       and 4.3:1 against the field's own fill. The old green-500 border
+       read 1.0:1 over a bright stroke and 2.4:1 on the plain canvas. */
+    border: 1px solid var(--gp-green-300);
     border-radius: var(--gp-radius-pill);
     background: var(--gp-green-900);
     color: var(--gp-fg);

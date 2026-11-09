@@ -314,9 +314,9 @@ const hero = chaptersIndex.hero ?? {};
   }
 
   .gp-chapters-stat-sub {
-    color: var(--gp-fg-dim);
+    color: var(--gp-fg-muted);
     font-family: var(--gp-font-mono);
-    font-size: 11px;
+    font-size: var(--gp-caption);
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
@@ -373,7 +373,7 @@ const hero = chaptersIndex.hero ?? {};
     font-family: var(--gp-font-mono);
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    font-size: 11px;
+    font-size: var(--gp-label-sm);
   }
 
   .gp-chapters-pill:hover {
@@ -444,7 +444,7 @@ const hero = chaptersIndex.hero ?? {};
   }
 
   .gp-chapters-card-stewards :global(.gp-text) {
-    color: var(--gp-fg-dim);
+    color: var(--gp-fg-muted);
     white-space: nowrap;
   }
 

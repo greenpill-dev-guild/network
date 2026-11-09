@@ -118,7 +118,10 @@
     --gp-shadow-card-lg: 0 1px 0 0 rgba(255, 255, 255, 0.06) inset, 0 16px 48px -16px rgba(0, 0, 0, 0.5);
     --gp-shadow-pill:    0 0 32px 0 rgba(184, 232, 53, 0.35), 0 0 80px 0 rgba(184, 232, 53, 0.15);
     --gp-shadow-deep:    -7px 7px 28px 0px rgba(22, 50, 31, 0.6);
-    --gp-shadow-focus:   0 0 0 3px rgba(184, 232, 53, 0.4);
+    /* Solid lime ring outside a 2px green-950 gap: at least 5.4:1 against
+       every surface and the illustrated background, and the gap keeps it
+       visible on lime buttons. The old 40% ring fell to 2.0:1 (PRD-1446). */
+    --gp-shadow-focus:   0 0 0 2px var(--gp-green-950), 0 0 0 4px var(--gp-ring);
 
     /* ── Layout ─────────────────────────────────────────────────── */
     --gp-container-md: 768px;
@@ -127,6 +130,16 @@
     --gp-container-2xl: 1440px;
 
     --gp-header-height: 72px;
+  }
+
+  /* Visitors who ask their system for more contrast get each text tone one
+     step brighter (PRD-1446). GpLayout hides the illustrated background
+     for the same query. */
+  @media (prefers-contrast: more) {
+    :root {
+      --gp-fg-muted: var(--gp-off-white);
+      --gp-fg-dim:   var(--gp-off-white-muted);
+    }
   }
 }
 
@@ -219,6 +232,24 @@
     outline: none;
     box-shadow: var(--gp-shadow-focus);
     border-radius: var(--gp-radius-sm);
+  }
+
+  /* Forced-colors themes drop box-shadow, so the ring above disappears
+     there. A system-coloured outline takes its place; !important keeps it
+     ahead of component rules that remove outlines (PRD-1446). */
+  @media (forced-colors: active) {
+    .gp-root :focus-visible {
+      outline: 2px solid CanvasText !important;
+      outline-offset: 2px;
+    }
+  }
+
+  /* Placeholder text uses the house dim tone, not the browser's grey, which
+     read at 2.9:1 on the map's dark fields. Every input keeps its own fill,
+     and fg-dim reads at 5.6:1 or better on those (PRD-1446). */
+  .gp-root ::placeholder {
+    color: var(--gp-fg-dim);
+    opacity: 1;
   }
 
   @media (prefers-reduced-motion: reduce) {
