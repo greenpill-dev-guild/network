@@ -12,7 +12,10 @@
  */
 const STATUSES_WITHOUT_PAGE: ReadonlySet<string> = new Set(['inactive', 'archived']);
 
-export function hasChapterPage(chapter: { status?: unknown }): boolean {
+// Takes any chapter record; only `status` is read. The index signature lets
+// snapshot records, whose type has no `status` key, pass TypeScript's
+// weak-type check.
+export function hasChapterPage(chapter: { readonly status?: unknown; readonly [key: string]: unknown }): boolean {
   const status = typeof chapter.status === 'string' ? chapter.status.trim().toLowerCase() : '';
   return !STATUSES_WITHOUT_PAGE.has(status);
 }

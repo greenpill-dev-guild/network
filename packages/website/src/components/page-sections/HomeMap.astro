@@ -2347,7 +2347,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     // to that node, with a way back to the list"). While the inspector stands
     // in for the list, this keeps what the list showed, for Back.
     type ListBehind = {
-      opener: HTMLElement | null;
+      opener: ListOpener | null;
       subset: { keys: string[]; label: string } | null;
       query: string;
       scrollTop: number;
@@ -3342,7 +3342,9 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     // The control that opened the list gets focus back when it closes: the
     // List toggle, the hero's "Find your people" link, or a stack marker.
-    let listOpener: HTMLElement | null = null;
+    // Stack markers are SVG groups, so an opener is any focusable element.
+    type ListOpener = HTMLElement | SVGElement;
+    let listOpener: ListOpener | null = null;
     // A list of just some nodes: the people of a stack that cannot fan out on
     // this map. Cleared when the list closes or opens for everything.
     let listSubset: { keys: Set<string>; label: string } | null = null;
@@ -3375,7 +3377,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     };
 
     const openNodeList = (
-      opener: HTMLElement | null = listToggle,
+      opener: ListOpener | null = listToggle,
       subset: { keys: string[]; label: string } | null = null
     ) => {
       if (!listDrawer || !listToggle) return;
@@ -4019,7 +4021,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
     // A stack too large to fan out with full touch targets on this map, or
     // whose names cannot all be shown apart, opens the map list with just its
     // people (and chapters, for a touch chooser).
-    const openStackList = (members: ClusterMember[], opener: HTMLElement | null) => {
+    const openStackList = (members: ClusterMember[], opener: ListOpener | null) => {
       const chapters = members.filter(isChapterPin).length;
       const people = members.length - chapters;
       const label = chapters === 0
@@ -4032,7 +4034,7 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
       members: ClusterMember[],
       center: MapPoint,
       viaKeyboard: boolean,
-      opener: HTMLElement | null = null
+      opener: ListOpener | null = null
     ) => {
       if (!clustersGroup) return;
       // One fan at a time: put the last one back before laying out this one.
