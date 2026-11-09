@@ -3066,15 +3066,22 @@ const statsA11y = `World map of ${chapterCount} Greenpill chapters. Approved ste
 
     // The phone's row scrolls sideways. Focus the script moves there (with
     // preventScroll, so the page stays put) still brings its control into
-    // the row's view.
+    // the row's view. The row's inline padding is each edge fade plus the
+    // focus ring, so keeping the control inside it keeps the control and
+    // its ring clear of the fades.
     const controlRow = scope.querySelector('.gp-home-map-control-row') as HTMLElement | null;
     controlRow?.addEventListener('focusin', (event) => {
       if (mapLayout() !== 'phone' || !(event.target instanceof HTMLElement)) return;
       const row = controlRow.getBoundingClientRect();
       const item = event.target.getBoundingClientRect();
-      const margin = 8;
-      if (item.left < row.left) controlRow.scrollLeft -= row.left - item.left + margin;
-      else if (item.right > row.right) controlRow.scrollLeft += item.right - row.right + margin;
+      const rowStyle = getComputedStyle(controlRow);
+      const rtl = rowStyle.direction === 'rtl';
+      const startClear = parseFloat(rowStyle.paddingInlineStart) || 0;
+      const endClear = parseFloat(rowStyle.paddingInlineEnd) || 0;
+      const left = row.left + (rtl ? endClear : startClear);
+      const right = row.right - (rtl ? startClear : endClear);
+      if (item.left < left) controlRow.scrollLeft -= left - item.left;
+      else if (item.right > right) controlRow.scrollLeft += item.right - right;
     });
 
     filterResetButtons.forEach((button) => {
