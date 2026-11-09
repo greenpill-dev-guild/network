@@ -490,7 +490,7 @@ Shadows are reserved for three specific moments:
 - **`shadow-card-lg`** — 16px shadow + brighter inset, for elevated / hover states on cards.
 - **`shadow-pill`** — The signature lime glow on primary buttons: `0 0 32px rgba(184, 232, 53, 0.35), 0 0 80px rgba(184, 232, 53, 0.15)`. This is the *only* place glow effects are used; it's what makes a primary action read as alive.
 - **`shadow-deep`** — A directional shadow (`-7px 7px 28px`) for the map hero and similar "stage" treatments. Use sparingly.
-- **`shadow-focus`** — A solid 2px lime ring outside a 2px `green-950` gap. Applied to every `:focus-visible` interactive element. The gap keeps the ring visible on lime buttons; the ring reads 5.44:1 or better on every surface (it was a 40% lime ring at 2.0 to 2.9:1 until PRD-1446). Do not override.
+- **`shadow-focus`** — A solid 2px lime ring outside a 2px `green-950` gap. Applied to every `:focus-visible` interactive element. The gap keeps the ring visible on lime buttons; the ring reads 5.44:1 or better on every surface (it was a 40% lime ring at 2.0 to 2.9:1 until PRD-1446). Forced-colors themes drop box-shadow, so there a 2px system-colour outline (`CanvasText`) replaces the ring. Do not override.
 
 Cards should not stack shadows on hover. State changes are conveyed by stepping `card` → `card-elev`, not by deepening the shadow.
 

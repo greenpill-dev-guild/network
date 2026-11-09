@@ -234,6 +234,16 @@
     border-radius: var(--gp-radius-sm);
   }
 
+  /* Forced-colors themes drop box-shadow, so the ring above disappears
+     there. A system-coloured outline takes its place; !important keeps it
+     ahead of component rules that remove outlines (PRD-1446). */
+  @media (forced-colors: active) {
+    .gp-root :focus-visible {
+      outline: 2px solid CanvasText !important;
+      outline-offset: 2px;
+    }
+  }
+
   /* Placeholder text uses the house dim tone, not the browser's grey, which
      read at 2.9:1 on the map's dark fields. Every input keeps its own fill,
      and fg-dim reads at 5.6:1 or better on those (PRD-1446). */

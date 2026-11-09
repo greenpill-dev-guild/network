@@ -776,11 +776,22 @@ test('illustrated background keeps small text readable (PRD-1446)', async () => 
 
   // Afo's "quiet lines" pick: a 60% green-950 scrim between the line art and
   // the glows. Without it, lime labels fall to 4.48:1 and lime chips to 3.62:1.
-  assert.match(layout, /\.gp-background-parallax::after\s*\{[^}]*background-color:\s*color-mix\(in srgb, var\(--gp-green-950\) 60%, transparent\);/);
-  // Visitors who ask for more contrast read on the plain canvas.
+  // The pseudo-element must exist and cover the whole layer for the scrim to paint.
+  const scrimRule = /\.gp-background-parallax::after\s*\{([^}]*)\}/.exec(layout)?.[1] ?? '';
+  assert.match(scrimRule, /\bcontent:\s*'';/);
+  assert.match(scrimRule, /\bposition:\s*absolute;/);
+  assert.match(scrimRule, /\binset:\s*0;/);
+  assert.match(scrimRule, /background-color:\s*color-mix\(in srgb, var\(--gp-green-950\) 60%, transparent\);/);
+  // Visitors who ask for more contrast read on the plain canvas, with each
+  // text tone one step brighter.
   assert.match(layout, /@media \(prefers-contrast: more\), \(forced-colors: active\)\s*\{\s*body\.gp-root \.gp-background-parallax\s*\{\s*display:\s*none;/);
-  // The focus ring stays opaque; the old 40% lime ring read at 2:1.
+  const moreContrast = /@media \(prefers-contrast: more\)\s*\{\s*:root\s*\{([^}]*)\}/.exec(tokens)?.[1] ?? '';
+  assert.match(moreContrast, /--gp-fg-muted:\s*var\(--gp-off-white\);/);
+  assert.match(moreContrast, /--gp-fg-dim:\s*var\(--gp-off-white-muted\);/);
+  // The focus ring stays opaque (the old 40% lime ring read at 2:1), and
+  // forced-colors themes, which drop box-shadow, get an outline instead.
   assert.match(tokens, /--gp-shadow-focus:\s*0 0 0 2px var\(--gp-green-950\), 0 0 0 4px var\(--gp-ring\);/);
+  assert.match(tokens, /@media \(forced-colors: active\)\s*\{\s*\.gp-root :focus-visible\s*\{\s*outline:\s*2px solid CanvasText !important;/);
 });
 
 test('footer links come from social-links.json, with Keystatic fields to edit them', async () => {
