@@ -19,6 +19,31 @@ const mediaField = fields.object({
   ogImage: fields.text({ label: 'OG Image Path' }),
 }, { label: 'Media' });
 
+// A story about a video (a podcast episode on YouTube, say). Pages play it on
+// the site with YouTubePlayer, using the story's Media image as the poster, so
+// keep that image a site-hosted copy of the episode art.
+const timestampPattern = { regex: /^((\d+:)?[0-5]?\d:[0-5]\d)?$/, message: 'Use mm:ss or h:mm:ss, e.g. 02:40.' };
+
+const videoField = fields.object({
+  youtubeId: fields.text({
+    label: 'YouTube Video ID',
+    description: 'The 11 characters after v= in the YouTube link, e.g. L6BZkCXhBAY. Leave empty for a story without a video.',
+    validation: { pattern: { regex: /^([A-Za-z0-9_-]{11})?$/, message: 'Use the 11-character ID from the YouTube link.' } },
+  }),
+  duration: fields.text({ label: 'Duration (mm:ss or h:mm:ss)', validation: { pattern: timestampPattern } }),
+  chapters: fields.array(
+    fields.object({
+      start: fields.text({ label: 'Start (mm:ss or h:mm:ss)', validation: { pattern: timestampPattern } }),
+      label: fields.text({ label: 'Chapter Title' }),
+    }),
+    {
+      label: 'Chapters',
+      description: 'Moments a reader can jump to, in time order.',
+      itemLabel: (props) => `${props.fields.start.value} ${props.fields.label.value}`.trim(),
+    },
+  ),
+}, { label: 'Video (YouTube)' });
+
 const ctaField = fields.object({
   label: fields.text({ label: 'Label' }),
   href: fields.text({ label: 'URL or Path' }),
@@ -235,6 +260,7 @@ export default config({
         featuredWeight: fields.number({ label: 'Featured Weight', defaultValue: 0 }),
         readTime: fields.text({ label: 'Read Time' }),
         media: mediaField,
+        video: videoField,
         seo: seoField,
       },
     }),
@@ -362,6 +388,25 @@ export default config({
         promise: fields.text({ label: 'Homepage Promise', multiline: true }),
         summary: fields.text({ label: 'Summary', multiline: true }),
         hero: pageHeroField,
+        // The band under the hero plays the named story's video. The story
+        // owns the episode (video, date, poster); this block is the framing.
+        featuredEpisode: fields.object({
+          storySlug: fields.text({
+            label: 'Story Slug',
+            description: 'A published story with a YouTube video. Leave empty to hide the band.',
+          }),
+          overline: fields.text({ label: 'Overline', description: 'Separate segments with " · ".' }),
+          title: fields.text({ label: 'Title' }),
+          dek: fields.text({ label: 'Dek', multiline: true }),
+          cta: fields.object({
+            label: fields.text({ label: 'Label' }),
+            href: fields.text({
+              label: 'URL or Path',
+              // No backslashes: browsers read "/\host" as a link to another site.
+              validation: { pattern: { regex: /^((https:\/\/|\/(?![/\\]))[^\s\\]*)?$/, message: 'Use a site path or a full https:// address.' } },
+            }),
+          }, { label: 'Extra Link (beside "Episode notes")' }),
+        }, { label: 'Featured Episode (band under the hero)' }),
         sections: pageSectionField,
         primaryCta: ctaField,
         secondaryCta: ctaField,

@@ -1,0 +1,115 @@
+---
+/**
+ * The homepage band under the hero that features one podcast episode: the
+ * click-to-load player beside the band's framing copy. The page builds the
+ * view with featuredEpisodeView() (src/lib/featured-episode.ts) from
+ * `featuredEpisode` in home-page.json and leaves the band out when there is
+ * none.
+ *
+ * Reflow (DESIGN.md, Home row): player 7/12 beside the copy 5/12 while the
+ * page is wider than 860px; below that the player spans the row above the
+ * copy, and at phone widths the actions go full width like the hero's.
+ */
+import Container from '../ui/Container.astro';
+import Overline from '../ui/Overline.astro';
+import Text from '../ui/Text.astro';
+import Meta from '../ui/Meta.astro';
+import Button from '../ui/Button.astro';
+import ArrowLink from '../ui/ArrowLink.astro';
+import YouTubePlayer from '../ui/YouTubePlayer.astro';
+import type { FeaturedEpisodeView } from '../../lib/featured-episode';
+
+interface Props {
+  episode: FeaturedEpisodeView;
+  /** The episode's date as readers see it ("Nov 5, 2026"). */
+  date: string;
+}
+
+const { episode, date } = Astro.props;
+const meta = [date, episode.durationLabel].filter(Boolean);
+---
+
+<section class="gp-episode">
+  <Container size="2xl">
+    <div class="gp-episode-grid">
+      <YouTubePlayer
+        id="featured-episode-video"
+        videoId={episode.video.id}
+        title={episode.video.title}
+        poster={episode.video.poster}
+        duration={episode.video.duration}
+      />
+
+      <div class="gp-episode-copy">
+        {episode.overline.length > 0 && <Overline segments={episode.overline} />}
+        <Text variant="h2" class="gp-episode-title">{episode.title}</Text>
+        {episode.dek && <Text variant="body" class="gp-episode-dek">{episode.dek}</Text>}
+        {meta.length > 0 && <Meta items={meta} />}
+        <div class="gp-episode-actions">
+          <Button href={episode.storyHref} variant="ghost">Episode notes</Button>
+          {episode.cta && <ArrowLink href={episode.cta.href}>{episode.cta.label}</ArrowLink>}
+        </div>
+      </div>
+    </div>
+  </Container>
+</section>
+
+<style>
+  /* Same vertical rhythm as the homepage's other sections (.gp-home-section). */
+  .gp-episode {
+    padding: clamp(var(--gp-space-3xl), 7vw, var(--gp-space-4xl)) 0;
+  }
+
+  .gp-episode-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    align-items: center;
+    gap: clamp(var(--gp-space-xl), 4vw, var(--gp-space-3xl));
+  }
+
+  .gp-episode-copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--gp-space-md);
+    min-inline-size: 0;
+  }
+
+  /* Text overrides go through :global(.gp-text.x) so they outrank Text's own
+     scoped rules on every page. */
+  .gp-episode-copy :global(.gp-text.gp-episode-title) {
+    text-wrap: balance;
+  }
+
+  .gp-episode-copy :global(.gp-text.gp-episode-dek) {
+    color: var(--gp-fg-muted);
+    max-inline-size: 52ch;
+    text-wrap: pretty;
+  }
+
+  .gp-episode-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--gp-space-md) var(--gp-space-lg);
+    margin-block-start: var(--gp-space-xs);
+  }
+
+  @container (max-width: 860px) {
+    .gp-episode-grid {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--gp-space-xl);
+    }
+  }
+
+  @container (max-width: 520px) {
+    .gp-episode-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .gp-episode-actions :global(.gp-button) {
+      inline-size: 100%;
+    }
+  }
+</style>

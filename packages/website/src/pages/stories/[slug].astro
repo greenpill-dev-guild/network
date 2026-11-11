@@ -10,7 +10,9 @@ import Text from '../../components/ui/Text.astro';
 import Meta from '../../components/ui/Meta.astro';
 import Breadcrumb from '../../components/shell/Breadcrumb.astro';
 import Avatar from '../../components/ui/Avatar.astro';
-import { publicGuildPath } from '../../lib/public-routes';
+import YouTubePlayer from '../../components/ui/YouTubePlayer.astro';
+import { isSitePath, publicGuildPath } from '../../lib/public-routes';
+import { isYouTubeId, parseTimestamp, youtubeWatchUrl } from '../../lib/youtube';
 import { getOperationalChapterPages, getOperationalGuilds } from '../../lib/operational-content';
 import { formatStoryDate, storyCategoryLabel, storyMetaItems, storyReadTime } from './_story-format';
 
@@ -81,6 +83,20 @@ const relatedGuildName = relatedGuildPath
   : '';
 const storyImage = data.media?.image || data.image || '';
 const storyImageAlt = data.media?.imageAlt || `${data.title} story image`;
+
+// A story about a video plays it in the header, with the story image as the
+// poster, and lists the chapters a reader can jump to. The poster must be a
+// file this site serves (YouTubePlayer); otherwise the header keeps the plain
+// image. A chapter whose start does not read as mm:ss or h:mm:ss is left out.
+const videoId = data.video?.youtubeId?.trim() ?? '';
+const hasVideo = isYouTubeId(videoId) && isSitePath(storyImage);
+const videoChapters = hasVideo
+  ? (data.video?.chapters ?? []).flatMap((chapter) => {
+    const start = parseTimestamp(chapter.start);
+    const label = chapter.label.trim();
+    return start === undefined || !label ? [] : [{ start, time: chapter.start.trim(), label }];
+  })
+  : [];
 ---
 
 <GpLayout
@@ -115,7 +131,39 @@ const storyImageAlt = data.media?.imageAlt || `${data.title} story image`;
             </div>
           )}
 
-          {storyImage && (
+          {hasVideo ? (
+            <div class="gp-story-hero-video">
+              <YouTubePlayer
+                id="story-video"
+                videoId={videoId}
+                title={data.title}
+                poster={storyImage}
+                duration={data.video?.duration}
+                eager
+              />
+              {videoChapters.length > 0 && (
+                <div class="gp-story-chapters">
+                  <Overline as="h2" tone="muted">Chapters</Overline>
+                  <ol class="gp-story-chapter-list" role="list">
+                    {videoChapters.map((chapter) => (
+                      <li>
+                        <a
+                          class="gp-story-chapter"
+                          href={youtubeWatchUrl(videoId, chapter.start)}
+                          target="_self"
+                          data-youtube-start={chapter.start}
+                          data-youtube-target="story-video"
+                        >
+                          <span class="gp-story-chapter-time">{chapter.time}</span>
+                          <span class="gp-story-chapter-label">{chapter.label}</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+            </div>
+          ) : storyImage && (
             <Card as="figure" padded="none" class="gp-story-hero-media">
               <img src={storyImage} alt={storyImageAlt} loading="eager" decoding="async" />
             </Card>
@@ -291,6 +339,74 @@ const storyImageAlt = data.media?.imageAlt || `${data.title} story image`;
     object-fit: cover;
   }
 
+  /* A video story: the player (components/ui/YouTubePlayer.astro) takes the
+     photo's place and width, with its chapters below it. */
+  .gp-story-hero-video {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-lg);
+    inline-size: min(100%, 920px);
+    margin-block-start: var(--gp-space-sm);
+  }
+
+  .gp-story-chapters {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-sm);
+  }
+
+  /* Two columns that fill top to bottom, so the times read in order. */
+  .gp-story-chapter-list {
+    columns: 2;
+    column-gap: var(--gp-space-xl);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .gp-story-chapter-list li {
+    break-inside: avoid;
+    border-block-end: 1px solid var(--gp-border-soft);
+  }
+
+  .gp-story-chapter {
+    display: flex;
+    align-items: baseline;
+    gap: var(--gp-space-md);
+    padding-block: var(--gp-space-sm);
+    color: var(--gp-fg);
+    font-family: var(--gp-font-body);
+    font-size: var(--gp-body-sm);
+    line-height: 1.45;
+    text-decoration: none;
+    transition: color 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .gp-story-chapter:hover {
+    color: var(--gp-primary);
+  }
+
+  .gp-story-chapter-time {
+    flex: none;
+    min-inline-size: 5ch;
+    color: var(--gp-fg-muted);
+    font-family: var(--gp-font-mono);
+    font-size: var(--gp-caption);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+  }
+
+  .gp-story-chapter-label {
+    min-inline-size: 0;
+  }
+
+  @media (pointer: coarse) {
+    .gp-story-chapter {
+      min-block-size: 44px;
+      align-items: center;
+    }
+  }
+
   .gp-story-body {
     padding: clamp(var(--gp-space-2xl), 5vw, var(--gp-space-4xl)) 0;
     border-top: 1px solid var(--gp-border-soft);
@@ -431,6 +547,10 @@ const storyImageAlt = data.media?.imageAlt || `${data.title} story image`;
   @container (max-width: 720px) {
     .gp-story-continue-grid {
       grid-template-columns: 1fr;
+    }
+
+    .gp-story-chapter-list {
+      columns: 1;
     }
   }
 </style>

@@ -17,12 +17,15 @@ import socialLinks from '../content/social-links.json';
 import { getOperationalChapters, getOperationalGuilds } from '../lib/operational-content';
 import { publicGuildPath } from '../lib/public-routes';
 import NewsletterSignup from '../components/page-sections/NewsletterSignup.astro';
+import FeaturedEpisode from '../components/page-sections/FeaturedEpisode.astro';
 import {
   gardenRampSteps,
   gardenSignupFallback,
   gardenStepHref,
   isGardenSignupStep,
 } from '../lib/garden-ramp';
+import { featuredEpisodeView } from '../lib/featured-episode';
+import { formatStoryDate } from './stories/_story-format';
 
 const chapters = await getOperationalChapters();
 const guilds = await getOperationalGuilds();
@@ -31,9 +34,15 @@ const books = (await getCollection('books')).sort(
 );
 
 const allStories = await getCollection('stories');
+
+// The band under the hero plays one episode, named in home-page.json; its
+// story stays out of the Stories bento below so it is not shown twice.
+const featuredEpisode = featuredEpisodeView(homePage.featuredEpisode, allStories);
+
 const homeStoryRank = new Map((homePage.featuredStorySlugs ?? []).map((slug, index) => [slug, index]));
 const publishedStories = allStories
   .filter((s) => s.data.status === 'published' && !s.data.seo?.noindex)
+  .filter((s) => s.id !== featuredEpisode?.storyId)
   .sort((a, b) => {
     const aRank = homeStoryRank.get(a.id) ?? Number.POSITIVE_INFINITY;
     const bRank = homeStoryRank.get(b.id) ?? Number.POSITIVE_INFINITY;
@@ -117,6 +126,10 @@ const secondaryCta = homePage.hero?.secondaryCta ?? { label: 'Browse chapters', 
         </div>
       </Container>
     </section>
+
+    {featuredEpisode && (
+      <FeaturedEpisode episode={featuredEpisode} date={formatStoryDate(featuredEpisode.publishDate)} />
+    )}
 
     <section class="gp-home-section gp-home-stories">
       <Container size="2xl">

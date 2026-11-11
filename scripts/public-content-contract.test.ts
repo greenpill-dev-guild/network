@@ -32,6 +32,15 @@ import {
   newsletterSignupView,
   newsletterSubscribeUrl,
 } from '../packages/website/src/lib/newsletter-signup.ts';
+import { featuredEpisodeView } from '../packages/website/src/lib/featured-episode.ts';
+import { isSitePath } from '../packages/website/src/lib/public-routes.ts';
+import {
+  durationLabel,
+  isYouTubeId,
+  parseTimestamp,
+  youtubeEmbedUrl,
+  youtubeWatchUrl,
+} from '../packages/website/src/lib/youtube.ts';
 import {
   loadChapterEnrichment,
 } from './directus-chapter-enrichment.ts';
@@ -718,6 +727,201 @@ test('published stories carry local image metadata', async () => {
   }
 
   assert.deepEqual(problems, []);
+});
+
+test('YouTube timestamps, durations and links read the way chapters and the player need', () => {
+  assert.equal(parseTimestamp('02:40'), 160);
+  assert.equal(parseTimestamp('48:54'), 2934);
+  assert.equal(parseTimestamp('1:02:03'), 3723);
+  assert.equal(parseTimestamp(' 00:05 '), 5);
+  for (const unreadable of ['60:00', '2:4', '02:40:', 'two minutes', '', undefined]) {
+    assert.equal(parseTimestamp(unreadable), undefined, `${unreadable} is not a timestamp`);
+  }
+
+  assert.equal(durationLabel('48:54'), '49 min');
+  assert.equal(durationLabel('00:20'), '1 min');
+  assert.equal(durationLabel('1:00:00'), '1 hr');
+  assert.equal(durationLabel('1:02:03'), '1 hr 2 min');
+  assert.equal(durationLabel('soon'), '');
+
+  assert.ok(isYouTubeId('L6BZkCXhBAY'));
+  for (const notAnId of ['L6BZkCXhBA', 'L6BZkCXhBAY1', 'L6BZkCXhBA!', '', undefined]) {
+    assert.equal(isYouTubeId(notAnId), false, `${notAnId} is not a video ID`);
+  }
+
+  assert.equal(youtubeWatchUrl('L6BZkCXhBAY'), 'https://www.youtube.com/watch?v=L6BZkCXhBAY');
+  assert.equal(youtubeWatchUrl('L6BZkCXhBAY', 160), 'https://www.youtube.com/watch?v=L6BZkCXhBAY&t=160s');
+
+  // Posters and band links must stay on this site the way a browser reads them.
+  for (const path of ['/images/stories/greenpill-irl-ep1.jpg', '/garden', '/garden#steps']) {
+    assert.ok(isSitePath(path), `${path} is a site path`);
+  }
+  for (const elsewhere of ['https://example.com/a.jpg', '//example.com/a.jpg', '/\\example.com/a.jpg', '/\t/example.com', 'images/a.jpg', '', undefined]) {
+    assert.equal(isSitePath(elsewhere), false, `${JSON.stringify(elsewhere)} is not a site path`);
+  }
+
+  const embed = new URL(youtubeEmbedUrl('L6BZkCXhBAY', 160));
+  assert.equal(embed.origin, 'https://www.youtube-nocookie.com');
+  assert.equal(embed.pathname, '/embed/L6BZkCXhBAY');
+  assert.equal(embed.searchParams.get('autoplay'), '1');
+  assert.equal(embed.searchParams.get('start'), '160');
+  assert.equal(new URL(youtubeEmbedUrl('L6BZkCXhBAY')).searchParams.has('start'), false);
+});
+
+test('video stories name a YouTube video, a site-hosted poster and chapters in time order', async () => {
+  const stories = await readCollection('stories');
+  const problems = [];
+  let videoStories = 0;
+
+  for (const [slug, story] of stories) {
+    const video = story.video ?? {};
+    if (!video.youtubeId && !video.duration && !(video.chapters ?? []).length) continue;
+    videoStories += 1;
+
+    if (!isYouTubeId(video.youtubeId)) problems.push(`${slug} video.youtubeId is not an 11-character YouTube ID`);
+    const poster = story.media?.image || story.image || '';
+    if (!poster.startsWith('/images/')) problems.push(`${slug} needs a site-hosted poster under /images/, not "${poster}"`);
+
+    const duration = parseTimestamp(video.duration);
+    if (duration === undefined) problems.push(`${slug} video.duration "${video.duration ?? ''}" is not mm:ss or h:mm:ss`);
+
+    let previousStart = -1;
+    (video.chapters ?? []).forEach((chapter, index) => {
+      const where = `${slug} chapter ${index + 1} (${chapter.start})`;
+      const start = parseTimestamp(chapter.start);
+      if (start === undefined) {
+        problems.push(`${where} is not mm:ss or h:mm:ss`);
+        return;
+      }
+      if (!chapter.label?.trim()) problems.push(`${where} has no label`);
+      if (start <= previousStart) problems.push(`${where} does not come after the chapter before it`);
+      if (duration !== undefined && start >= duration) problems.push(`${where} starts after the video ends`);
+      previousStart = start;
+    });
+  }
+
+  assert.deepEqual(problems, []);
+  assert.ok(videoStories > 0, 'at least one story carries a video, so this check is not empty');
+});
+
+test('the featured-episode band names a published story with a video, and hides rather than break', async () => {
+  const [homePage, stories] = await Promise.all([readJson('home-page.json'), readCollection('stories')]);
+  const entries = [...stories].map(([id, data]) => ({ id, data }));
+  const config = homePage.featuredEpisode;
+
+  // An empty slug hides the band on purpose; a filled one must resolve.
+  if (config?.storySlug) {
+    const view = featuredEpisodeView(config, entries);
+    assert.ok(view, `featuredEpisode.storySlug "${config.storySlug}" names a published story with a video and a poster`);
+    assert.equal(view.storyHref, `/stories/${config.storySlug}`);
+    if (config.cta?.label || config.cta?.href) {
+      assert.ok(view.cta, 'featuredEpisode.cta has a label and a site path or https address');
+    }
+  }
+
+  const story = {
+    id: 'an-episode',
+    data: {
+      title: 'An episode',
+      status: 'published',
+      publishDate: '2026-11-05',
+      dek: 'The story dek.',
+      image: '/images/stories/an-episode.jpg',
+      media: { image: '/images/stories/an-episode.jpg' },
+      video: { youtubeId: 'L6BZkCXhBAY', duration: '48:54' },
+    },
+  };
+  const withData = (data) => [{ ...story, data: { ...story.data, ...data } }];
+  const band = { storySlug: 'an-episode', overline: 'Podcast · Series · Episode 1', title: '', dek: '' };
+
+  const view = featuredEpisodeView(band, [story]);
+  assert.deepEqual(view?.overline, ['Podcast', 'Series', 'Episode 1']);
+  assert.equal(view?.title, 'An episode', 'an empty band title falls back to the story title');
+  assert.equal(view?.dek, 'The story dek.');
+  assert.equal(view?.durationLabel, '49 min');
+  assert.deepEqual(view?.video, {
+    id: 'L6BZkCXhBAY',
+    title: 'An episode',
+    duration: '48:54',
+    poster: '/images/stories/an-episode.jpg',
+  });
+
+  assert.equal(featuredEpisodeView({ ...band, storySlug: '' }, [story]), undefined);
+  assert.equal(featuredEpisodeView({ ...band, storySlug: 'missing' }, [story]), undefined);
+  assert.equal(featuredEpisodeView(band, withData({ status: 'draft' })), undefined);
+  assert.equal(featuredEpisodeView(band, withData({ seo: { noindex: true } })), undefined);
+  assert.equal(featuredEpisodeView(band, withData({ video: { youtubeId: 'not-an-id' } })), undefined);
+  assert.equal(featuredEpisodeView(band, withData({ image: '', media: { image: '' } })), undefined);
+  // A poster on another host would load before play, so the band stays hidden.
+  const remote = 'https://example.com/episode.jpg';
+  assert.equal(featuredEpisodeView(band, withData({ image: remote, media: { image: remote } })), undefined);
+
+  const ctaFor = (href) => featuredEpisodeView({ ...band, cta: { label: 'Discuss', href } }, [story])?.cta;
+  assert.deepEqual(ctaFor('https://hub.regencoordination.xyz/t/478'), { label: 'Discuss', href: 'https://hub.regencoordination.xyz/t/478' });
+  assert.deepEqual(ctaFor('/garden'), { label: 'Discuss', href: '/garden' });
+  // Browsers read the backslash and the tab forms as links to example.com.
+  for (const unsafe of ['javascript:alert(1)', 'http://example.com', '//example.com', '/\\example.com/path', '/\t/example.com', 'garden', '']) {
+    assert.equal(ctaFor(unsafe), undefined, `${JSON.stringify(unsafe)} is left out`);
+  }
+});
+
+test('the site embeds video only through the click-to-load player', async () => {
+  const websiteSrc = join(rootDir, 'packages/website/src');
+  const playerPath = join(websiteSrc, 'components/ui/YouTubePlayer.astro');
+  const youtubeLibPath = join(websiteSrc, 'lib/youtube.ts');
+  // src/data holds snapshots of outside text (the podcast feed, Directus
+  // content); the build copies their images, and pages print their words.
+  const generatedDataDir = join(websiteSrc, 'data');
+  const problems = [];
+
+  const sourceFiles = (await readFilesWithExtensions(websiteSrc, ['.astro', '.ts', '.mjs', '.json', '.css']))
+    .filter((file) => !file.startsWith(`${generatedDataDir}/`));
+  for (const file of sourceFiles) {
+    const source = await readFile(file, 'utf8');
+    const name = file.slice(rootDir.length + 1);
+    if (/i\.ytimg\.com|img\.youtube\.com/.test(source)) problems.push(`${name} loads a YouTube thumbnail; copy the poster into public/images`);
+    if (/youtube\.com\/embed/.test(source)) problems.push(`${name} embeds youtube.com; use YouTubePlayer (youtube-nocookie, on click)`);
+    if (/<iframe\b/i.test(source)) problems.push(`${name} has an iframe that loads with the page`);
+    if (/https:\/\/(?:www\.)?youtube-nocookie\.com/.test(source) && file !== youtubeLibPath) {
+      problems.push(`${name} builds embed URLs outside src/lib/youtube.ts`);
+    }
+    if (/createElement\(\s*['"]iframe['"]/.test(source) && file !== playerPath) problems.push(`${name} creates an iframe outside YouTubePlayer`);
+  }
+  assert.deepEqual(problems, []);
+
+  const [player, homePage, storyPage, keystaticConfig, astroContentConfig] = await Promise.all([
+    readFile(playerPath, 'utf8'),
+    readFile(homePagePath, 'utf8'),
+    readFile(storyDetailPagePath, 'utf8'),
+    readFile(keystaticConfigPath, 'utf8'),
+    readFile(astroContentConfigPath, 'utf8'),
+  ]);
+
+  // The player renders only with a poster this site serves (builds do not run
+  // this test, so the component holds the rule itself). The poster stays a
+  // link to YouTube, and only a plain click plays here.
+  assert.match(player, /\{isYouTubeId\(videoId\) && isSitePath\(poster\) && \(/);
+  assert.match(storyPage, /const hasVideo = isYouTubeId\(videoId\) && isSitePath\(storyImage\);/);
+  assert.match(player, /class="gp-youtube-poster" href=\{youtubeWatchUrl\(videoId\)\}/);
+  assert.match(player, /isPlainPrimaryClick\(event\)/);
+  assert.match(player, /frame\.title = /);
+  assert.match(player, /frame\.referrerPolicy = 'strict-origin-when-cross-origin'/);
+
+  // The band sits between the hero and the Stories bento, and its story is not repeated there.
+  const bandAt = homePage.indexOf('<FeaturedEpisode');
+  assert.ok(bandAt > homePage.indexOf('gp-home-hero-actions'), 'the band follows the hero');
+  assert.ok(bandAt < homePage.indexOf('gp-home-stories'), 'the band comes before the Stories bento');
+  assert.match(homePage, /featuredEpisodeView\(homePage\.featuredEpisode, allStories\)/);
+  assert.match(homePage, /s\.id !== featuredEpisode\?\.storyId/);
+
+  // Video stories play in the story header, with chapter links that drive the player.
+  assert.match(storyPage, /<YouTubePlayer/);
+  assert.match(storyPage, /data-youtube-start=\{chapter\.start\}/);
+
+  // Keystatic saves keep the fields, and Astro reads them.
+  assert.match(keystaticConfig, /video: videoField/);
+  assert.match(keystaticConfig, /featuredEpisode: fields\.object\(/);
+  assert.match(astroContentConfig, /video: videoSchema/);
 });
 
 test('website page typography avoids viewport-scaled type and negative tracking', async () => {

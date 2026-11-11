@@ -453,12 +453,12 @@ What each page does at the three reference widths. This is the acceptance contra
 
 | Page | Desktop (1440) | Tablet (1024) | Mobile (375) |
 |---|---|---|---|
-| **Home** | Hero with mycelial map left + node CTA right; Library bento at 4-up book covers; Stories grid 3-up; Podcast strip cover + body + timer inline | Map full-width; bento collapses to 2-col at `≤1100px` container width (Library card 3-up books); Stories 2-up | Map stacked, its stage at least 60svh; map overlay reflows to bottom pill row; hero CTAs `width: 100%`; podcast cover stacks above meta + timer; books grid 2-up; Stories 1-up; hero card chip ellipsizes |
+| **Home** | Hero with mycelial map left + node CTA right; featured-episode band under the hero, player 7/12 beside copy 5/12; Library bento at 4-up book covers; Stories grid 3-up; Podcast strip cover + body + timer inline | Map full-width; featured-episode band keeps player beside copy, then stacks at `≤860px` container width; bento collapses to 2-col at `≤1100px` container width (Library card 3-up books); Stories 2-up | Map stacked, its stage at least 60svh; map overlay reflows to bottom pill row; hero CTAs `width: 100%`; featured-episode player full width above its copy, band actions `width: 100%` at `≤520px`; podcast cover stacks above meta + timer; books grid 2-up; Stories 1-up; hero card chip ellipsizes |
 | **Chapters** | Hero map + stats overlay; "Featured chapters" 3-up; full directory 3-col; Sister chapters 3-col | Map full-width; directory 2-col; Sister chapters 2-col | Map overlay → bottom pill row; directory and Sister chapters **collapse to 1-col at `≤520px`** (status chips and city titles need the room); region filter row wraps to 2 rows |
 | **Chapter (detail)** | Hero photo + steward card side-by-side; events 2-col; Sister chapters 3-col | Hero stacks; events 2-col; Sister chapters 2-col | Hero stacks; events 1-col; Sister chapters 1-col; breadcrumb collapses middle crumbs to `…`; RSVP CTAs `width: 100%` |
 | **Library** | Editorial hero + 4-up book rail; Knowledge Garden 3-col; podcast list inline | Book rail 3-up; Knowledge Garden 2-col | Hero stacks; book rail horizontal scroll with edge fade; Knowledge Garden 1-col; podcast list cover stacks above meta |
 | **Stories** | Side-by-side featured + grid 3-up; filter pills + selects inline | Featured 1-up above grid 2-up | Featured + grid all 1-col; **filter pill row → horizontal scroll with edge mask**; selects stack |
-| **Story (detail)** | Hero photo full-bleed + article column 720px max; share rail floats right | Article full-width; share rail moves inline below title | Article full-width; share chips wrap row; breadcrumb collapses middle to `…`; "More from" ghost buttons `width: 100%` |
+| **Story (detail)** | Hero photo full-bleed + article column 720px max (a video story shows its player there, chapters 2-col below); share rail floats right | Article full-width; share rail moves inline below title | Article full-width; video chapters 1-col at `≤720px`, rows 44px tall on touch; share chips wrap row; breadcrumb collapses middle to `…`; "More from" ghost buttons `width: 100%` |
 | **Guild** | Mandate hero + diagram side-by-side; member grid 4-up; events 2-col | Hero stacks; member grid 3-up; events 2-col | Hero stacks; member grid 2-up; events 1-col; "View on GitHub" + "Add to calendar" `width: 100%`; project meta wraps cleanly via nowrap segments |
 | **Garden** | Steps in vertical rhythm with side illustrations; chat mockup card inline | Same vertical rhythm; illustrations scale down | Steps fully stacked; assessment chip rows wrap to multiple lines; calendar tiles must meet **44×44px touch target** |
 
@@ -605,6 +605,11 @@ Cards never use horizontal scroll-snap rails by default — use a real grid with
 - **Image placeholder** — `green-800` surface with topo wash + faint gold radial sheen + mono corner label. Use anywhere real photography is missing; do *not* substitute with stock or AI-generated imagery.
 - **Hero photo placeholder** — Topographic wash + warm radial gradient + optional scrim. Used by Story / Chapter / Guild detail heroes.
 
+### Video
+
+- **`YouTubePlayer`** (`ui/YouTubePlayer.astro`) is the only way the site embeds video. The server renders a site-hosted 16:9 poster inside a link to the video on YouTube, so a page sends nothing to YouTube or Google until a visitor presses play, and visitors without JavaScript still reach the video. A plain click swaps in the privacy-enhanced player from `youtube-nocookie.com` in the same box (no layout shift) and moves focus into it; a modified click still opens YouTube. Links with `data-youtube-start` and `data-youtube-target` start the same player at a chapter. The poster is a copy under `public/images/`, never a YouTube thumbnail URL.
+- A story names its video in `video` (YouTube ID, duration, chapters); its media image is the poster. The homepage's featured-episode band (`page-sections/FeaturedEpisode.astro`) plays the story that `featuredEpisode.storySlug` in `home-page.json` names, and an empty slug hides the band.
+
 ## Form Patterns
 
 Forms are sparse across the site — newsletter signup, chapter applications, contributor pledges, story comments — but every one follows the same shape so users learn it once.
@@ -740,3 +745,4 @@ Background imagery, logo treatment, and photography are **not authored in the de
 - **Don't** let overlines or bylines wrap mid-segment. Each `·`-separated segment is its own `nowrap` span; the row wraps as a unit.
 - **Don't** use viewport media queries for reflow. Every page root uses `container-type: inline-size` and reflows respond to inline-size, not viewport width.
 - **Don't** shrink interactive targets below 44×44px at mobile, even if the desktop component is smaller.
+- **Don't** load a third-party embed with the page. Embeds load on click only, from a privacy-enhanced host, behind a site-hosted poster (`YouTubePlayer`).

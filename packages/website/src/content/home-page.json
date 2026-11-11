@@ -25,6 +25,16 @@
       "ogImage": ""
     }
   },
+  "featuredEpisode": {
+    "storySlug": "greenpill-irl-building-a-coordi-nation",
+    "overline": "Podcast · Greenpill IRL · Episode 1",
+    "title": "Three years of Greenpill, from the stewards.",
+    "dek": "Kevin Owocki sits down with network stewards Matt and Afolabi: how a meme and a book grew into local chapters around the world, what worked and what didn't, and where Greenpill goes into 2027.",
+    "cta": {
+      "label": "Discuss it on the Hub",
+      "href": "https://hub.regencoordination.xyz/t/478"
+    }
+  },
   "sections": [
     {
       "key": "network-map",
