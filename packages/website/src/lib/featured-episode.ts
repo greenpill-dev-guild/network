@@ -9,6 +9,7 @@
  * an empty player.
  */
 
+import { isSitePath } from './public-routes.js';
 import { durationLabel, isYouTubeId } from './youtube.js';
 
 export interface FeaturedEpisodeConfig {
@@ -60,9 +61,11 @@ export function featuredEpisodeView(
   const story = stories.find((entry) => entry.id === slug);
   if (!story || story.data.status !== 'published' || story.data.seo?.noindex) return undefined;
 
+  // The player shows only a poster this site serves (YouTubePlayer), so a
+  // story whose image lives elsewhere gets no band.
   const videoId = story.data.video?.youtubeId?.trim();
   const poster = story.data.media?.image || story.data.image || '';
-  if (!isYouTubeId(videoId) || !poster) return undefined;
+  if (!isYouTubeId(videoId) || !isSitePath(poster)) return undefined;
 
   const duration = story.data.video?.duration?.trim() ?? '';
   const ctaLabel = config?.cta?.label?.trim();
@@ -81,23 +84,17 @@ export function featuredEpisodeView(
   };
 }
 
-// Stands in for this site's origin while a path is resolved; the .invalid
-// top-level domain never names a real host.
-const SITE_ORIGIN = 'https://site.invalid';
-
 /**
- * The CTA's href when it is an https address or a path on this site, read the
- * way a browser reads it. A browser turns `/\host/path` (or a path with a tab
- * or newline inside `//`) into a link to another host, so a path counts only
- * when it still resolves to this site. Anything else leaves the link out.
+ * The CTA's href when it is an https address or a path on this site (see
+ * isSitePath for paths a browser would send elsewhere). Anything else leaves
+ * the link out.
  */
 function safeCtaHref(value: string | undefined): string | undefined {
   const href = value?.trim();
   if (!href) return undefined;
+  if (isSitePath(href)) return href;
   try {
-    if (/^https:\/\//i.test(href)) return new URL(href).protocol === 'https:' ? href : undefined;
-    if (!href.startsWith('/')) return undefined;
-    return new URL(href, SITE_ORIGIN).origin === SITE_ORIGIN ? href : undefined;
+    return /^https:\/\//i.test(href) && new URL(href).protocol === 'https:' ? href : undefined;
   } catch {
     return undefined;
   }

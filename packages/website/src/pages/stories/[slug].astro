@@ -11,7 +11,7 @@ import Meta from '../../components/ui/Meta.astro';
 import Breadcrumb from '../../components/shell/Breadcrumb.astro';
 import Avatar from '../../components/ui/Avatar.astro';
 import YouTubePlayer from '../../components/ui/YouTubePlayer.astro';
-import { publicGuildPath } from '../../lib/public-routes';
+import { isSitePath, publicGuildPath } from '../../lib/public-routes';
 import { isYouTubeId, parseTimestamp, youtubeWatchUrl } from '../../lib/youtube';
 import { getOperationalChapterPages, getOperationalGuilds } from '../../lib/operational-content';
 import { formatStoryDate, storyCategoryLabel, storyMetaItems, storyReadTime } from './_story-format';
@@ -85,10 +85,11 @@ const storyImage = data.media?.image || data.image || '';
 const storyImageAlt = data.media?.imageAlt || `${data.title} story image`;
 
 // A story about a video plays it in the header, with the story image as the
-// poster, and lists the chapters a reader can jump to. A chapter whose start
-// does not read as mm:ss or h:mm:ss is left out.
+// poster, and lists the chapters a reader can jump to. The poster must be a
+// file this site serves (YouTubePlayer); otherwise the header keeps the plain
+// image. A chapter whose start does not read as mm:ss or h:mm:ss is left out.
 const videoId = data.video?.youtubeId?.trim() ?? '';
-const hasVideo = isYouTubeId(videoId) && Boolean(storyImage);
+const hasVideo = isYouTubeId(videoId) && isSitePath(storyImage);
 const videoChapters = hasVideo
   ? (data.video?.chapters ?? []).flatMap((chapter) => {
     const start = parseTimestamp(chapter.start);

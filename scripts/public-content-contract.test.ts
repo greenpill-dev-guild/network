@@ -33,6 +33,7 @@ import {
   newsletterSubscribeUrl,
 } from '../packages/website/src/lib/newsletter-signup.ts';
 import { featuredEpisodeView } from '../packages/website/src/lib/featured-episode.ts';
+import { isSitePath } from '../packages/website/src/lib/public-routes.ts';
 import {
   durationLabel,
   isYouTubeId,
@@ -751,6 +752,14 @@ test('YouTube timestamps, durations and links read the way chapters and the play
   assert.equal(youtubeWatchUrl('L6BZkCXhBAY'), 'https://www.youtube.com/watch?v=L6BZkCXhBAY');
   assert.equal(youtubeWatchUrl('L6BZkCXhBAY', 160), 'https://www.youtube.com/watch?v=L6BZkCXhBAY&t=160s');
 
+  // Posters and band links must stay on this site the way a browser reads them.
+  for (const path of ['/images/stories/greenpill-irl-ep1.jpg', '/garden', '/garden#steps']) {
+    assert.ok(isSitePath(path), `${path} is a site path`);
+  }
+  for (const elsewhere of ['https://example.com/a.jpg', '//example.com/a.jpg', '/\\example.com/a.jpg', '/\t/example.com', 'images/a.jpg', '', undefined]) {
+    assert.equal(isSitePath(elsewhere), false, `${JSON.stringify(elsewhere)} is not a site path`);
+  }
+
   const embed = new URL(youtubeEmbedUrl('L6BZkCXhBAY', 160));
   assert.equal(embed.origin, 'https://www.youtube-nocookie.com');
   assert.equal(embed.pathname, '/embed/L6BZkCXhBAY');
@@ -843,6 +852,9 @@ test('the featured-episode band names a published story with a video, and hides 
   assert.equal(featuredEpisodeView(band, withData({ seo: { noindex: true } })), undefined);
   assert.equal(featuredEpisodeView(band, withData({ video: { youtubeId: 'not-an-id' } })), undefined);
   assert.equal(featuredEpisodeView(band, withData({ image: '', media: { image: '' } })), undefined);
+  // A poster on another host would load before play, so the band stays hidden.
+  const remote = 'https://example.com/episode.jpg';
+  assert.equal(featuredEpisodeView(band, withData({ image: remote, media: { image: remote } })), undefined);
 
   const ctaFor = (href) => featuredEpisodeView({ ...band, cta: { label: 'Discuss', href } }, [story])?.cta;
   assert.deepEqual(ctaFor('https://hub.regencoordination.xyz/t/478'), { label: 'Discuss', href: 'https://hub.regencoordination.xyz/t/478' });
@@ -885,7 +897,11 @@ test('the site embeds video only through the click-to-load player', async () => 
     readFile(astroContentConfigPath, 'utf8'),
   ]);
 
-  // The poster stays a link to YouTube, and only a plain click plays here.
+  // The player renders only with a poster this site serves (builds do not run
+  // this test, so the component holds the rule itself). The poster stays a
+  // link to YouTube, and only a plain click plays here.
+  assert.match(player, /\{isYouTubeId\(videoId\) && isSitePath\(poster\) && \(/);
+  assert.match(storyPage, /const hasVideo = isYouTubeId\(videoId\) && isSitePath\(storyImage\);/);
   assert.match(player, /class="gp-youtube-poster" href=\{youtubeWatchUrl\(videoId\)\}/);
   assert.match(player, /isPlainPrimaryClick\(event\)/);
   assert.match(player, /frame\.title = /);

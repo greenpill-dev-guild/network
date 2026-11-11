@@ -16,8 +16,11 @@
  * for visitors without JavaScript.
  *
  * DESIGN.md: third-party embeds load on click only, from privacy-enhanced
- * hosts, with site-hosted posters.
+ * hosts, with site-hosted posters. A poster from another host would load
+ * before play, so without a poster this site serves the player renders
+ * nothing; pages check isSitePath() first and show something else.
  */
+import { isSitePath } from '../../lib/public-routes';
 import { durationLabel, isYouTubeId, youtubeWatchUrl } from '../../lib/youtube';
 
 interface Props {
@@ -40,7 +43,7 @@ const length = durationLabel(duration);
 const playLabel = length ? `Play video: ${title}, ${length}` : `Play video: ${title}`;
 ---
 
-{isYouTubeId(videoId) && (
+{isYouTubeId(videoId) && isSitePath(poster) && (
   <div
     id={id}
     class:list={['gp-youtube', className]}
