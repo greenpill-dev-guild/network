@@ -35,6 +35,19 @@ const translationSchema = z.object({
   slug: z.string().optional().default(''),
 });
 
+// A story about a video (a podcast episode on YouTube, say) names it here, and
+// pages play it with components/ui/YouTubePlayer.astro. The story's media
+// image is the poster, so the player needs no image field of its own.
+// Timestamps are "mm:ss" or "h:mm:ss" (src/lib/youtube.ts reads them).
+const videoSchema = z.object({
+  youtubeId: z.string().optional().default(''),
+  duration: z.string().optional().default(''),
+  chapters: z.array(z.object({
+    start: z.string().default(''),
+    label: z.string().default(''),
+  })).optional().default([]),
+}).optional().prefault({});
+
 const libraryCardSchema = z.object({
   eyebrow: z.string().optional().default(''),
   title: z.string().optional().default(''),
@@ -81,6 +94,7 @@ const stories = defineCollection({
     featuredWeight: z.number().optional().default(0),
     readTime: z.string().optional().default(''),
     media: mediaSchema,
+    video: videoSchema,
     seo: seoSchema,
   }),
 });

@@ -1,5 +1,6 @@
-// Display helpers shared by the story index and story pages. Files that start
-// with an underscore are not routes, so this module only serves the two pages.
+// Display helpers shared by the story index and story pages, and the date on
+// the homepage's featured-episode band (a story too). Files that start with an
+// underscore are not routes, so this module only serves those pages.
 
 // Labels match the category options editors pick from in keystatic.config.ts.
 const CATEGORY_LABELS: Record<string, string> = {

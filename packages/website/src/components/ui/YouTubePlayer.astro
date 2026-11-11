@@ -1,0 +1,197 @@
+---
+/**
+ * A YouTube video that loads only when a visitor presses play.
+ *
+ * The server renders a site-hosted poster inside a link to the video on
+ * YouTube, so the page sends nothing to YouTube or Google until then, and a
+ * visitor without JavaScript can still watch it there. With JavaScript, a
+ * plain click on that link swaps in the privacy-enhanced player from
+ * youtube-nocookie.com, in the same 16:9 box (no layout shift), and moves
+ * focus into it. A modified click (cmd, ctrl, shift, alt, middle button)
+ * still opens YouTube, as BookDialog's cover links still open their PDFs.
+ *
+ * Chapter links elsewhere on the page drive the same player: an <a> with
+ * `data-youtube-start` (seconds) and `data-youtube-target` (this player's id)
+ * starts the video there. Its href is the YouTube watch link at that time,
+ * for visitors without JavaScript.
+ *
+ * DESIGN.md: third-party embeds load on click only, from privacy-enhanced
+ * hosts, with site-hosted posters.
+ */
+import { durationLabel, isYouTubeId, youtubeWatchUrl } from '../../lib/youtube';
+
+interface Props {
+  /** Unique on the page; chapter links name it in data-youtube-target. */
+  id: string;
+  videoId: string;
+  /** The video's title, for the play button's name and the player's iframe title. */
+  title: string;
+  /** A site-hosted 16:9 image (an /images path), never a YouTube thumbnail URL. */
+  poster: string;
+  /** "mm:ss" or "h:mm:ss", shown on the poster. */
+  duration?: string;
+  /** The poster is above the fold (a story header): fetch it at once. */
+  eager?: boolean;
+  class?: string;
+}
+
+const { id, videoId, title, poster, duration = '', eager = false, class: className } = Astro.props;
+const length = durationLabel(duration);
+const playLabel = length ? `Play video: ${title}, ${length}` : `Play video: ${title}`;
+---
+
+{isYouTubeId(videoId) && (
+  <div
+    id={id}
+    class:list={['gp-youtube', className]}
+    data-youtube-player
+    data-youtube-id={videoId}
+    data-youtube-title={title}
+  >
+    <a class="gp-youtube-poster" href={youtubeWatchUrl(videoId)} target="_self" aria-label={playLabel}>
+      <img
+        src={poster}
+        alt=""
+        width="1280"
+        height="720"
+        loading={eager ? 'eager' : 'lazy'}
+        fetchpriority={eager ? 'high' : undefined}
+        decoding="async"
+      />
+      <span class="gp-youtube-play" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false"><path d="M9.5 6.5v11l9-5.5z" /></svg>
+      </span>
+      {duration && <span class="gp-youtube-duration" aria-hidden="true">{duration}</span>}
+    </a>
+  </div>
+)}
+
+<script>
+  import { isYouTubeId, youtubeEmbedUrl } from '../../lib/youtube';
+
+  function isPlainPrimaryClick(event: MouseEvent) {
+    return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+  }
+
+  // Plays inline on a plain click; any other click keeps the link's own
+  // behavior and opens the video on YouTube.
+  function playOnClick(link: HTMLAnchorElement, player: HTMLElement, startSeconds = 0): void {
+    link.addEventListener('click', (event) => {
+      if (event.defaultPrevented || !isPlainPrimaryClick(event)) return;
+      event.preventDefault();
+      play(player, startSeconds);
+    });
+  }
+
+  // Swaps the poster (or a player already running) for the embed, starting at
+  // startSeconds, and moves focus into it so the keyboard controls the video.
+  function play(player: HTMLElement, startSeconds = 0): void {
+    const videoId = player.dataset.youtubeId;
+    if (!isYouTubeId(videoId)) return;
+    const frame = document.createElement('iframe');
+    frame.className = 'gp-youtube-frame';
+    frame.src = youtubeEmbedUrl(videoId, startSeconds);
+    frame.title = player.dataset.youtubeTitle || 'YouTube video';
+    frame.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+    frame.allowFullscreen = true;
+    // YouTube's embed terms need the Referer, so a stricter page policy must not reach the frame.
+    frame.referrerPolicy = 'strict-origin-when-cross-origin';
+    player.replaceChildren(frame);
+    frame.focus();
+  }
+
+  for (const player of document.querySelectorAll<HTMLElement>('[data-youtube-player]')) {
+    const poster = player.querySelector<HTMLAnchorElement>('a.gp-youtube-poster');
+    if (poster && isYouTubeId(player.dataset.youtubeId)) playOnClick(poster, player);
+  }
+
+  for (const link of document.querySelectorAll<HTMLAnchorElement>('a[data-youtube-start]')) {
+    const player = document.getElementById(link.dataset.youtubeTarget ?? '');
+    const start = Number(link.dataset.youtubeStart);
+    if (player?.hasAttribute('data-youtube-player') && Number.isInteger(start) && start >= 0) {
+      playOnClick(link, player, start);
+    }
+  }
+</script>
+
+<style>
+  /* The wrapper holds the 16:9 box and the card shadow. It does not clip, so
+     the global focus ring (a box-shadow on the poster) stays visible; the
+     poster and the frame round their own corners. */
+  .gp-youtube {
+    position: relative;
+    inline-size: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--gp-radius-lg);
+    background: var(--gp-green-900);
+    box-shadow: var(--gp-shadow-card);
+  }
+
+  .gp-youtube-poster,
+  .gp-youtube :global(.gp-youtube-frame) {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    border: 0;
+    border-radius: var(--gp-radius-lg);
+  }
+
+  .gp-youtube-poster {
+    display: block;
+    overflow: hidden;
+    background: var(--gp-green-900);
+    color: var(--gp-off-white);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .gp-youtube-poster img {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .gp-youtube-play {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    display: grid;
+    place-items: center;
+    inline-size: 72px;
+    block-size: 72px;
+    border: 1px solid color-mix(in srgb, var(--gp-off-white) 32%, transparent);
+    border-radius: var(--gp-radius-pill);
+    background: color-mix(in srgb, var(--gp-green-950) 80%, transparent);
+    color: var(--gp-off-white);
+    transition: background 200ms cubic-bezier(0.4, 0, 0.2, 1), color 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .gp-youtube-play svg {
+    inline-size: 32px;
+    block-size: 32px;
+    fill: currentColor;
+  }
+
+  .gp-youtube-poster:hover .gp-youtube-play,
+  .gp-youtube-poster:focus-visible .gp-youtube-play {
+    background: var(--gp-green-800);
+    color: var(--gp-lime-400);
+  }
+
+  .gp-youtube-duration {
+    position: absolute;
+    inset-block-end: var(--gp-space-sm);
+    inset-inline-end: var(--gp-space-sm);
+    padding: var(--gp-space-xs) var(--gp-space-sm);
+    border-radius: var(--gp-radius-pill);
+    background: color-mix(in srgb, var(--gp-green-950) 88%, transparent);
+    color: var(--gp-off-white);
+    font-family: var(--gp-font-mono);
+    font-size: var(--gp-caption);
+    line-height: 1;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+</style>
