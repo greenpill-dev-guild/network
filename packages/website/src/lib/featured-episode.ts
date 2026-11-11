@@ -66,7 +66,7 @@ export function featuredEpisodeView(
 
   const duration = story.data.video?.duration?.trim() ?? '';
   const ctaLabel = config?.cta?.label?.trim();
-  const ctaHref = config?.cta?.href?.trim();
+  const ctaHref = safeCtaHref(config?.cta?.href);
 
   return {
     storyId: story.id,
@@ -76,9 +76,29 @@ export function featuredEpisodeView(
     dek: config?.dek?.trim() || story.data.dek || story.data.excerpt || '',
     publishDate: story.data.publishDate ?? '',
     durationLabel: durationLabel(duration),
-    // A site path or an https address; anything else (http:, javascript:, a
-    // protocol-relative //host) leaves the link out.
-    cta: ctaLabel && ctaHref && /^(?:https:\/\/|\/(?!\/))/.test(ctaHref) ? { label: ctaLabel, href: ctaHref } : undefined,
+    cta: ctaLabel && ctaHref ? { label: ctaLabel, href: ctaHref } : undefined,
     video: { id: videoId, title: story.data.title, duration, poster },
   };
+}
+
+// Stands in for this site's origin while a path is resolved; the .invalid
+// top-level domain never names a real host.
+const SITE_ORIGIN = 'https://site.invalid';
+
+/**
+ * The CTA's href when it is an https address or a path on this site, read the
+ * way a browser reads it. A browser turns `/\host/path` (or a path with a tab
+ * or newline inside `//`) into a link to another host, so a path counts only
+ * when it still resolves to this site. Anything else leaves the link out.
+ */
+function safeCtaHref(value: string | undefined): string | undefined {
+  const href = value?.trim();
+  if (!href) return undefined;
+  try {
+    if (/^https:\/\//i.test(href)) return new URL(href).protocol === 'https:' ? href : undefined;
+    if (!href.startsWith('/')) return undefined;
+    return new URL(href, SITE_ORIGIN).origin === SITE_ORIGIN ? href : undefined;
+  } catch {
+    return undefined;
+  }
 }

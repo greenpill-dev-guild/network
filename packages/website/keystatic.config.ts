@@ -402,7 +402,8 @@ export default config({
             label: fields.text({ label: 'Label' }),
             href: fields.text({
               label: 'URL or Path',
-              validation: { pattern: { regex: /^((https:\/\/|\/(?!\/))\S*)?$/, message: 'Use a site path or a full https:// address.' } },
+              // No backslashes: browsers read "/\host" as a link to another site.
+              validation: { pattern: { regex: /^((https:\/\/|\/(?![/\\]))[^\s\\]*)?$/, message: 'Use a site path or a full https:// address.' } },
             }),
           }, { label: 'Extra Link (beside "Episode notes")' }),
         }, { label: 'Featured Episode (band under the hero)' }),

@@ -847,8 +847,9 @@ test('the featured-episode band names a published story with a video, and hides 
   const ctaFor = (href) => featuredEpisodeView({ ...band, cta: { label: 'Discuss', href } }, [story])?.cta;
   assert.deepEqual(ctaFor('https://hub.regencoordination.xyz/t/478'), { label: 'Discuss', href: 'https://hub.regencoordination.xyz/t/478' });
   assert.deepEqual(ctaFor('/garden'), { label: 'Discuss', href: '/garden' });
-  for (const unsafe of ['javascript:alert(1)', 'http://example.com', '//example.com', '']) {
-    assert.equal(ctaFor(unsafe), undefined, `${unsafe} is left out`);
+  // Browsers read the backslash and the tab forms as links to example.com.
+  for (const unsafe of ['javascript:alert(1)', 'http://example.com', '//example.com', '/\\example.com/path', '/\t/example.com', 'garden', '']) {
+    assert.equal(ctaFor(unsafe), undefined, `${JSON.stringify(unsafe)} is left out`);
   }
 });
 
