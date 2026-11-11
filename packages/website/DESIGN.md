@@ -607,7 +607,7 @@ Cards never use horizontal scroll-snap rails by default — use a real grid with
 
 ### Video
 
-- **`YouTubePlayer`** (`ui/YouTubePlayer.astro`) is the only way the site embeds video. The server renders a site-hosted 16:9 poster inside a link to the video on YouTube, so a page sends nothing to YouTube or Google until a visitor presses play, and visitors without JavaScript still reach the video. A plain click swaps in the privacy-enhanced player from `youtube-nocookie.com` in the same box (no layout shift) and moves focus into it; a modified click still opens YouTube. Links with `data-youtube-start` and `data-youtube-target` start the same player at a chapter. The poster is a copy under `public/images/`, never a YouTube thumbnail URL.
+- **`YouTubePlayer`** (`ui/YouTubePlayer.astro`) is the only way the site embeds video. The server renders a site-hosted 16:9 poster inside a link to the video on YouTube, so the player sends no request to YouTube until a visitor presses play, and visitors without JavaScript still reach the video. A plain click swaps in the privacy-enhanced player from `youtube-nocookie.com` in the same box (no layout shift) and moves focus into it; a modified click still opens YouTube. Links with `data-youtube-start` and `data-youtube-target` start the same player at a chapter. The poster is a copy under `public/images/`, never a YouTube thumbnail URL.
 - A story names its video in `video` (YouTube ID, duration, chapters); its media image is the poster. The homepage's featured-episode band (`page-sections/FeaturedEpisode.astro`) plays the story that `featuredEpisode.storySlug` in `home-page.json` names, and an empty slug hides the band.
 
 ## Form Patterns
