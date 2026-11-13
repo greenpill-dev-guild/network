@@ -585,6 +585,11 @@ export default config({
         }),
         youtube: fields.url({ label: 'YouTube', validation: { isRequired: true } }),
         github: fields.url({ label: 'GitHub repository (footer)', validation: { isRequired: true } }),
+        builderPortfolio: fields.url({
+          label: 'Builder portfolio (footer credit)',
+          description: 'The footer credit links the name Afolabi Aiyeloja here.',
+          validation: { isRequired: true },
+        }),
       },
     }),
   },

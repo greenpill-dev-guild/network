@@ -1011,7 +1011,7 @@ test('footer links come from social-links.json, with Keystatic fields to edit th
   // and leaves out a link whose URL an editor removed.
   assert.doesNotMatch(footer, /https?:\/\//);
   assert.match(footer, /\.filter\(\(item\) => item\.href\)/);
-  const footerKeys = ['twitter', 'telegram', 'linkedin', 'youtube', 'hub', 'codeOfConduct', 'events', 'stewardCall', 'github'];
+  const footerKeys = ['twitter', 'telegram', 'linkedin', 'youtube', 'hub', 'codeOfConduct', 'events', 'stewardCall', 'github', 'builderPortfolio'];
   for (const key of footerKeys) {
     assert.match(socialLinks[key], /^https:\/\//, `social-links.json ${key}`);
     assert.match(footer, new RegExp(`socialLinks\\.${key}\\b`), `footer reads ${key}`);

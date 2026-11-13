@@ -3,11 +3,12 @@ import socialLinks from '../../content/social-links.json';
 
 // Each column holds at most four links (Afo, November 2026): Connect keeps
 // X / Twitter, Telegram, LinkedIn and YouTube, Farcaster is gone, and the
-// Regen Hub sits under Resources. Outside links, the GitHub one in the
-// bottom row and the steward booking link included, come from
+// Regen Hub sits under Resources. Outside links, the bottom row's GitHub
+// and credit links and the steward booking link included, come from
 // content/social-links.json, so an editor changes each in one place; the
 // Garden ramp and its assessment read the same booking link. A link left
-// without a URL is not shown (Keystatic also requires these fields).
+// without a URL is not shown, and the credit keeps its words as plain text
+// (Keystatic also requires these fields).
 const columns = [
   {
     heading: 'Network',
@@ -67,7 +68,10 @@ const year = new Date().getFullYear();
 
   <div class="gp-footer-bottom">
     <span>© {year} Greenpill Network</span>
-    {socialLinks.github && <a href={socialLinks.github}>Built in the open on GitHub</a>}
+    <span>
+      {socialLinks.github ? <a href={socialLinks.github}>Built in the open on GitHub</a> : 'Built'} by
+      {socialLinks.builderPortfolio ? <a href={socialLinks.builderPortfolio}>Afolabi Aiyeloja</a> : 'Afolabi Aiyeloja'}
+    </span>
   </div>
 </footer>
 
@@ -142,8 +146,11 @@ const year = new Date().getFullYear();
     line-height: 1.4;
   }
 
+  /* Each link stays on one line, so a narrow screen wraps the credit before
+     the name instead of splitting it. */
   .gp-footer-bottom a {
     color: var(--gp-fg-muted);
+    white-space: nowrap;
     text-decoration: underline;
     text-decoration-color: var(--gp-border);
     text-underline-offset: 0.2em;
