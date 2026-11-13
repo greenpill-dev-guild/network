@@ -26,7 +26,6 @@ interface Props {
 
 const { id, fallbackHref, fallbackLabel, class: className } = Astro.props;
 const emailId = `${id}-email`;
-const noteId = `${id}-note`;
 const statusId = `${id}-status`;
 ---
 
@@ -49,7 +48,7 @@ const statusId = `${id}-status`;
         maxlength={NEWSLETTER_EMAIL_MAX_LENGTH}
         spellcheck="false"
         required
-        aria-describedby={`${noteId} ${statusId}`}
+        aria-describedby={statusId}
         data-newsletter-email
       />
       <Button type="submit" data-newsletter-submit>Subscribe</Button>
@@ -68,7 +67,6 @@ const statusId = `${id}-status`;
         />
       </label>
     </div>
-    <p class="gp-newsletter-note" id={noteId}>Your address goes to Paragraph, which runs the Greenpill newsletter.</p>
   </form>
 
   <div class="gp-newsletter-status" id={statusId} role="status" aria-atomic="true" tabindex="-1" data-newsletter-status>
@@ -232,7 +230,9 @@ const statusId = `${id}-status`;
 <style>
   /* Reflows on its own width: a narrow home card stacks the button under the
      field (Button goes full width below 520px), the wide /garden row keeps
-     them side by side. */
+     them side by side. Nothing follows the button, so in a home ramp card
+     Subscribe lines up with the other steps' buttons; the step's own text
+     says the posts come from Paragraph. */
   .gp-newsletter {
     position: relative;
     container-type: inline-size;
@@ -254,14 +254,6 @@ const statusId = `${id}-status`;
     flex-wrap: wrap;
     align-items: flex-end;
     gap: var(--gp-space-md);
-  }
-
-  .gp-newsletter-note {
-    margin: 0;
-    color: var(--gp-fg-muted);
-    font-family: var(--gp-font-body);
-    font-size: var(--gp-caption);
-    line-height: 1.5;
   }
 
   /* The honeypot: out of sight and out of the accessibility tree, but not

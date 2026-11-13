@@ -391,6 +391,15 @@ test('the newsletter form keeps addresses out of URLs and the honeypot out of re
   assert.match(markup, /<noscript>[\s\S]*href=\{fallbackHref\}[\s\S]*<\/noscript>/);
 });
 
+test('the newsletter form has no note of its own, so Subscribe ends a home ramp card', async () => {
+  // Afo (November 2026): the Garden step's text above the field already says
+  // the posts come from Paragraph, and a note under the form lifted Subscribe
+  // above the other ramp buttons on the homepage.
+  const source = await readFile(join(rootDir, 'packages/website/src/components/page-sections/NewsletterSignup.astro'), 'utf8');
+  const form = source.slice(source.indexOf('<form'), source.indexOf('</form>'));
+  assert.doesNotMatch(form, /<p\b/, 'no text block inside the signup form');
+});
+
 test('operational content snapshot is public-safe and derived from approved operational collections', async () => {
   const snapshot = assertPublicOperationalContentSnapshot(
     JSON.parse(await readFile(snapshotPath, 'utf8'))
