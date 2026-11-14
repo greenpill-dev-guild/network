@@ -9,16 +9,15 @@ name: Website Copy
 # check, so steward copy from Directus cannot block it; that copy is cleaned in
 # Directus through an approved change set.
 #
+# Every pull request runs it, whatever it touches, so a ruleset on main can
+# require it: a check limited to some paths never reports on the other pull
+# requests, and a required check that never reports holds them forever.
+#
 # The check only reads files. It needs no install, no secrets and no write
 # access, so the token is read-only and is not kept after checkout.
 
 on:
   pull_request:
-    paths:
-      - "packages/website/**"
-      - "scripts/website-em-dashes.ts"
-      - "scripts/website-em-dashes.test.ts"
-      - ".github/workflows/website-copy.yml"
 
 permissions:
   contents: read

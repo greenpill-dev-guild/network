@@ -1,22 +1,14 @@
 name: Supply Chain Guardrails
 
+# Every pull request runs the audit, whatever it touches, so a ruleset on main
+# can require it: a check limited to some paths never reports on the other pull
+# requests, and a required check that never reports holds them forever. The
+# audit reads only dependency, workflow and agent-instruction files, so a pull
+# request that changes none of them gets the same answer as main. Pushes still
+# run it only when one of those files changes.
+
 on:
   pull_request:
-    paths:
-      - "package.json"
-      - "**/package.json"
-      - "bun.lock"
-      - "bun.lockb"
-      - "pnpm-lock.yaml"
-      - "yarn.lock"
-      - "bunfig.toml"
-      - "pnpm-workspace.yaml"
-      - ".yarnrc.yml"
-      - ".github/workflows/**"
-      - "AGENTS.md"
-      - "CLAUDE.md"
-      - ".codex/**"
-      - ".claude/**"
   push:
     branches: [main, release/2.0]
     paths:
