@@ -169,7 +169,6 @@ try {
     await sql.unsafe(await readMigration(file));
   }
 
-  // --- Before 033 -------------------------------------------------------------
   // Rows shaped like production: a request with its child rows, an initiative,
   // and a project.
   await sql`insert into content.chapters ${sql({ slug: 'proof', name: 'Proof chapter' })}`;
@@ -201,7 +200,6 @@ try {
   // An untouched chapter arrived as '' and met the foreign key.
   assert.equal(await refusal(() => insertInitiative({ slug: 'no-chapter', title: 'No chapter' })), FOREIGN_KEY);
 
-  // --- 033 --------------------------------------------------------------------
   const beforeMigration = await digest();
   await sql.unsafe(textFieldMigration);
   // Defaults only: no row changes, updated_at included, and no review email queued.
@@ -246,7 +244,6 @@ try {
   assert.equal(await refusal(() => insertInitiative({ slug: 'new-initiative', chapter_slug: 'proof', title: 'New initiative' })), null);
   assert.equal(await refusal(() => insertProject({ slug: 'new-project', guild_slug: 'proof-guild', name: 'New project' })), null);
 
-  // --- Optional fields ------------------------------------------------------------
   // An emptied optional field now arrives as '', and its column takes it.
   const emptied = await refusal(() => sql!`
     update content.chapter_update_requests

@@ -215,7 +215,6 @@ export function formatPickerCoordinate(value: number): string {
   return Number(fixed) === 0 ? (0).toFixed(6) : fixed;
 }
 
-// ---- The map's view: what part of the drawing the stage shows -------------
 // A stage as wide as the drawing (200 by 88 map units) shows all of it. A
 // phone's stage is at least 60svh tall (docs/design/map-polish-audit.md § 5),
 // so it shows the drawing's full height and part of its width, centred on the
@@ -292,7 +291,6 @@ export function panMapView(view: MapBox, edge: MapEdge, drawing: MapBox = MAP_DR
   return { ...view, x: Math.min(Math.max(drawing.x, x), drawing.x + drawing.width - view.width) };
 }
 
-// ---- The inspector over the map -------------------------------------------
 // docs/design/map-polish-audit.md § 5: "When the node would sit under the
 // dock, the map pans it into the open area", and on a phone "The map pans
 // the node above the sheet." The map never resizes, so the view moves: it may
@@ -393,7 +391,6 @@ export function pointsBeyondView(view: MapBox, points: readonly MapPoint[]): Rec
   return { west, east };
 }
 
-// ---- Pins on the drawing's edge -------------------------------------------
 // docs/design/map-polish-audit.md § 5, "Edge pins": "A valid point on the
 // map's edge, such as a confirmed place on the 180th meridian, still draws
 // half outside the drawing. The build keeps the audit's clamp: the rendered
@@ -473,7 +470,6 @@ export function badgeFallbackCenter(
   return keepCircleInside(beside, targetRadius, view, cornerRadius);
 }
 
-// ---- Labels at rest -------------------------------------------------------
 // § 5: "Chapter labels at rest ... The highest featuredWeight goes first.
 // Each label tries right, left, above and below its dot, and hides when it
 // would touch another label, a pin, a badge, a bar or the dock."

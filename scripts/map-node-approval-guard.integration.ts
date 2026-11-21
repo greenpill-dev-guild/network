@@ -199,7 +199,6 @@ try {
     await sql.unsafe(await readMigration(file));
   }
 
-  // --- Rows saved before the guard ------------------------------------------
   // Until now an approved node at 0,0 could be saved, as the June 2026 client
   // did for two nodes PRD-1409 later repaired.
   const legacyHidden = await insertNode({ status: 'approved', latitude: 0, longitude: 0, place_name: 'Port Harcourt' });
@@ -286,7 +285,6 @@ try {
   assert.deepEqual(await state(repairedFromZero), ['archived', '0.000000', '0.000000']);
   assert.deepEqual(await state(repairedFromEdge), ['approved', '90.000000', '97.762610']);
 
-  // --- Approving a pending node ----------------------------------------------
   // At 0,0: refused with a readable error, and the node stays pending.
   const pendingAtZero = await insertNode({ latitude: 0, longitude: 0, place_name: 'Rotterdam, Netherlands' });
   await assertRefused(() => editNode(pendingAtZero, { status: 'approved' }), pendingAtZero, 'null_island', 'approving at 0,0');
@@ -332,7 +330,6 @@ try {
   assert.equal(approved.status, 'approved');
   assert.ok(approved.approved_at instanceof Date);
 
-  // --- Saving an approved node directly ---------------------------------------
   // Live onboarding and admin edits insert approved rows. Every problem the
   // shared rule names is refused with the guard's own message, before the
   // column checks from migrations 001 and 018 would refuse the row less clearly.
@@ -357,7 +354,6 @@ try {
   // Pending rows may still hold 0,0, as the June 2026 client wrote them.
   await insertNode({ latitude: 0, longitude: 0 });
 
-  // --- Owner update requests ---------------------------------------------------
   // A request that moves an approved node to 0,0 fails, and stays pending.
   const movedToZero = await insertNode({ status: 'approved', latitude: 6.5244, longitude: 3.3792, place_name: 'Lagos' });
   const moveRequest = await insertUpdateRequest(movedToZero, { latitude: 0, longitude: 0 });
@@ -392,7 +388,6 @@ try {
   assert.equal(renamedNode.display_name, 'Renamed proof node');
   assert.deepEqual(await state(renamed), ['approved', '-16.800000', '180.000000']);
 
-  // --- Applying it again -------------------------------------------------------
   const settled = await everySubmission();
   await sql.unsafe(guardMigration);
   assert.equal(await everySubmission(), settled, 'replaying the guard changed a stored row');

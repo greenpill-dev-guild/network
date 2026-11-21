@@ -183,7 +183,6 @@ try {
     await sql.unsafe(await readMigration(file));
   }
 
-  // --- Backfill -----------------------------------------------------------
   // Rows as they exist before 029: description in media only, no new columns.
   const legacyUpload = await uploadFile();
   await insertChapter('legacy-approved', {
@@ -237,7 +236,6 @@ try {
   assert.equal(Object.hasOwn(published ?? {}, 'imageAlt'), false);
   assert.equal(Object.hasOwn(published ?? {}, 'imageFileId'), false);
 
-  // --- Update request alt text and credit -----------------------------------
   for (const file of migrations.filter((name) => name > IMAGE_MIGRATION && name < REQUEST_MIGRATION)) {
     await sql.unsafe(await readMigration(file));
   }
@@ -323,7 +321,6 @@ try {
   await editRequest(blank, { proposed_image_alt: '', proposed_image_credit: null });
   assert.deepEqual(await requestDescription(blank), [null, null]);
 
-  // --- New rows ------------------------------------------------------------
   // A seeded or imported chapter describes its sourced image in media only.
   await insertChapter('new-from-media', { media: sourced('new-from-media', { imageAlt: 'Imported alt.', imageCredit: 'Imported credit' }) });
   let row = await chapterRow('new-from-media');
@@ -334,7 +331,6 @@ try {
   row = await chapterRow('new-blank');
   assert.deepEqual([row.image_alt, row.image_credit], [null, null]);
 
-  // --- Direct edits while the sourced image shows --------------------------
   const slug = 'direct';
   await insertChapter(slug, {
     image: '/images/chapters/direct.jpg',
@@ -378,7 +374,6 @@ try {
   row = await chapterRow(slug);
   assert.deepEqual([row.image_alt, row.image_credit], ['Corrected alt for the second image.', 'Second credit']);
 
-  // --- Uploads --------------------------------------------------------------
   const firstUpload = await uploadFile();
   const secondUpload = await uploadFile();
 
@@ -455,7 +450,6 @@ try {
   assert.deepEqual([row.image_alt, row.image_credit], [null, null]);
   assert.equal(Object.hasOwn((await publicChapter('social-only'))?.media ?? {}, 'imageAlt'), false);
 
-  // --- Accepted update requests ---------------------------------------------
   // Without an image the request describes the image the chapter shows.
   await acceptRequest(slug, { alt: 'Reviewed alt.' });
   row = await chapterRow(slug);
@@ -515,7 +509,6 @@ try {
   assert.deepEqual([row.image_alt, row.image_credit], ['Second accepted alt.', 'Second Photographer']);
   assert.equal(row.seo.ogImage, social);
 
-  // --- Prepared steward sync drafts -------------------------------------------
   // The prep script starts a draft from the chapter's current values. Until a
   // steward edits it, it proposes nothing: accepting it as prepared leaves the
   // chapter as it was, whether it shows a sourced image or an uploaded one.
@@ -569,7 +562,6 @@ try {
   await sql!`update content.chapter_update_requests set request_status = 'accepted' where id = ${rewritten}::uuid`;
   assert.deepEqual(await chapterFacts('prepared-upload'), { ...beforeRewrite, summary: 'A summary the steward rewrote.' });
 
-  // --- Alerts ---------------------------------------------------------------
   // An unreviewed sourced image is withheld; the chapter stays, with one alert.
   await insertChapter('unreviewed', {
     image: '/images/chapters/unreviewed.jpg',

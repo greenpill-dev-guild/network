@@ -285,7 +285,6 @@ async function waitForExpression(client: CdpClient, sessionId: string, expressio
   // Non-fatal: continue with whatever rendered (a route may legitimately never settle one channel).
 }
 
-// ── Route discovery from the built dist (overridable via CLI) ──
 function discoverRoutes(): string[] {
   const routes = new Set<string>();
   const walk = (absDir: string, urlPrefix: string) => {
@@ -309,7 +308,6 @@ function slugFor(route: string): string {
   return s || 'home';
 }
 
-// ── Source CSS standard check ───────────────────────────────────────────────
 function sourceFilesToScan(): string[] {
   const files: string[] = [];
   const walk = (absDir: string) => {
@@ -672,7 +670,6 @@ try {
 } catch {}
 `;
 
-// ── Channel 2 — accessibility tree ──
 async function auditAccessibilityTree(client: CdpClient, sessionId: string): Promise<Violation[]> {
   const out: Violation[] = [];
   let tree;
@@ -809,7 +806,6 @@ async function discoverWebMcp(client: CdpClient, origin: string, routes: string[
   }
 }
 
-// ── Per-route × width verification ──
 async function verifyRouteAtWidth(client: CdpClient, origin: string, route: string, width: number): Promise<Violation[]> {
   const target = await client.send('Target.createTarget', { url: 'about:blank' });
   const attached = await client.send('Target.attachToTarget', { targetId: target.targetId, flatten: true });
