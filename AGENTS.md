@@ -73,7 +73,7 @@ A merge into `main` is a production deploy twice over:
 - GitHub Pages rebuilds the public website from every merge that touches `packages/website`, `packages/shared`, `packages/agent`, `scripts`, `package.json`, `bun.lock`, `tsconfig*.json` or `.github/workflows/github-pages.yml`, and from the hourly scheduled rebuild for everything else. It is live within minutes; the rollback is a revert.
 - The Fly.io GitHub app deploys `network-agent` from every push to `main` (`packages/agent/fly.toml`, blue-green), whatever the merge touched.
 
-Agents merge on proof, by the tier rules in `.agents/merge-policy.json`, and record the tier and its proof in the pull request's Verification section. Because every merge also ships the agent, a pull request that changes what the agent image is built from (the paths in `release.agentImagePaths` of `.agents/merge-policy.json`) waits for afo's go in the session before it merges. afo also keeps the manual Fly deploy of the Directus admin (`network-admin`), migrations applied to the production database, and Directus permission syncs against production. Agents never run those.
+Agents merge on proof, by the tier rules in `.agents/merge-policy.json`, and record the tier and its proof in the pull request's Verification section. Because every merge also ships the agent, a pull request that changes what the agent image is built from (the paths in `release.agentImagePaths` of `.agents/merge-policy.json`) waits for afo's go in the session before it merges (afo's decision, 21 November 2026; the Fly auto-deploy stays on). afo also keeps the manual Fly deploy of the Directus admin (`network-admin`), migrations applied to the production database, and Directus permission syncs against production. Agents never run those.
 
 ## Skills
 
