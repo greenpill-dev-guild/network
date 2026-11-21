@@ -3,7 +3,8 @@
 //
 // - Comments the comment codemod's narrow pass removes (banners, commented-out code, labels and
 //   notes that restate a name) on added lines of package source (`packages/*/src`) and
-//   `scripts/`, tests aside.
+//   `scripts/`. Test, spec, story and mock files are not judged; database proofs and browser
+//   smoke scripts are, like any other script.
 //   The codemod decides, so a comment whose place carries its meaning stays allowed.
 // - New markdown that reads as a report (an audit, findings, a summary, a dated note) anywhere
 //   outside `.plans/` and `docs/`, and any other new markdown outside those folders, the guidance
@@ -67,8 +68,9 @@ export function addedLines(diff) {
   return lines;
 }
 
+// Counted as git counts lines, so a line number matches the diff's.
 function lineOf(code, index) {
-  return code.slice(0, index).split(/\r\n|[\n\r\u2028\u2029]/).length;
+  return code.slice(0, index).split('\n').length;
 }
 
 /** The comments the narrow purge would remove whose first line the change added. */
@@ -122,11 +124,28 @@ export function judge(root, ref) {
     sourceFiles += 1;
     const code = readFileSync(absolute, 'utf8');
     // Whitespace is ignored, so re-indenting old comments (wrapping code in a block) adds none.
+    // `--text` and no diff drivers keep `.gitattributes` from hiding hunks, and literal pathspecs
+    // keep a route like `[slug].astro` from matching other files.
     const paths = from ? [from, file] : [file];
     const added =
       how === 'A'
         ? 'all'
-        : addedLines(runGit(root, ['diff', '-U0', '-w', '-M', '--no-color', ref, '--', ...paths]).stdout);
+        : addedLines(
+            runGit(root, [
+              '--literal-pathspecs',
+              'diff',
+              '-U0',
+              '-w',
+              '-M',
+              '--text',
+              '--no-ext-diff',
+              '--no-textconv',
+              '--no-color',
+              ref,
+              '--',
+              ...paths,
+            ]).stdout,
+          );
     let comments;
     try {
       comments = regrownComments(code, file, added);

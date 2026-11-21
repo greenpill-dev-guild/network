@@ -153,3 +153,35 @@ test('re-indenting old comments, as wrapping code in a function does, adds none'
   );
   assert.equal(judge(root, base).problems.length, 1);
 });
+
+test('gitattributes, bracketed route names and odd line breaks cannot hide or invent an added comment', (t) => {
+  const root = mkdtempSync(path.join(tmpdir(), 'regrowth-edges-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const env = fixtureGitEnvironment();
+  const git = (...args) => execFileSync('git', ['-C', root, ...args], { env, encoding: 'utf8' });
+  const write = (file, text) => {
+    mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
+    writeFileSync(path.join(root, file), text);
+  };
+  git('init', '-q', '-b', 'develop');
+  write('.gitattributes', '*.ts -diff\n');
+  write('packages/shared/src/hidden.ts', 'export const a = 1;\nexport const b = 2;\n');
+  write('packages/shared/src/[id].ts', '// ===== Old banner =====\nexport const a = 1;\n');
+  write('packages/shared/src/i.ts', 'export const a = 1;\n');
+  write('packages/shared/src/breaks.ts', 'const s = "a b";\nexport const a = s;\nexport const b = 2;\n');
+  git('add', '.');
+  git('commit', '-q', '-m', 'base');
+  const base = git('rev-parse', 'HEAD').trim();
+
+  write('packages/shared/src/hidden.ts', 'export const a = 1;\n// ===== Hidden banner =====\nexport const b = 2;\n');
+  write('packages/shared/src/i.ts', 'export const z = 0;\nexport const a = 1;\n');
+  write('packages/shared/src/[id].ts', '// ===== Old banner =====\nexport const a = 1;\nexport const c = 3;\n');
+  write(
+    'packages/shared/src/breaks.ts',
+    'const s = "a b";\nexport const a = s;\n// ===== Late banner =====\nexport const b = 2;\n',
+  );
+  const { problems } = judge(root, base);
+  assert.equal(problems.length, 2, problems.join('\n'));
+  assert.ok(problems.some((problem) => problem.startsWith('packages/shared/src/hidden.ts:2: new banner comment')));
+  assert.ok(problems.some((problem) => problem.startsWith('packages/shared/src/breaks.ts:3: new banner comment')));
+});
