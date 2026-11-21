@@ -67,6 +67,7 @@ Each rule names what enforces it. "Review only" means nothing fails automaticall
 | Changes to critical and sensitive paths follow the merge tiers; agent-image changes wait for afo's go | review only (no merge gate check) | `.agents/merge-policy.json` |
 | Website CSS uses `--gp-*` tokens and the Modern CSS Standard; the source baseline only shrinks | `ui:check` in CI `PR checks`; `--write-source-baseline` refuses new entries | `scripts/ui-verify.ts`, `scripts/ui-source-baseline.test.ts` |
 | No new lint finding: oxlint, wrap-once, Biome formatting | CI `PR checks` (`bun run lint`) against a shrink-only baseline | `scripts/lint/run.mjs`, `.agents/lint-baseline.json` |
+| No new banner, label, commented-out code or name-restating comment in package source or `scripts/`; no report-style markdown outside `.plans/` and `docs/` | CI `PR checks` (judges only added lines and files) | `scripts/quality/check-regrowth.mjs`, `scripts/quality/comment-policy.mjs` |
 | Every migration applies to a fresh Postgres, reruns skip, and the database proofs pass; no two new migrations share a prefix | CI `Database proofs` | `.github/workflows/database-proofs.yml`, `scripts/migration-prefixes.test.ts` |
 | Greenpill-owned migrations live only in `packages/agent/migrations`; Directus is never the public API; the website stays static | review only | this file |
 | Install or upgrade no dependency without approval in the current task | review only | this file |

@@ -34,6 +34,8 @@ jobs:
         uses: actions/checkout@v6
         with:
           persist-credentials: false
+          # The regrowth check compares the change with its merge base.
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -59,6 +61,14 @@ jobs:
       # shrink-only .agents/lint-baseline.json: a new finding fails.
       - name: Lint (shrink-only baseline)
         run: bun run lint
+
+      # Judges only what this pull request adds: no comment the codemod's
+      # narrow pass would remove, and no report-style markdown outside .plans/
+      # and docs/.
+      - name: No regrowth of purged comments or report markdown
+        env:
+          REGROWTH_BASE_REF: origin/${{ github.base_ref }}
+        run: bun scripts/quality/check-regrowth.mjs
 
       - name: Build website
         run: bun run build:website
