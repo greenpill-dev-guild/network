@@ -197,7 +197,6 @@ try {
     await sql.unsafe(await readFile(resolve(migrationsDir, file), 'utf8'));
   }
 
-  // --- An agent released ahead of the migration ------------------------------
   // A merge deploys the agent, and 030 is applied by hand. On the schema before
   // 030 the agent must keep alerting the way it did.
   await insertChapter('healthy');
@@ -237,7 +236,6 @@ try {
   );
   assert.equal(alertFailures().some((failure: any) => failure.step === 'open'), false);
 
-  // --- Migration 030 ---------------------------------------------------------
   const beforeMigration = await alertFingerprints();
   assert.equal(beforeMigration.allColumns.length, 4);
   await sql.unsafe(episodeMigration);
@@ -262,7 +260,6 @@ try {
 
   warnings.length = 0;
 
-  // --- Episodes --------------------------------------------------------------
   // Production's rows are weeks old by the time 030 lands. The first render
   // ends the two episodes that were already over and leaves the other two open.
   await anHourLater();
@@ -313,7 +310,6 @@ try {
   await render();
   assert.deepEqual(await alerts('still-dropped'), ['record_quarantined resolved sent']);
 
-  // --- A withheld image on a chapter that is then dropped ----------------------
   // The chapter has an open image alert. A mailto: link now drops the chapter.
   // A dropped chapter is not in the snapshot, so nothing is known about its
   // image, and the image alert stays open.
@@ -354,7 +350,6 @@ try {
   ]);
   assert.deepEqual(await deliver(), ['quarantined chapters/just-broken']);
 
-  // --- A collection the contract and Directus name differently -----------------
   // The alert is stored under the Directus name. A render must look for it
   // under that same name, or it would end and reopen the episode every time.
   const reviewed = new Date();
@@ -377,7 +372,6 @@ try {
   assert.deepEqual(await alerts('proof-initiative'), ['record_quarantined open queued']);
   assert.deepEqual(await deliver(), ['quarantined chapter_initiatives/proof-initiative']);
 
-  // --- Renders at the same moment --------------------------------------------
   await insertChapter('raced', { links: mailto });
   await Promise.all(Array.from({ length: 8 }, () => render(pool)));
   assert.deepEqual(await alerts('raced'), ['record_quarantined open queued']);
@@ -469,7 +463,6 @@ try {
     { code: '23514' }
   );
 
-  // --- A render that changes nothing writes nothing ----------------------------
   // The snapshot route is a public read path. Three alerts are open and all of
   // them still hold, so the render's transaction never needs a transaction id.
   assert.equal(await openAlertCount(), 3);

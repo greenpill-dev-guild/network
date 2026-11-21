@@ -3354,7 +3354,6 @@ test('home map inspector: the dock, the sheets and the compact tooltip (map-poli
   assert.doesNotMatch(component, /shouldRecoverMobileView/);
 });
 
-// ---------------------------------------------------------------------------
 // PRD-1409 (qa-map-data): nodes saved at impossible coordinates.
 // Live /map/state on 2026-11-06 held these public points. The June 2026
 // add-node client produced them: a pin drag clamped to the mini-map edge gave
@@ -3363,7 +3362,6 @@ test('home map inspector: the dock, the sheets and the compact tooltip (map-poli
 // are always refused. An exact edge point is refused from raw coordinates but
 // accepted from a confirmed place, because real places sit on the 180th
 // meridian (Fiji). Evidence: .plans/archive/website-qa-2026-11/handoffs/qa-map-data.md
-// ---------------------------------------------------------------------------
 const LIVE_EDGE_POINTS = Object.freeze([
   { place: 'Florida', lat: 90, long: 97.76261 },
   { place: 'Taiwan', lat: 90, long: 176.912492 },
@@ -3816,7 +3814,6 @@ test('D2: the home map and footer drop the ecoregion layer and its credit', asyn
 });
 
 // PRD-1409 review follow-ups: PostgreSQL rounding and chapter anchors.
-// ---------------------------------------------------------------------------
 
 test('coordinates are judged at the six decimal places PostgreSQL stores', () => {
   // numeric(9, 6) rounds anything finer, so the rule judges the rounded value.

@@ -98,8 +98,6 @@ test('a re-run is not dated by a job it kept from the earlier attempt', () => {
   assert.equal(earliestJobStart(jobs, ''), null);
 });
 
-// --- Watching -----------------------------------------------------------------
-
 /** A scripted Pages pipeline on a virtual clock. Tests script GitHub's side through the hooks. */
 function simulate(initialRuns: PagesRun[], startAt: string) {
   const clock = { nowMs: Date.parse(startAt) };
@@ -314,8 +312,6 @@ test('a fresh run that hangs in turn is cancelled and followed by another', asyn
   assert.equal(watch.startedReplacement, true);
 });
 
-// --- GitHub API ----------------------------------------------------------------
-
 type FakeResponse = { status?: number; body?: unknown };
 
 function fakeGitHub(
@@ -522,8 +518,6 @@ test('configuration names what is missing and rejects a malformed repository', (
   assert.equal(readConfig({ ...env, PAGES_RUN_ID: '' }).watchedRunId, undefined);
   assert.throws(() => readConfig({ ...env, PAGES_RUN_ID: 'latest' }), /must be a workflow run id/);
 });
-
-// --- Workflow wiring -----------------------------------------------------------
 
 test('the recovery workflow is wired to the Pages workflow it watches', () => {
   const workflows = new URL('../.github/workflows/', import.meta.url);
