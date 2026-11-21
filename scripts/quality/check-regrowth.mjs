@@ -78,19 +78,19 @@ function lineOf(code, index) {
  * inside or below an existing comment counts even when the comment starts on an old line.
  */
 export function regrownComments(code, file, added) {
+  const holdsAddedLine = (comment) => {
+    if (added === 'all') return true;
+    const last = lineOf(code, Math.max(comment.start, comment.end - 1));
+    for (let line = lineOf(code, comment.start); line <= last; line += 1) if (added.has(line)) return true;
+    return false;
+  };
   return purgeSource(code, file)
-    .removed.map((comment) => ({
+    .removed.filter(holdsAddedLine)
+    .map((comment) => ({
       line: lineOf(code, comment.start),
-      lastLine: lineOf(code, Math.max(comment.start, comment.end - 1)),
       kind: comment.kind,
       text: code.slice(comment.start, comment.end),
-    }))
-    .filter((comment) => {
-      if (added === 'all') return true;
-      for (let line = comment.line; line <= comment.lastLine; line += 1) if (added.has(line)) return true;
-      return false;
-    })
-    .map(({ lastLine, ...comment }) => comment);
+    }));
 }
 
 /**
