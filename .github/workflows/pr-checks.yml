@@ -65,6 +65,9 @@ jobs:
       - name: Agent guidance tests
         run: bun test scripts/guidance-paths.test.ts scripts/repo-skill-discovery.test.ts
 
+      - name: Browser verification policy
+        run: bun run check:browser-verification-policy
+
       - name: Build website
         run: bun run build:website
 

@@ -70,7 +70,7 @@ Each rule names what enforces it. "Review only" means nothing fails automaticall
 
 A merge into `main` is a production deploy twice over:
 
-- GitHub Pages rebuilds the public website from every merge that touches `packages/website`, `packages/shared`, `packages/agent`, `scripts`, `package.json`, `bun.lock` or `tsconfig*.json`, and from the hourly scheduled rebuild for everything else. It is live within minutes; the rollback is a revert.
+- GitHub Pages rebuilds the public website from every merge that touches `packages/website`, `packages/shared`, `packages/agent`, `scripts`, `package.json`, `bun.lock`, `tsconfig*.json` or `.github/workflows/github-pages.yml`, and from the hourly scheduled rebuild for everything else. It is live within minutes; the rollback is a revert.
 - The Fly.io GitHub app deploys `network-agent` from every push to `main` (`packages/agent/fly.toml`, blue-green), whatever the merge touched.
 
 Agents merge on proof, by the tier rules in `.agents/merge-policy.json`, and record the tier and its proof in the pull request's Verification section. Because every merge also ships the agent, a pull request that changes what the agent image is built from (the paths in `release.agentImagePaths` of `.agents/merge-policy.json`) waits for afo's go in the session before it merges. afo also keeps the manual Fly deploy of the Directus admin (`network-admin`), migrations applied to the production database, and Directus permission syncs against production. Agents never run those.
@@ -150,8 +150,8 @@ The admin package owns the self-hosted Directus deployment surface. Directus may
 ## Deployment Notes
 
 - The current public site can remain on GitHub Pages. If the project later migrates to Vercel, use repo root, `bun run build:website`, and `packages/website/dist`.
-- Fly deploys should run from the repo root with `fly deploy --config packages/agent/fly.toml`.
-- The Directus admin Fly app is `network-admin`; deploy it from the repo root with `fly deploy packages/admin --config packages/admin/fly.toml`.
+- `network-agent` deploys from every push to `main` through the Fly.io GitHub app. A manual deploy, afo's step only, runs from the repo root with `fly deploy --config packages/agent/fly.toml`.
+- The Directus admin Fly app is `network-admin`; afo deploys it by hand from the repo root with `fly deploy packages/admin --config packages/admin/fly.toml`.
 - `DATABASE_URL` belongs only on private Fly services, starting with the agent app. Do not expose database credentials to the public website deploy, Keystatic content, generated JSON, browser bundles, or any future Vercel project.
 
 ## Privacy Boundary

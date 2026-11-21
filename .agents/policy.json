@@ -5,25 +5,25 @@
       "id": "fly-deploy",
       "pattern": "^(\\S*/)?fly(ctl)?( -\\S+( [^-\\s]\\S*)?)* deploy( |$)",
       "action": "ask",
-      "message": "PRODUCTION DEPLOYMENT: a manual Fly deploy of network-agent or network-admin is afo's step. Go ahead only on his explicit word in this session."
+      "message": "PRODUCTION DEPLOYMENT: a manual Fly deploy of network-agent or network-admin is afo's step (main also auto-deploys network-agent). Go ahead only on his explicit word in this session."
     },
     {
       "id": "fly-production-shell",
-      "pattern": "^(\\S*/)?fly(ctl)?( -\\S+( [^-\\s]\\S*)?)* (ssh|console|machines? (exec|run|update|destroy|stop|restart|clone)|secrets (set|unset|import|deploy)|scale|mpg (proxy|connect)|postgres connect)( |$)",
+      "pattern": "^(\\S*/)?fly(ctl)?( -\\S+( [^-\\s]\\S*)?)* (ssh|console|machines? (exec|run|update|destroy|stop|restart|clone)|secrets (set|unset|import|deploy)|scale|apps (restart|destroy|move)|volumes (destroy|extend|fork)|mpg (proxy|connect)|postgres connect)( |$)",
       "action": "ask",
-      "message": "PRODUCTION: this reaches or changes a production Fly machine, secret or database. Go ahead only on afo's explicit word in this session."
+      "message": "PRODUCTION: this reaches or changes a production Fly machine, app, volume, secret or database. Go ahead only on afo's explicit word in this session."
     },
     {
       "id": "database-write",
-      "pattern": "^(bun|npm|pnpm|yarn)( --?\\S+)* run (db:migrate|db:cleanup:\\S+|db:repair:\\S+|db:deliver:\\S+|impact:sync|content:migrate|content:seed:public)( |$)|^(bun|node|tsx)( --?\\S+)* (\\./)?scripts/(agent-db\\.migrate|map-node-edit-flow-cleanup|map-node-location-repair|map-node-edit-link-delivery|map-node-moderation-delivery|agent-impact-sync|agent-public-content-seed)\\.ts( |$)|^(bun|node|tsx)( --?\\S+)* (\\./)?scripts/operational-content\\.ts( .*)? --migrate( |$)",
+      "pattern": "^(bun|npm|pnpm|yarn)( --?[\\w-]+(=\\S+| [^-\\s]\\S*)?)* run( --?[\\w-]+(=\\S+| [^-\\s]\\S*)?)* (db:migrate|db:cleanup:\\S+|db:repair:\\S+|db:deliver:\\S+|impact:sync|content:migrate|content:seed:public)( |$)|^(bun|node|tsx)( --?[\\w-]+(=\\S+| [^-\\s]\\S*)?)* (\\S*/)?scripts/(agent-db\\.migrate|map-node-edit-flow-cleanup|map-node-location-repair|map-node-edit-link-delivery|map-node-moderation-delivery|agent-impact-sync|agent-public-content-seed)\\.ts( |$)|^(bun|node|tsx)( --?[\\w-]+(=\\S+| [^-\\s]\\S*)?)* (\\S*/)?scripts/operational-content\\.ts( .*)? --migrate( |$)",
       "action": "ask",
       "message": "This writes to whatever DATABASE_URL points at (the environment or .env.local), which the guard cannot see. Production migrations and data repairs are afo's step. Go ahead only when the target is the local database (localhost:3304) or a CI service container."
     },
     {
       "id": "directus-write",
-      "pattern": "^(bun|npm|pnpm|yarn)( --?\\S+)* run (directus:content:setup|directus:studio:setup|directus:users:invite|directus:steward:smoke)( |$)|^(bun|npm|pnpm|yarn)( --?\\S+)* run directus:content-access(?!.* (verify|sync|--dry-run|--help|-h)( |$))( |$)|^(bun|node|tsx)( --?\\S+)* (\\./)?scripts/directus-(operational-content-setup|studio-setup|users|steward-smoke)\\.ts( |$)|^(bun|node|tsx)( --?\\S+)* (\\./)?scripts/directus-content-access\\.ts(?!.* (verify|sync|--dry-run|--help|-h)( |$))( |$)",
+      "pattern": "^(bun|npm|pnpm|yarn)( --?[\\w-]+(=\\S+| [^-\\s]\\S*)?)* run( --?[\\w-]+(=\\S+| [^-\\s]\\S*)?)* (directus:content:setup|directus:studio:setup|directus:users:invite|directus:steward:smoke|directus:map-moderation:smoke)( |$)|^(bun|npm|pnpm|yarn)( --?[\\w-]+(=\\S+| [^-\\s]\\S*)?)* run( --?[\\w-]+(=\\S+| [^-\\s]\\S*)?)* directus:content-access(?!( --)? (verify|sync)( |$))(?!.* (--dry-run|--help|-h)( |$))( |$)|^(bun|node|tsx)( --?[\\w-]+(=\\S+| [^-\\s]\\S*)?)* (\\S*/)?scripts/directus-(operational-content-setup|studio-setup|users|steward-smoke|map-moderation-smoke|chapter-enrichment|operational-enrichment|steward-sync-prep)\\.ts( |$)|^(bun|node|tsx)( --?[\\w-]+(=\\S+| [^-\\s]\\S*)?)* (\\S*/)?scripts/directus-content-access\\.ts(?!( --)? (verify|sync)( |$))(?!.* (--dry-run|--help|-h)( |$))( |$)",
       "action": "ask",
-      "message": "This changes permissions, metadata or users in whatever Directus DIRECTUS_URL points at, which the guard cannot see; invites send real email. Syncs against production are afo's step. Go ahead only for the local Directus (localhost:3302). `directus:content-access -- verify` (alias `sync`) and `--dry-run` are read-only and pass."
+      "message": "This changes permissions, metadata, content or users in whatever Directus DIRECTUS_URL points at (plain `bun` loads .env.local, which can hold production settings); the guard cannot see the target, and invites send real email. Syncs against production are afo's step. Go ahead only for the local Directus (localhost:3302). `directus:content-access -- verify` (alias `sync`) and `--dry-run` are read-only and pass."
     }
   ],
   "paths": [

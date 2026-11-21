@@ -56,7 +56,9 @@ for (const relPath of requiredPolicyFiles) {
     continue;
   }
 
+  // A one-line `@AGENTS.md` import carries AGENTS.md's policy, which is checked itself.
   const text = read(relPath);
+  if (relPath !== 'AGENTS.md' && /^@\.?\/?AGENTS\.md\s*$/.test(text.trim())) continue;
   for (const phrase of [
     'authenticated Brave QA profile',
     'Codex browser-extension path',
