@@ -1,14 +1,16 @@
 name: PR Checks
 
 # Runs on every pull request, whatever it touches, so a ruleset on main can
-# require one check that says the change type-checks, keeps the repo's contract
-# tests green and builds the site inside the Pages size budget. github-pages.yml
+# require one check that says the change type-checks, keeps every test file in
+# scripts/ and the website CSS guard green, and builds the site inside the
+# Pages size budget. github-pages.yml
 # builds only after a merge, which is too late to keep main whole.
 #
 # Nothing here needs a secret, a database or the network beyond the lockfile
 # install. The build reads the committed fallback snapshot (no
 # OPERATIONAL_CONTENT_SNAPSHOT_URL), which holds no remote chapter images, and
-# the tests that need Postgres or a browser (`*:db`, `*:browser`) stay out.
+# the proofs that need Postgres or a browser (`*.integration.ts`, `*:browser`)
+# run elsewhere: database-proofs.yml for Postgres.
 # Steps that compile TypeScript run through `bun --bun`, so the compiler's node
 # shebang runs on Bun, as in the Pages build, whatever Node the runner ships.
 
@@ -47,23 +49,8 @@ jobs:
       - name: Check website types
         run: bun --bun run --cwd packages/website check
 
-      - name: Content contract tests
-        run: bun --bun run test:content
-
-      - name: Agent contract tests
-        run: bun --bun run test:agent
-
-      - name: Map node contract tests
-        run: bun --bun run test:map-nodes
-
-      - name: Chapter impact contract tests
-        run: bun --bun run test:chapter-impact
-
       - name: Validate plan hubs
         run: bun --bun run plans:validate
-
-      - name: Agent guidance tests
-        run: bun test scripts/guidance-paths.test.ts scripts/repo-skill-discovery.test.ts
 
       - name: Browser verification policy
         run: bun run check:browser-verification-policy
@@ -71,10 +58,15 @@ jobs:
       - name: Build website
         run: bun run build:website
 
+      # Every test file under scripts/ and the source CSS guard, in one
+      # command. It runs after the build because the map route tests read
+      # the built pages. `bun test ./scripts` picks up a new test file
+      # without a workflow change.
+      - name: All tests and the website CSS guard
+        run: bun --bun run test
+
       # The same budget the Pages deploy enforces. This build uses the
       # committed snapshot, so live chapter image copies can still add a little
       # on deploy.
       - name: Check Pages size budget
-        run: |
-          bun test scripts/pages-artifact-size.test.ts
-          bun --no-env-file scripts/pages-artifact-size.ts
+        run: bun --no-env-file scripts/pages-artifact-size.ts
