@@ -27,7 +27,7 @@ const repoRoot = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 
 // Package source and the repository's scripts, Astro components included.
 const PACKAGE_SOURCE = /^(packages\/[^/]+\/src\/.+|scripts\/.+)\.(ts|tsx|js|jsx|mjs|cjs|mts|cts|sol|astro)$/;
-const TEST_PATH = /(^|\/)(__tests__|__mocks__|test|tests)\/|\.(test|spec|stories)\.[cm]?[jt]sx?$/;
+const TEST_PATH = /(^|\/)(__tests__|__mocks__|test|tests)\/|\.(test|spec|stories)\.([cm]?[jt]sx?|astro)$/;
 const GENERATED = /\.d\.[cm]?ts$|(^|\/)(generated|vendor|dist)\/|\.generated\./;
 
 const MARKDOWN = /\.(md|mdx)$/i;

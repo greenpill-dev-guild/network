@@ -48,6 +48,8 @@ test('package source excludes tests, stories, mocks, declarations and generated 
     'packages/shared/src/types/indexer.d.ts',
     'packages/contracts/script/deploy.ts',
     'scripts/quality/check-regrowth.test.mjs',
+    'packages/website/src/components/ui/Card.test.astro',
+    'packages/website/src/components/ui/Card.stories.astro',
   ]) {
     assert.ok(!isPackageSource(file), file);
   }
