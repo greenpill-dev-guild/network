@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "commands": [
+    {
+      "id": "fly-deploy",
+      "pattern": "^(\\S*/)?fly(ctl)?( -\\S+( [^-\\s]\\S*)?)* deploy( |$)",
+      "action": "ask",
+      "message": "PRODUCTION DEPLOYMENT: a manual Fly deploy of network-agent or network-admin is afo's step (main also auto-deploys network-agent). Go ahead only on his explicit word in this session."
+    },
+    {
+      "id": "fly-production-shell",
+      "pattern": "^(\\S*/)?fly(ctl)?( -\\S+( [^-\\s]\\S*)?)* (ssh|console|machines? (exec|run|update|destroy|stop|restart|clone)|secrets (set|unset|import|deploy)|scale|apps? (restart|destroy|move)|(volumes?|vol) (destroy|extend|fork)|mpg (proxy|connect)|(postgres|pg) connect)( |$)",
+      "action": "ask",
+      "message": "PRODUCTION: this reaches or changes a production Fly machine, app, volume, secret or database. Go ahead only on afo's explicit word in this session."
+    },
+    {
+      "id": "database-write",
+      "pattern": "^(\\S*/)?(bun|npm|pnpm|yarn)( --?[\\w-]+(=\\S+| [^-\\s]\\S*)?)* run( --?[\\w-]+(=\\S+| [^-\\s]\\S*)?)* (db:migrate|db:cleanup:\\S+|db:repair:\\S+|db:deliver:\\S+|impact:sync|content:migrate|content:seed:public)( |$)|^(\\S*/)?(bun|node|tsx)( --?[\\w-]+(=\\S+| [^-\\s]\\S*)?)* (\\S*/)?scripts/(agent-db\\.migrate|map-node-edit-flow-cleanup|map-node-location-repair|map-node-edit-link-delivery|map-node-moderation-delivery|agent-impact-sync|agent-public-content-seed)\\.ts( |$)|^(\\S*/)?(bun|node|tsx)( --?[\\w-]+(=\\S+| [^-\\s]\\S*)?)* (\\S*/)?scripts/operational-content\\.ts( .*)? --migrate( |$)",
+      "action": "ask",
+      "message": "This writes to whatever DATABASE_URL points at (the environment or .env.local), which the guard cannot see. Production migrations and data repairs are afo's step. Go ahead only when the target is the local database (localhost:3304) or a CI service container."
+    },
+    {
+      "id": "directus-write",
+      "pattern": "^(\\S*/)?(bun|npm|pnpm|yarn)( --?[\\w-]+(=\\S+| [^-\\s]\\S*)?)* run( --?[\\w-]+(=\\S+| [^-\\s]\\S*)?)* (directus:content:setup|directus:studio:setup|directus:users:invite|directus:steward:smoke|directus:map-moderation:smoke)( |$)|^(\\S*/)?(bun|npm|pnpm|yarn)( --?[\\w-]+(=\\S+| [^-\\s]\\S*)?)* run( --?[\\w-]+(=\\S+| [^-\\s]\\S*)?)* directus:content-access(?!( --)? (verify|sync)( |$))(?!.* (--dry-run|--help|-h)( |$))( |$)|^(\\S*/)?(bun|node|tsx)( --?[\\w-]+(=\\S+| [^-\\s]\\S*)?)* (\\S*/)?scripts/directus-(operational-content-setup|studio-setup|users|steward-smoke|map-moderation-smoke|chapter-enrichment|operational-enrichment|steward-sync-prep)\\.ts( |$)|^(\\S*/)?(bun|node|tsx)( --?[\\w-]+(=\\S+| [^-\\s]\\S*)?)* (\\S*/)?scripts/directus-content-access\\.ts(?!( --)? (verify|sync)( |$))(?!.* (--dry-run|--help|-h)( |$))( |$)",
+      "action": "ask",
+      "message": "This changes permissions, metadata, content or users in whatever Directus DIRECTUS_URL points at (plain `bun` loads .env.local, which can hold production settings); the guard cannot see the target, and invites send real email. Syncs against production are afo's step. Go ahead only for the local Directus (localhost:3302). `directus:content-access -- verify` (alias `sync`) and `--dry-run` are read-only and pass."
+    }
+  ],
+  "paths": [
+    {
+      "id": "critical-migrations",
+      "glob": "packages/agent/migrations/**",
+      "action": "notice",
+      "message": "Critical tier (.agents/merge-policy.json): migrations ship before afo applies them to production, so the deployed agent must tolerate both schemas. Deploy tolerant code first, then migrate; never edit an applied migration."
+    },
+    {
+      "id": "critical-public-projection",
+      "glob": "packages/*/src/public-content.ts",
+      "action": "notice",
+      "message": "Critical tier: this is the public projection. Nothing private (emails, raw notes, IPs, user agents, steward notes, pending submissions) may reach a public payload; extend the contract tests with any new field."
+    },
+    {
+      "id": "critical-workflows",
+      "glob": ".github/workflows/**",
+      "action": "notice",
+      "message": "Critical tier: CI workflow. Keep required check names stable (.agents/merge-policy.json requiredChecks), pin actions, and never weaken a check as a workaround."
+    }
+  ],
+  "proof": {
+    "commands": [
+      "^bun run (typecheck|build|build:website|build:packages|plans:validate|ui:check|ui:verify|test:[\\w:-]+)\\b",
+      "^bun (--bun )?test (\\./)?scripts/[\\w.-]+\\.test\\.ts\\b"
+    ]
+  }
+}

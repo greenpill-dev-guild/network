@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 
 const repoRoot = process.cwd();
 const requiredPolicyFiles = ["AGENTS.md", "CLAUDE.md", "packages/website/CLAUDE.md"];
@@ -56,7 +56,10 @@ for (const relPath of requiredPolicyFiles) {
     continue;
   }
 
+  // A one-line `@AGENTS.md` import carries AGENTS.md's policy, which is checked itself.
   const text = read(relPath);
+  const importedGuide = join(dirname(relPath), 'AGENTS.md');
+  if (relPath !== importedGuide && /^@(\.\/)?AGENTS\.md$/.test(text.trim()) && requiredPolicyFiles.includes(importedGuide)) continue;
   for (const phrase of [
     'authenticated Brave QA profile',
     'Codex browser-extension path',

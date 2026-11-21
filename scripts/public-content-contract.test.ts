@@ -957,7 +957,9 @@ test('repo agent guidance points at the canonical website stylesheet', async () 
     if (source.includes('packages/website/src/styles/global.css')) {
       problems.push(`${label} points at removed global.css`);
     }
-    if (!source.includes('packages/website/src/styles/gp-tokens.css')) {
+    // CLAUDE.md may be the one-line import of AGENTS.md, which carries the pointer.
+    const importsAgentsGuide = /^@\.?\/?AGENTS\.md$/m.test(source);
+    if (!source.includes('packages/website/src/styles/gp-tokens.css') && !importsAgentsGuide) {
       problems.push(`${label} does not mention canonical gp-tokens.css`);
     }
   }
