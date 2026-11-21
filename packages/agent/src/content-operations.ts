@@ -915,7 +915,6 @@ export async function deliverQueuedContentReviewNotifications(
   return result;
 }
 
-//
 // Two different conditions, each with its own alert:
 // - record_quarantined: a record is dropped from the public snapshot.
 // - chapter_image_withheld: a chapter stays published without its image.
