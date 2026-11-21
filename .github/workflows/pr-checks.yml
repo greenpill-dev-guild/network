@@ -55,6 +55,11 @@ jobs:
       - name: Browser verification policy
         run: bun run check:browser-verification-policy
 
+      # oxlint, the kit's wrap-once rules and Biome formatting, behind the
+      # shrink-only .agents/lint-baseline.json: a new finding fails.
+      - name: Lint (shrink-only baseline)
+        run: bun run lint
+
       - name: Build website
         run: bun run build:website
 

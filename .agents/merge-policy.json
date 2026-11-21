@@ -8,7 +8,8 @@
     "PR checks",
     "Em dashes in website copy",
     "audit / Supply-chain guardrails",
-    "agents-doctor / Agents doctor"
+    "agents-doctor / Agents doctor",
+    "Database proofs"
   ],
   "release": {
     "about": "A merge into main is a production deploy: GitHub Pages rebuilds the website (path-filtered push trigger plus an hourly rebuild), and the Fly.io GitHub app deploys network-agent from every push to main, whatever the merge touched (packages/agent/fly.toml, blue-green). afo accepted live-from-main for the static website on 21 Nov 2026 and wants his approval at Fly deploys. Since the agent deploy happens at merge, a pull request that changes any path in agentImagePaths (what packages/agent/Dockerfile builds the image from, plus the files packages/agent/fly.toml ships with [[files]]) waits for his go in the session before an agent merges it, whatever its tier. afo decided this on 21 Nov 2026 (\"Keep the interim rule\"), choosing it over merging agent-image changes on proof and over switching off the Fly auto-deploy, which stays on: this go is the agent's production promotion. He also keeps the manual Fly deploy of network-admin, migrations applied to the production database with db:migrate (recorded in audit.agent_schema_migrations), and Directus permission syncs against production. Agents never run those; .agents/policy.json makes the shared guards ask first on afo's machine, and cloud agents hold no production credentials. The kit's merge-policy schema has no field for a gate by environment or by path outside the tiers, so dev merge-settings does not apply this entry.",
@@ -37,7 +38,7 @@
   },
   "tiers": {
     "critical": {
-      "about": "Schema migrations, the steward permission model, the public projections, the Fly deploy configs and CI. Merges once three things hold on the current head: PR checks and every other required check are green, the full gate has passed (the Postgres migration job and rendered proof once they exist), and a fresh agent's adversarial review naming the head SHA is addressed. The agent merges by hand with that SHA as the expected head (gh pr merge --merge --match-head-commit <sha>) and stops if the head has moved; auto-merge would also merge a later push. Code-owner review cannot gate this tier, because GitHub refuses approval of one's own pull request.",
+      "about": "Schema migrations, the steward permission model, the public projections, the Fly deploy configs and CI. Merges once three things hold on the current head: PR checks and every other required check are green, the full gate has passed (PR checks, Database proofs, and rendered proof for website changes once the Proof phase adds it), and a fresh agent's adversarial review naming the head SHA is addressed. The agent merges by hand with that SHA as the expected head (gh pr merge --merge --match-head-commit <sha>) and stops if the head has moved; auto-merge would also merge a later push. Code-owner review cannot gate this tier, because GitHub refuses approval of one's own pull request.",
       "paths": [
         "packages/agent/migrations/**",
         "scripts/directus-content-access.ts",

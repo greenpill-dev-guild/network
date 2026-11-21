@@ -75,6 +75,8 @@
     "test:home-map:live-e2e": "bun run build:packages && bun --no-env-file scripts/home-map-live-e2e.ts",
     "home-map:rehearsal": "bun run build:packages && bun --no-env-file scripts/home-map-live-rehearsal.ts",
     "test": "bun run build:packages && bun test ./scripts && bun run ui:check",
+    "lint": "bun scripts/lint/run.mjs",
+    "lint:shrink": "bun scripts/lint/run.mjs shrink",
     "test:plans": "bun test scripts/plan-hub.test.ts",
     "test:em-dashes": "bun test scripts/website-em-dashes.test.ts",
     "ui:check": "UI_VERIFY_SOURCE_ONLY=1 bun --no-env-file scripts/ui-verify.ts",
@@ -84,12 +86,14 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@typescript/native": "npm:typescript@7.0.2",
+    "@biomejs/biome": "^2.6.8",
     "@greenpill-network/agent": "workspace:*",
     "@greenpill-network/shared": "workspace:*",
     "@types/node": "^22",
+    "@typescript/native": "npm:typescript@7.0.2",
     "axe-core": "^4.11.4",
     "modern-web-guidance": "^0.0.169",
+    "oxlint": "^1.94.0",
     "typescript": "^6.0.3"
   }
 }
