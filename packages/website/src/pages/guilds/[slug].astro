@@ -77,7 +77,6 @@ const APPEARANCE_VERBS: Record<string, string> = {
 const avatarName = (name: unknown) => text(name).replace(/[()]/g, '');
 const appearanceLinkLabel = (appearance: any) =>
   `${APPEARANCE_VERBS[text(appearance.kind).toLowerCase()] ?? 'Open'} on ${destinationLabel(text(appearance.href))}`;
-// "With Afo, Coi, Matt" for the people an appearance credits; empty when it names none.
 const appearancePeople = (appearance: any) => {
   const names = list(appearance.people).map(text).filter(Boolean);
   return names.length > 0 ? `With ${names.join(', ')}` : '';
@@ -140,7 +139,6 @@ const hatGroups = list(data.stewards)
     return groups;
   }, new Map<string, any[]>());
 
-// Active projects only, higher featured weight first.
 const projects = (await getOperationalProjects())
   .filter((project) => project.data.guild === item.id && (text(project.data.status) || 'active') === 'active')
   .sort((a, b) => Number(b.data.featuredWeight ?? 0) - Number(a.data.featuredWeight ?? 0))

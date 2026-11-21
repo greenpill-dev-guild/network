@@ -68,7 +68,6 @@ function linkifyText(text: string) {
 }
 
 const bodyBlocks = bodyToBlocks(data.body || '');
-// The editor's Read Time field wins when filled; otherwise estimate from the body.
 const heroMeta = [...storyMetaItems(data), data.readTime?.trim() || storyReadTime(data.body)];
 const sources = (data.proofSignals ?? []).filter((signal) => signal.value || signal.label);
 

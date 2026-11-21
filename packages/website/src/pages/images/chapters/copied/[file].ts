@@ -4,7 +4,6 @@ import { getChapterImageCopyFiles } from '../../../../lib/operational-content';
 
 export const prerender = true;
 
-// Writes the site-hosted copies of remote chapter images into the build.
 export const getStaticPaths: GetStaticPaths = async () =>
   (await getChapterImageCopyFiles()).map((file) => ({
     params: { file: file.name },

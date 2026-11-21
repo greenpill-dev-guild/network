@@ -73,9 +73,8 @@ const stories = defineCollection({
     tag: z.string().optional().default(''),
     tags: z.array(z.string()).optional().default([]),
     /*
-     * HiFi article bodies stay Markdown for compatibility. Renderers should
-     * support paragraphs, ## headings, > pull quotes, markdown lists, and a
-     * final ## Thanks or ## Acknowledgements section.
+     * Markdown. Renderers support paragraphs, ## headings, > pull quotes,
+     * lists, and a final ## Thanks or ## Acknowledgements section.
      */
     body: z.string().optional().default(''),
     image: z.string().optional().default(''),

@@ -378,8 +378,8 @@ const sharedThemes = (a: PublicMapStateNode, b: PublicMapStateNode): string[] =>
 
 // Edge colour is the only relationship signal on the public map, so prefer a
 // specific shared theme over the near-ubiquitous `public` (Public Goods) theme;
-// keep `public` only when it is the sole shared theme. Deterministic — the first
-// match preserves node A's theme order.
+// keep `public` only when it is the sole shared theme. The first match keeps
+// node A's theme order, so the pick is deterministic.
 const PUBLIC_THEME_SLUG = 'public';
 const firstSpecificTheme = (themes: string[]): string => (
   themes.find((theme) => theme && theme !== PUBLIC_THEME_SLUG) ?? ''
@@ -445,9 +445,9 @@ export function generatePublicMapEdges(
     });
   };
 
-  // Relationships are person-to-person only (steward↔steward, steward↔member,
-  // member↔member). Chapters stay as geographic anchors with no relationship
-  // threads — there is intentionally no steward→chapter edge.
+  // Relationships are person-to-person only. Chapters stay as geographic
+  // anchors with no relationship threads: there is intentionally no
+  // steward-to-chapter edge.
   const candidates: Array<{
     a: PublicMapStateNode;
     b: PublicMapStateNode;

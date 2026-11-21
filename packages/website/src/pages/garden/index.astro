@@ -20,7 +20,6 @@ import {
 
 const title = garden.title || 'Greenpill Garden';
 const summary = garden.summary || 'A participation ramp for people moving from reading about regeneration to joining chapters, contributing skills, and coordinating real-world public goods.';
-// With no steps in garden.json the page leaves the ramp out (see lib/garden-ramp.ts).
 const steps = gardenRampSteps(garden.steps);
 const heroCta = gardenHeroCta(garden.stickyCta, steps.length);
 const seoTitle = garden.seo.title || `${title} · Greenpill Network`;

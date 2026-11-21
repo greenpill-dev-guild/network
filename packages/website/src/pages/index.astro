@@ -79,7 +79,6 @@ const ecosystemRows = [
   .map((row) => ({ ...row, items: (row.items as EcosystemEntry[]).filter(isListableOrg) }))
   .filter((row) => row.items.length > 0);
 
-// With no steps in garden.json the home page leaves the ramp section out.
 const gardenSteps = gardenRampSteps(garden.steps).slice(0, 4);
 
 const heroTitle = homePage.hero?.title || homePage.title || 'A global regenerative network.';
