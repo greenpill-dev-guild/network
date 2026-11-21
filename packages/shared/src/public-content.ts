@@ -462,8 +462,9 @@ function resolvePublicChapterImage(chapter: PublicOperationalRecord, uploadedIma
   };
 }
 
-// Only an absolute http(s) URL is published; any other scheme or a relative
-// path becomes no image.
+// Only a value that starts with http:// or https:// and holds no whitespace is
+// published; any other scheme or a relative path becomes no image. The host is
+// not checked.
 function toUploadedImageUrl(value: unknown): string {
   const url = cleanString(value);
   return /^https?:\/\/\S+$/i.test(url) ? url : '';
