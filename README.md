@@ -298,9 +298,14 @@ bun run directus:content-access -- assign --input /path/to/content-access.tsv
 
 The TSV columns are `email`, `kind`, and `slug`, where `kind` is `chapter` or
 `guild`. `Greenpill Steward Editor` users can read published operational
-content, edit only assigned draft/pending chapter or guild content, and create
-chapter initiatives or guild projects only under assigned parent records.
-Publishing remains reserved for trusted publishers and operators.
+content, edit their assigned chapter or guild records in draft, pending review
+or published status, and create chapter initiatives or guild projects under
+assigned parent records in any of those statuses. An assigned steward can
+therefore publish their own records directly, on edit and on create; the
+chapter update request workflow stays available for changes they want reviewed
+first. Archiving stays with publishers and operators. A published change
+reaches the public website only after the next snapshot refresh and site build.
+`scripts/directus-content-access.test.ts` pins these statuses.
 
 After changing roles, permissions, assignment data, or Directus metadata, run a
 temporary steward-session smoke test:
