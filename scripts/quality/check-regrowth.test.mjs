@@ -17,7 +17,7 @@ test('new markdown is allowed in its homes, guidance folders and conventional na
     '.claude/skills/review/SKILL.md',
     '.claude/context/testing.md',
     '.claude/skills/qa-triage/references/unattended-report.md',
-    'scripts/quality/check.mjs',
+    'scripts/quality/check-regrowth.test.mjs',
   ]) {
     assert.equal(markdownProblem(file), null, file);
   }
@@ -39,13 +39,15 @@ test('package source excludes tests, stories, mocks, declarations and generated 
   assert.ok(isPackageSource('packages/website/src/components/ui/Card.astro'));
   assert.ok(isPackageSource('scripts/operational-content.ts'));
   assert.ok(!isPackageSource('scripts/agent-contract.test.ts'));
+  // Unlike Green Goods, the repository's own scripts are in scope here.
+  assert.ok(isPackageSource('scripts/quality/check.mjs'));
   for (const file of [
     'packages/shared/src/__tests__/a.test.ts',
     'packages/shared/src/components/Button.stories.tsx',
     'packages/shared/src/__mocks__/wagmi.ts',
     'packages/shared/src/types/indexer.d.ts',
     'packages/contracts/script/deploy.ts',
-    'scripts/quality/check.mjs',
+    'scripts/quality/check-regrowth.test.mjs',
   ]) {
     assert.ok(!isPackageSource(file), file);
   }
