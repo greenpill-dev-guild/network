@@ -43,9 +43,7 @@
       ".plans/backlog/knowledge-commons-graph-explorer/artifacts/generators",
       ".plans/active/public-website-design-implementation/research"
     ],
-    "depends_on_features": [
-      "v2-steward-decision-pack"
-    ]
+    "depends_on_features": []
   },
   "lanes": {
     "ui": {

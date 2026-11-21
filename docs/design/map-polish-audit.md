@@ -110,7 +110,7 @@ Measured live at 820px canvas width: **35 node pairs within 18px of each other; 
 
 ## 5. P1 decisions (2026-11-07)
 
-Afo chose to see the P1 layout designed before any P1 code was written (PRD-1424, a child of PRD-739). The prompt is [homemap-p1-prompt.md](homemap-p1-prompt.md). Its three variants were drawn from live public map data (`/map/state` of 2026-11-07 and the committed chapter snapshot) on a private Claude Design canvas in Afo's account: <https://claude.ai/artifact/5Q6JNPPZDp5PbjydrM8QYQ>. With screenshots of all three in front of him, he answered four questions and took the recommended option each time:
+Afo chose to see the P1 layout designed before any P1 code was written (PRD-1424, a child of PRD-739). The prompt was `docs/design/homemap-p1-prompt.md`, removed with the other design prompts once the P1 layout shipped; git history before 3bfe8b9 has it. Its three variants were drawn from live public map data (`/map/state` of 2026-11-07 and the committed chapter snapshot) on a private Claude Design canvas in Afo's account: <https://claude.ai/artifact/5Q6JNPPZDp5PbjydrM8QYQ>. With screenshots of all three in front of him, he answered four questions and took the recommended option each time:
 
 | Question | Afo's answer | What it means |
 |---|---|---|
