@@ -188,7 +188,7 @@ function reportSanitizedEditLinkError(
       errorName: error instanceof Error ? error.name : 'UnknownError',
     });
   } catch {
-    // Public neutrality must not depend on telemetry.
+    // A telemetry failure must not change the neutral public response.
   }
 }
 
@@ -421,9 +421,10 @@ export function createAgentApp({
     return context.json(MAP_NODE_EDIT_LINK_NEUTRAL_RESPONSE, 202);
   });
 
-  // Standalone, email-keyed recovery — no node id. Mirrors the per-node handler:
-  // validate the email, swallow all downstream state, and always return the same
-  // neutral response so the route never reveals whether the email matched.
+  // Standalone, email-keyed recovery with no node id. Mirrors the per-node
+  // handler: validate the email, swallow all downstream state, and always
+  // return the same neutral response so the route never reveals whether the
+  // email matched.
   app.post(MAP_NODE_EDIT_LINK_REQUEST_ROUTE, async (context) => {
     let input: UnknownRecord = {};
     try {

@@ -18,7 +18,7 @@ export const CHAPTER_IMAGE_COPY_DIR = '/images/chapters/copied';
 // agent stamps this origin into the snapshot; a test keeps the two in step.
 export const DEFAULT_DIRECTUS_PUBLIC_URL = 'https://admin.greenpill.network';
 
-// Directus accepts uploads up to 25 MB.
+// Directus accepts uploads up to 25 MB; the cap leaves headroom above that.
 const DEFAULT_MAX_SOURCE_BYTES = 30 * 1024 * 1024;
 // The chapter hero is at most 920 CSS px wide.
 const DISPLAY_MAX_SIDE_PX = 1600;

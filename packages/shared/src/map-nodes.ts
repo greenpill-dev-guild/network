@@ -223,7 +223,6 @@ const PRIVATE_MAP_NODE_FIELD_PATTERNS = Object.freeze([
   'requesteruseragent',
 ]);
 
-// Strict: blank, null and boolean values are missing, never 0.
 const normalizeNumber = parseMapCoordinate;
 
 const cleanHref = (value: unknown): string => {

@@ -312,8 +312,6 @@ const questionCount = QUESTIONS.length;
     const inputsFor = (questionId: string) =>
       Array.from(form.querySelectorAll(`input[name="${questionId}"]`)) as HTMLInputElement[];
 
-    // A question counts as answered once it has at least one pick: the
-    // checked radio, or every ticked box of a checkbox group.
     const readAnswers = (): Answers => {
       const answers: Answers = {};
       for (const { id } of questions) {
@@ -455,10 +453,8 @@ const questionCount = QUESTIONS.length;
       firstOption?.focus();
     });
 
-    // Restore the latest local state. Picks made before this script ran (a
-    // slow load) stay; saved answers fill only the questions without one,
-    // and a merged state is saved. If every question is answered, show the
-    // recomputed result.
+    // Picks made before this script ran (a slow load) win; saved answers fill
+    // only the questions without one.
     const stored = loadStored();
     const restored = restoreAssessmentAnswers(questions, readAnswers(), stored?.answers);
     for (const { id } of questions) {

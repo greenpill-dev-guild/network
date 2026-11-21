@@ -1049,8 +1049,7 @@ export async function reconcileSnapshotAlerts(
     `);
   } catch (error) {
     // A database without migration 030 has no resolved_at and ends up here
-    // (code 42703). Alerts are still opened above and never resolved, which
-    // is how every database behaved before 030.
+    // (code 42703). Alerts are then opened above and never resolved.
     warnSnapshotAlertFailure({ step: 'resolve' }, error);
   }
 }

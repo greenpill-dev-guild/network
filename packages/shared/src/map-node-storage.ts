@@ -46,7 +46,6 @@ export const PUBLIC_MAP_THEME_ALIASES: Readonly<Record<string, string>> = Object
 
 const cleanString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
-// Strict: blank, null and boolean values are missing, never 0.
 const normalizeNumber = parseMapCoordinate;
 
 export const normalizePublicMapThemeSlug = (theme: unknown): string => {
@@ -73,7 +72,7 @@ export function createLocalPendingMapNode(
     city: cleanString(input?.city),
     region: cleanString(input?.region),
     country: cleanString(input?.country),
-    // D2 (2026-11-06): no region label, even one stored by an older visit.
+    // Always empty (decision D2), even when an older visit stored a region label.
     bioregion: '',
     lat: normalizeNumber(input?.lat),
     long: normalizeNumber(input?.long),

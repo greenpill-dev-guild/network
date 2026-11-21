@@ -21,9 +21,8 @@ const {
   class: className,
 } = Astro.props;
 
-// Map well-known surface names to a 2-letter glyph that reads cleanly in the
-// round avatar. Fallback derives initials from the label words; falls back
-// to the first two letters when only one word.
+// Two-letter glyphs for well-known surfaces in the round avatar; pickGlyph
+// falls back to initials from the label.
 const SURFACE_GLYPH: Record<string, string> = {
   x: 'X',
   twitter: 'TW',
