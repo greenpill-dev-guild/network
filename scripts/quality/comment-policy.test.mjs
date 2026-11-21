@@ -603,3 +603,21 @@ test('a reason in Astro frontmatter survives the narrow pass', () => {
     '---\n// Fetched at build time because the agent is not public during builds.\nconst data = await load();\n---\n<p>{data}</p>\n';
   assert.equal(purgeSource(code, 'Reason.astro').code, code);
 });
+
+test('a script tag inside a frontmatter string is not a second segment', () => {
+  const code = ['---', "const example = '<script>// ===== Setup =====</script>';", '---', '<p>{example}</p>', ''].join(
+    '\n',
+  );
+  assert.equal(purgeSource(code, 'Example.astro').code, code);
+});
+
+test('a data script with an unquoted type is left alone', () => {
+  const code =
+    '<script type=application/json>{"imports": {}}</script>\n<script>\n  // ===== Setup =====\n  const a = 1;\n</script>\n';
+  const { code: purged, removed } = purgeSource(code, 'Data.astro');
+  assert.deepEqual(
+    removed.map((comment) => comment.kind),
+    ['banner'],
+  );
+  assert.ok(purged.includes('{"imports": {}}'));
+});

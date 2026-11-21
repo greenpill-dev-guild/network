@@ -621,19 +621,27 @@ function parse(file, code) {
 export function astroSegments(code) {
   const segments = [];
   const front = /^---\r?\n([\s\S]*?)\r?\n---(?=\r?\n|$)/.exec(code);
-  if (front)
-    segments.push({
-      start: front.index + front[0].indexOf(front[1]),
-      end: front.index + front[0].indexOf(front[1]) + front[1].length,
-    });
+  if (front) {
+    const start = front[0].indexOf(front[1]);
+    segments.push({ start, end: start + front[1].length });
+  }
+  // Scripts are looked for only in the template, after the frontmatter, so a `<script>` written
+  // inside a frontmatter string is not taken for one.
   const script = /<script\b([^>]*)>([\s\S]*?)<\/script>/g;
+  script.lastIndex = front ? front[0].length : 0;
   for (let match; (match = script.exec(code)); ) {
-    const type = /\btype\s*=\s*["']([^"']*)["']/i.exec(match[1])?.[1];
+    const attribute = /\btype\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i.exec(match[1]);
+    const type = attribute && (attribute[1] ?? attribute[2] ?? attribute[3]);
     if (type && !/^(module|text\/javascript|application\/javascript)$/i.test(type)) continue;
     const start = match.index + match[0].indexOf('>') + 1;
     segments.push({ start, end: start + match[2].length });
   }
-  return segments.filter((segment) => segment.end > segment.start).sort((a, b) => a.start - b.start);
+  const ordered = segments.filter((segment) => segment.end > segment.start).sort((a, b) => a.start - b.start);
+  // Edits are applied from the last segment back, by offset, so segments must never overlap.
+  for (let index = 1; index < ordered.length; index++) {
+    if (ordered[index].start < ordered[index - 1].end) throw new Error('Astro code segments overlap; refusing to edit');
+  }
+  return ordered;
 }
 
 const shift = (comment, by) => ({
