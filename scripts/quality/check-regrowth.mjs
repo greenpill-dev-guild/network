@@ -73,15 +73,24 @@ function lineOf(code, index) {
   return code.slice(0, index).split('\n').length;
 }
 
-/** The comments the narrow purge would remove whose first line the change added. */
+/**
+ * The comments the narrow purge would remove that hold a line the change added, so a line added
+ * inside or below an existing comment counts even when the comment starts on an old line.
+ */
 export function regrownComments(code, file, added) {
   return purgeSource(code, file)
     .removed.map((comment) => ({
       line: lineOf(code, comment.start),
+      lastLine: lineOf(code, Math.max(comment.start, comment.end - 1)),
       kind: comment.kind,
       text: code.slice(comment.start, comment.end),
     }))
-    .filter((comment) => added === 'all' || added.has(comment.line));
+    .filter((comment) => {
+      if (added === 'all') return true;
+      for (let line = comment.line; line <= comment.lastLine; line += 1) if (added.has(line)) return true;
+      return false;
+    })
+    .map(({ lastLine, ...comment }) => comment);
 }
 
 /**
@@ -126,9 +135,10 @@ export function judge(root, ref) {
     // Whitespace is ignored, so re-indenting old comments (wrapping code in a block) adds none.
     // `--text` and no diff drivers keep `.gitattributes` from hiding hunks, and literal pathspecs
     // keep a route like `[slug].astro` from matching other files.
+    // A file that arrives from outside the judged scope brings all its comments with it.
     const paths = from ? [from, file] : [file];
     const added =
-      how === 'A'
+      how === 'A' || (from && !isPackageSource(from))
         ? 'all'
         : addedLines(
             runGit(root, [

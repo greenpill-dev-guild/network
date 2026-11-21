@@ -185,3 +185,28 @@ test('gitattributes, bracketed route names and odd line breaks cannot hide or in
   assert.ok(problems.some((problem) => problem.startsWith('packages/shared/src/hidden.ts:2: new banner comment')));
   assert.ok(problems.some((problem) => problem.startsWith('packages/shared/src/breaks.ts:3: new banner comment')));
 });
+
+test('a line added inside an old comment, or a file moved in from outside the scope, is judged', (t) => {
+  const root = mkdtempSync(path.join(tmpdir(), 'regrowth-span-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const env = fixtureGitEnvironment();
+  const git = (...args) => execFileSync('git', ['-C', root, ...args], { env, encoding: 'utf8' });
+  const write = (file, text) => {
+    mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
+    writeFileSync(path.join(root, file), text);
+  };
+  git('init', '-q', '-b', 'develop');
+  write('packages/shared/src/kept.ts', '// const oldValue = 1;\nexport const a = 1;\n');
+  write('packages/shared/legacy.ts', '// ===== Legacy banner =====\nexport const l = 1;\n');
+  git('add', '.');
+  git('commit', '-q', '-m', 'base');
+  const base = git('rev-parse', 'HEAD').trim();
+  assert.deepEqual(judge(root, base).problems, []);
+
+  write('packages/shared/src/kept.ts', '// const oldValue = 1;\n// const newValue = 2;\nexport const a = 1;\n');
+  git('mv', 'packages/shared/legacy.ts', 'packages/shared/src/legacy.ts');
+  const { problems } = judge(root, base);
+  assert.equal(problems.length, 2, problems.join('\n'));
+  assert.ok(problems.some((problem) => problem.startsWith('packages/shared/src/kept.ts:1: new')));
+  assert.ok(problems.some((problem) => problem.startsWith('packages/shared/src/legacy.ts:1: new banner comment')));
+});
