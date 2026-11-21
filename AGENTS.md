@@ -58,17 +58,22 @@ Each rule names what enforces it. "Review only" means nothing fails automaticall
 | Plan hubs follow the hub contract | CI `PR checks` (`plans:validate`) | `scripts/plan-hub.ts` |
 | No em dashes in website copy | CI `Em dashes in website copy` | `.github/workflows/website-copy.yml` |
 | Installs stay on the frozen lockfile and the release-age gate; workflow and guidance changes are audited | CI `audit / Supply-chain guardrails` | `.github/workflows/supply-chain-guardrails.yml` |
-| `CLAUDE.md` imports this file, one skills folder, valid policy files, PR template, CODEOWNERS | CI `agents-doctor / Agents doctor` | `.github/workflows/agents-doctor.yml` |
+| `CLAUDE.md` imports this file, one skills folder, valid policy files, PR template, CODEOWNERS, the skill adapter | CI `agents-doctor / Agents doctor` (strict: warnings fail too) | `.github/workflows/agents-doctor.yml` |
 | Guidance names only repository paths that exist; skills live in one folder | tests, CI `PR checks` | `scripts/guidance-paths.test.ts`, `scripts/repo-skill-discovery.test.ts` |
-| Fly deploys, production migrations and Directus permission syncs are afo's to run | shared guards ask first (local); review only for cloud agents | `.agents/policy.json` |
-| Changes to critical and sensitive paths follow the merge tiers | review only (no merge gate check) | `.agents/merge-policy.json` |
+| Manual Fly deploys, Fly production shells, production database writes and Directus syncs are afo's to run | shared guards ask first (local); review only for cloud agents | `.agents/policy.json` |
+| Changes to critical and sensitive paths follow the merge tiers; agent-image changes wait for afo's go | review only (no merge gate check) | `.agents/merge-policy.json` |
 | Website CSS uses `--gp-*` tokens and the Modern CSS Standard | `bun run ui:check` locally; review only in CI | `scripts/ui-verify.ts` |
 | Greenpill-owned migrations live only in `packages/agent/migrations`; Directus is never the public API; the website stays static | review only | this file |
 | Install or upgrade no dependency without approval in the current task | review only | this file |
 
 ## Merge Tiers
 
-Every merge into `main` redeploys the public website through GitHub Pages and is live within minutes; the rollback is a revert. Agents merge every tier on proof, by the tier rules in `.agents/merge-policy.json`, and record the tier and its proof in the pull request's Verification section. afo's approval sits at production promotion: the manual Fly deploys of the agent and the Directus admin, migrations applied to the production database, and Directus permission syncs against production. Agents never run those.
+A merge into `main` is a production deploy twice over:
+
+- GitHub Pages rebuilds the public website from every merge that touches `packages/website`, `packages/shared`, `packages/agent`, `scripts`, `package.json`, `bun.lock` or `tsconfig*.json`, and from the hourly scheduled rebuild for everything else. It is live within minutes; the rollback is a revert.
+- The Fly.io GitHub app deploys `network-agent` from every push to `main` (`packages/agent/fly.toml`, blue-green), whatever the merge touched.
+
+Agents merge on proof, by the tier rules in `.agents/merge-policy.json`, and record the tier and its proof in the pull request's Verification section. Because every merge also ships the agent, a pull request that changes what the agent image is built from (the paths in `release.agentImagePaths` of `.agents/merge-policy.json`) waits for afo's go in the session before it merges. afo also keeps the manual Fly deploy of the Directus admin (`network-admin`), migrations applied to the production database, and Directus permission syncs against production. Agents never run those.
 
 ## Skills
 
@@ -84,7 +89,7 @@ When dispatched from a Linear issue, that issue is your spec: read it in full, p
 
 - **Ready gate.** Implement only if the issue gives clear acceptance criteria, a named surface (`website`, `agent`, `admin`, `shared` or `workspace`), and validation (explicit, or the relevant commands above). If anything is missing, the scope is ambiguous, or it needs a cross-package or architecture decision, stop and comment on the issue instead of guessing.
 - **Executor, not orchestrator.** Implement only the scoped unit, in the smallest package boundary. Do not expand past the acceptance criteria or make sequencing decisions that belong to the human.
-- **Branch and PR.** One issue per PR, and the PR body links it (`Closes PRD-NNN` or `Linear: PRD-NNN`). Merge by the tier rules above.
+- **Branch and PR.** Work on the branch the issue names, if it names one. One issue per PR, and the PR body links it (`Closes PRD-NNN` or `Linear: PRD-NNN`). Merge by the tier rules above; an unattended run (a routine or schedule with no one in the session) opens a draft PR and leaves the merge to a later session.
 - **Before the PR**, run the matching validation (`bun run typecheck`, the focused `bun run test:*` for the surface, `bun run agentic:check` for website/UI work, then `bun run build`) and record the evidence, not "should work". Honor the Privacy Boundary below.
 
 ## Codex Permission Policy

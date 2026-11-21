@@ -14,7 +14,7 @@ The live PR base when one exists, otherwise `origin/main`. Fetch it before compu
 - Run everything from the repository root through the package scripts in `package.json` (`bun run <script>`). Focused test files run with `bun test scripts/<name>.test.ts` after `bun run build:packages` when they import a workspace package; the `test:*` scripts do that for you.
 - Scripts that must not read a root `.env` run with `bun --no-env-file`, as the package scripts do.
 - The dev machine shares one 8 GB VM with other repositories. The website build, `ui:verify`, the browser smokes (`test:*:browser`) and the database proofs (`test:*:db`) belong in CI; locally run one heavy step at a time, check `uptime` first, and wait while the one-minute load is above 12.
-- Never run `db:migrate`, `content:migrate`, `directus:content:setup` or a mutating `directus:content-access` against production, and never `fly deploy`: those are afo's (`.agents/policy.json`).
+- Never run a database write (`db:migrate`, `content:migrate`, `db:deliver:*`, `db:repair:*`, `db:cleanup:*`, `impact:sync`, `content:seed:public`) or a Directus sync (`directus:content:setup`, `directus:studio:setup`, `directus:users:invite`, a mutating `directus:content-access`) against production, and never `fly deploy`: those are afo's (`.agents/policy.json`).
 
 ### Selector
 none. Choose tiers by hand from **Tiers**, then add every row of **Conditional checks** whose surface the change touches.
@@ -28,7 +28,7 @@ none. Choose tiers by hand from **Tiers**, then add every row of **Conditional c
 | push | ready-for-CI gate on the committed tree before a push | the checkpoint tier plus `bun run plans:validate`; the build and size budget run in CI `PR checks` |
 | readiness | explicit production-readiness review; non-mutating full local gate | **Guide** § Review Readiness Gate: `bun run typecheck`, `bun run plans:validate`, `bun run build`, plus every conditional check, each fresh |
 | full | explicit full local gate | the readiness tier plus `bun --bun run --cwd packages/website check` |
-| release | release gate | none: merges into `main` deploy the website; Fly deploys, production migrations and Directus permission syncs are afo's manual steps |
+| release | release gate | none: a merge into `main` deploys the website (GitHub Pages) and `network-agent` (Fly GitHub app); a change to `release.agentImagePaths` waits for afo's go before merging; the `network-admin` deploy, production migrations and Directus syncs are his manual steps |
 
 ### Conditional checks
 **Guide** § Review Readiness Gate lists them by surface. In short:
@@ -48,6 +48,7 @@ none. Choose tiers by hand from **Tiers**, then add every row of **Conditional c
 - Critical: `packages/agent/migrations/**`, `scripts/directus-content-access.ts`, `scripts/directus-operational-content-setup.ts`, both `public-content.ts` projections, both `fly.toml` files, `.github/workflows/**`. Read every touched line; merge on the full gate plus a fresh agent's adversarial review naming the head SHA.
 - Sensitive: the rest of `packages/agent/src`, `packages/shared/src`, `packages/admin`, `scripts/directus-*`. Merge on the required checks plus that review.
 - Routine: everything else. Merge on the required checks.
+- Any tier: a change to `release.agentImagePaths` (what the agent image is built from) waits for afo's go before merging, because every merge deploys `network-agent`.
 
 ### CI
 GitHub Actions. Required at the PR's current head SHA (`.agents/merge-policy.json` `requiredChecks`): `PR checks`, `Em dashes in website copy`, `audit / Supply-chain guardrails`, `agents-doctor / Agents doctor`. CI owns the website build, the Pages size budget and Astro's type check; a local run never stands in for pending CI.
@@ -132,7 +133,7 @@ Chapter stewards and guild leads (Directus users), site visitors, and the agent'
 Never run production migrations, Directus permission syncs or Fly deploys (`.agents/policy.json` asks first). Reads of the production database need afo's OK in the session. Prefer the local stack (`bun run dev`, ports 3301 to 3304) for reproduction.
 
 ### Real surface
-`https://greenpill.network` (GitHub Pages, from `main`), `https://agent.greenpill.network` (Fly app `network-agent`), Directus at `network-admin` signed in as a steward in authenticated Brave.
+`https://greenpill.network` (GitHub Pages, from `main`), `https://agent.greenpill.network` (Fly app `network-agent`, deployed from every push to `main`), Directus at `network-admin` signed in as a steward in authenticated Brave.
 
 ### Layers
 Triage: website build (static, snapshot-fed) → agent route (Hono) → Postgres views and tables → Directus admin. Data: committed fallback snapshot, live agent snapshot, Postgres `content`, `intake` and `impact` schemas. Extra evidence: the Pages deploy run for the commit, the agent's `/ready` and impact cache status.
@@ -254,10 +255,10 @@ none locally; CI is the gate.
 `.github/pull_request_template.md` (Why, Measured, Verification, Not verified). Verification names the merge tier from `.agents/merge-policy.json` and the proof that tier needs.
 
 ### Merge
-`.agents/merge-policy.json`: merge commits only. Routine auto-merges on green; sensitive and critical merge by hand with `gh pr merge --merge --match-head-commit <reviewed-sha>` once their review is addressed.
+`.agents/merge-policy.json`: merge commits only. Routine auto-merges on green; sensitive and critical merge by hand with `gh pr merge --merge --match-head-commit <reviewed-sha>` once their review is addressed. A change to `release.agentImagePaths` merges only after afo's go, since the merge deploys `network-agent`.
 
 ### After merge
-Check the Pages deploy for the merge commit and the live page; close the Linear issue with a closeout comment.
+Check the Pages deploy and the Fly `production` deployment for the merge commit, the live page and `https://agent.greenpill.network/ready`; close the Linear issue with a closeout comment.
 
 ### Report line
 The PR URL with its state, and the Pages deploy result for website changes.

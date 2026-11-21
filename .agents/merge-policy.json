@@ -11,8 +11,27 @@
     "agents-doctor / Agents doctor"
   ],
   "release": {
-    "about": "main is both the integration branch and production for the static website: every merge redeploys GitHub Pages, so a merged change is live within minutes and the rollback is a revert. afo accepted that on 21 Nov 2026. His approval sits at production promotion instead, which no merge performs: the manual Fly deploys of the agent (packages/agent/fly.toml) and the Directus admin (packages/admin/fly.toml), migrations applied to the production database with db:migrate (recorded in audit.agent_schema_migrations), and Directus permission syncs against production (directus:content:setup, directus:content-access). Agents never run those; .agents/policy.json makes the shared guards ask first on afo's machine, and cloud agents hold no production credentials. The kit's merge-policy schema has no field for a gate by environment, so dev merge-settings does not apply this entry.",
-    "approvalAt": ["fly deploy (network-agent, network-admin)", "production db:migrate", "production Directus permission syncs"]
+    "about": "A merge into main is a production deploy: GitHub Pages rebuilds the website (path-filtered push trigger plus an hourly rebuild), and the Fly.io GitHub app deploys network-agent from every push to main, whatever the merge touched (packages/agent/fly.toml, blue-green). afo accepted live-from-main for the static website on 21 Nov 2026 and wants his approval at Fly deploys. Since the agent deploy happens at merge, a pull request that changes any path in agentImagePaths (what packages/agent/Dockerfile builds the image from) waits for his go in the session before an agent merges it, whatever its tier. Until he decides otherwise, that is the agent's production promotion. He also keeps the manual Fly deploy of network-admin, migrations applied to the production database with db:migrate (recorded in audit.agent_schema_migrations), and Directus permission syncs against production. Agents never run those; .agents/policy.json makes the shared guards ask first on afo's machine, and cloud agents hold no production credentials. The kit's merge-policy schema has no field for a gate by environment or by path outside the tiers, so dev merge-settings does not apply this entry.",
+    "approvalAt": [
+      "merges that change agentImagePaths (Fly auto-deploys network-agent)",
+      "fly deploy of network-admin",
+      "production db:migrate",
+      "production Directus permission syncs"
+    ],
+    "agentImagePaths": [
+      "packages/agent/src/**",
+      "packages/shared/src/**",
+      "packages/agent/Dockerfile",
+      "packages/agent/fly.toml",
+      "package.json",
+      "bun.lock",
+      "packages/*/package.json",
+      "tsconfig.json",
+      "tsconfig.base.json",
+      "tsconfig.scripts.json",
+      "packages/agent/tsconfig.json",
+      "packages/shared/tsconfig.json"
+    ]
   },
   "tiers": {
     "critical": {
@@ -42,8 +61,10 @@
       "autoMerge": false
     },
     "routine": {
-      "about": "Everything else: website, docs, plans, tests and tooling. Auto-merges once the required checks are green.",
-      "paths": ["**"],
+      "about": "Everything else: website, docs, plans, tests and tooling. Auto-merges once the required checks are green, except a pull request that changes release.agentImagePaths (package.json, bun.lock, tsconfig files): that waits for afo's go, because the merge deploys network-agent.",
+      "paths": [
+        "**"
+      ],
       "requireCodeOwnerReview": false,
       "autoMerge": true
     }
