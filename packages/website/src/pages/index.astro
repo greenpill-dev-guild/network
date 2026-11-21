@@ -66,9 +66,8 @@ const applePodcastsHref = 'https://podcasts.apple.com/us/podcast/greenpill/id160
 
 const activeChapterCount = chapters.length;
 
-// Ecosystem entries are editorial content in home-page.json: one row of
-// partner communities and one row of tools, each linking to the
-// organization's own site. Incomplete entries are skipped, not rendered.
+// Ecosystem rows are editorial content in home-page.json; an entry without a
+// name or an https link is skipped.
 type EcosystemEntry = { name?: string; blurb?: string; href?: string };
 const isListableOrg = (org: EcosystemEntry) =>
   Boolean(org.name?.trim() && org.href && /^https:\/\//.test(org.href));

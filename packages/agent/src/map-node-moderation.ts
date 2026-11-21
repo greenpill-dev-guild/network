@@ -587,7 +587,7 @@ async function sendMagicLinkEmail({
     try {
       providerMessageId = cleanString((await response.json())?.id);
     } catch {
-      // The provider accepted the stable-idempotency request.
+      // Sending succeeded even if the provider response body was unavailable.
     }
     return { status: 'sent', error: '', providerMessageId };
   } catch {

@@ -1211,8 +1211,8 @@ async function findEditableSubmissionsByEmail(
 }
 
 // Standalone email-keyed recovery. Looks up the most recently updated approved
-// public node by owner email and queues one manage link. The response is ALWAYS
-// the same neutral message — it never reveals whether the email matched, how
+// public node by owner email and queues one manage link. The response is always
+// the same neutral message: it never reveals whether the email matched, how
 // many nodes exist, or any node detail. A no-match request still records one
 // attempt row so the write path does not fork. Tokens stay hash-only; delivery
 // generates the same 30-minute edit tokens as the per-node path.

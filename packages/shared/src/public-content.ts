@@ -462,7 +462,8 @@ function resolvePublicChapterImage(chapter: PublicOperationalRecord, uploadedIma
   };
 }
 
-// An upload's public address must be an absolute web URL.
+// Only an absolute http(s) URL is published; any other scheme or a relative
+// path becomes no image.
 function toUploadedImageUrl(value: unknown): string {
   const url = cleanString(value);
   return /^https?:\/\/\S+$/i.test(url) ? url : '';
@@ -501,8 +502,6 @@ export function toPublicOperationalContentSnapshot({
   // surviving snapshot.
   const quarantined: QuarantinedOperationalRecord[] = [];
 
-  // An image that is not cleared for publication costs the chapter its image,
-  // never its place on the site.
   const chaptersWithWithheldImages = new Set<string>();
   const chaptersWithPublicImages = normalizeCollection(chapters, 'chapters').map((chapter) => {
     // A record cannot name its own upload; see resolvePublicChapterImage.

@@ -4,8 +4,7 @@
  *
  * When the content has no steps (the list is missing, or an editor emptied
  * it), both pages leave the ramp out. They neither fail the build nor fall
- * back to a copy of the ramp kept in code: the last such copy drifted from the
- * content and still carried an old Telegram invite and a removed signup form.
+ * back to a copy kept in code, which drifts from the content.
  */
 
 const DEFAULT_HERO_CTA = { label: 'Start with Step 1', href: '#step-1' };
