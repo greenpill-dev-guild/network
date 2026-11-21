@@ -43,9 +43,7 @@
       "packages/shared",
       "packages/admin"
     ],
-    "depends_on_features": [
-      "ai-native-dev-workflow"
-    ]
+    "depends_on_features": []
   },
   "lanes": {
     "ui": {

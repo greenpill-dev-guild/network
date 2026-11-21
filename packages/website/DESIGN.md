@@ -556,7 +556,7 @@ Motion is **restrained and purposeful** — used to confirm intent, smooth state
 
 ## Components
 
-The component vocabulary is small and reused across all eight pages. The full visual contract lives in `Components (Hi-Fi).html`; below are the prose contracts.
+The component vocabulary is small and reused across all eight pages. The rendered gallery at `/design-system` (`src/pages/design-system.astro`) shows every one; below are the prose contracts.
 
 ### Buttons
 

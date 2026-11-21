@@ -38,8 +38,6 @@
       "packages/website/src/lib/newsletter-signup.ts": 1,
       "packages/website/src/lib/operational-content.ts": 1,
       "packages/website/src/pages/sitemap.xml.ts": 1,
-      "packages/website/src/scripts/dropdown.ts": 1,
-      "packages/website/src/scripts/image-sequence.ts": 1,
       "packages/website/src/scripts/webmcp.ts": 1,
       "scripts/agent-contract.test.ts": 1,
       "scripts/agent-impact-sync.ts": 1,
@@ -80,7 +78,6 @@
       "scripts/home-map-browser-smoke.ts": 1,
       "scripts/home-map-live-e2e.ts": 1,
       "scripts/home-map-live-rehearsal.ts": 1,
-      "scripts/lint/run.mjs": 1,
       "scripts/map-edit-browser-smoke.ts": 1,
       "scripts/map-edit-route.test.ts": 1,
       "scripts/map-moderation-route.test.ts": 1,
@@ -130,9 +127,6 @@
       "packages/shared/src/public-content.ts": 1,
       "scripts/agent-contract.test.ts": 1
     },
-    "eslint(no-unassigned-vars)": {
-      "packages/website/src/scripts/dropdown.ts": 1
-    },
     "eslint(no-unsafe-optional-chaining)": {
       "scripts/directus-content-access.test.ts": 3,
       "scripts/directus-studio-setup.test.ts": 24
@@ -147,16 +141,8 @@
       "scripts/home-map-browser-smoke.ts": 1,
       "scripts/ui-verify.ts": 1
     },
-    "raw-listener": {
-      "packages/website/src/scripts/dropdown.ts": 4,
-      "packages/website/src/scripts/image-sequence.ts": 1,
-      "packages/website/src/scripts/mobile-menu.ts": 3,
-      "packages/website/src/scripts/modal.ts": 3
-    },
     "raw-timer": {
-      "packages/website/src/lib/chapter-image-copies.ts": 1,
-      "packages/website/src/scripts/dropdown.ts": 2,
-      "packages/website/src/scripts/modal.ts": 2
+      "packages/website/src/lib/chapter-image-copies.ts": 1
     }
   }
 }

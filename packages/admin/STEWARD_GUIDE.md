@@ -2,8 +2,8 @@
 
 This guide is for chapter and guild stewards using the private Greenpill
 Directus admin. Directus is the editing and review surface; the public website
-updates only after trusted publishers approve content and a new public snapshot
-or website build is published.
+updates once a record is published and the next public snapshot or website
+build runs.
 
 ## What Stewards Can Do
 
@@ -19,8 +19,10 @@ Stewards can only edit their own assigned chapter or guild. Every other chapter
 stays read-only.
 
 Standard stewards cannot edit unrelated chapters or guilds, view private
-intake/contact data, or change Directus configuration. Publishing new records
-and archiving remain trusted publisher/operator actions.
+intake/contact data, or change Directus configuration. You can publish your own
+chapter or guild records, and new initiatives or projects under them, by setting
+their status to Published; the change shows on the website after the next site
+rebuild. Archiving stays with publishers and operators.
 
 ## Steward Starter Checklist
 
