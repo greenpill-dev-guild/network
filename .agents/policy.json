@@ -15,7 +15,7 @@
     },
     {
       "id": "db-migrate",
-      "pattern": "(^| )(db:migrate|content:migrate)( |$)|(^| )(\\S*/)?scripts/agent-db\\.migrate\\.ts( |$)",
+      "pattern": "(^| )(db:migrate|content:migrate)( |$)|(^| )(\\S*/)?scripts/agent-db\\.migrate\\.ts( |$)|(^| )(\\S*/)?scripts/operational-content\\.ts( .*)? --migrate( |$)",
       "action": "ask",
       "message": "Migrations apply to whatever DATABASE_URL points at (the environment or .env.local), which the guard cannot see. Production migrations are afo's step. Go ahead only when the target is the local database (localhost:3304) or a CI service container."
     },

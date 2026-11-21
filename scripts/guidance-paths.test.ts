@@ -40,6 +40,23 @@ export function namedPaths(text: string): string[] {
   return [...paths];
 }
 
+// Build output such as packages/website/dist/ is gitignored and absent on a
+// clean checkout. Guidance may name it, so paths under a plain .gitignore entry
+// (a folder name like `dist/`, or an anchored path) are exempt.
+const ignoreRules = readFileSync(join(rootDir, '.gitignore'), 'utf8')
+  .split('\n')
+  .map((line) => line.trim().replace(/^\*\*\//, ''))
+  .filter((line) => line && !line.startsWith('#') && !line.startsWith('!') && !/[*?[]/.test(line));
+
+export function isIgnored(path: string): boolean {
+  const segments = path.split('/').filter(Boolean);
+  return ignoreRules.some((rule) => {
+    const bare = rule.replace(/^\//, '').replace(/\/$/, '');
+    if (rule.startsWith('/') || bare.includes('/')) return path === bare || path.startsWith(`${bare}/`);
+    return segments.includes(bare);
+  });
+}
+
 function relativeLinks(file: string, text: string): string[] {
   return [...text.matchAll(/\]\((\.\.?\/[^)\s#]+)(?:#[^)]*)?\)/g)].map((m) => relative(rootDir, resolve(rootDir, dirname(file), m[1])));
 }
@@ -49,7 +66,7 @@ test('every repository path named in agent guidance exists', () => {
   for (const file of guidanceFiles()) {
     const text = readFileSync(join(rootDir, file), 'utf8');
     for (const path of [...namedPaths(text), ...relativeLinks(file, text)]) {
-      if (!existsSync(join(rootDir, path))) missing.push(`${file}: ${path}`);
+      if (!existsSync(join(rootDir, path)) && !isIgnored(path)) missing.push(`${file}: ${path}`);
     }
   }
   assert.deepEqual(missing, [], `guidance names paths that do not exist:\n${missing.join('\n')}`);
@@ -59,4 +76,6 @@ test('the path extractor finds backticked and linked repository paths', () => {
   const text = 'See `packages/website/src/content.config.ts:12` and [guide](docs/x.md#y), not `bun run dev` or `packages/*/x`.';
   assert.deepEqual(namedPaths(text).sort(), ['docs/x.md', 'packages/website/src/content.config.ts']);
   assert.ok(statSync(join(rootDir, 'AGENTS.md')).isFile());
+  assert.ok(isIgnored('packages/website/dist/'), 'build output is exempt');
+  assert.ok(!isIgnored('packages/website/src/content.config.ts'), 'source paths are checked');
 });
