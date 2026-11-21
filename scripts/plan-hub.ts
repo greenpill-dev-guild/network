@@ -1,6 +1,5 @@
 #!/usr/bin/env bun
 
-// ===== Seeded regrowth banner =====
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
