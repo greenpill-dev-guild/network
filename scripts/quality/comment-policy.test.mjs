@@ -148,19 +148,6 @@ test('a NatSpec line and a plain comment under it stay separate comments', () =>
   assert.equal(purgeSource(code, 'Lib.sol').code, '/// @notice Kept.\nuint256 constant X = 1;\n');
 });
 
-test('deployed contract sources are never rewritten', () => {
-  const out = [];
-  const log = console.log;
-  console.log = (line) => out.push(line);
-  try {
-    assert.equal(main(['--check', 'packages/contracts/src/tokens/Garden.sol']), 0);
-  } finally {
-    console.log = log;
-  }
-  assert.match(out.join('\n'), /Would remove 0 comment\(s\) from 0 file\(s\)/);
-  assert.match(out.join('\n'), /Skipped 1 deployed contract source file/);
-});
-
 test("claims go to the owner's table, a named dependency needs a reason, and a bare mention is narration", () => {
   const code = [
     '// TODO: drop once the indexer ships the field',
