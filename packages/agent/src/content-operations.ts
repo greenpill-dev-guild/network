@@ -98,8 +98,6 @@ export function getContentOperationsConfig(env: Record<string, string | undefine
   };
 }
 
-// --- Dispatch-on-publish -----------------------------------------------------
-
 export interface ContentDispatchState {
   watermark: string;
   lastDispatchAt: number;
@@ -187,8 +185,6 @@ export async function maybeDispatchContentRebuild(
   console.log('content_dispatch_sent', { repo: config.dispatchRepo });
   return { status: 'dispatched', watermark };
 }
-
-// --- Deployed publish health -------------------------------------------------
 
 export interface ContentPublishHealthObservation {
   contentWatermark: string;
@@ -521,8 +517,6 @@ export async function checkContentPublishHealth(
     return { status: 'check_failed' };
   }
 }
-
-// --- Content-review notifications -------------------------------------------
 
 type ReviewNotificationKind =
   | 'update_request_pending'
@@ -921,8 +915,6 @@ export async function deliverQueuedContentReviewNotifications(
   return result;
 }
 
-// --- Snapshot alerts ----------------------------------------------------------
-//
 // Two different conditions, each with its own alert:
 // - record_quarantined: a record is dropped from the public snapshot.
 // - chapter_image_withheld: a chapter stays published without its image.
@@ -1063,8 +1055,6 @@ export async function reconcileSnapshotAlerts(
   }
 }
 
-// --- Live Onboarding expiry ---------------------------------------------------
-
 export async function expireLiveOnboardingIfDue(sql: SqlLike): Promise<boolean> {
   try {
     const [row] = await sql`select intake.expire_live_onboarding() as changed`;
@@ -1076,8 +1066,6 @@ export async function expireLiveOnboardingIfDue(sql: SqlLike): Promise<boolean> 
     return false;
   }
 }
-
-// --- Repository ---------------------------------------------------------------
 
 async function withSql<T>(
   createSql: (options?: { max?: number }) => SqlLike | null,
