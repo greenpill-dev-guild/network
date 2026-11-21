@@ -36,7 +36,7 @@ none. Choose tiers by hand from **Tiers**, then add every row of **Conditional c
 - Operational content, Directus-owned public projections or snapshots → `bun run test:content`
 - Chapter impact contracts → `bun run test:chapter-impact`
 - Map/member node contracts → `bun run test:map-nodes`; map editing routes → `bun run test:map-edit`
-- A migration or anything a database proof covers → CI `Database proofs` (locally `bun run db:local:up`, then the `test:*:db` script for the surface)
+- A migration or anything a database proof covers → CI `Database proofs` (locally `bun run db:local:up`, then the `test:*:db` script for the surface; `test:map-node-moderation:db` also needs `bun run db:migrate` first)
 - `.plans/**` or plan tooling → `bun run test:plans` and `bun run plans:validate`
 - Steward permission model (`scripts/directus-content-access.ts`) → `bun test scripts/directus-content-access.test.ts`
 - Agent guidance, skills or `.agents/**` → `bun test scripts/guidance-paths.test.ts scripts/repo-skill-discovery.test.ts`

@@ -8,8 +8,13 @@ import {
   moderateMapNode,
 } from '../packages/agent/src/map-node-moderation.ts';
 
-const databaseUrl = process.env.DATABASE_URL?.trim();
-if (!databaseUrl) throw new Error('DATABASE_URL is required for the moderation integration proof.');
+// This proof writes fixtures into a migrated database, so it runs only against
+// a local one: the dev stack's Postgres or a CI service container.
+const databaseUrl = process.env.DATABASE_URL?.trim() || 'postgres://greenpill:greenpill@localhost:3304/greenpill_network';
+const databaseHost = new URL(databaseUrl).hostname;
+if (!['localhost', '127.0.0.1', '::1', '[::1]'].includes(databaseHost)) {
+  throw new Error(`The moderation integration proof writes fixtures, so it refuses ${databaseHost}; point DATABASE_URL at a local database.`);
+}
 
 const sql = createDatabaseClient({ url: databaseUrl, max: 8 });
 if (!sql) throw new Error('Could not create the moderation integration database client.');

@@ -45,7 +45,7 @@ Run installs and validation from the repo root.
 - `bun run test` - every test file in `scripts/` plus `ui:check`, as PR checks run it. The map route tests read the built site, so run `bun run build:website` first.
 - `bun run test:agent`, `bun run test:chapter-impact`, `bun run test:content`, `bun run test:map-nodes`, `bun run plans:validate` - focused contract checks.
 - `bun run lint` - oxlint, the kit's wrap-once rules and Biome formatting against the shrink-only `.agents/lint-baseline.json`; `bun run lint:shrink` lowers counts after a cleanup.
-- `bun run test:*:db` - the database proofs; each needs local Postgres (`bun run db:local:up`) and the Database proofs workflow runs all six in CI.
+- `bun run test:*:db` - the database proofs; each needs local Postgres (`bun run db:local:up`). Five build their own scratch database; `test:map-node-moderation:db` needs `bun run db:migrate` on the local database first and refuses any non-local host. The Database proofs workflow runs all six in CI.
 - `bun run ui:check` - source-only website CSS guardrails; no build, browser, or screenshots.
 - `bun run ui:verify <route>` - heavier website build + rendered browser proof at 375 / 1024 / 1440.
 

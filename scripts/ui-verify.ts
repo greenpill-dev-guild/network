@@ -528,21 +528,7 @@ async function writeSourceBaseline(): Promise<void> {
 }
 
 async function auditSourceCss(): Promise<Violation[]> {
-  const findings = await collectSourceFindings();
-  const baseline = loadSourceBaseline();
-  const remaining = baseline.map((entry) => ({ ...entry, matched: false }));
-  const unapproved: SourceFinding[] = [];
-
-  for (const hit of findings) {
-    const match = remaining.find((entry) => !entry.matched && entry.file === hit.file && entry.code === hit.code && hit.text.includes(entry.needle));
-    if (match) {
-      match.matched = true;
-    } else {
-      unapproved.push(hit);
-    }
-  }
-
-  const stale = remaining.filter((entry) => !entry.matched);
+  const { dropped: stale, uncovered: unapproved } = shrinkSourceBaseline(loadSourceBaseline(), await collectSourceFindings());
   return [
     ...unapproved.map(({ file: _file, line: _line, text: _text, ...violation }) => violation),
     ...stale.map((entry) => ({

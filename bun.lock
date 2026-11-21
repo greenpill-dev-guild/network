@@ -5,14 +5,14 @@
     "": {
       "name": "greenpill-network",
       "devDependencies": {
-        "@biomejs/biome": "^2.6.8",
+        "@biomejs/biome": "2.6.8",
         "@greenpill-network/agent": "workspace:*",
         "@greenpill-network/shared": "workspace:*",
         "@types/node": "^22",
         "@typescript/native": "npm:typescript@7.0.2",
         "axe-core": "^4.11.4",
         "modern-web-guidance": "^0.0.169",
-        "oxlint": "^1.94.0",
+        "oxlint": "1.94.0",
         "typescript": "^6.0.3",
       },
     },
