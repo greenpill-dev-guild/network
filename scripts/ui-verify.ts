@@ -452,7 +452,7 @@ function shouldSkipRawDesignValue(rel: string, text: string): boolean {
   return sourceTokenFiles.has(rel) || isHomeMapDataColor(rel, text);
 }
 
-function collectLineSourceFindings(rel: string, scan: string): SourceFinding[] {
+export function collectLineSourceFindings(rel: string, scan: string): SourceFinding[] {
   const findings: SourceFinding[] = [];
   const lines = scan.split('\n');
   for (let index = 0; index < lines.length; index += 1) {
@@ -498,33 +498,37 @@ async function collectSourceFindings(): Promise<SourceFinding[]> {
   return out;
 }
 
+// The baseline only shrinks. Regenerating it keeps each existing entry that
+// still matches a finding, with its reviewed reason, and drops the stale ones.
+// A finding no entry covers is refused: fix it, or add its line by hand in a
+// reviewed change.
+export function shrinkSourceBaseline(baseline: SourceBaselineEntry[], hits: SourceFinding[]) {
+  const remaining = baseline.map((entry) => ({ ...entry, matched: false }));
+  const uncovered: SourceFinding[] = [];
+  for (const hit of hits) {
+    const match = remaining.find((entry) => !entry.matched && entry.file === hit.file && entry.code === hit.code && hit.text.includes(entry.needle));
+    if (match) match.matched = true;
+    else uncovered.push(hit);
+  }
+  return { kept: remaining.filter((entry) => entry.matched), dropped: remaining.filter((entry) => !entry.matched), uncovered };
+}
+
 async function writeSourceBaseline(): Promise<void> {
-  const hits = await collectSourceFindings();
-  const lines = [
-    '# file\tcode\tneedle\treason',
-    ...hits.map((hit) => `${hit.file}\t${hit.code}\t${hit.text}\tExisting audited Network CSS standard exception; convert to gp tokens, logical properties, or dynamic viewport primitives when touching this surface.`),
-    '',
-  ];
+  const { kept, dropped, uncovered } = shrinkSourceBaseline(loadSourceBaseline(), await collectSourceFindings());
+  if (uncovered.length > 0) {
+    console.error(`[ui-check] refusing to grow the source baseline: ${uncovered.length} finding(s) have no entry.`);
+    for (const hit of uncovered) console.error(`      ✗ [source:${hit.code}] ${hit.msg}`);
+    console.error('[ui-check] Fix them, or add a reviewed line to scripts/data/ui-source-baseline.tsv by hand.');
+    process.exitCode = 1;
+    return;
+  }
+  const lines = ['# file\tcode\tneedle\treason', ...kept.map((entry) => [entry.file, entry.code, entry.needle, entry.reason].join('\t')), ''];
   writeFileSync(sourceBaselinePath, lines.join('\n'));
-  console.log(`[ui-check] wrote ${hits.length} source baseline entr${hits.length === 1 ? 'y' : 'ies'} to ${relativeSourcePath(sourceBaselinePath)}`);
+  console.log(`[ui-check] kept ${kept.length} and dropped ${dropped.length} source baseline entr${dropped.length === 1 ? 'y' : 'ies'} in ${relativeSourcePath(sourceBaselinePath)}`);
 }
 
 async function auditSourceCss(): Promise<Violation[]> {
-  const findings = await collectSourceFindings();
-  const baseline = loadSourceBaseline();
-  const remaining = baseline.map((entry) => ({ ...entry, matched: false }));
-  const unapproved: SourceFinding[] = [];
-
-  for (const hit of findings) {
-    const match = remaining.find((entry) => !entry.matched && entry.file === hit.file && entry.code === hit.code && hit.text.includes(entry.needle));
-    if (match) {
-      match.matched = true;
-    } else {
-      unapproved.push(hit);
-    }
-  }
-
-  const stale = remaining.filter((entry) => !entry.matched);
+  const { dropped: stale, uncovered: unapproved } = shrinkSourceBaseline(loadSourceBaseline(), await collectSourceFindings());
   return [
     ...unapproved.map(({ file: _file, line: _line, text: _text, ...violation }) => violation),
     ...stale.map((entry) => ({
@@ -938,4 +942,6 @@ async function run(): Promise<void> {
   if (hardCount > 0) process.exitCode = 1;
 }
 
-run().catch((error) => { console.error('[ui-verify] failed'); console.error(error); process.exitCode = 1; });
+if (import.meta.main) {
+  run().catch((error) => { console.error('[ui-verify] failed'); console.error(error); process.exitCode = 1; });
+}

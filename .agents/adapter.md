@@ -23,11 +23,11 @@ none. Choose tiers by hand from **Tiers**, then add every row of **Conditional c
 | Tier | Use | Command |
 |---|---|---|
 | targeted | the smallest proof of one changed behavior | `bun run build:packages && bun test scripts/<name>.test.ts`, or the focused `bun run test:<surface>` |
-| style | path-scoped, non-mutating format and lint | `bun run ui:check` for website CSS and `bun run check:em-dashes` for website copy; no formatter or linter is configured yet |
+| style | path-scoped, non-mutating format and lint | `bun run lint` (oxlint, wrap-once and Biome formatting against the shrink-only baseline), `bun run ui:check` for website CSS, `bun run check:em-dashes` for website copy |
 | checkpoint | a coherent cross-package batch or shared-interface change | `bun run typecheck && bun run test:content && bun run test:agent && bun run test:map-nodes && bun run test:chapter-impact` |
-| push | ready-for-CI gate on the committed tree before a push | the checkpoint tier plus `bun run plans:validate`; the build and size budget run in CI `PR checks` |
+| push | ready-for-CI gate on the committed tree before a push | `bun run typecheck && bun run lint && bun run plans:validate`; `bun run test`, the build and the size budget run in CI `PR checks` |
 | readiness | explicit production-readiness review; non-mutating full local gate | **Guide** § Review Readiness Gate: `bun run typecheck`, `bun run plans:validate`, `bun run build`, plus every conditional check, each fresh |
-| full | explicit full local gate | the readiness tier plus `bun --bun run --cwd packages/website check` |
+| full | explicit full local gate | the readiness tier plus `bun run lint`, `bun run test` (after the build) and `bun --bun run --cwd packages/website check` |
 | release | release gate | none: a merge into `main` deploys the website (GitHub Pages) and `network-agent` (Fly GitHub app); a change to `release.agentImagePaths` waits for afo's go before merging; the `network-admin` deploy, production migrations and Directus syncs are his manual steps |
 
 ### Conditional checks
@@ -36,6 +36,7 @@ none. Choose tiers by hand from **Tiers**, then add every row of **Conditional c
 - Operational content, Directus-owned public projections or snapshots → `bun run test:content`
 - Chapter impact contracts → `bun run test:chapter-impact`
 - Map/member node contracts → `bun run test:map-nodes`; map editing routes → `bun run test:map-edit`
+- A migration or anything a database proof covers → CI `Database proofs` (locally `bun run db:local:up`, then the `test:*:db` script for the surface; `test:map-node-moderation:db` also needs `bun run db:migrate` first)
 - `.plans/**` or plan tooling → `bun run test:plans` and `bun run plans:validate`
 - Steward permission model (`scripts/directus-content-access.ts`) → `bun test scripts/directus-content-access.test.ts`
 - Agent guidance, skills or `.agents/**` → `bun test scripts/guidance-paths.test.ts scripts/repo-skill-discovery.test.ts`
@@ -51,7 +52,7 @@ none. Choose tiers by hand from **Tiers**, then add every row of **Conditional c
 - Any tier: a change to `release.agentImagePaths` (what the agent image is built from) waits for afo's go before merging, because every merge deploys `network-agent`.
 
 ### CI
-GitHub Actions. Required at the PR's current head SHA (`.agents/merge-policy.json` `requiredChecks`): `PR checks`, `Em dashes in website copy`, `audit / Supply-chain guardrails`, `agents-doctor / Agents doctor`. CI owns the website build, the Pages size budget and Astro's type check; a local run never stands in for pending CI.
+GitHub Actions. Required at the PR's current head SHA (`.agents/merge-policy.json` `requiredChecks`): `PR checks`, `Em dashes in website copy`, `audit / Supply-chain guardrails`, `agents-doctor / Agents doctor`, `Database proofs`. CI owns the website build, the Pages size budget, Astro's type check, every test file (`bun run test`) and the Postgres proofs; a local run never stands in for pending CI.
 
 ### Rendered proof
 `AGENTS.md` § Agentic Modern Web Standard owns the rules. Label every capture with its engine and session. Local QA of visible UI uses the authenticated Brave profile; `bun run ui:verify <route>` and `agentic:browser-proof` are clean-room proof and are never reported as authenticated. If authenticated Brave cannot be reached, record that proof as blocked, not passed.

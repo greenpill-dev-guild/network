@@ -1,0 +1,88 @@
+name: Database Proofs
+
+# Applies every migration in packages/agent/migrations to a fresh Postgres, in
+# the order production applies them, then runs the database proofs. It runs on
+# every pull request so `main` can require it; most pull requests touch no
+# migration and it finishes in about a minute. No secret and no production
+# database: the service container is the only database this job sees.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - "packages/agent/**"
+      - "packages/shared/**"
+      - "scripts/*.integration.ts"
+      - "scripts/agent-db.migrate.ts"
+      - "scripts/migration-prefixes.test.ts"
+      - ".github/workflows/database-proofs.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: database-proofs-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  proofs:
+    name: Database proofs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: greenpill_network
+          POSTGRES_USER: greenpill
+          POSTGRES_PASSWORD: greenpill
+        ports:
+          - 3304:5432
+        options: >-
+          --health-cmd "pg_isready -U greenpill -d greenpill_network"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # The local-stack address the proofs default to; set explicitly so a
+      # stray variable can never point a proof elsewhere.
+      DATABASE_URL: postgres://greenpill:greenpill@localhost:3304/greenpill_network
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.10"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Migration prefixes are unique
+        run: bun test scripts/migration-prefixes.test.ts
+
+      - name: Apply every migration to a fresh database
+        run: bun --bun run db:migrate
+
+      - name: Apply them again (already-applied migrations are skipped)
+        run: bun --bun run db:migrate
+
+      - name: Map node moderation proof
+        run: bun --bun run test:map-node-moderation:db
+
+      - name: Chapter image fields proof
+        run: bun --bun run test:chapter-images:db
+
+      - name: Snapshot alert episodes proof
+        run: bun --bun run test:snapshot-alerts:db
+
+      - name: Map node approval guard proof
+        run: bun --bun run test:map-node-approval-guard:db
+
+      - name: Directus text fields proof
+        run: bun --bun run test:text-fields:db
+
+      - name: Chapter update request children proof
+        run: bun --bun run test:update-request-children:db

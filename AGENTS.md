@@ -42,7 +42,10 @@ Run installs and validation from the repo root.
 - `bun run directus:studio:setup` - apply steward-friendly Directus Data Studio collection and field metadata.
 - `bun run directus:local:bootstrap` - wait for local Directus, then apply local roles/permissions and Data Studio metadata; this local path ignores root `.env.local` to avoid production Directus admin settings.
 - `bun run directus:steward:smoke` - create a temporary steward user and verify scoped Directus editing behavior.
+- `bun run test` - every test file in `scripts/` plus `ui:check`, as PR checks run it. The map route tests read the built site, so run `bun run build:website` first.
 - `bun run test:agent`, `bun run test:chapter-impact`, `bun run test:content`, `bun run test:map-nodes`, `bun run plans:validate` - focused contract checks.
+- `bun run lint` - oxlint, the kit's wrap-once rules and Biome formatting against the shrink-only `.agents/lint-baseline.json`; `bun run lint:shrink` lowers counts after a cleanup.
+- `bun run test:*:db` - the database proofs; each needs local Postgres (`bun run db:local:up`). Five build their own scratch database; `test:map-node-moderation:db` needs `bun run db:migrate` on the local database first and refuses any non-local host. The Database proofs workflow runs all six in CI.
 - `bun run ui:check` - source-only website CSS guardrails; no build, browser, or screenshots.
 - `bun run ui:verify <route>` - heavier website build + rendered browser proof at 375 / 1024 / 1440.
 
@@ -53,8 +56,8 @@ Each rule names what enforces it. "Review only" means nothing fails automaticall
 | Rule | Enforcer | Where |
 | --- | --- | --- |
 | Packages and scripts type-check; the site builds inside the Pages size budget | CI `PR checks` | `.github/workflows/pr-checks.yml` |
-| Public agent routes use exported route constants and shared payload contracts | test, CI `PR checks` (`test:agent`) | `scripts/agent-contract.test.ts` |
-| Public projections never expose emails, raw notes, IPs, user agents, spam metadata, steward notes, pending submissions or raw upstream feedback | tests, CI `PR checks` (`test:content`, `test:map-nodes`); review for new fields | `scripts/public-content-contract.test.ts`, `scripts/map-node-contract.test.ts` |
+| Public agent routes use exported route constants and shared payload contracts | test, CI `PR checks` (`bun run test`) | `scripts/agent-contract.test.ts` |
+| Public projections never expose emails, raw notes, IPs, user agents, spam metadata, steward notes, pending submissions or raw upstream feedback | tests, CI `PR checks` (`bun run test`); review for new fields | `scripts/public-content-contract.test.ts`, `scripts/map-node-contract.test.ts` |
 | Plan hubs follow the hub contract | CI `PR checks` (`plans:validate`) | `scripts/plan-hub.ts` |
 | No em dashes in website copy | CI `Em dashes in website copy` | `.github/workflows/website-copy.yml` |
 | Installs stay on the frozen lockfile and the release-age gate; workflow and guidance changes are audited | CI `audit / Supply-chain guardrails` | `.github/workflows/supply-chain-guardrails.yml` |
@@ -62,7 +65,9 @@ Each rule names what enforces it. "Review only" means nothing fails automaticall
 | Guidance names only repository paths that exist; skills live in one folder | tests, CI `PR checks` | `scripts/guidance-paths.test.ts`, `scripts/repo-skill-discovery.test.ts` |
 | Manual Fly deploys, Fly production shells, production database writes and Directus syncs are afo's to run | shared guards ask first (local); review only for cloud agents | `.agents/policy.json` |
 | Changes to critical and sensitive paths follow the merge tiers; agent-image changes wait for afo's go | review only (no merge gate check) | `.agents/merge-policy.json` |
-| Website CSS uses `--gp-*` tokens and the Modern CSS Standard | `bun run ui:check` locally; review only in CI | `scripts/ui-verify.ts` |
+| Website CSS uses `--gp-*` tokens and the Modern CSS Standard; the source baseline only shrinks | `ui:check` in CI `PR checks`; `--write-source-baseline` refuses new entries | `scripts/ui-verify.ts`, `scripts/ui-source-baseline.test.ts` |
+| No new lint finding: oxlint, wrap-once, Biome formatting | CI `PR checks` (`bun run lint`) against a shrink-only baseline | `scripts/lint/run.mjs`, `.agents/lint-baseline.json` |
+| Every migration applies to a fresh Postgres, reruns skip, and the database proofs pass; no two new migrations share a prefix | CI `Database proofs` | `.github/workflows/database-proofs.yml`, `scripts/migration-prefixes.test.ts` |
 | Greenpill-owned migrations live only in `packages/agent/migrations`; Directus is never the public API; the website stays static | review only | this file |
 | Install or upgrade no dependency without approval in the current task | review only | this file |
 
@@ -73,7 +78,13 @@ A merge into `main` is a production deploy twice over:
 - GitHub Pages rebuilds the public website from every merge that touches `packages/website`, `packages/shared`, `packages/agent`, `scripts`, `package.json`, `bun.lock`, `tsconfig*.json` or `.github/workflows/github-pages.yml`, and from the hourly scheduled rebuild for everything else. It is live within minutes; the rollback is a revert.
 - The Fly.io GitHub app deploys `network-agent` from every push to `main` (`packages/agent/fly.toml`, blue-green), whatever the merge touched.
 
-Agents merge on proof, by the tier rules in `.agents/merge-policy.json`, and record the tier and its proof in the pull request's Verification section. Because every merge also ships the agent, a pull request that changes what the agent image is built from (the paths in `release.agentImagePaths` of `.agents/merge-policy.json`) waits for afo's go in the session before it merges (afo's decision, 21 November 2026; the Fly auto-deploy stays on). afo also keeps the manual Fly deploy of the Directus admin (`network-admin`), migrations applied to the production database, and Directus permission syncs against production. Agents never run those.
+Agents merge on proof, by tier (`.agents/merge-policy.json` names the paths in each):
+
+- **Routine**: every required check green at the head SHA. Auto-merge is fine.
+- **Sensitive**: also a fresh agent's adversarial review that names the head SHA, with its findings addressed. Merge by hand with `gh pr merge --merge --match-head-commit <sha>`.
+- **Critical**: also the full gate at that head: PR checks, Database proofs, and rendered proof for website changes. Merge the same way.
+
+Every pull request names its tier and that proof in its Verification section. There is no merge gate check; the tier rules are held by review. Because every merge also ships the agent, a pull request that changes what the agent image is built from (the paths in `release.agentImagePaths` of `.agents/merge-policy.json`) waits for afo's go in the session before it merges (afo's decision, 21 November 2026; the Fly auto-deploy stays on). afo also keeps the manual Fly deploy of the Directus admin (`network-admin`), migrations applied to the production database, and Directus permission syncs against production. Agents never run those.
 
 ## Skills
 

@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "scopes": ["packages/website/src"],
+  "rules": {
+    "raw-timer": {
+      "wrappers": [],
+      "use": "a timer that is cleared when its element or page goes away; the existing ones are baselined in .agents/lint-baseline.json"
+    },
+    "raw-listener": {
+      "wrappers": [],
+      "use": "{ once: true }, or an AbortController signal that is aborted on teardown"
+    },
+    "async-effect": {
+      "wrappers": [],
+      "use": "a cancelled or mounted guard"
+    }
+  }
+}
