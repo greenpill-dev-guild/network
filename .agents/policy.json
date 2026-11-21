@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "commands": [
+    {
+      "id": "fly-deploy",
+      "pattern": "^(\\S*/)?fly(ctl)? deploy( |$)",
+      "action": "ask",
+      "message": "PRODUCTION DEPLOYMENT: Fly deploys of network-agent and network-admin are afo's step. Go ahead only on his explicit word in this session."
+    },
+    {
+      "id": "fly-production-shell",
+      "pattern": "^(\\S*/)?fly(ctl)? (ssh console|machine exec|machines exec|secrets (set|unset|import)|mpg (proxy|connect)|postgres connect)( |$)",
+      "action": "ask",
+      "message": "PRODUCTION: this reaches a production Fly machine, secret or database. Go ahead only on afo's explicit word in this session."
+    },
+    {
+      "id": "db-migrate",
+      "pattern": "(^| )(db:migrate|content:migrate)( |$)|(^| )(\\S*/)?scripts/agent-db\\.migrate\\.ts( |$)",
+      "action": "ask",
+      "message": "Migrations apply to whatever DATABASE_URL points at (the environment or .env.local), which the guard cannot see. Production migrations are afo's step. Go ahead only when the target is the local database (localhost:3304) or a CI service container."
+    },
+    {
+      "id": "directus-permission-sync",
+      "pattern": "(^| )((\\S*/)?scripts/directus-operational-content-setup\\.ts|directus:content:setup)( |$)|(^| )((\\S*/)?scripts/directus-content-access\\.ts|directus:content-access)(?!.* (verify|--dry-run|--help|-h)( |$))( |$)",
+      "action": "ask",
+      "message": "Directus permission syncs apply to whatever DIRECTUS_URL points at, which the guard cannot see. Syncs against production are afo's step. Go ahead only for the local Directus (localhost:3302); `directus:content-access -- verify` and `--dry-run` are read-only and pass."
+    }
+  ],
+  "paths": [
+    {
+      "id": "critical-migrations",
+      "glob": "packages/agent/migrations/**",
+      "action": "notice",
+      "message": "Critical tier (.agents/merge-policy.json): migrations ship before afo applies them to production, so the deployed agent must tolerate both schemas. Deploy tolerant code first, then migrate; never edit an applied migration."
+    },
+    {
+      "id": "critical-public-projection",
+      "glob": "packages/*/src/public-content.ts",
+      "action": "notice",
+      "message": "Critical tier: this is the public projection. Nothing private (emails, raw notes, IPs, user agents, steward notes, pending submissions) may reach a public payload; extend the contract tests with any new field."
+    },
+    {
+      "id": "critical-workflows",
+      "glob": ".github/workflows/**",
+      "action": "notice",
+      "message": "Critical tier: CI workflow. Keep required check names stable (.agents/merge-policy.json requiredChecks), pin actions, and never weaken a check as a workaround."
+    }
+  ],
+  "proof": {
+    "commands": [
+      "^bun run (typecheck|build|build:website|build:packages|plans:validate|ui:check|ui:verify|test:[\\w:-]+)\\b",
+      "^bun (--bun )?test (\\./)?scripts/[\\w.-]+\\.test\\.ts\\b"
+    ]
+  }
+}

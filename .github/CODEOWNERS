@@ -1,0 +1,22 @@
+# Owners for the critical and sensitive merge tiers (.agents/merge-policy.json).
+# No tier requires a code owner's review: agents merge on proof, and GitHub
+# refuses approval of one's own pull request. This file names who answers for
+# each gated path; routine paths have no owner here.
+
+# Sensitive: agent runtime, shared contracts, Directus admin and scripts
+/packages/agent/src/                             @Oba-One
+/packages/shared/src/                            @Oba-One
+/packages/admin/                                 @Oba-One
+/scripts/directus-*                              @Oba-One
+
+# Later lines win in CODEOWNERS, so the critical paths come last.
+# Critical: migrations, the steward permission model, public projections,
+# Fly deploy configs and CI
+/packages/agent/migrations/                      @Oba-One
+/scripts/directus-content-access.ts              @Oba-One
+/scripts/directus-operational-content-setup.ts   @Oba-One
+/packages/shared/src/public-content.ts           @Oba-One
+/packages/agent/src/public-content.ts            @Oba-One
+/packages/agent/fly.toml                         @Oba-One
+/packages/admin/fly.toml                         @Oba-One
+/.github/workflows/                              @Oba-One

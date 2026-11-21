@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "mergeMethod": "merge",
+  "autoMerge": true,
+  "deleteBranchOnMerge": true,
+  "adminBypass": "pull_request",
+  "requiredChecks": [
+    "PR checks",
+    "Em dashes in website copy",
+    "audit / Supply-chain guardrails",
+    "agents-doctor / Agents doctor"
+  ],
+  "release": {
+    "about": "main is both the integration branch and production for the static website: every merge redeploys GitHub Pages, so a merged change is live within minutes and the rollback is a revert. afo accepted that on 21 Nov 2026. His approval sits at production promotion instead, which no merge performs: the manual Fly deploys of the agent (packages/agent/fly.toml) and the Directus admin (packages/admin/fly.toml), migrations applied to the production database with db:migrate (recorded in audit.agent_schema_migrations), and Directus permission syncs against production (directus:content:setup, directus:content-access). Agents never run those; .agents/policy.json makes the shared guards ask first on afo's machine, and cloud agents hold no production credentials. The kit's merge-policy schema has no field for a gate by environment, so dev merge-settings does not apply this entry.",
+    "approvalAt": ["fly deploy (network-agent, network-admin)", "production db:migrate", "production Directus permission syncs"]
+  },
+  "tiers": {
+    "critical": {
+      "about": "Schema migrations, the steward permission model, the public projections, the Fly deploy configs and CI. Merges once three things hold on the current head: PR checks and every other required check are green, the full gate has passed (the Postgres migration job and rendered proof once they exist), and a fresh agent's adversarial review naming the head SHA is addressed. The agent merges by hand with that SHA as the expected head (gh pr merge --merge --match-head-commit <sha>) and stops if the head has moved; auto-merge would also merge a later push. Code-owner review cannot gate this tier, because GitHub refuses approval of one's own pull request.",
+      "paths": [
+        "packages/agent/migrations/**",
+        "scripts/directus-content-access.ts",
+        "scripts/directus-operational-content-setup.ts",
+        "packages/shared/src/public-content.ts",
+        "packages/agent/src/public-content.ts",
+        "packages/agent/fly.toml",
+        "packages/admin/fly.toml",
+        ".github/workflows/**"
+      ],
+      "requireCodeOwnerReview": false,
+      "autoMerge": false
+    },
+    "sensitive": {
+      "about": "The rest of the agent runtime and shared contracts, the Directus admin package and the Directus scripts. Merges once the required checks are green and a fresh agent's adversarial review naming the head SHA is addressed, merged by hand with gh pr merge --merge --match-head-commit <sha>.",
+      "paths": [
+        "packages/agent/src/**",
+        "packages/shared/src/**",
+        "packages/admin/**",
+        "scripts/directus-*"
+      ],
+      "requireCodeOwnerReview": false,
+      "autoMerge": false
+    },
+    "routine": {
+      "about": "Everything else: website, docs, plans, tests and tooling. Auto-merges once the required checks are green.",
+      "paths": ["**"],
+      "requireCodeOwnerReview": false,
+      "autoMerge": true
+    }
+  }
+}

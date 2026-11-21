@@ -1,0 +1,34 @@
+name: Agents Doctor
+
+# Checks that the repository follows the shared agent kit: AGENTS.md as the
+# guide, CLAUDE.md importing it, one skills folder, valid .agents policy files,
+# the PR template, CODEOWNERS and the adapter the kit skills read. It runs on
+# every pull request, whatever it touches, so `main`'s ruleset can require it: a
+# required check limited to some paths never reports on the other pull requests
+# and holds them forever. It reads only a few files and takes seconds.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - "AGENTS.md"
+      - "CLAUDE.md"
+      - ".agents/**"
+      - ".claude/**"
+      - ".codex/**"
+      - ".github/CODEOWNERS"
+      - ".github/pull_request_template.md"
+      - ".github/workflows/agents-doctor.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  agents-doctor:
+    # Pinned to a guild commit; doctor-ref matches, so the workflow and the
+    # doctor script it runs come from the same commit.
+    uses: greenpill-dev-guild/.github/.github/workflows/agents-doctor.yml@d5bab15ee152be8fe289257826b28655090e4d05
+    with:
+      mode: ci
+      doctor-ref: d5bab15ee152be8fe289257826b28655090e4d05
