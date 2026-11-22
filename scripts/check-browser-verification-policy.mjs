@@ -32,6 +32,14 @@ function read(relPath) {
   return readFileSync(join(repoRoot, relPath), 'utf8');
 }
 
+function sectionBody(text, heading) {
+  const start = text.indexOf(`\n${heading}\n`);
+  if (start === -1) return '';
+  const rest = text.slice(start + heading.length + 2);
+  const next = rest.search(/^#{1,3} /m);
+  return `${heading}\n${next === -1 ? rest : rest.slice(0, next)}`;
+}
+
 function walk(dir, result = []) {
   if (!existsSync(dir)) return result;
   for (const entry of readdirSync(dir)) {
@@ -76,8 +84,11 @@ for (const relPath of requiredPolicyFiles) {
   const text = read(relPath);
   const importedGuide = join(dirname(relPath), 'AGENTS.md');
   if (relPath !== importedGuide && /^@(\.\/)?AGENTS\.md$/.test(text.trim()) && requiredPolicyFiles.includes(importedGuide)) continue;
+  // AGENTS.md's phrases count only inside its Browser Evidence section, so moving them
+  // elsewhere or deleting the section fails.
+  const scope = relPath === 'AGENTS.md' ? sectionBody(text, '### Browser Evidence') : text;
   for (const phrase of requiredPhrases[relPath] ?? []) {
-    if (!text.includes(phrase)) {
+    if (!scope.includes(phrase)) {
       fail(`${relPath}: missing required Browser Evidence phrase "${phrase}"`);
     }
   }

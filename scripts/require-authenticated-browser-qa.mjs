@@ -5,6 +5,12 @@
 // run stops here instead of passing as proof.
 import { findChromeBinary } from './ui-verify.ts';
 
+const sourceOnly = process.env.UI_VERIFY_SOURCE_ONLY === '1' || process.argv.includes('--source-only');
+if (sourceOnly) {
+  console.warn('[browser-qa] Source-only run: no captures, so this is not rendered proof.');
+  process.exit(0);
+}
+
 if (!findChromeBinary()) {
   console.error(
     '[browser-qa] No Chrome or Chromium binary found (set CHROME_BIN), so this run would capture nothing. Label the proof `none`.',
