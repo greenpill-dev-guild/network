@@ -120,6 +120,8 @@ for (const collection of PUBLIC_OPERATIONAL_CONTENT_COLLECTIONS) {
             return;
           }
           assert.deepEqual(published, baseline);
+          // The pick keeps the record's own key order, so a regenerated snapshot does not churn.
+          assert.deepEqual(published.map(Object.keys), baseline.map(Object.keys));
           for (const record of published) {
             for (const key of Object.keys(record)) assert.ok(allowed.has(key), `${collection} published ${key}`);
           }
@@ -130,13 +132,20 @@ for (const collection of PUBLIC_OPERATIONAL_CONTENT_COLLECTIONS) {
   });
 
   test(`a private field nested inside a published ${collection} value is never published`, SLOW, () => {
+    // Object values and arrays of objects (links, stewards, proof signals, public members).
+    const isObject = (value: unknown) => value !== null && typeof value === 'object' && !Array.isArray(value);
     const objectFields = [...allowed].filter((field) =>
       committed[collection].some((record: Record<string, unknown>) => {
         const value = record[field];
-        return value !== null && typeof value === 'object' && !Array.isArray(value);
+        return isObject(value) || (Array.isArray(value) && value.some(isObject));
       }),
     );
-    if (objectFields.length === 0) return;
+    // Themes hold no object values, so there is nothing nested to plant a field in.
+    if (collection === 'themes') {
+      assert.deepEqual(objectFields, []);
+      return;
+    }
+    assert.ok(objectFields.length > 0);
     fc.assert(
       fc.property(
         fc.constantFrom(...committed[collection]),
@@ -145,7 +154,11 @@ for (const collection of PUBLIC_OPERATIONAL_CONTENT_COLLECTIONS) {
         // `reviewStatus`, which says whether the image may be shown.
         knownPrivateKey.filter((key) => !['media', 'reviewStatus', 'review_status'].includes(key)),
         (base: Record<string, unknown>, field, key) => {
-          const record = { ...base, [field]: { ...(base[field] as object), [key]: SECRET } };
+          const value = base[field];
+          const planted = Array.isArray(value)
+            ? [{ ...(value.find(isObject) ?? {}), [key]: SECRET }, ...value]
+            : { ...(isObject(value) ? (value as object) : {}), [key]: SECRET };
+          const record = { ...base, [field]: planted };
           const snapshot = publish(collection, [record]);
           // The record is quarantined, or the field that held the value is withheld whole (an
           // unreviewed chapter image's media); either way nothing private is published.

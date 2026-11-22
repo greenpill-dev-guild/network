@@ -148,14 +148,17 @@ const PUBLIC_OPERATIONAL_CONTENT_EXACT_FIELD_KEY_ALLOWLIST = Object.freeze([
   'reviewstatus',
 ]);
 
-const normalizeFieldKeyName = (key: string): string => key.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+const cleanString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
+const normalizeFieldKey = (key: unknown): string => cleanString(key).toLowerCase().replace(/[^a-z0-9]/g, '');
 
 // The private names the map node and impact contracts already know (a request IP, an edit token,
 // upstream work feedback), matched exactly so a nested value under one is caught here too. The
-// impact list's `media` is left out: it is a public operational field.
+// impact list's `media` is left out: it is a public operational field. Some names are generic
+// (`token`, `works`, `mediaUrls`): content that uses one is quarantined, which fails closed and
+// raises the quarantine alert, so rename the field rather than drop the name from this list.
 const PRIVATE_OPERATIONAL_CONTENT_KNOWN_FIELD_KEYS: ReadonlySet<string> = new Set(
   [...PRIVATE_MAP_NODE_FIELDS, ...PRIVATE_CHAPTER_IMPACT_FIELDS.filter((field) => field !== 'media')].map(
-    normalizeFieldKeyName,
+    normalizeFieldKey,
   ),
 );
 
@@ -172,8 +175,6 @@ const WORKFLOW_FIELDS = Object.freeze([
   'updated_by',
 ]);
 
-const cleanString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
-const normalizeFieldKey = (key: unknown): string => cleanString(key).toLowerCase().replace(/[^a-z0-9]/g, '');
 const isPresent = <T>(value: T | null | undefined): value is T => value !== null && value !== undefined;
 
 const toIso = (value: Date | string | null | undefined): string => {
