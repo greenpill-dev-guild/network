@@ -11,14 +11,17 @@ if (sourceOnly) {
   process.exit(0);
 }
 
-if (!findChromeBinary()) {
+const binary = findChromeBinary();
+if (!binary) {
   console.error(
     '[browser-qa] No Chrome or Chromium binary found (set CHROME_BIN), so this run would capture nothing. Label the proof `none`.',
   );
   process.exit(1);
 }
 
-const label = process.env.CI === 'true' ? 'CI Chrome' : 'headless Chrome';
+// The label names the engine that will run: discovery can pick Chromium or Edge as well as Chrome.
+const engine = /edge/i.test(binary) ? 'Edge' : /chromium/i.test(binary) ? 'Chromium' : 'Chrome';
+const label = `${process.env.CI === 'true' ? 'CI' : 'headless'} ${engine}`;
 console.warn(
   `[browser-qa] Label these captures \`${label}\`. They are rendered proof for public routes; an authenticated-class change still needs authenticated Brave proof, or a note that it is pending and why.`,
 );
