@@ -405,16 +405,15 @@ Then, in another terminal:
 bun run test:home-map:live-e2e --keep-live --expanded
 ```
 
-Important QA policy:
+Important QA policy (superseded 2026-11-21 by `AGENTS.md` § Browser Evidence,
+which this handoff now follows):
 
-- `test:home-map:browser` and `ui:verify` are clean-room/script evidence.
-- Local layout, interaction, motion, and public-route QA must use the
-  authenticated Brave QA profile via the live authenticated-browser path
-  described in `AGENTS.md` and `packages/website/CLAUDE.md`.
-- Do not report isolated Browser, Playwright, or DevTools MCP as authenticated
-  Brave QA.
-- If authenticated Brave is unavailable, report authenticated QA as blocked
-  instead of substituting another browser profile.
+- Label every capture: `test:home-map:browser:required` and `ui:verify` are
+  `headless Chrome` on this machine and `CI Chrome` in Actions.
+- The home map and other public routes accept that labeled proof. Authenticated
+  Brave is needed only for the authenticated surface class the section lists.
+- Never report headless or isolated captures as authenticated Brave proof.
+- Authenticated-class proof that cannot reach Brave is pending, with the reason.
 
 Authenticated Brave walkthrough checklist:
 

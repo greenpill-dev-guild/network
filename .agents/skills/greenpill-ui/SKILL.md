@@ -60,7 +60,9 @@ WARN: fix unless it's a known data-viz exception.
 three-font split intact, no grey / pure-white / pure-black, focus ring untouched, pill
 radii, motion rules.
 
-**7. Report** what changed, the routes you verified, and the HARD/WARN counts.
+**7. Report** what changed, the routes you verified, the HARD/WARN counts, and the capture label
+from `AGENTS.md` § Browser Evidence: `headless Chrome` on this machine, `CI Chrome` in Actions.
+A run that found no browser captured nothing: report it as `none`, not as proof.
 
 ## Why this loop exists
 

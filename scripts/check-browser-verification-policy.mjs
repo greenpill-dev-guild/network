@@ -4,7 +4,23 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 
 const repoRoot = process.cwd();
-const requiredPolicyFiles = ["AGENTS.md", "CLAUDE.md", "packages/website/CLAUDE.md"];
+const requiredPolicyFiles = ["AGENTS.md", "CLAUDE.md", "packages/website/CLAUDE.md", ".agents/skills/greenpill-ui/SKILL.md"];
+
+// AGENTS.md owns the Browser Evidence rules; other guidance points to it instead of restating them.
+const requiredPhrases = {
+  'AGENTS.md': [
+    '### Browser Evidence',
+    'Label every rendered proof',
+    'Authenticated-session proof is required only for the authenticated surface class',
+    'record the authenticated-class proof as pending',
+    'Do not substitute an isolated Browser, Playwright or DevTools MCP profile for authenticated-class proof',
+  ],
+  'packages/website/CLAUDE.md': ['`AGENTS.md` § Browser Evidence'],
+  '.agents/skills/greenpill-ui/SKILL.md': ['`AGENTS.md` § Browser Evidence'],
+};
+
+// Guidance outside AGENTS.md and CLAUDE.md files that restated the old rule.
+const extraGuidanceFiles = ['.agents/adapter.md', '.claude/context/validation-pipeline.md'];
 
 const failures = [];
 
@@ -14,6 +30,14 @@ function fail(message) {
 
 function read(relPath) {
   return readFileSync(join(repoRoot, relPath), 'utf8');
+}
+
+function sectionBody(text, heading) {
+  const start = text.indexOf(`\n${heading}\n`);
+  if (start === -1) return '';
+  const rest = text.slice(start + heading.length + 2);
+  const next = rest.search(/^#{1,3} /m);
+  return `${heading}\n${next === -1 ? rest : rest.slice(0, next)}`;
 }
 
 function walk(dir, result = []) {
@@ -52,7 +76,7 @@ function walk(dir, result = []) {
 
 for (const relPath of requiredPolicyFiles) {
   if (!existsSync(join(repoRoot, relPath))) {
-    fail(`${relPath}: missing required authenticated-browser QA policy file`);
+    fail(`${relPath}: missing required Browser Evidence policy file`);
     continue;
   }
 
@@ -60,16 +84,12 @@ for (const relPath of requiredPolicyFiles) {
   const text = read(relPath);
   const importedGuide = join(dirname(relPath), 'AGENTS.md');
   if (relPath !== importedGuide && /^@(\.\/)?AGENTS\.md$/.test(text.trim()) && requiredPolicyFiles.includes(importedGuide)) continue;
-  for (const phrase of [
-    'authenticated Brave QA profile',
-    'Codex browser-extension path',
-    'Claude Code Chrome/Chromium extension path',
-    'authenticated Brave profile/tab',
-    'Do not use isolated Browser, Playwright, or DevTools MCP profiles for local QA',
-    'If authenticated Brave access is blocked, stop and report QA as blocked',
-  ]) {
-    if (!text.includes(phrase)) {
-      fail(`${relPath}: missing required authenticated-browser QA phrase "${phrase}"`);
+  // AGENTS.md's phrases count only inside its Browser Evidence section, so moving them
+  // elsewhere or deleting the section fails.
+  const scope = relPath === 'AGENTS.md' ? sectionBody(text, '### Browser Evidence') : text;
+  for (const phrase of requiredPhrases[relPath] ?? []) {
+    if (!scope.includes(phrase)) {
+      fail(`${relPath}: missing required Browser Evidence phrase "${phrase}"`);
     }
   }
 }
@@ -93,9 +113,16 @@ const stalePatterns = [
   /Brave-only QA/i,
   /Chrome\/Edge QA profiles/i,
   /for Brave-only QA/i,
+  // The rule before Browser Evidence: every local check in authenticated Brave, or blocked.
+  /Local agentic browser QA must use the authenticated Brave/i,
+  /report QA as blocked/i,
+  /mark the proof `BLOCKED`/i,
+  /record that proof as blocked/i,
+  /Do not use isolated Browser, Playwright, or DevTools MCP profiles for local QA/i,
 ];
 
-for (const filePath of walk(repoRoot)) {
+for (const filePath of [...walk(repoRoot), ...extraGuidanceFiles.map((file) => join(repoRoot, file))]) {
+  if (!existsSync(filePath)) continue;
   const relPath = relative(repoRoot, filePath);
   const text = readFileSync(filePath, 'utf8');
   for (const pattern of stalePatterns) {
@@ -122,7 +149,7 @@ if (existsSync(packageJsonPath)) {
     scripts['agentic:browser-proof'] &&
     !scripts['agentic:browser-proof'].startsWith('bun scripts/require-authenticated-browser-qa.mjs && ')
   ) {
-    fail('package.json: local agentic:browser-proof must be guarded by require-authenticated-browser-qa.mjs');
+    fail('package.json: agentic:browser-proof must run require-authenticated-browser-qa.mjs first, which labels its captures');
   }
 
   if (
@@ -130,12 +157,12 @@ if (existsSync(packageJsonPath)) {
     scripts['agentic:verify'].includes('ui:verify') &&
     !scripts['agentic:verify'].startsWith('bun scripts/require-authenticated-browser-qa.mjs')
   ) {
-    fail('package.json: local agentic:verify browser lane must be guarded by require-authenticated-browser-qa.mjs');
+    fail('package.json: agentic:verify must run require-authenticated-browser-qa.mjs first, which labels its captures');
   }
 }
 
 if (failures.length > 0) {
-  console.error('Authenticated browser QA policy check failed:');
+  console.error('Browser Evidence policy check failed:');
   for (const failure of failures) {
     console.error(`- ${failure}`);
   }
@@ -143,5 +170,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  `Authenticated browser QA policy check passed for ${requiredPolicyFiles.length} guidance file(s).`,
+  `Browser Evidence policy check passed for ${requiredPolicyFiles.length} guidance file(s).`,
 );

@@ -1,20 +1,27 @@
 #!/usr/bin/env bun
+// Runs before `agentic:browser-proof` and `agentic:verify` so their captures carry the right label
+// (AGENTS.md, Browser Evidence). The run is clean-room proof: enough for public routes, never
+// authenticated Brave proof. Without a browser `ui:verify` would skip and capture nothing, so the
+// run stops here instead of passing as proof.
+import { findChromeBinary } from './ui-verify.ts';
 
-if (process.env.CI === 'true') {
-  console.warn(
-    '[browser-qa] CI=true: allowing clean-room browser proof. Do not report this as authenticated local QA.',
-  );
+const sourceOnly = process.env.UI_VERIFY_SOURCE_ONLY === '1' || process.argv.includes('--source-only');
+if (sourceOnly) {
+  console.warn('[browser-qa] Source-only run: no captures, so this is not rendered proof.');
   process.exit(0);
 }
 
-console.error(
-  [
-    '[browser-qa] Local agentic browser QA must use the authenticated Brave QA profile.',
-    '[browser-qa] Codex: use the Codex browser-extension path and claim the already-open Brave tab/window.',
-    '[browser-qa] Claude Code: use the Claude Code Chrome/Chromium extension path (`claude --chrome` or `/chrome`) and select the authenticated Brave profile/tab when connected.',
-    '[browser-qa] Claude fallback: if the Brave extension path is unavailable, use computer-use/visible desktop control of the already-open Brave window.',
-    '[browser-qa] Do not run isolated Browser, Playwright, or DevTools MCP profiles for local QA.',
-    '[browser-qa] If authenticated Brave access is blocked, report QA as blocked.',
-  ].join('\n'),
+const binary = findChromeBinary();
+if (!binary) {
+  console.error(
+    '[browser-qa] No Chrome or Chromium binary found (set CHROME_BIN), so this run would capture nothing. Label the proof `none`.',
+  );
+  process.exit(1);
+}
+
+// The label names the engine that will run: discovery can pick Chromium or Edge as well as Chrome.
+const engine = /edge/i.test(binary) ? 'Edge' : /chromium/i.test(binary) ? 'Chromium' : 'Chrome';
+const label = `${process.env.CI === 'true' ? 'CI' : 'headless'} ${engine}`;
+console.warn(
+  `[browser-qa] Label these captures \`${label}\`. They are rendered proof for public routes; an authenticated-class change still needs authenticated Brave proof, or a note that it is pending and why.`,
 );
-process.exit(1);
