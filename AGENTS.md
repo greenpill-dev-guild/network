@@ -57,7 +57,7 @@ Each rule names what enforces it. "Review only" means nothing fails automaticall
 | --- | --- | --- |
 | Packages and scripts type-check; the site builds inside the Pages size budget | CI `PR checks` | `.github/workflows/pr-checks.yml` |
 | Public agent routes use exported route constants and shared payload contracts | test, CI `PR checks` (`bun run test`) | `scripts/agent-contract.test.ts` |
-| Public projections never expose emails, raw notes, IPs, user agents, spam metadata, steward notes, pending submissions or raw upstream feedback | tests, CI `PR checks` (`bun run test`); review for new fields | `scripts/public-content-contract.test.ts`, `scripts/map-node-contract.test.ts` |
+| Public projections never expose emails, raw notes, IPs, user agents, spam metadata, steward notes, pending submissions or raw upstream feedback; an operational record publishes only its collection's allowlisted fields, so a new Directus column reaches the site only once added to `PUBLIC_OPERATIONAL_RECORD_FIELDS` | tests and fast-check properties, CI `PR checks` (`bun run test`); the payload types reject an unlisted field at type-check; review for new fields | `scripts/public-content-contract.test.ts`, `scripts/map-node-contract.test.ts`, `scripts/public-projection-allowlist.test.ts`, `packages/shared/src/public-content.ts` |
 | Plan hubs follow the hub contract | CI `PR checks` (`plans:validate`) | `scripts/plan-hub.ts` |
 | No em dashes in website copy | CI `Em dashes in website copy` | `.github/workflows/website-copy.yml` |
 | Installs stay on the frozen lockfile and the release-age gate; workflow and guidance changes are audited | CI `audit / Supply-chain guardrails` | `.github/workflows/supply-chain-guardrails.yml` |

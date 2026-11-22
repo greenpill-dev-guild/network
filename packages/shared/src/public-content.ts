@@ -15,7 +15,55 @@ export type PublicOperationalContentCollection =
   | 'guilds'
   | 'projects';
 
-export interface PublicOperationalRecord {
+// The top-level fields each collection publishes, and the only ones that reach the snapshot,
+// whatever a database view or seed file adds. They match the `content.public_*` views (chapters
+// also read imageAlt, imageCredit and imageFileId, which resolvePublicChapterImage consumes).
+// Nested values stay guarded by containsPrivateOperationalContentField.
+export const PUBLIC_OPERATIONAL_RECORD_FIELDS = Object.freeze({
+  themes: Object.freeze(['id', 'name', 'slug', 'sortOrder', 'summary'] as const),
+  people: Object.freeze([
+    'avatar', 'bio', 'displayName', 'id', 'links', 'media', 'role', 'seo', 'slug', 'themeSlugs',
+  ] as const),
+  chapters: Object.freeze([
+    'authoredResourceSlugs', 'city', 'connectLinks', 'country', 'featuredStory', 'featuredStorySlugs',
+    'featuredWeight', 'founded', 'id', 'image', 'impactSources', 'introQuote', 'introQuoteAttribution',
+    'lat', 'link', 'links', 'long', 'media', 'name', 'proofSignals', 'region', 'relatedChapterSlugs', 'seo',
+    'slug', 'status', 'stewardSlugs', 'stewards', 'summary', 'themeSlugs',
+  ] as const),
+  chapterInitiatives: Object.freeze([
+    'chapterSlug', 'description', 'featuredWeight', 'id', 'impactSources', 'links', 'proofSignals',
+    'relatedResourceSlugs', 'relatedStorySlugs', 'slug', 'status', 'summary', 'themeSlugs', 'title',
+  ] as const),
+  guilds: Object.freeze([
+    'cadence', 'connectLinks', 'description', 'featuredWeight', 'foundedYear', 'id', 'image', 'links',
+    'mandateParagraphs', 'media', 'memberSlugs', 'name', 'oneliner', 'outputs', 'principles', 'proofSignals',
+    'publicMembers', 'seo', 'slug', 'status', 'stewardSlugs', 'stewards', 'summary', 'themeSlugs', 'type',
+  ] as const),
+  projects: Object.freeze([
+    'description', 'featuredWeight', 'guild', 'id', 'image', 'liveUrl', 'media', 'name', 'proofSignals',
+    'repoUrl', 'seo', 'slug', 'status', 'stewardSlugs', 'summary', 'techStack', 'themeSlugs',
+  ] as const),
+});
+
+type PublicOperationalFieldOf<C extends PublicOperationalContentCollection> =
+  (typeof PUBLIC_OPERATIONAL_RECORD_FIELDS)[C][number];
+
+// A published record names only its collection's fields; a key outside the list does not type-check.
+export type PublicOperationalRecordOf<C extends PublicOperationalContentCollection> = {
+  slug: string;
+  id: string;
+} & { [K in Exclude<PublicOperationalFieldOf<C>, 'slug' | 'id'>]?: any };
+
+export type PublicThemeRecord = PublicOperationalRecordOf<'themes'>;
+export type PublicPersonRecord = PublicOperationalRecordOf<'people'>;
+export type PublicChapterRecord = PublicOperationalRecordOf<'chapters'>;
+export type PublicChapterInitiativeRecord = PublicOperationalRecordOf<'chapterInitiatives'>;
+export type PublicGuildRecord = PublicOperationalRecordOf<'guilds'>;
+export type PublicProjectRecord = PublicOperationalRecordOf<'projects'>;
+export type PublicOperationalRecord = PublicOperationalRecordOf<PublicOperationalContentCollection>;
+
+// A record on its way to publication: every field the source carried, until toPublicRecord.
+interface OperationalRecordDraft {
   slug: string;
   id: string;
   [key: string]: any;
@@ -41,12 +89,12 @@ export interface PublicOperationalImpactSourcePayload {
 export interface PublicOperationalContentSnapshot {
   version: 1;
   generatedAt: string;
-  themes: PublicOperationalRecord[];
-  people: PublicOperationalRecord[];
-  chapters: PublicOperationalRecord[];
-  chapterInitiatives: PublicOperationalRecord[];
-  guilds: PublicOperationalRecord[];
-  projects: PublicOperationalRecord[];
+  themes: PublicThemeRecord[];
+  people: PublicPersonRecord[];
+  chapters: PublicChapterRecord[];
+  chapterInitiatives: PublicChapterInitiativeRecord[];
+  guilds: PublicGuildRecord[];
+  projects: PublicProjectRecord[];
   locations: PublicOperationalLocation[];
   impactSourceBindings: PublicOperationalImpactSourcePayload;
 }
@@ -158,7 +206,7 @@ function stripWorkflowFields(record: UnknownRecord): UnknownRecord {
   return next;
 }
 
-function normalizeRecord(record: UnknownRecord): PublicOperationalRecord | null {
+function normalizeRecord(record: UnknownRecord): OperationalRecordDraft | null {
   const source = stripWorkflowFields(normalizeObject(record?.data ?? record));
   const slug = normalizeSlug(record) || normalizeSlug(source);
   if (!slug) return null;
@@ -240,7 +288,7 @@ function defaultsForCollection(collection: PublicOperationalContentCollection | 
 function normalizeCollection(
   records: UnknownRecord[],
   collection: PublicOperationalContentCollection | '' = ''
-): PublicOperationalRecord[] {
+): OperationalRecordDraft[] {
   return asArray(records)
     .map(normalizeRecord)
     .filter(isPresent)
@@ -342,8 +390,22 @@ export interface WithheldChapterImage {
   reason: 'unapproved_media';
 }
 
+// Keeps the collection's public fields, in the record's own order, so a regenerated snapshot
+// diffs only where content changed.
+function toPublicRecord<C extends PublicOperationalContentCollection>(
+  record: OperationalRecordDraft,
+  collection: C
+): PublicOperationalRecordOf<C> {
+  const allowed = new Set<string>(PUBLIC_OPERATIONAL_RECORD_FIELDS[collection]);
+  const published: UnknownRecord = {};
+  for (const key of Object.keys(record)) {
+    if (allowed.has(key)) published[key] = record[key];
+  }
+  return published as PublicOperationalRecordOf<C>;
+}
+
 function quarantineUnsafeRecords(
-  records: ReturnType<typeof normalizeCollection>,
+  records: OperationalRecordDraft[],
   collection: string,
   quarantined: QuarantinedOperationalRecord[]
 ) {
@@ -374,8 +436,8 @@ function quarantineUnsafeRecords(
 //   describe the image the chapter shows. For a sourced image, media.imageAlt
 //   and media.imageCredit remain the fallback.
 // - imageFileId: the upload's file id, which stays private.
-function resolvePublicChapterImage(chapter: PublicOperationalRecord, uploadedImageUrl: string): {
-  chapter: PublicOperationalRecord;
+function resolvePublicChapterImage(chapter: OperationalRecordDraft, uploadedImageUrl: string): {
+  chapter: OperationalRecordDraft;
   imageWithheld: boolean;
 } {
   const {
@@ -430,7 +492,7 @@ function resolvePublicChapterImage(chapter: PublicOperationalRecord, uploadedIma
   }
 
   if (sourcedImages.length === 0 && socialImage === '') {
-    return { chapter: publicFields as PublicOperationalRecord, imageWithheld: false };
+    return { chapter: publicFields as OperationalRecordDraft, imageWithheld: false };
   }
 
   if (sourcedImageApproved) {
@@ -508,35 +570,41 @@ export function toPublicOperationalContentSnapshot({
     // A record cannot name its own upload; see resolvePublicChapterImage.
     const { uploadedImageUrl: _selfDeclaredUpload, ...record } = chapter;
     const resolved = resolvePublicChapterImage(
-      record as PublicOperationalRecord,
+      record as OperationalRecordDraft,
       toUploadedImageUrl(options.uploadedChapterImageUrls?.get(chapter.slug))
     );
     if (resolved.imageWithheld) chaptersWithWithheldImages.add(chapter.slug);
     return resolved.chapter;
   });
 
-  const publicChapters = quarantineUnsafeRecords(chaptersWithPublicImages, 'chapters', quarantined);
+  const publicChapters = quarantineUnsafeRecords(chaptersWithPublicImages, 'chapters', quarantined)
+    .map((chapter) => toPublicRecord(chapter, 'chapters'));
   const withheldChapterImages: WithheldChapterImage[] = publicChapters
     .filter((chapter) => chaptersWithWithheldImages.has(chapter.slug))
     .map((chapter) => ({ slug: chapter.slug, reason: 'unapproved_media' }));
-  const publicGuilds = quarantineUnsafeRecords(normalizeCollection(guilds, 'guilds'), 'guilds', quarantined);
+  const publicGuilds = quarantineUnsafeRecords(normalizeCollection(guilds, 'guilds'), 'guilds', quarantined)
+    .map((guild) => toPublicRecord(guild, 'guilds'));
   const publicGuildSlugs = new Set(publicGuilds.map((guild) => guild.slug).filter(Boolean));
   const publicProjects = quarantineUnsafeRecords(
     normalizeCollection(projects, 'projects'),
     'projects',
     quarantined
-  ).filter((project) => publicGuildSlugs.has(cleanString(project.guild ?? project.guildSlug)));
+  )
+    .filter((project) => publicGuildSlugs.has(cleanString(project.guild ?? project.guildSlug)))
+    .map((project) => toPublicRecord(project, 'projects'));
   const snapshot: PublicOperationalContentSnapshot = {
     version: PUBLIC_OPERATIONAL_CONTENT_VERSION,
     generatedAt: toIso(generatedAt),
-    themes: quarantineUnsafeRecords(normalizeCollection(themes, 'themes'), 'themes', quarantined),
-    people: quarantineUnsafeRecords(normalizeCollection(people, 'people'), 'people', quarantined),
+    themes: quarantineUnsafeRecords(normalizeCollection(themes, 'themes'), 'themes', quarantined)
+      .map((theme) => toPublicRecord(theme, 'themes')),
+    people: quarantineUnsafeRecords(normalizeCollection(people, 'people'), 'people', quarantined)
+      .map((person) => toPublicRecord(person, 'people')),
     chapters: publicChapters,
     chapterInitiatives: quarantineUnsafeRecords(
       normalizeCollection(chapterInitiatives, 'chapterInitiatives'),
       'chapterInitiatives',
       quarantined
-    ),
+    ).map((initiative) => toPublicRecord(initiative, 'chapterInitiatives')),
     guilds: publicGuilds,
     projects: publicProjects,
     locations: toPublicOperationalLocations(publicChapters),
