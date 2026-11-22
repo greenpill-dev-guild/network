@@ -172,7 +172,7 @@ for (const collection of PUBLIC_OPERATIONAL_CONTENT_COLLECTIONS) {
 }
 
 test('a chapter that gives its point as latitude and longitude still gets a map location', () => {
-  const base = committed.chapters.find((chapter: Record<string, unknown>) => chapter.lat && !chapter.seo?.noindex);
+  const base = committed.chapters.find((chapter: Record<string, any>) => chapter.lat && !chapter.seo?.noindex);
   const { lat, long, ...rest } = base;
   const snapshot = publish('chapters', [{ ...rest, latitude: lat, longitude: long }]);
   const location = snapshot.locations.find((entry) => entry.id === base.slug);
