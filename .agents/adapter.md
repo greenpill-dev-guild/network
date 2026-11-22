@@ -55,7 +55,7 @@ none. Choose tiers by hand from **Tiers**, then add every row of **Conditional c
 GitHub Actions. Required at the PR's current head SHA (`.agents/merge-policy.json` `requiredChecks`): `PR checks`, `Em dashes in website copy`, `audit / Supply-chain guardrails`, `agents-doctor / Agents doctor`, `Database proofs`. CI owns the website build, the Pages size budget, Astro's type check, every test file (`bun run test`) and the Postgres proofs; a local run never stands in for pending CI.
 
 ### Rendered proof
-`AGENTS.md` § Agentic Modern Web Standard owns the rules. Label every capture with its engine and session. Local QA of visible UI uses the authenticated Brave profile; `bun run ui:verify <route>` and `agentic:browser-proof` are clean-room proof and are never reported as authenticated. If authenticated Brave cannot be reached, record that proof as blocked, not passed.
+`AGENTS.md` § Browser Evidence owns the rules. Label every capture with its engine and session (`authenticated Brave`, `headless Chrome`, `CI Chrome` or `none`). Authenticated Brave is required only for the authenticated surface class that section lists; public routes accept labeled headless or CI proof. Authenticated-class proof that cannot reach Brave is pending, not passed.
 
 ## review
 
@@ -114,7 +114,7 @@ The harness's built-in `/code-review`; say so and use it rather than hand-rollin
 - A command, environment variable or path renamed without updating `AGENTS.md`, `README.md` or the skills.
 
 ### Not findings
-Isolated browser or headless captures labeled as clean-room proof are expected evidence, not a mislabel; only presenting them as authenticated proof is a finding.
+Labeled `headless Chrome` or `CI Chrome` captures are expected evidence for public routes, not a mislabel. Presenting them as authenticated proof, or offering them for an authenticated-class change, is a finding.
 
 ### Immutable records
 `.plans/audits/**` and `.plans/**/reports/**`.

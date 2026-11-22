@@ -21,21 +21,18 @@ Add every focused check whose surface is touched:
 - Map editing routes: `bun run test:map-edit`
 - Map/member node contracts: `bun run test:map-nodes`
 - Plan hub tooling or `.plans/**`: `bun run test:plans`
-- Homepage map behavior: `bun run test:home-map:browser` for clean-room browser proof; use the
-  authenticated Brave path for local authenticated QA
-- Map-edit browser behavior: `bun run test:map-edit:browser` for clean-room browser proof; use the
-  authenticated Brave path for local authenticated QA
+- Homepage map behavior: `bun run test:home-map:browser`, labeled `headless Chrome` proof
+- Map-edit browser behavior: `bun run test:map-edit:browser`, labeled `headless Chrome` proof
 - Website, UI, CSS, accessibility, or web design: run `bun run agentic:guidance`,
-  `bun run agentic:check`, then `bun run ui:verify <route>` for rendered clean-room evidence and
-  complete the local QA pass in authenticated Brave
+  `bun run agentic:check`, then `bun run ui:verify <route>` for labeled rendered proof
 - Browser-proof policy changes: `bun run check:browser-verification-policy`
 
 A required failure means `REQUEST_CHANGES`. A required check that cannot run means
 `COMMENT_ONLY`; do not silently replace or downgrade proof.
 
-Visible UI requires rendered proof through the authenticated Brave QA profile. Isolated Browser,
-Playwright, DevTools MCP, and clean-room browser commands do not substitute for authenticated local
-QA. If authenticated Brave is unavailable, mark the proof `BLOCKED`.
+Visible UI requires labeled rendered proof under `AGENTS.md` § Browser Evidence. Authenticated
+Brave is required only for the authenticated surface class listed there; when it cannot be reached
+for such a change, mark that proof pending with the reason, never passed.
 
 When full local-stack behavior is relevant and `bun run dev` is already running, verify:
 
