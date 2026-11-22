@@ -592,8 +592,10 @@ export function toPublicOperationalContentSnapshot({
     return resolved.chapter;
   });
 
-  const publicChapters = quarantineUnsafeRecords(chaptersWithPublicImages, 'chapters', quarantined)
-    .map((chapter) => toPublicRecord(chapter, 'chapters'));
+  // Locations and impact bindings build their own explicit payloads, so they read the checked
+  // records before the pick and keep accepting coordinate aliases such as latitude and longitude.
+  const checkedChapters = quarantineUnsafeRecords(chaptersWithPublicImages, 'chapters', quarantined);
+  const publicChapters = checkedChapters.map((chapter) => toPublicRecord(chapter, 'chapters'));
   const withheldChapterImages: WithheldChapterImage[] = publicChapters
     .filter((chapter) => chaptersWithWithheldImages.has(chapter.slug))
     .map((chapter) => ({ slug: chapter.slug, reason: 'unapproved_media' }));
@@ -622,8 +624,8 @@ export function toPublicOperationalContentSnapshot({
     ).map((initiative) => toPublicRecord(initiative, 'chapterInitiatives')),
     guilds: publicGuilds,
     projects: publicProjects,
-    locations: toPublicOperationalLocations(publicChapters),
-    impactSourceBindings: toPublicOperationalImpactSourceBindings(publicChapters, generatedAt),
+    locations: toPublicOperationalLocations(checkedChapters),
+    impactSourceBindings: toPublicOperationalImpactSourceBindings(checkedChapters, generatedAt),
   };
 
   if (quarantined.length > 0) {
