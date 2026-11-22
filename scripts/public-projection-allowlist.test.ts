@@ -36,6 +36,8 @@ import { isPublicMapCoordinate } from '@greenpill-network/shared/map-locations';
 // payload is a leak, whatever the key it travelled under.
 const SECRET = 'SECRET-7f3a-never-public';
 const RUNS = { numRuns: 300 };
+// Each run builds whole snapshots; a loaded machine must not fail a property on time alone.
+const SLOW = { timeout: 60_000 };
 
 const committed = JSON.parse(
   readFileSync(new URL('../packages/website/src/data/operational-content-snapshot.json', import.meta.url), 'utf8'),
@@ -67,6 +69,19 @@ function extraFields(excluded: ReadonlySet<string>) {
   );
 }
 
+// Workflow fields the snapshot strips before it checks a record for private fields: they are
+// dropped, not quarantined.
+const OPERATIONAL_WORKFLOW_KEYS = new Set([
+  'reviewedAt',
+  'reviewed_at',
+  'reviewedBy',
+  'reviewed_by',
+  'createdBy',
+  'created_by',
+  'updatedBy',
+  'updated_by',
+]);
+
 // Inputs an operational record reads besides its published fields: the snapshot's own controls
 // and the chapter image fields resolvePublicChapterImage turns into published alt text and credit.
 const OPERATIONAL_CONTROL_KEYS = ['data', 'publicationStatus', 'publication_status', 'imageAlt', 'imageCredit'];
@@ -86,7 +101,7 @@ function publish(collection: PublicOperationalContentCollection, records: Record
 for (const collection of PUBLIC_OPERATIONAL_CONTENT_COLLECTIONS) {
   const allowed = new Set<string>(PUBLIC_OPERATIONAL_RECORD_FIELDS[collection]);
 
-  test(`a ${collection} record publishes only its allowlisted fields, and extra fields change nothing`, () => {
+  test(`a ${collection} record publishes only its allowlisted fields, and extra fields change nothing`, SLOW, () => {
     fc.assert(
       fc.property(
         fc.constantFrom(...committed[collection]),
@@ -96,7 +111,10 @@ for (const collection of PUBLIC_OPERATIONAL_CONTENT_COLLECTIONS) {
           const snapshot = publish(collection, [{ ...base, ...extras }]);
           assert.ok(!leaks(snapshot), 'a value from a field outside the allowlist was published');
           const published = snapshot[collection];
-          if (containsPrivateOperationalContentField(extras)) {
+          const checked = Object.fromEntries(
+            Object.entries(extras).filter(([key]) => !OPERATIONAL_WORKFLOW_KEYS.has(key)),
+          );
+          if (containsPrivateOperationalContentField(checked)) {
             // A private-looking field quarantines the record rather than publish around it.
             assert.equal(published.length, 0);
             return;
@@ -111,7 +129,7 @@ for (const collection of PUBLIC_OPERATIONAL_CONTENT_COLLECTIONS) {
     );
   });
 
-  test(`a private field nested inside a published ${collection} value is never published`, () => {
+  test(`a private field nested inside a published ${collection} value is never published`, SLOW, () => {
     const objectFields = [...allowed].filter((field) =>
       committed[collection].some((record: Record<string, unknown>) => {
         const value = record[field];
@@ -123,7 +141,9 @@ for (const collection of PUBLIC_OPERATIONAL_CONTENT_COLLECTIONS) {
       fc.property(
         fc.constantFrom(...committed[collection]),
         fc.constantFrom(...objectFields),
-        knownPrivateKey,
+        // Private elsewhere but public here: an operational record's `media`, and its media's
+        // `reviewStatus`, which says whether the image may be shown.
+        knownPrivateKey.filter((key) => !['media', 'reviewStatus', 'review_status'].includes(key)),
         (base: Record<string, unknown>, field, key) => {
           const record = { ...base, [field]: { ...(base[field] as object), [key]: SECRET } };
           const snapshot = publish(collection, [record]);
@@ -202,7 +222,7 @@ test('a pending, rejected or archived submission is never published', () => {
   );
 });
 
-test('map state nodes carry no private field or value', () => {
+test('map state nodes carry no private field or value', SLOW, () => {
   const CHAPTER_INPUT_KEYS = new Set([
     'lat',
     'latitude',

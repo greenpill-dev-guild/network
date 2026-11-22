@@ -1,7 +1,9 @@
 import {
   CHAPTER_IMPACT_SOURCES_VERSION,
+  PRIVATE_CHAPTER_IMPACT_FIELDS,
   normalizeImpactSources,
 } from './chapter-impact.js';
+import { PRIVATE_MAP_NODE_FIELDS } from './map-nodes.js';
 import type { PublicImpactSourceBinding } from './chapter-impact.js';
 import { isPublicMapCoordinate, parseMapCoordinate } from './map-locations.js';
 
@@ -133,6 +135,7 @@ const PRIVATE_OPERATIONAL_CONTENT_FIELD_PATTERNS = Object.freeze([
   'pending',
   'admin',
   'decodeddatajson',
+  'stewardnote',
 ]);
 
 const PRIVATE_OPERATIONAL_CONTENT_EXACT_FIELD_KEYS = Object.freeze([
@@ -144,6 +147,17 @@ const PRIVATE_OPERATIONAL_CONTENT_EXACT_FIELD_KEYS = Object.freeze([
 const PUBLIC_OPERATIONAL_CONTENT_EXACT_FIELD_KEY_ALLOWLIST = Object.freeze([
   'reviewstatus',
 ]);
+
+const normalizeFieldKeyName = (key: string): string => key.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+
+// The private names the map node and impact contracts already know (a request IP, an edit token,
+// upstream work feedback), matched exactly so a nested value under one is caught here too. The
+// impact list's `media` is left out: it is a public operational field.
+const PRIVATE_OPERATIONAL_CONTENT_KNOWN_FIELD_KEYS: ReadonlySet<string> = new Set(
+  [...PRIVATE_MAP_NODE_FIELDS, ...PRIVATE_CHAPTER_IMPACT_FIELDS.filter((field) => field !== 'media')].map(
+    normalizeFieldKeyName,
+  ),
+);
 
 const WORKFLOW_FIELDS = Object.freeze([
   'publicationStatus',
@@ -641,6 +655,7 @@ export function containsPrivateOperationalContentField(value: unknown, seen: Set
       !PUBLIC_OPERATIONAL_CONTENT_EXACT_FIELD_KEY_ALLOWLIST.includes(normalizedKey) &&
       (
         PRIVATE_OPERATIONAL_CONTENT_EXACT_FIELD_KEYS.includes(normalizedKey) ||
+        PRIVATE_OPERATIONAL_CONTENT_KNOWN_FIELD_KEYS.has(normalizedKey) ||
         PRIVATE_OPERATIONAL_CONTENT_FIELD_PATTERNS.some((pattern) => normalizedKey.includes(pattern))
       )
     ) {
