@@ -127,7 +127,7 @@ function discoverCachedChromium(): string[] {
   return found;
 }
 
-function findChromeBinary(): string {
+export function findChromeBinary(): string {
   const candidates = [
     process.env.CHROME_BIN,
     process.env.CHROMIUM_BIN,

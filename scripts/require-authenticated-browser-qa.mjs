@@ -1,7 +1,16 @@
 #!/usr/bin/env bun
 // Runs before `agentic:browser-proof` and `agentic:verify` so their captures carry the right label
 // (AGENTS.md, Browser Evidence). The run is clean-room proof: enough for public routes, never
-// authenticated Brave proof.
+// authenticated Brave proof. Without a browser `ui:verify` would skip and capture nothing, so the
+// run stops here instead of passing as proof.
+import { findChromeBinary } from './ui-verify.ts';
+
+if (!findChromeBinary()) {
+  console.error(
+    '[browser-qa] No Chrome or Chromium binary found (set CHROME_BIN), so this run would capture nothing. Label the proof `none`.',
+  );
+  process.exit(1);
+}
 
 const label = process.env.CI === 'true' ? 'CI Chrome' : 'headless Chrome';
 console.warn(

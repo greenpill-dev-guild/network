@@ -4,7 +4,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 
 const repoRoot = process.cwd();
-const requiredPolicyFiles = ["AGENTS.md", "CLAUDE.md", "packages/website/CLAUDE.md"];
+const requiredPolicyFiles = ["AGENTS.md", "CLAUDE.md", "packages/website/CLAUDE.md", ".agents/skills/greenpill-ui/SKILL.md"];
 
 // AGENTS.md owns the Browser Evidence rules; other guidance points to it instead of restating them.
 const requiredPhrases = {
@@ -16,6 +16,7 @@ const requiredPhrases = {
     'Do not substitute an isolated Browser, Playwright or DevTools MCP profile for authenticated-class proof',
   ],
   'packages/website/CLAUDE.md': ['`AGENTS.md` § Browser Evidence'],
+  '.agents/skills/greenpill-ui/SKILL.md': ['`AGENTS.md` § Browser Evidence'],
 };
 
 // Guidance outside AGENTS.md and CLAUDE.md files that restated the old rule.

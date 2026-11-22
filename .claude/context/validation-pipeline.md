@@ -21,8 +21,10 @@ Add every focused check whose surface is touched:
 - Map editing routes: `bun run test:map-edit`
 - Map/member node contracts: `bun run test:map-nodes`
 - Plan hub tooling or `.plans/**`: `bun run test:plans`
-- Homepage map behavior: `bun run test:home-map:browser`, labeled `headless Chrome` proof
-- Map-edit browser behavior: `bun run test:map-edit:browser`, labeled `headless Chrome` proof
+- Homepage map behavior: `bun run test:home-map:browser`, labeled `headless Chrome` on this machine
+  and `CI Chrome` in Actions
+- Map-edit browser behavior: `bun run test:map-edit:browser`, labeled `headless Chrome` on this machine
+  and `CI Chrome` in Actions
 - Website, UI, CSS, accessibility, or web design: run `bun run agentic:guidance`,
   `bun run agentic:check`, then `bun run ui:verify <route>` for labeled rendered proof
 - Browser-proof policy changes: `bun run check:browser-verification-policy`
