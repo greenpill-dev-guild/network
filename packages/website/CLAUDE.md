@@ -46,7 +46,7 @@ bun run ui:verify /your-route
 
 `ui:check` is static/source-only and catches CSS standard drift without building or opening a browser. `ui:verify` renders at 375/1024/1440 and runs four channels — layout (overflow / wrapped pills / 44px targets), accessibility tree, axe-core, and CLS + semantic lint — writing screenshots + `report.json` to `.ui-verify/`. **Read the 375px PNG first.** Fix every HARD violation. Never declare UI work done on code review alone — responsiveness and a11y bugs are invisible in source.
 
-Label the captures as the root `AGENTS.md` § Browser Evidence says: `ui:verify` is `headless Chrome` on this machine and `CI Chrome` in Actions, and it is full rendered proof for public routes. Authenticated Brave is required only for the authenticated surface class listed there (Directus-backed steward flows, signed-in or staging sessions, the future workspace).
+Label the captures as the root `AGENTS.md` § Browser Evidence says: `ui:verify` is `headless Chrome` on this machine and `CI Chrome` in Actions, and it is full rendered proof for public routes. Authenticated Brave is required only for the authenticated surface class that section lists; check it before calling `ui:verify` enough.
 
 Runtime WebMCP is approved only for the public read-only pilot in `src/scripts/webmcp.ts`. Keep tools scoped to visible public page/map state and do not expose private Directus data, pending intake, steward notes, edit links, emails, credentials, writes, or background-only actions.
 
